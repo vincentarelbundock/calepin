@@ -287,13 +287,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     };
 
     let calepin_config = CalepinConfig::load(&src_dir, Some(&config_path))?;
-    let config_dir = config_path.parent().unwrap_or(&current_dir);
     let cli_theme = args
         .theme
         .as_deref()
         .map(|value| crate::theme::ThemeSelection::parse(value, &current_dir))
         .transpose()?;
-    let config_theme = config.theme_selection(config_dir)?;
+    let config_theme = calepin_config.theme_selection()?.unwrap_or_default();
     let site_theme = cli_theme.clone().unwrap_or_else(|| config_theme.clone());
     let theme_dir = match &site_theme {
         crate::theme::ThemeSelection::Dir(dir) => Some(dir.clone()),
@@ -3199,29 +3198,56 @@ mod tests {
 
     #[test]
     fn theme_key_parses_builtin_name() {
-        let config = website_config_from_toml(r#"theme = "academic""#);
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), r#"theme = "academic""#).unwrap();
+
+        let config =
+            crate::config::CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+                .unwrap();
+
         assert_eq!(
-            config.theme_selection(Path::new("/tmp")).unwrap(),
-            crate::theme::ThemeSelection::Builtin("academic")
+            config.theme_selection().unwrap(),
+            Some(crate::theme::ThemeSelection::Builtin("academic"))
         );
     }
 
     #[test]
     fn theme_key_false_disables() {
-        let config = website_config_from_toml("theme = false");
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "theme = false").unwrap();
+
+        let config =
+            crate::config::CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+                .unwrap();
+
         assert_eq!(
-            config.theme_selection(Path::new("/tmp")).unwrap(),
-            crate::theme::ThemeSelection::Disabled
+            config.theme_selection().unwrap(),
+            Some(crate::theme::ThemeSelection::Disabled)
         );
     }
 
     #[test]
     fn missing_theme_key_is_default() {
-        let config = website_config_from_toml("");
-        assert_eq!(
-            config.theme_selection(Path::new("/tmp")).unwrap(),
-            crate::theme::ThemeSelection::Default
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "").unwrap();
+
+        let config =
+            crate::config::CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+                .unwrap();
+
+        assert_eq!(config.theme_selection().unwrap(), None);
+    }
+
+    #[test]
+    fn website_config_accepts_shared_styles_key() {
+        let config = website_config_from_toml(
+            r#"
+theme = "academic"
+styles = ["styles/site.css"]
+"#,
         );
+
+        assert_eq!(config.title, None);
     }
 
     #[test]
@@ -4519,11 +4545,22 @@ filenames = ["atom.xml", "rss.xml"]
             "{{ doc.body }}",
         )
         .unwrap();
-        let config = website_config_from_toml(r#"theme = "themes/my-theme""#);
+        std::fs::write(
+            temp.path().join("calepin.toml"),
+            r#"theme = "themes/my-theme""#,
+        )
+        .unwrap();
+        let config = crate::config::CalepinConfig::load(
+            temp.path(),
+            Some(&temp.path().join("calepin.toml")),
+        )
+        .unwrap();
 
         assert_eq!(
-            config.theme_selection(temp.path()).unwrap(),
-            crate::theme::ThemeSelection::Dir(temp.path().join("themes/my-theme"))
+            config.theme_selection().unwrap(),
+            Some(crate::theme::ThemeSelection::Dir(
+                temp.path().join("themes/my-theme")
+            ))
         );
     }
 

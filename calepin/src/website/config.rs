@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use super::feeds::FeedsConfig;
@@ -13,7 +12,8 @@ pub(super) struct WebsiteConfig {
     pub(super) languages: BTreeMap<String, LanguageConfig>,
     #[serde(rename = "executables")]
     pub(super) _executables: Option<toml::Value>,
-    pub(super) theme: Option<RawThemeValue>,
+    pub(super) theme: Option<toml::Value>,
+    pub(super) styles: Option<toml::Value>,
     pub(super) title: Option<String>,
     pub(super) description: Option<String>,
     pub(super) base_url: Option<String>,
@@ -42,13 +42,6 @@ pub(super) struct WebsiteConfig {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
-pub(super) enum RawThemeValue {
-    Enabled(String),
-    Toggle(bool),
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(untagged)]
 pub(super) enum RawRobotsConfig {
     Toggle(bool),
     Config(RobotsConfig),
@@ -73,20 +66,6 @@ impl Default for RobotsConfig {
 }
 
 impl WebsiteConfig {
-    pub(super) fn theme_selection(
-        &self,
-        config_dir: &Path,
-    ) -> Result<crate::theme::ThemeSelection> {
-        match &self.theme {
-            None => Ok(crate::theme::ThemeSelection::Default),
-            Some(RawThemeValue::Toggle(false)) => Ok(crate::theme::ThemeSelection::Disabled),
-            Some(RawThemeValue::Toggle(true)) => Ok(crate::theme::ThemeSelection::Default),
-            Some(RawThemeValue::Enabled(value)) => {
-                crate::theme::ThemeSelection::parse(value, config_dir)
-            }
-        }
-    }
-
     pub(super) fn robots_enabled(&self) -> bool {
         match &self.robots {
             None => true,
