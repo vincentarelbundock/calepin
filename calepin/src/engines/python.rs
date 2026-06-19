@@ -135,7 +135,13 @@ while True:
                 from matplotlib.axes import Axes
             except Exception:
                 return False
-            if isinstance(value, (Figure, Artist, Axes)):
+            display_types = (Figure, Artist, Axes)
+            try:
+                from matplotlib.colorbar import Colorbar
+                display_types = display_types + (Colorbar,)
+            except Exception:
+                pass
+            if isinstance(value, display_types):
                 return True
             if isinstance(value, (list, tuple, set, frozenset)):
                 return any(_calepin_is_matplotlib_display_value(item, seen) for item in value)
@@ -416,6 +422,7 @@ matplotlib = types.ModuleType("matplotlib")
 figure_mod = types.ModuleType("matplotlib.figure")
 artist_mod = types.ModuleType("matplotlib.artist")
 axes_mod = types.ModuleType("matplotlib.axes")
+colorbar_mod = types.ModuleType("matplotlib.colorbar")
 pyplot_mod = types.ModuleType("matplotlib.pyplot")
 
 class Figure:
@@ -431,6 +438,9 @@ class Artist:
 class Axes:
     pass
 
+class Colorbar:
+    pass
+
 class Line2D(Artist):
     pass
 
@@ -438,6 +448,9 @@ _fig = Figure()
 
 def plot(values):
     return [Line2D()]
+
+def colorbar():
+    return Colorbar()
 
 def get_fignums():
     return [1]
@@ -449,24 +462,29 @@ def close(target=None):
     pass
 
 pyplot_mod.plot = plot
+pyplot_mod.colorbar = colorbar
 pyplot_mod.get_fignums = get_fignums
 pyplot_mod.gcf = gcf
 pyplot_mod.close = close
 figure_mod.Figure = Figure
 artist_mod.Artist = Artist
 axes_mod.Axes = Axes
+colorbar_mod.Colorbar = Colorbar
 matplotlib.figure = figure_mod
 matplotlib.artist = artist_mod
 matplotlib.axes = axes_mod
+matplotlib.colorbar = colorbar_mod
 matplotlib.pyplot = pyplot_mod
 sys.modules["matplotlib"] = matplotlib
 sys.modules["matplotlib.figure"] = figure_mod
 sys.modules["matplotlib.artist"] = artist_mod
 sys.modules["matplotlib.axes"] = axes_mod
+sys.modules["matplotlib.colorbar"] = colorbar_mod
 sys.modules["matplotlib.pyplot"] = pyplot_mod
 
 import matplotlib.pyplot as plt
-plt.plot([1, 2, 3])"#,
+plt.plot([1, 2, 3])
+plt.colorbar()"#,
                 &fig_path,
                 6.0,
                 3.708,
