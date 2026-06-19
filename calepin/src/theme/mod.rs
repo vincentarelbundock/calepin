@@ -558,6 +558,23 @@ styles = ["../theme.css"]
     }
 
     #[test]
+    fn academic_notebook_maps_auto_sidenote_numbering_to_numbers() {
+        let source = notebook_source(
+            &ThemeSelection::Builtin("academic"),
+            &NotebookTemplateContext::default(),
+        )
+        .unwrap()
+        .unwrap();
+
+        assert!(
+            source
+                .source
+                .contains(r#"if numbering == auto { "1" } else { numbering }"#),
+            "academic paged output should map Calepin's default numbering to marginalia's numeric numbering"
+        );
+    }
+
+    #[test]
     fn legacy_paged_typ_jinja_still_works_for_local_themes() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
