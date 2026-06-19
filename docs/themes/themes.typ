@@ -3,10 +3,10 @@
 
 #title()
 
-Themes control how _Calepin_ renders HTML pages, single-document HTML notebooks,
-and Typst notebook outputs. A theme can provide MiniJinja HTML templates,
-partials, CSS, JavaScript, and a Typst notebook template for PDF, SVG, PNG, and
-HTML output.
+Themes control how _Calepin_ renders two types of content: websites and notebooks
+(HTML or PDF). A website theme can provide MiniJinja HTML templates, partials, CSS,
+JavaScript, and notebook themes add typst-side template support for HTML and PDF
+outputs.
 
 = Choosing a theme
 
@@ -20,10 +20,10 @@ theme = "themes/my-theme"   # a local theme directory
 theme = "typst"             # raw Typst output, no Calepin theme
 ```
 
-The same string values work inside a document with `#calepin.setup(theme: ...)`:
+The same string values can be set per document or selected with a config file:
 
-```typ
-#calepin.setup(theme: "academic")
+```sh
+calepin compile notebook.typ --config=/path/to/calepin.toml
 ```
 
 When several theme settings are present during a compile, the document setting
