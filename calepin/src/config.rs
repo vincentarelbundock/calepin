@@ -35,6 +35,12 @@ impl CalepinConfig {
         if !path.exists() {
             return Err(anyhow!("config file not found: {}", path.display()));
         }
+        if !is_toml_file(&path) {
+            return Err(anyhow!(
+                "config file must be a .toml file: {}",
+                path.display()
+            ));
+        }
         let contents = std::fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
         let raw: RawCalepinConfig = toml::from_str(&contents)
@@ -78,6 +84,12 @@ fn resolve_config_path(path: &Path) -> Result<PathBuf> {
     } else {
         Ok(std::env::current_dir()?.join(path))
     }
+}
+
+fn is_toml_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -414,6 +426,20 @@ styles = ["styles/site.css"]
             .to_string();
 
         assert!(err.contains("failed to parse"), "{err}");
+    }
+
+    #[test]
+    fn config_path_must_be_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "#let setup = (:)\n").unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&input))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("config file must be a .toml file"), "{err}");
+        assert!(err.contains("paper.typ"), "{err}");
     }
 
     #[test]
