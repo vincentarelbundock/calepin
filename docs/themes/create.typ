@@ -1,88 +1,85 @@
-#set document(title: [Create themes])
-#metadata((title: "Create a theme")) <website-metadata>
+#set document(title: [Create])
 
 #title()
 
-Create a local theme when CSS overrides are not enough: for example, when you
-need to change HTML templates, add JavaScript, replace shared partials, or
-customize the Typst notebook template.
+Use a local theme when you need structural changes, not just color and spacing.
+Common reasons include custom page chrome, extra client-side behavior, branded
+metadata, and notebook wrappers that affect how the Typst source is final-formatted.
 
-= Eject a built-in theme
+You can start small and expand only where needed.
 
-Built-in themes are compiled into the _Calepin_ binary, so you cannot edit them
-directly. Instead, copy one into your project and edit the copy:
+= Create a local theme
+
+Built-in themes are compiled into the Calepin binary, so you customize them by copying
+one into your project first.
 
 ```sh
-calepin new theme                     # copies calepin to themes/calepin/
-calepin new theme themes/my-theme
+calepin new theme                  # copy Calepin theme to themes/calepin/
+calepin new theme themes/my-theme  # copy into a custom directory
 ```
 
-Then point your site or document at the copy:
+Then point Calepin at your copy:
 
 ```toml
 theme = "themes/calepin"
+theme = "themes/my-theme" # with the custom name
 ```
 
-The copy is yours: edit its HTML, CSS, JavaScript, `theme.toml`, and notebook
-template files freely, and check them into version control. _Calepin_ upgrades
-will never touch them. Ejected shared files are written beside the theme in
-`themes/shared/`.
+Once copied, the theme is project-owned: edit its templates, styles, scripts, and
+`theme.toml` freely and keep it in version control.
 
 = Start small
 
-A local theme can be small. Missing standard entry files fall back to the
-built-in `calepin` theme, so a local theme can override just
-`layouts/webpage.html`, just `layouts/notebook.html`, or just
-`notebook.typ.jinja`. Supporting files such as partials, styles, and scripts
-come from the selected theme plus any imports declared in `theme.toml`.
+A local theme can be tiny. You only need to include files you want to customize.
+Everything else falls back to the built-in `calepin` theme, so valid overrides include:
+
+- only `layouts/webpage.html`
+- only `layouts/notebook.html`
+- only `notebook.typ.jinja`
+
+Supporting assets (`partials`, `styles`, `scripts`) come from the selected theme and
+from any shared imports declared in `theme.toml`.
+
+= What can be customized
+
+Use this map when you want to choose the right file first:
+
+```text
+themes/my-theme/
+  theme.toml           # theme metadata and shared imports
+  layouts/
+    webpage.html        # website page wrapper
+    notebook.html       # standalone notebook HTML wrapper
+    landing.html        # optional page-specific override
+  partials/
+    ...                # reusable template fragments
+  styles/
+    ...                # theme CSS
+  scripts/
+    ...                # theme JavaScript
+  notebook.typ.jinja    # Typst template around notebook source
+```
 
 = HTML templates
 
-For notebooks compiled as single HTML documents, the relevant layout is
-`layouts/notebook.html`. For websites, most pages use `layouts/webpage.html`.
+For a single HTML notebook, use `layouts/notebook.html`.
+For websites, the default entry is `layouts/webpage.html`.
 
-Templates can access:
+Layouts are MiniJinja templates. The most common values are:
 
-- `doc.head`
-- `doc.body_open`
-- `doc.body`
-- `doc.body_close`
-- `doc.title`
-- `site.sidebar`
-- `site.sidebar_sections`
-- `site.menus`
-- `site.menu_list`
-- `site.languages`
-- `site.translations`
-- `site.language`
-- `site.toc`
-- `site.title`
-- `site.description`
-- `site.base_url`
-- `site.logo`
-- `site.logo_alt`
-- `site.home_url`
-- `site.favicon`
-- `site.current_url`
-- `site.page_title`
-- `styles`
-- `scripts`
-- `syntax_css`
-- `theme`
-- `target`
+- `doc.head`, `doc.body_open`, `doc.body`, `doc.body_close`
+- `site.title`, `site.base_url`, `site.logo`, `site.favicon`
+- `site.sidebar`, `site.sidebar_sections`, `site.toc`, `site.menus`
+- `styles`, `scripts`, `syntax_css`, `theme`, `target`
 
-Navigation entries expose `href`, `label`, `label_html`, and `active`.
-`site.menus` is a map from menu name to navigation entries, such as
-`site.menus.main` and `site.menus.social`. `site.menu_list` contains the same
-menus as `{ name, items }` records for themes that need to iterate over every
-configured menu.
+Navigation entries also expose `href`, `label`, `label_html`, and `active`.
 
-Here is a minimal `layouts/notebook.html` for single-file HTML output:
+Here is a minimal `layouts/notebook.html`:
 
 ```html
 {{ doc.head }}
+  <meta charset="UTF-8">
   <title>{{ doc.title }}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   {% for style in styles %}
   <style>
 {{ style.css }}
@@ -104,14 +101,12 @@ Here is a minimal `layouts/notebook.html` for single-file HTML output:
 {{ doc.body_close }}
 ```
 
-`doc.head`, `doc.body_open`, and `doc.body_close` come from Typst's generated
-HTML. Keep them in the template unless you are deliberately replacing the whole
-document shell.
+Keep `doc.head`, `doc.body_open`, and `doc.body_close` unless you are intentionally
+replacing the entire HTML shell.
 
 == Website layouts
 
-A website page can select a different HTML layout from the active theme with
-`layout` in its `<website-metadata>`:
+You can switch layouts per page with `<website-metadata>`:
 
 ```typ
 #metadata((
@@ -120,19 +115,13 @@ A website page can select a different HTML layout from the active theme with
 )) <website-metadata>
 ```
 
-The `layout` value is an explicit path inside the active theme. _Calepin_ uses
-it exactly as written: it does not add `layouts/`, does not add `.html`, and
-does not fall back to `layouts/webpage.html` if the file is missing. The path
-must name a relative `.html` file that stays inside the theme directory.
+The `layout` value must be a relative `.html` path inside the active theme.
+Calepin does not add `layouts/` or `.html` for you and does not fall back to
+`layouts/webpage.html` if the file is missing.
 
 = Partials
 
-A partial is a reusable MiniJinja template fragment stored under `partials/`.
-Use partials for repeated HTML such as a header, footer, navigation list, search
-box, or analytics snippet.
-
-Include a partial from `layouts/webpage.html`, `layouts/notebook.html`, a
-page-specific layout, or another partial:
+Keep repeated HTML in partials under `partials/` and include them from layouts.
 
 ```html
 {% include "partials/header.html" %}
@@ -140,12 +129,10 @@ page-specific layout, or another partial:
 
 Partials receive the same template context as the file that includes them.
 
-= Shared files
+= Shared imports
 
-Themes can opt into shared partials, CSS, and JavaScript with `theme.toml`.
-These are the pieces that the built-in themes use for metadata,
-stylesheet/script wiring, typography, syntax highlighting, code output, dark
-mode, language selection, theme toggles, search, and copy buttons.
+`theme.toml` can request shared partials, styles, and scripts so a theme uses common
+pieces from the built-in stack.
 
 ```toml
 [shared]
@@ -154,46 +141,30 @@ styles = ["theme.css", "code.css", "widgets.css"]
 scripts = ["theme-toggle.js", "language-picker.js", "copy-code.js"]
 ```
 
-Shared imports load in the order listed in `theme.toml`. Files in the theme's
-own `partials/`, `styles/`, and `scripts/` directories load after the shared
-imports in filename order. If a theme-local file has the same filename as a
-shared import, the local file overrides that import.
+Shared items load first, then local files in `partials/`, `styles/`, and `scripts/`
+override by filename if they exist.
 
-Import names are filenames, not paths: use `theme.css`, not `styles/theme.css`
-or `../theme.css`. For local directory themes, _Calepin_ first checks the
-theme's own file, then `themes/shared/`, then the embedded shared library
-shipped with _Calepin_.
+Use filenames only (`theme.css`, not `styles/theme.css`, and not `../theme.css`).
 
 = Notebook Typst templates
 
-Notebook outputs use a Typst-source MiniJinja template named
-`notebook.typ.jinja`:
+`notebook.typ.jinja` is the Typst-side wrapper used by notebook outputs.
 
 ```text
 themes/my-theme/
   notebook.typ.jinja
 ```
 
-Typst already has a complete #link("https://typst.app/docs/tutorial/formatting/")[styling system]
-based on `#set` and `#show` rules. _Calepin_'s notebook theme layer adds one
-optional step before Typst runs: `notebook.typ.jinja` is rendered with MiniJinja
-and must produce Typst source.
+Before Typst runs, Calepin renders this file with MiniJinja so the output is still
+valid Typst source.
 
-Every bundled theme includes `notebook.typ.jinja`. To customize it, eject a
-bundle:
+To customize it:
 
-```sh
-calepin new theme
-```
+1. copy a local theme
+2. edit `themes/my-theme/notebook.typ.jinja`
+3. set `theme = "themes/my-theme"` in `calepin.toml`
 
-Then edit `themes/calepin/notebook.typ.jinja` and select that local theme in
-`calepin.toml`:
-
-```toml
-theme = "themes/calepin"
-```
-
-Use `document.body` where the notebook source should appear:
+Inside the template, place notebook content with `document.body`:
 
 ```typ
 #set page(
@@ -207,26 +178,20 @@ Use `document.body` where the notebook source should appear:
 {{ document.body }}
 ```
 
-`notebook.typ.jinja` receives:
+Useful `notebook.typ.jinja` values:
 
-- `theme`: the local theme directory name
+- `theme`: local theme directory name
 - `target`: `notebook`
-- `document.path`: the root-relative `.typ` input path
-- `document.dir`: the root-relative input directory
-- `document.stem`: the input filename without `.typ`
-- `document.body`: the staged notebook source as a Typst `#include`
-- `document.meta`: metadata from `#metadata(...) <website-metadata>`
-- `params`: document parameters after CLI overrides
+- `document.path`: `.typ` input path relative to workspace
+- `document.dir`: input directory relative to workspace
+- `document.stem`: input filename without `.typ`
+- `document.body`: notebook body, injected as a `#include`
+- `document.meta`: values from `#metadata(...) <website-metadata>`
+- `params`: CLI parameter map
 
-If `notebook.typ.jinja` does not reference `document.body`, _Calepin_ treats it
-like a prelude and includes the notebook source after the rendered template.
+If `document.body` is not referenced, Calepin appends the notebook body after the
+rendered template.
 
-For output-specific branches, use Typst's runtime input instead of MiniJinja:
-
-```typ
-#let is-html = sys.inputs.at("calepin-target", default: "paged") == "html"
-```
-
-Set `theme = "typst"` or use an empty `notebook.typ.jinja` to disable notebook
-Typst styling. Local themes that still use the older `paged.typ.jinja` filename
-continue to work, but new themes should use `notebook.typ.jinja`.
+`theme = "typst"` disables notebook-specific theming, or use an empty
+`notebook.typ.jinja` for a minimal pass-through template. Older themes using
+`paged.typ.jinja` still work; new themes should use `notebook.typ.jinja`.
