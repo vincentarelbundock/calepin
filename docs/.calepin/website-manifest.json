@@ -1,7 +1,7 @@
 {
   "outputs": [
     ".calepin/calepin-website.9057a35da8c12d51.js",
-    ".calepin/calepin-website.96b96c2aa3d43ef1.css",
+    ".calepin/calepin-website.e813786576c1b44e.css",
     ".calepin/favicon.svg",
     "404.html",
     "404.pdf",
@@ -258,7 +258,7 @@
     "websites/websites.pdf"
   ],
   "pagefind": {
-    "signature": 16425353428870032031,
+    "signature": 12331427279342369103,
     "outputs": [
       "pagefind/fragment/en_1b2838b.pf_fragment",
       "pagefind/fragment/en_2ce6ef1.pf_fragment",
