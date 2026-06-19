@@ -308,7 +308,7 @@ styles = ["styles/site.css"]
     );
 
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
-    let theme_pos = html.find("--calepin-color-background").unwrap();
+    let theme_pos = html.find(".calepin-site-topbar").unwrap();
     let config_pos = html.find("--config-style-marker").unwrap();
     assert!(config_pos > theme_pos, "{html}");
 }
@@ -365,6 +365,9 @@ styles = ["styles/raw.css"]
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
     assert!(html.contains("--raw-style-marker"), "{html}");
     assert!(!html.contains("calepin-copy-code"), "{html}");
+    assert!(!html.contains("calepin-document-main"), "{html}");
+    assert!(!html.contains("calepin-document-topbar"), "{html}");
+    assert!(!html.contains("cdn.jsdelivr.net/npm/@picocss/pico"), "{html}");
 }
 
 #[test]
