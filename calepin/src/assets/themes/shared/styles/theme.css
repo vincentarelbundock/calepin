@@ -99,16 +99,6 @@ html[data-theme="light"] {
   --calepin-z-popover: 40;
   --calepin-z-modal: 50;
 
-  /* Legacy aliases. New theme CSS should use the semantic tokens above. */
-  --calepin-accent: var(--calepin-color-accent);
-  --calepin-accent-hover: var(--calepin-color-accent-hover);
-  --calepin-muted-surface: var(--calepin-surface-muted);
-  --calepin-card-shadow: var(--calepin-shadow-card);
-  --calepin-topbar-z: var(--calepin-z-topbar);
-  --calepin-side-width: var(--calepin-sidebar-width);
-  --calepin-z-overlay: var(--calepin-z-backdrop);
-  --calepin-overlay-z: var(--calepin-z-backdrop);
-  --calepin-drawer-z: var(--calepin-z-drawer);
 }
 
 html[data-theme="dark"] {
@@ -135,7 +125,6 @@ html[data-theme="dark"] {
   --calepin-surface-code: #151d26;
   --calepin-surface-output: var(--calepin-surface-muted);
   --calepin-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.22);
-  --calepin-card-shadow: var(--calepin-shadow-card);
 }
 
 @media (min-width: 48rem) {
@@ -169,7 +158,6 @@ html[data-theme="dark"] {
     --calepin-surface-code: #151d26;
     --calepin-surface-output: var(--calepin-surface-muted);
     --calepin-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.22);
-    --calepin-card-shadow: var(--calepin-shadow-card);
   }
 }
 
