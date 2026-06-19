@@ -39,7 +39,7 @@ If a page has no `website-metadata.title`, _Calepin_ falls back to the document 
 
 If you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.
 
-Titled sections are foldable: each page loads with the section that contains it open and the others folded, and readers can open more sections by hand. To keep every section expanded instead, disable folding:
+Titled sections are foldable: each page loads with the section that contains it open and the others folded. Opening a different section folds the previous one. To keep every section expanded instead, disable folding:
 
 ```toml
 [sidebar]

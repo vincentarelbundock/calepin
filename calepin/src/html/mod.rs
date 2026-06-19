@@ -871,6 +871,16 @@ mod tests {
     }
 
     #[test]
+    fn bundled_website_theme_script_closes_other_sidebar_sections() {
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+        let script = html_theme_script(&entry).unwrap();
+
+        assert!(script.contains("initSidebarSections"));
+        assert!(script.contains(".calepin-website-sidebar-section"));
+        assert!(script.contains(r#"removeAttribute("open")"#));
+    }
+
+    #[test]
     fn bundled_website_theme_keeps_sections_unfolded_when_fold_disabled() {
         let site_context = SiteContextInput {
             sidebar_fold: false,

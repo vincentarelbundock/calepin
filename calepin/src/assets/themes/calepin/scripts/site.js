@@ -1,8 +1,9 @@
 /* Calepin website behaviour, consolidated.
  *
  * One module-local script wires: view switcher (HTML/Source/PDF), the mobile
- * sidebar drawer, inline SVGs, internal link state preservation, and the
- * native <dialog> video lightbox, and the Pagefind navbar search bridge.
+ * sidebar drawer, sidebar section folding, inline SVGs, internal link state
+ * preservation, the native <dialog> video lightbox, and the Pagefind navbar
+ * search bridge.
  *
  * The Rust theme loader inlines this file into a <script> at the end of <body>,
  * so the DOM already exists when it runs and no DOMContentLoaded guard is
@@ -232,6 +233,24 @@
     return { close };
   }
 
+  // ------------------------------------------------------ sidebar sections
+
+  function initSidebarSections() {
+    const sections = Array.from(
+      document.querySelectorAll(".calepin-website-sidebar-section"),
+    );
+    if (sections.length < 2) return;
+
+    sections.forEach((section) => {
+      section.addEventListener("toggle", () => {
+        if (!section.open) return;
+        sections.forEach((other) => {
+          if (other !== section) other.removeAttribute("open");
+        });
+      });
+    });
+  }
+
   // ------------------------------------------------------------- inline svg
 
   function svgTextFromSource(src) {
@@ -378,6 +397,7 @@
 
   initView(viewSelect);
   const nav = createNav();
+  initSidebarSections();
   inlineSvgs();
   initDialogs();
   preserveStateInLinks(viewSelect);
