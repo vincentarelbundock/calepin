@@ -13,9 +13,9 @@
 
   if _is-html() {
     let note_class = if numbering == none {
-      "calepin-sidenote sidenote marginnote sidenote-unnumbered"
+      "calepin-sidenote calepin-sidenote-unnumbered"
     } else {
-      "calepin-sidenote sidenote sidenote-numbered"
+      "calepin-sidenote calepin-sidenote-numbered"
     }
     if numbering == none {
       return html.elem("span", attrs: (class: note_class))[#body]

@@ -60,11 +60,7 @@
 }
 
 .calepin-sidenote,
-.sidenote,
-.marginnote,
-.calepin-sidefigure,
-.sidefigure,
-.margin-figure {
+.calepin-sidefigure {
   display: block;
   float: right;
   clear: right;
@@ -77,11 +73,7 @@
 }
 
 .calepin-sidenote p,
-.sidenote p,
-.marginnote p,
-.calepin-sidefigure figcaption,
-.sidefigure figcaption,
-.margin-figure figcaption {
+.calepin-sidefigure figcaption {
   margin: 0 0 0.7rem;
   line-height: inherit;
 }
@@ -98,31 +90,19 @@
 }
 
 /* A figure, table, or code output placed in the margin. */
-.calepin-sidefigure,
-.sidefigure,
-.margin-figure {
+.calepin-sidefigure {
   margin-top: 0.4rem;
 }
 
 .calepin-sidefigure figure,
 .calepin-sidefigure img,
 .calepin-sidefigure svg,
-.calepin-sidefigure table,
-.sidefigure figure,
-.sidefigure img,
-.sidefigure svg,
-.sidefigure table,
-.margin-figure figure,
-.margin-figure img,
-.margin-figure svg,
-.margin-figure table {
+.calepin-sidefigure table {
   width: 100%;
   margin: 0;
 }
 
-.calepin-sidefigure table,
-.sidefigure table,
-.margin-figure table {
+.calepin-sidefigure table {
   font-size: 0.8rem;
 }
 
@@ -179,11 +159,7 @@
 
 @media (max-width: 56rem) {
   .calepin-sidenote,
-  .sidenote,
-  .marginnote,
-  .calepin-sidefigure,
-  .sidefigure,
-  .margin-figure {
+  .calepin-sidefigure {
     display: block;
     float: none;
     width: auto;

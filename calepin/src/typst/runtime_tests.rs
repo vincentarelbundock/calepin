@@ -1840,10 +1840,8 @@ Text#calepin.elements.sidenote[A margin remark.] continues.
     );
     assert!(
         html.contains("class=calepin-sidenote")
-            || html.contains(r#"class="calepin-sidenote""#)
-            || html.contains("class=sidenote")
-            || html.contains(r#"class="sidenote""#),
-        "expected a canonical or legacy sidenote container:\n{html}"
+            || html.contains(r#"class="calepin-sidenote""#),
+        "expected a calepin-sidenote container:\n{html}"
     );
     // Marker and note are associated by a shared id.
     assert!(
@@ -1853,7 +1851,7 @@ Text#calepin.elements.sidenote[A margin remark.] continues.
 }
 
 #[test]
-fn typst_compile_html_sidenote_unnumbered_emits_marginnote() {
+fn typst_compile_html_sidenote_unnumbered_emits_calepin_sidenote() {
     skip_if_no_typst!();
 
     let dir = typst_accessible_tempdir();
@@ -1883,10 +1881,8 @@ Text#calepin.elements.sidenote(numbering: none)[An unnumbered aside.] ends.
     );
     assert!(
         html.contains("class=calepin-sidenote")
-            || html.contains(r#"class="calepin-sidenote""#)
-            || html.contains("class=marginnote")
-            || html.contains(r#"class="marginnote""#),
-        "expected a canonical or legacy unnumbered sidenote container:\n{html}"
+            || html.contains(r#"class="calepin-sidenote""#),
+        "expected a calepin-sidenote container:\n{html}"
     );
     assert!(
         !html.contains("doc-noteref"),
@@ -1895,7 +1891,7 @@ Text#calepin.elements.sidenote(numbering: none)[An unnumbered aside.] ends.
 }
 
 #[test]
-fn typst_compile_html_sidefigure_emits_margin_figure_with_caption() {
+fn typst_compile_html_sidefigure_emits_calepin_sidefigure_with_caption() {
     skip_if_no_typst!();
 
     let dir = typst_accessible_tempdir();
@@ -1923,12 +1919,8 @@ fn typst_compile_html_sidefigure_emits_margin_figure_with_caption() {
     let html = std::fs::read_to_string(output).unwrap();
     assert!(
         html.contains("class=calepin-sidefigure")
-            || html.contains(r#"class="calepin-sidefigure""#)
-            || html.contains("class=sidefigure")
-            || html.contains(r#"class="sidefigure""#)
-            || html.contains("class=margin-figure")
-            || html.contains(r#"class="margin-figure""#),
-        "expected a canonical or legacy sidefigure container:\n{html}"
+            || html.contains(r#"class="calepin-sidefigure""#),
+        "expected a calepin-sidefigure container:\n{html}"
     );
     assert!(
         html.contains("<figure"),
