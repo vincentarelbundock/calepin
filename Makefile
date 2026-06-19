@@ -171,9 +171,9 @@ cli-reference: build  ## Generate docs/reference/cli.typ from clap help output
 		printf '```\n'; \
 	} > docs/reference/cli.typ
 
-website:  ## Render docs/ via calepin compile directory mode
-	@set -eu; \
-	cargo run --manifest-path calepin/Cargo.toml -- compile docs docs
+website: ## Render docs/ via calepin compile directory mode
+	uv run calepin compile docs/themes/examples/tufte/tufte.typ --config docs/themes/examples/tufte/calepin.toml --format html
+	calepin compile docs
 
 serve:  ## Build and serve the website at http://$(HOST):$(PORT)
 	$(MAKE) website

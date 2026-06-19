@@ -249,6 +249,11 @@ h3 {
   min-width: 0;
 }
 
+.calepin-document-main {
+  width: min(100% - 2rem, var(--calepin-content-width));
+  margin-inline: auto;
+}
+
 .calepin-content > :first-child {
   margin-top: 0;
 }

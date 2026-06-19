@@ -2,6 +2,7 @@
 
 #let sidenote = calepin.elements.sidenote
 #let sidefigure = calepin.elements.sidefigure
+#let chunk = calepin.chunk
 
 #let setup(
   title: none,
@@ -20,7 +21,7 @@
   )
 }
 
-#let chunk = calepin.chunk
+#setup(title: [Matrix factorization with Calepin])
 
 #let python-figure(
   label: none,
@@ -57,7 +58,6 @@
   $
 ]
 
-#setup(title: [Matrix factorization with Calepin])
 
 = Matrix factorization with Calepin
 
@@ -253,9 +253,16 @@ for i, row in enumerate(ratings):
 
 == What to check
 
+```r
+#| label: fig-blahblah
+#| fig-width: 100%
+#| results: hide
+plot(mpg ~ hp, data = mtcars)
+```
+
 Matrix factorization is useful because it shares information across rows and
-columns. But this sharing is also a modeling assumption. A practical workflow
-should check prediction error on held-out observed entries, tune the rank
-#rank-k, and inspect whether the completed matrix makes domain sense. Calepin
-is useful here because the prose, the fitted model, and the diagnostics all
-live in the same executable document.
+columns.#sidefigure()[#calepin.results("fig-blahblah")] But this sharing is
+also a modeling assumption. A practical workflow should check prediction error
+on held-out observed entries, tune the rank #rank-k, and inspect whether the
+completed matrix makes domain sense. Calepin is useful here because the prose,
+the fitted model, and the diagnostics all live in the same executable document.

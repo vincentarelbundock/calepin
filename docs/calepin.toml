@@ -15,7 +15,10 @@ generate_feeds = true
 filenames = ["atom.xml", "rss.xml"]
 
 [static]
-include = ["assets/**", "index.typ"]
+include = ["assets/**", "index.typ", "themes/examples/tufte/**"]
+
+[pages]
+exclude = ["themes/examples/**", "slides/examples/**"]
 
 [[menus.main]]
 target = "getting-started/install.typ"
