@@ -4,9 +4,8 @@
  * Sidenotes and side figures use `academic`'s existing classes.
  */
 
-:root,
-html[data-theme="light"],
-html[data-theme="dark"] {
+html[data-theme="light"] {
+  color-scheme: light;
   --calepin-color-background: #fffff8;
   --calepin-color-text: #12110f;
   --calepin-color-muted: #5a5650;
@@ -24,6 +23,27 @@ html[data-theme="dark"] {
   --calepin-surface-output: #fffdf0;
   --calepin-surface: #fffdf0;
   --calepin-surface-muted: #fff8eb;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --calepin-color-background: #18130d;
+  --calepin-color-text: #f6efe8;
+  --calepin-color-muted: #c5baa7;
+  --calepin-color-accent: #d58a7f;
+  --calepin-color-accent-hover: #f0b7ab;
+  --calepin-color-link: #d58a7f;
+  --calepin-color-link-hover: #f0b7ab;
+  --calepin-font-body: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --calepin-font-heading: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --calepin-heading-weight: 400;
+  --calepin-font-size: 112.5%;
+  --calepin-margin-width: 280px;
+  --calepin-margin-gap: 40px;
+  --calepin-surface-code: #1f1a14;
+  --calepin-surface-output: #1f1a14;
+  --calepin-surface: #1f1a14;
+  --calepin-surface-muted: #2b241b;
 }
 
 html {
