@@ -453,6 +453,17 @@
     setSearchResultsOpen(input, results, Boolean(results.children.length));
   }
 
+  function initMobileSearchTriggers() {
+    document.querySelectorAll("[data-calepin-mobile-search-trigger]").forEach((button) => {
+      if (button.dataset.calepinSearchBound === "true") return;
+      button.dataset.calepinSearchBound = "true";
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        openPagefindSearch("");
+      });
+    });
+  }
+
   function initNavbarSearch() {
     const input = document.querySelector("[data-calepin-search-input]");
     if (!input) return;
@@ -624,10 +635,12 @@
     document.querySelector("pagefind-searchbox") ||
     document.querySelector("[data-calepin-search-input]") ||
     document.querySelector("[data-calepin-search-results]") ||
+    document.querySelector("[data-calepin-mobile-search-trigger]") ||
     document.querySelector(".calepin-website-search-results")
   );
   if (!hasSearch) return;
 
+  initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
 })();
@@ -719,7 +732,8 @@
   const normalizeView = (value) =>
     value === VIEW.source || value === VIEW.pdf ? value : VIEW.rendered;
 
-  function currentView(select) {
+  function currentView(selects) {
+    const select = Array.isArray(selects) ? selects[0] : selects;
     return normalizeView((select && select.value) || VIEW.rendered);
   }
 
@@ -813,17 +827,21 @@
     showMainFallback("Could not load PDF view.");
   }
 
-  function applyView(mode, select) {
+  function applyView(mode, selects) {
     const value = normalizeView(mode);
-    if (select) select.value = value;
+    (Array.isArray(selects) ? selects : [selects]).filter(Boolean).forEach((select) => {
+      select.value = value;
+    });
     updateCurrentUrlParam(VIEW.param, value === VIEW.rendered ? "" : value);
     if (value === VIEW.source) renderSourceMode();
     else if (value === VIEW.pdf) renderPdfMode();
   }
 
-  function initView(select) {
-    applyView(readUrlParam(VIEW.param, normalizeView, VIEW.rendered), select);
-    if (select && !select.dataset.calepinBound) {
+  function initView(selects) {
+    const viewSelects = (Array.isArray(selects) ? selects : [selects]).filter(Boolean);
+    applyView(readUrlParam(VIEW.param, normalizeView, VIEW.rendered), viewSelects);
+    viewSelects.forEach((select) => {
+      if (select.dataset.calepinBound) return;
       select.dataset.calepinBound = "true";
       select.addEventListener("change", (event) => {
         const value = normalizeView(event.target.value);
@@ -831,7 +849,7 @@
         setUrlParam(url, VIEW.param, value === VIEW.rendered ? "" : value);
         window.location.href = url.toString();
       });
-    }
+    });
   }
 
   // ----------------------------------------------------------- nav drawer
@@ -1028,19 +1046,19 @@
 
   // --------------------------------------------------------------- bootstrap
 
-  const viewSelect = document.getElementById("calepin-website-view-mode");
+  const viewSelects = Array.from(document.querySelectorAll("[data-calepin-view-mode], #calepin-website-view-mode"));
 
-  initView(viewSelect);
+  initView(viewSelects);
   const nav = createNav();
   initSidebarSections();
   inlineSvgs();
   initDialogs();
-  preserveStateInLinks(viewSelect);
-  initLinkInterception(nav, viewSelect);
+  preserveStateInLinks(viewSelects);
+  initLinkInterception(nav, viewSelects);
 
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
-    initView(viewSelect);
-    preserveStateInLinks(viewSelect);
+    initView(viewSelects);
+    preserveStateInLinks(viewSelects);
   });
 })();

@@ -2736,6 +2736,29 @@ a:has(.calepin-nav-icon) {
   font-size: 1.2rem;
 }
 
+.calepin-website-mobile-search-item,
+.calepin-website-sidebar nav.calepin-website-mobile-drawer-nav {
+  display: none;
+}
+
+.calepin-website-mobile-search-button,
+.calepin-website-theme-button {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  display: inline-grid;
+  place-items: center;
+  padding: 0.35rem;
+  line-height: 1;
+}
+
+.calepin-website-nav-toggle svg,
+.calepin-website-mobile-search-button svg,
+.calepin-website-theme-button svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: block;
+}
+
 /* ------------------------------------------------------------ Landing */
 
 .landing-hero {
@@ -3685,17 +3708,84 @@ html:not([data-theme]) {
     min-height: auto;
   }
 
-  .calepin-website-nav-toggle {
-    display: inline-grid;
+  .calepin-website-topbar {
+    padding-inline: 0.75rem;
   }
 
-  .calepin-website-search-item {
-    flex: 1 1 9rem;
-    min-width: 8rem;
+  .calepin-website-topbar nav {
+    gap: 0.5rem;
+  }
+
+  .calepin-website-topbar nav > ul:first-child {
+    min-width: 0;
+  }
+
+  .calepin-website-topbar nav > ul:first-child > li:last-child {
+    min-width: 0;
+  }
+
+  .calepin-website-topbrand-text {
+    display: block;
+    max-width: min(46vw, 18rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .calepin-website-nav-toggle {
+    display: inline-grid;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    place-items: center;
+    padding: 0.35rem;
+  }
+
+  .calepin-website-topbar nav > ul:last-child > li {
+    display: none;
+  }
+
+  .calepin-website-topbar nav > ul:last-child > .calepin-website-mobile-search-item,
+  .calepin-website-topbar nav > ul:last-child > .calepin-website-theme-item {
+    display: block;
+    list-style: none;
   }
 
   .calepin-website-search-input {
     min-width: 0;
+  }
+
+  .calepin-website-sidebar nav.calepin-website-mobile-drawer-nav {
+    display: block;
+    margin-bottom: 1.2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--calepin-color-border);
+  }
+
+  .calepin-website-mobile-drawer-nav ul {
+    gap: 0.2rem;
+  }
+
+  .calepin-website-sidebar .calepin-website-mobile-drawer-nav a {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    padding: 0.55rem 0.65rem;
+    font-size: 0.95rem;
+    word-break: normal;
+  }
+
+  .calepin-website-mobile-drawer-actions {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.8rem;
+  }
+
+  .calepin-website-mobile-drawer-actions .calepin-website-theme-button,
+  .calepin-website-mobile-drawer-actions .calepin-website-view-mode,
+  .calepin-website-mobile-drawer-actions .calepin-language-picker-button {
+    width: 100%;
+    min-height: 2.75rem;
+    justify-content: center;
   }
 
   .calepin-website-shell.grid {
@@ -3714,7 +3804,7 @@ html:not([data-theme]) {
     left: 0;
     width: var(--calepin-sidebar-mobile-width);
     height: calc(100vh - var(--calepin-topbar-height));
-    padding: 0.8rem;
+    padding: 1rem;
     background: var(--calepin-color-background);
     border-right: 1px solid var(--calepin-color-border);
     box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.2);
@@ -3819,6 +3909,8 @@ html:not([data-theme]) {
   }
 }
 
-.calepin-website-nav-backdrop {
-  display: none;
+@media (min-width: 56.001rem) {
+  .calepin-website-nav-backdrop {
+    display: none;
+  }
 }
