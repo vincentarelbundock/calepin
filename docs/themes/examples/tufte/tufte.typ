@@ -7,6 +7,37 @@
   fallback: false,
 )
 
+#if is-paged {
+  #show: marginalia.setup.with(
+    outer: (far: 8mm, width: 48mm, sep: 6mm),
+    book: false,
+  )
+
+  #set page(
+    paper: "us-letter",
+    margin: (inside: 2.2cm, outside: 5.1cm, y: 2.0cm),
+    numbering: "1",
+    number-align: right,
+  )
+
+  #set text(size: 10pt)
+  #set par(
+    leading: 0.45em,
+    first-line-indent: 1.15em,
+    spacing: 0.9em,
+  )
+
+  #set heading(numbering: none)
+  #show heading: set align(left)
+  #show heading.where(level: 1): smallcaps
+  #show heading.where(level: 1): set text(size: 1.1em, weight: "regular")
+  #show heading.where(level: 2): set text(size: 10.5pt, style: "italic", weight: "regular")
+
+  #set figure(gap: 0.55em)
+  #set table(stroke: none)
+  #set table(inset: 0.45em)
+}
+
 #let sidenote = calepin.elements.sidenote
 #let sidefigure = calepin.elements.sidefigure
 #let chunk = calepin.chunk
@@ -29,7 +60,7 @@
   )
 }
 
-#let tufte-body = [
+
 #setup(title: [Matrix factorization with Calepin])
 
 #let python-figure(
@@ -275,41 +306,3 @@ also a modeling assumption. A practical workflow should check prediction error
 on held-out observed entries, tune the rank #rank-k, and inspect whether the
 completed matrix makes domain sense. Calepin is useful here because the prose,
 the fitted model, and the diagnostics all live in the same executable document.
-]
-
-#if is-paged {
-  #show: marginalia.setup.with(
-    outer: (far: 8mm, width: 48mm, sep: 6mm),
-    book: false,
-  )
-
-  #set page(
-    paper: "us-letter",
-    margin: (inside: 2.2cm, outside: 5.1cm, y: 2.0cm),
-    numbering: "1",
-    number-align: right,
-  )
-
-  #set text(size: 10pt)
-  #set par(
-    leading: 0.45em,
-    first-line-indent: 1.15em,
-    spacing: 0.9em,
-  )
-
-  #set heading(numbering: none)
-  #show heading: set align(left)
-  #show heading.where(level: 1): smallcaps
-  #show heading.where(level: 1): set text(size: 1.1em, weight: "regular")
-  #show heading.where(level: 2): set text(size: 10.5pt, style: "italic", weight: "regular")
-
-  #set figure(gap: 0.55em)
-  #set table(stroke: none)
-  #set table(inset: 0.45em)
-
-  #tufte-body
-}
-
-#if not is-paged {
-  #tufte-body
-}
