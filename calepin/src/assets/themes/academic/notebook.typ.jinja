@@ -1,4 +1,28 @@
 #import "/.calepin/calepin.typ": _html-themed-raw-block
+#import "/.calepin/calepin.typ" as calepin
+#import "@preview/marginalia:0.2.0" as marginalia
+
+// Wide outer margin so sidenotes and side figures have room.
+#show: marginalia.setup.with(
+  outer: (far: 8mm, width: 48mm, sep: 6mm),
+  book: false,
+)
+
+// Place margin elements with marginalia in paged output. Only non-default
+// arguments are forwarded so marginalia keeps its own defaults otherwise.
+#calepin.elements.set-margin-impl(
+  note: (body, numbering: auto, side: auto) => {
+    let args = (:)
+    if numbering == none { args.insert("numbering", none) }
+    if side != auto { args.insert("side", side) }
+    marginalia.note(body, ..args)
+  },
+  figure: (body, caption: none, side: auto) => {
+    let args = (:)
+    if side != auto { args.insert("side", side) }
+    marginalia.notefigure(body, caption: caption, ..args)
+  },
+)
 
 #show raw.where(block: true): it => {
   if it.theme != auto {

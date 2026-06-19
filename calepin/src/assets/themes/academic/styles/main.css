@@ -54,11 +54,9 @@
   max-width: var(--calepin-content-width);
 }
 
-.marginnote,
 .sidenote,
-.margin-note,
-.side-note,
-.academic-footnote {
+.marginnote,
+.margin-figure {
   float: right;
   clear: right;
   width: var(--calepin-margin-width);
@@ -69,21 +67,39 @@
   scroll-margin-top: calc(var(--calepin-topbar-height) + 1rem);
 }
 
-.marginnote p,
 .sidenote p,
-.margin-note p,
-.side-note p,
-.academic-footnote p {
+.marginnote p,
+.margin-figure figcaption {
   margin: 0 0 0.7rem;
   line-height: inherit;
 }
 
-.academic-footnote-backref {
-  margin-right: 0.35rem;
-  color: var(--calepin-color-text);
-  font-size: 0.78rem;
-  font-weight: 700;
+/* In-text marker for a numbered sidenote. The number is emitted by the sidenote
+   element; CSS only renders it as a superscript. */
+[role="doc-noteref"] {
+  color: var(--calepin-color-accent);
+  font-size: 0.75em;
+  font-weight: 600;
+  vertical-align: super;
+  line-height: 0;
   text-decoration: none;
+}
+
+/* A figure, table, or code output placed in the margin. */
+.margin-figure {
+  margin-top: 0.4rem;
+}
+
+.margin-figure figure,
+.margin-figure img,
+.margin-figure svg,
+.margin-figure table {
+  width: 100%;
+  margin: 0;
+}
+
+.margin-figure table {
+  font-size: 0.8rem;
 }
 
 .academic-page-nav {
@@ -138,11 +154,9 @@
 }
 
 @media (max-width: 56rem) {
-  .marginnote,
   .sidenote,
-  .margin-note,
-  .side-note,
-  .academic-footnote {
+  .marginnote,
+  .margin-figure {
     float: none;
     width: auto;
     margin: 0.75rem 0 1.2rem;

@@ -1800,3 +1800,225 @@ pass
     let count = html.matches("HTMLRELOCATE_12345").count();
     assert_eq!(count, 1, "expected relocated output once in HTML:\n{html}");
 }
+
+#[test]
+fn typst_compile_html_sidenote_links_marker_to_note() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+Text#calepin.elements.sidenote[A margin remark.] continues.
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("A margin remark."),
+        "expected the note body in HTML output:\n{html}"
+    );
+    assert!(
+        html.contains("doc-noteref"),
+        "expected a doc-noteref marker:\n{html}"
+    );
+    assert!(
+        html.contains("class=sidenote") || html.contains(r#"class="sidenote""#),
+        "expected a sidenote container:\n{html}"
+    );
+    // Marker and note are associated by a shared id.
+    assert!(
+        html.contains("#sn-1") && (html.contains("id=sn-1") || html.contains(r#"id="sn-1""#)),
+        "expected the marker href to target the note id:\n{html}"
+    );
+}
+
+#[test]
+fn typst_compile_html_sidenote_unnumbered_emits_marginnote() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+Text#calepin.elements.sidenote(numbering: none)[An unnumbered aside.] ends.
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("An unnumbered aside."),
+        "expected the note body in HTML output:\n{html}"
+    );
+    assert!(
+        html.contains("class=marginnote") || html.contains(r#"class="marginnote""#),
+        "expected a marginnote container:\n{html}"
+    );
+    assert!(
+        !html.contains("doc-noteref"),
+        "an unnumbered note should not emit a marker:\n{html}"
+    );
+}
+
+#[test]
+fn typst_compile_html_sidefigure_emits_margin_figure_with_caption() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.sidefigure(caption: [A side caption.])[
+  #html.elem("img", attrs: (src: "fig.png", alt: "demo"))
+]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("class=margin-figure") || html.contains(r#"class="margin-figure""#),
+        "expected a margin-figure container:\n{html}"
+    );
+    assert!(
+        html.contains("<figure"),
+        "expected a figure element:\n{html}"
+    );
+    assert!(
+        html.contains("<figcaption"),
+        "expected a figcaption:\n{html}"
+    );
+    assert!(
+        html.contains("A side caption."),
+        "expected the caption text:\n{html}"
+    );
+}
+
+#[test]
+fn typst_query_paged_sidenote_falls_back_to_footnote() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+Body text#calepin.elements.sidenote[A footnote fallback remark.] here.
+"##,
+    )
+    .unwrap();
+
+    let json = typst_query_with_inputs(
+        dir.path(),
+        &input,
+        "footnote",
+        &["calepin-mode=render", "calepin-target=paged"],
+    );
+    assert!(
+        json.contains("A footnote fallback remark."),
+        "expected the paged sidenote to fall back to a footnote:\n{json}"
+    );
+}
+
+#[test]
+fn typst_query_paged_sidenote_uses_installed_margin_impl() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    // A theme installs its own margin placement; the element must use it
+    // instead of the default footnote fallback.
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.set-margin-impl(note: (body, numbering: auto, side: auto) => [#metadata("MARGIN_IMPL_USED")<margin-probe> #body])
+
+Body#calepin.elements.sidenote[a remark] here.
+"##,
+    )
+    .unwrap();
+
+    let json = typst_query_with_inputs(
+        dir.path(),
+        &input,
+        "<margin-probe>",
+        &["calepin-mode=render", "calepin-target=paged"],
+    );
+    assert!(
+        json.contains("MARGIN_IMPL_USED"),
+        "expected the installed margin implementation to be used:\n{json}"
+    );
+}
+
+#[test]
+fn typst_query_margin_elements_pass_body_through_in_query_mode() {
+    skip_if_no_typst!();
+
+    let dir = typst_accessible_tempdir();
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    // In the query pass the elements must be transparent so chunk metadata
+    // inside a margin element is still extracted.
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+Body#calepin.elements.sidenote[#metadata("INSIDE_NOTE")<note-probe>] and
+#calepin.elements.sidefigure[#metadata("INSIDE_FIGURE")<figure-probe>].
+"##,
+    )
+    .unwrap();
+
+    let note = typst_query(dir.path(), &input, "<note-probe>");
+    assert!(
+        note.contains("INSIDE_NOTE"),
+        "expected the sidenote body to pass through in query mode:\n{note}"
+    );
+    let figure = typst_query(dir.path(), &input, "<figure-probe>");
+    assert!(
+        figure.contains("INSIDE_FIGURE"),
+        "expected the sidefigure body to pass through in query mode:\n{figure}"
+    );
+}

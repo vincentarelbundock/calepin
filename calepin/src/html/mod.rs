@@ -805,20 +805,17 @@ mod tests {
     }
 
     #[test]
-    fn academic_site_theme_enhances_footnotes_as_margin_notes() {
+    fn academic_site_theme_does_not_rewire_footnotes() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
         let script = html_theme_script(&entry).unwrap();
 
-        assert!(css.contains(".academic-footnote"));
-        assert!(css.contains(".academic-footnote-backref"));
-        assert!(script.contains(r#"section[role="doc-endnotes"]"#));
-        assert!(script.contains("sidenote academic-footnote"));
-        assert!(script.contains("scrollToElement(sidenote)"));
-        assert!(script.contains("scrollToElement(reference)"));
-        assert!(script.contains(r#"insertAdjacentElement("afterend", sidenote)"#));
+        // Footnotes are left as native footnotes; the theme no longer moves
+        // endnotes into the margin. Margin placement is an explicit author
+        // choice via the sidenote/sidefigure elements instead.
+        assert!(!script.contains(r#"section[role="doc-endnotes"]"#));
+        assert!(!script.contains("enhanceFootnotes"));
+        // The unrelated navigation toggle is retained.
+        assert!(script.contains("academic-nav-toggle"));
     }
 
     fn sidebar_section(title: &str, href: &str, active: bool) -> SiteNavSection {
