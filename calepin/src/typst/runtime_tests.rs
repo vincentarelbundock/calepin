@@ -917,6 +917,10 @@ fn typst_compile_html_respects_figure_display_dimensions_from_results() {
         "expected display width in HTML output:\n{html}"
     );
     assert!(
+        html.contains("calepin-figure-width"),
+        "expected a stable sized figure class in HTML output:\n{html}"
+    );
+    assert!(
         html.contains("height: 44pt"),
         "expected display height in HTML output:\n{html}"
     );

@@ -54,6 +54,10 @@
   max-width: var(--calepin-content-width);
 }
 
+.academic-document-main > .calepin-figure-width {
+  max-width: var(--calepin-content-width) !important;
+}
+
 .sidenote,
 .marginnote,
 .margin-figure {

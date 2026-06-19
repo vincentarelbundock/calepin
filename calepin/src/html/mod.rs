@@ -262,6 +262,53 @@ mod tests {
         })
     }
 
+    fn element_property_with_inline(
+        css: &str,
+        selector_to_match: &str,
+        property: &str,
+        inline_value: &str,
+    ) -> String {
+        let mut winner = (false, (1, 0, 0, 0), 0, inline_value.trim().to_string());
+        for (order, (selectors, declarations)) in top_level_css_rules(css).into_iter().enumerate() {
+            let Some((value, important)) = declaration_value_with_priority(declarations, property)
+            else {
+                continue;
+            };
+            for selector in selectors.split(',').map(str::trim) {
+                if selector != selector_to_match {
+                    continue;
+                }
+                let candidate = (
+                    important,
+                    selector_specificity_for_element(selector),
+                    order + 1,
+                    value.clone(),
+                );
+                if (candidate.0, candidate.1, candidate.2) >= (winner.0, winner.1, winner.2) {
+                    winner = candidate;
+                }
+            }
+        }
+        winner.3
+    }
+
+    fn declaration_value_with_priority(
+        declarations: &str,
+        property: &str,
+    ) -> Option<(String, bool)> {
+        declarations.split(';').find_map(|declaration| {
+            let (name, value) = declaration.split_once(':')?;
+            if name.trim() != property {
+                return None;
+            }
+            let value = value.trim();
+            let Some(stripped) = value.strip_suffix("!important") else {
+                return Some((value.to_string(), false));
+            };
+            Some((stripped.trim().to_string(), true))
+        })
+    }
+
     fn selector_matches_root_theme(selector: &str, theme: &str) -> bool {
         selector == ":root"
             || selector == format!("html[data-theme=\"{theme}\"]")
@@ -274,6 +321,15 @@ mod tests {
             selector if selector.starts_with("html[data-theme=") => (0, 1, 1),
             _ => (0, 0, 0),
         }
+    }
+
+    fn selector_specificity_for_element(selector: &str) -> (usize, usize, usize, usize) {
+        let class_count = selector.matches('.').count();
+        let element_count = selector
+            .split(|ch: char| !ch.is_ascii_alphabetic())
+            .filter(|part| !part.is_empty() && !part.starts_with('.'))
+            .count();
+        (0, 0, class_count, element_count)
     }
 
     #[test]
@@ -836,6 +892,23 @@ mod tests {
             light,
             "calc(var(--calepin-content-width) + var(--calepin-margin-gap) + var(--calepin-margin-width))"
         );
+    }
+
+    #[test]
+    fn academic_document_caps_sized_figures_to_text_column() {
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+
+        let max_width = element_property_with_inline(
+            &css,
+            ".academic-document-main > .calepin-figure-width",
+            "max-width",
+            "100%",
+        );
+
+        assert_eq!(max_width, "var(--calepin-content-width)");
     }
 
     #[test]

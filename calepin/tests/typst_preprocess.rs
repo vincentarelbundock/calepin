@@ -481,7 +481,9 @@ digraph {
 
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
     assert!(
-        html.contains(r#"<div style="width: 37%; max-width: 100%; margin-inline: auto;"><figure"#),
+        html.contains(
+            r#"<div class="calepin-figure-width" style="width: 37%; max-width: 100%; margin-inline: auto;"><figure"#
+        ),
         "expected display width on captioned figure in HTML output:\n{html}"
     );
     assert!(

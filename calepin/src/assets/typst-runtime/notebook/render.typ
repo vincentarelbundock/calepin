@@ -71,7 +71,7 @@
   if style == "" {
     std.html.elem("img", attrs: (src: path, alt: alt))
   } else {
-    std.html.elem("img", attrs: (src: path, alt: alt, style: style))
+    std.html.elem("img", attrs: (src: path, alt: alt, class: "calepin-figure-width", style: style))
   }
 }
 
@@ -90,6 +90,12 @@
   _append-css(with-responsive, _html-image-align-style(fig-align))
 }
 
+#let _html-figure-width-attrs(style) = {
+  let attrs = (class: "calepin-figure-width")
+  attrs.insert("style", style)
+  attrs
+}
+
 // A labeled figure must stay a native `figure` so `@label` cross-references
 // resolve, and a native figure cannot carry the display-width style itself.
 // Wrap it in a styled block that applies the same width/responsive/alignment as
@@ -99,7 +105,7 @@
   if style == "" {
     content
   } else {
-    std.html.elem("div", attrs: (style: style))[#content]
+    std.html.elem("div", attrs: _html-figure-width-attrs(style))[#content]
   }
 }
 
@@ -112,7 +118,7 @@
   fig-cap-location,
 ) = {
   let style = _html-figure-style(width, responsive, fig-align)
-  let attrs = if style == "" { (:) } else { (style: style) }
+  let attrs = if style == "" { (:) } else { _html-figure-width-attrs(style) }
   let caption = std.html.elem("figcaption")[#context [Figure #counter(figure).display(): #fig-caption]]
   let content = if fig-cap-location == top {
     [#caption #img]
