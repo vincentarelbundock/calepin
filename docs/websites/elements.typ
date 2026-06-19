@@ -8,6 +8,8 @@
 
 #title()
 
+= Typst functions
+
 In Typst, `#let` is your primary building block for reusable formatting and construction. Use it to avoid repeating the same patterns.
 
 #let banner(message, note) = [
@@ -27,6 +29,8 @@ In Typst, `#let` is your primary building block for reusable formatting and cons
 ```
 
 #banner("Reusable function in action", "If you update this definition, both call sites update automatically.")
+
+The `calepin` namespace also includes a compact set of reusable elements for cards, galleries, columns, tabs, and lightbox media. They are designed to demonstrate output-aware patterning in practical notebook websites.
 
 = Output-aware formatting
 
@@ -57,11 +61,8 @@ The rendered result:
   fallback: () => [#text(fill: gray)[#strong("Fallback")] output branch],
 )
 
-= Built-in elements
 
-The namespace includes a compact set of reusable elements for cards, galleries, columns, tabs, and lightbox media. They are designed to demonstrate output-aware patterning in practical notebook websites.
-
-== `card`
+= Card
 
 `calepin.elements.card` keeps one piece of content boxed consistently across formats.
 
@@ -78,7 +79,7 @@ The namespace includes a compact set of reusable elements for cards, galleries, 
   A card wraps content with matching style in HTML and paged output.
 ]
 
-== Side notes and side figures
+= Side notes
 
 `calepin.elements.sidenote` and `calepin.elements.sidefigure` place supporting
 material in the margin. In HTML output, the built-in `academic` theme supports
@@ -108,7 +109,7 @@ Text#calepin.elements.sidenote[A margin note.] continues.
 ]
 ```
 
-== Gallery
+= Gallery
 
 `calepin.elements.gallery` accepts image items as tuples or dictionaries and handles local image metadata automatically in static outputs. In HTML output, it can activate lightbox behavior.
 
@@ -138,7 +139,7 @@ Text#calepin.elements.sidenote[A margin note.] continues.
   max-width: 42em,
 )
 
-== Columns
+= Columns
 
 `calepin.elements.columns` is output-aware, so the same call produces a plain Pico `.grid` for HTML and a `grid(...)` for paged output. Columns are equal-width; pass the paged-output column count as an integer. By default, each item is wrapped in a `<div>` so plain Typst blocks stay together as one column; use `wrap: false` when the items already render as standalone HTML elements such as cards.
 
@@ -194,7 +195,7 @@ You can also request more than two columns:
   [One], [Two], [Three]
 )
 
-== Tabs
+= Tabs
 
 `calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the group and `calepin.elements.tab("Label", active: true)[...]` for each panel. Panel names are generated automatically; pass `name: "..."` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed.
 
@@ -240,7 +241,7 @@ sum(x) / len(x)
   ]
 ]
 
-== Lightbox
+= Lightbox
 
 `lightbox-image(...)` and `lightbox-video(...)` produce browser-only interactive media wrappers in HTML while degrading gracefully in paged output.
 

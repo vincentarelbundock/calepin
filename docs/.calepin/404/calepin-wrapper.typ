@@ -21,14 +21,16 @@
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
-    it
+    chunk_from_raw_plain(it.lang, it)
   } else {
     _html-themed-raw-block(it)
   }
 }
 
 // Notebook theme
-#import "/.calepin/calepin.typ": _html-themed-raw-block
+#import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
+
+#show raw.where(block: true): set text(size: .8em)
 
 #show raw.where(block: true): it => {
   if it.theme != auto {
@@ -37,7 +39,7 @@
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
-    it
+    chunk_from_raw_plain(it.lang, it)
   } else {
     _html-themed-raw-block(it)
   }

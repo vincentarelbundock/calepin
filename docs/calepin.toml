@@ -87,9 +87,6 @@ title = "Websites"
   target = "websites/multilingual.typ"
 
   [[sidebar.section.item]]
-  target = "websites/elements.typ"
-
-  [[sidebar.section.item]]
   target = "websites/custom-elements.typ"
 
 [[sidebar.section]]
@@ -115,6 +112,9 @@ title = "Themes"
 
 [[sidebar.section]]
 title = "More"
+
+  [[sidebar.section.item]]
+  target = "websites/elements.typ"
 
   [[sidebar.section.item]]
   target = "tips.typ"
