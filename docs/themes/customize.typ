@@ -17,6 +17,21 @@ Configured CSS files load after the selected theme's CSS, in the order listed.
 Paths are resolved relative to `calepin.toml`, and each file must have a `.css`
 extension. The setting affects HTML output only.
 
+= Style raw HTML with CSS
+
+Use this mode when you want complete control of the generated markup and CSS while still using
+Calepin's notebook execution model; it is especially useful for design systems that already
+have established HTML/CSS conventions.
+
+Set `theme = "typst"` when you do not want a bundled base theme. Configured styles still apply to HTML output:
+
+```toml
+theme = "typst"
+styles = ["styles/raw.css"]
+```
+
+This mode is useful when you want Typst's raw HTML structure and a completely project-owned stylesheet.
+
 = Theme tokens
 
 Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
@@ -107,16 +122,3 @@ internals.
   "Syntax", `--calepin-syntax-background`, "Syntax background color for code blocks.",
   "Syntax", `--calepin-syntax-border`, "Syntax border color derived from foreground/background.",
 )
-
-= Raw HTML plus CSS
-
-Set `theme = "typst"` when you do not want a bundled base theme. Configured
-styles still apply to HTML output:
-
-```toml
-theme = "typst"
-styles = ["styles/raw.css"]
-```
-
-This mode is useful when you want Typst's raw HTML structure and a completely
-project-owned stylesheet.
