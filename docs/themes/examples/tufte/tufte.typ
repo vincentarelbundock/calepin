@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ" as calepin
 #import "@preview/marginalia:0.3.1" as marginalia
 
-// Page margins
+// Margin notes
 #show: marginalia.setup.with(
   outer: (far: 6mm, width: 50mm, sep: 6mm),
   inner: (far: 2.2cm, width: 0mm, sep: 0mm),
@@ -10,13 +10,11 @@
   bottom: 2.0cm,
   book: false,
 )
-
-// Margin helpers
 #let sidenote = calepin.elements.sidenote.with(side: "right")
 #let sidefigure = calepin.elements.sidefigure.with(side: "right")
 
-// Text and headings
-#set text(size: 10pt)
+// Style text and headings
+#set text(size: 11pt)
 #set par(
   leading: 0.45em,
   first-line-indent: 1.15em,
@@ -25,28 +23,22 @@
 #set heading(numbering: none)
 #show title: smallcaps
 #show title: set text(weight: "regular")
-#show heading: set align(left)
-#show heading.where(level: 1): smallcaps
-#show heading.where(level: 1): set text(size: 1.1em, weight: "regular")
-#show heading.where(level: 2): set text(size: 10.5pt, style: "italic", weight: "regular")
+#show heading.where(level: 1): set text(size: 1em, style: "italic", weight: "regular")
 
 // Figures and tables
 #set figure(gap: 0.55em)
 #set table(stroke: none)
 #set table(inset: 0.45em)
 
-// Notebook helpers
-#let chunk = calepin.chunk
-#let newthought = smallcaps
-
-// Document options
-#set document(title: [Matrix factorization with Calepin])
+// Executable code chunks
 #calepin.setup(
   echo: true,
   eval: true,
   results: "verbatim",
 )
 
+// Title
+#set document(title: [Matrix factorization with Calepin])
 #title()
 
 Matrix factorization represents a rectangular data matrix as the product of
@@ -61,7 +53,7 @@ user and item point in similar latent directions.#sidenote(numbering: auto)[The 
 rotation of the latent dimensions are not identified. What matters for
 prediction is the dot product, not a unique interpretation of each axis.]
 
-== A small ratings matrix
+= A small ratings matrix
 
 We will fit a rank-2 model to a tiny ratings matrix. Missing values are written
 as `None`.
@@ -101,13 +93,13 @@ The model should use the observed entries to fill in the missing cells. With
 only two latent dimensions, it has to compress the observed pattern rather than
 memorize every rating separately.
 
-== A synthetic rank-2 heatmap
+= A synthetic rank-2 heatmap
 
 Before fitting the ratings data, it is useful to look at an exactly rank-2
 matrix. The following chunk imports NumPy, generates two skinny factors, and
 plots their product with Matplotlib.
 
-#chunk(
+#calepin.chunk(
   "python",
   label: "fig-rank-two-heatmap",
   fig-caption: [Synthetic rank-2 matrix],
@@ -139,7 +131,7 @@ In HTML output, this figure is a useful asset-inlining check: a self-contained
 render should embed the generated PNG directly in the page instead of linking
 to a file under `.calepin/`.#sidenote(numbering: none)[#lorem(25)]
 
-== Fitting a rank-2 model
+= Fitting a rank-2 model
 
 The loss is squared error on observed ratings plus a small penalty that keeps
 the latent vectors from growing too large:
@@ -203,7 +195,7 @@ for epoch, value in checkpoints:
 ```
 
 #sidefigure[
-#chunk("python", echo: false, results: "typst")[```python
+#calepin.chunk("python", echo: false, results: "typst")[```python
 def cell(value):
     return f"[{value}]"
 
@@ -229,7 +221,7 @@ print(fragment)
 The margin table is computed from the trained model. The exact coordinate
 system is arbitrary, but nearby items have similar factor vectors.
 
-== Completing the matrix
+= Completing the matrix
 
 The fitted model can now predict the missing ratings.
 
@@ -253,7 +245,7 @@ for i, row in enumerate(ratings):
             print(f"{users[i]:>3} -> {items[j]:<14} {predict(i, j):.2f}")
 ```
 
-== What to check
+= What to check
 
 ```r
 #| label: fig-blahblah
