@@ -19,10 +19,10 @@ extension. The setting affects HTML output only.
 
 = Style raw HTML with CSS
 
-If you need complete control of the generated markup and CSS in Calepin's
-notebook execution model, one way to achieve this is to use the raw HTML workflow. Set
-`theme = "typst"` when you do not want a bundled base theme. Configured styles still apply to
-HTML output:
+In some contexts, it can be useful to generate raw HTML documents, and to define CSS to style
+those raw classless elements directly. One way to achieve this is to use the `typst` theme, which
+creates unstyled HTML that leaves styling fully in your project CSS. Set `theme = "typst"` when you
+do not want a bundled base theme. Configured styles still apply to HTML output:
 
 ```toml
 theme = "typst"
