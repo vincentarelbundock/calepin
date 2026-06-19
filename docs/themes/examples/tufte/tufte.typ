@@ -51,27 +51,6 @@
 
 #setup(title: [Matrix factorization with Calepin])
 
-#let python-figure(
-  label: none,
-  caption: none,
-  alt: none,
-  device-width: 6,
-  device-height: 3.8,
-  dpi: 160,
-  width: 80%,
-  body,
-) = chunk(
-  "python",
-  label: label,
-  fig-caption: caption,
-  fig-alt-text: alt,
-  fig-device-format: "png",
-  fig-device-width: device-width,
-  fig-device-height: device-height,
-  fig-device-dpi: dpi,
-  fig-width: width,
-)[#body]
-
 = Matrix factorization with Calepin
 
 Matrix factorization represents a rectangular data matrix as the product of
@@ -132,10 +111,16 @@ Before fitting the ratings data, it is useful to look at an exactly rank-2
 matrix. The following chunk imports NumPy, generates two skinny factors, and
 plots their product with Matplotlib.
 
-#python-figure(
+#chunk(
+  "python",
   label: "fig-rank-two-heatmap",
-  caption: [Synthetic rank-2 matrix],
-  alt: "Heatmap of a generated rank-2 matrix",
+  fig-caption: [Synthetic rank-2 matrix],
+  fig-alt-text: "Heatmap of a generated rank-2 matrix",
+  fig-device-format: "png",
+  fig-device-width: 6,
+  fig-device-height: 3.8,
+  fig-device-dpi: 160,
+  fig-width: 80%,
 )[```python
 import numpy as np
 import matplotlib.pyplot as plt
