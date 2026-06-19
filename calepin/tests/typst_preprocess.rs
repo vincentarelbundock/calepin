@@ -259,6 +259,156 @@ Theme is a compile-time concern.
 }
 
 #[test]
+fn compile_html_config_styles_append_after_theme_css() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::create_dir_all(dir.path().join("styles")).unwrap();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#set document(title: [Paper])
+Hello
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("calepin.toml"),
+        r#"
+theme = "academic"
+styles = ["styles/site.css"]
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("styles/site.css"),
+        ":root { --config-style-marker: yes; }",
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.html",
+            "--format",
+            "html",
+            "--config",
+            "calepin.toml",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
+    let theme_pos = html.find("--calepin-color-background").unwrap();
+    let config_pos = html.find("--config-style-marker").unwrap();
+    assert!(config_pos > theme_pos, "{html}");
+}
+
+#[test]
+fn compile_html_theme_false_still_applies_config_styles() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::create_dir_all(dir.path().join("styles")).unwrap();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#set document(title: [Paper])
+Hello
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("calepin.toml"),
+        r#"
+theme = false
+styles = ["styles/raw.css"]
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("styles/raw.css"),
+        "body { --raw-style-marker: yes; }",
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.html",
+            "--format",
+            "html",
+            "--config",
+            "calepin.toml",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
+    assert!(html.contains("--raw-style-marker"), "{html}");
+    assert!(!html.contains("calepin-copy-code"), "{html}");
+}
+
+#[test]
+fn compile_pdf_ignores_config_styles() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::create_dir_all(dir.path().join("styles")).unwrap();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#set document(title: [Paper])
+Hello
+"#,
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("calepin.toml"), r#"styles = ["styles/site.css"]"#)
+        .unwrap();
+    std::fs::write(dir.path().join("styles/site.css"), "body { color: red; }").unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.pdf",
+            "--format",
+            "pdf",
+            "--config",
+            "calepin.toml",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(dir.path().join("paper.pdf").is_file());
+}
+
+#[test]
 fn compile_html_respects_canonical_figure_display_dimensions() {
     if !has_command("typst")
         || Command::new("dot")
