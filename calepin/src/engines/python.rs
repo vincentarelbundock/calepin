@@ -129,19 +129,8 @@ while True:
             if value_id in seen:
                 return False
             seen.add(value_id)
-            try:
-                from matplotlib.figure import Figure
-                from matplotlib.artist import Artist
-                from matplotlib.axes import Axes
-            except Exception:
-                return False
-            display_types = (Figure, Artist, Axes)
-            try:
-                from matplotlib.colorbar import Colorbar
-                display_types = display_types + (Colorbar,)
-            except Exception:
-                pass
-            if isinstance(value, display_types):
+            module = type(value).__module__
+            if module == "matplotlib" or module.startswith("matplotlib."):
                 return True
             if isinstance(value, (list, tuple, set, frozenset)):
                 return any(_calepin_is_matplotlib_display_value(item, seen) for item in value)
@@ -443,6 +432,12 @@ class Colorbar:
 
 class Line2D(Artist):
     pass
+
+Figure.__module__ = "matplotlib.figure"
+Artist.__module__ = "matplotlib.artist"
+Axes.__module__ = "matplotlib.axes"
+Colorbar.__module__ = "matplotlib.colorbar"
+Line2D.__module__ = "matplotlib.lines"
 
 _fig = Figure()
 
