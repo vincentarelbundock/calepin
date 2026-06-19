@@ -1,0 +1,48 @@
+/*
+ * Margin figure construct.
+ *
+ * Extracted from PR #39. `.margin-figure` places a figure, table, or code output
+ * in the right gutter alongside the main text column. The `academic` theme
+ * provides text margin notes (.sidenote, .marginnote) but has no margin-figure
+ * construct, so this is genuinely additive.
+ *
+ * The gutter variables (--gutter-width, --gutter-gap, --main-width) are defined
+ * on the .calepin-tufte container; fallbacks are inlined here so the rules also
+ * work standalone.
+ */
+
+.calepin-tufte .margin-figure {
+  float: right;
+  clear: right;
+  width: var(--gutter-width, 280px);
+  margin-right: calc(-1 * (var(--gutter-width, 280px) + var(--gutter-gap, 40px)));
+  margin-top: 0.4rem;
+  margin-bottom: 0.8rem;
+  color: #5a5650;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.calepin-tufte .margin-figure figure,
+.calepin-tufte .margin-figure .cell-output,
+.calepin-tufte .margin-figure .sourceCode {
+  margin-top: 0;
+}
+
+.calepin-tufte .margin-figure table {
+  width: 100%;
+  font-size: 0.78rem;
+}
+
+/* Drop the float and inline the figure on narrow screens. */
+@media (max-width: 1080px) {
+  .calepin-tufte .margin-figure {
+    float: none;
+    display: block;
+    width: auto;
+    max-width: var(--main-width, 690px);
+    margin: 0.8rem 0;
+    padding-left: 1rem;
+    border-left: 2px solid #d8d1c3;
+  }
+}

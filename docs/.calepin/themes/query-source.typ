@@ -63,6 +63,52 @@ just `layouts/notebook.html` or `notebook.typ.jinja`. Supporting files such as
 partials, styles, and scripts come from the selected theme plus any imports
 declared in `theme.toml`.
 
+= CSS tokens
+
+Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
+namespace. Override these tokens from local theme CSS instead of targeting
+theme-specific internals such as `--academic-*`, `--pico-*`, or one-off
+component variables.
+
+Every color and surface token has explicit light, dark, and system-dark values:
+
+```css
+:root,
+html[data-theme="light"] {
+  --calepin-color-background: #fffff8;
+  --calepin-color-text: #12110f;
+  --calepin-color-accent: #7a2e2a;
+  --calepin-surface: #fffff8;
+}
+
+html[data-theme="dark"] {
+  --calepin-color-background: #15130f;
+  --calepin-color-text: #eee6d6;
+  --calepin-color-accent: #d18b82;
+  --calepin-surface: #1d1a14;
+}
+```
+
+The stable token groups cover colors, state colors, callouts, surfaces,
+typography, spacing, reading width, margin notes, borders, shadows, focus rings,
+and interface layers. For example:
+
+```css
+:root {
+  --calepin-font-body: Palatino, "Palatino Linotype", Georgia, serif;
+  --calepin-font-heading: var(--calepin-font-body);
+  --calepin-heading-weight: 400;
+  --calepin-content-width: 39rem;
+  --calepin-margin-width: 16rem;
+  --calepin-margin-gap: 2.25rem;
+  --calepin-block-gap: 1.5rem;
+  --calepin-callout-warning-color: #b26a00;
+}
+```
+
+_Calepin_ maps its tokens into Pico CSS variables internally, but `--calepin-*`
+is the public customization surface for built-in themes.
+
 = Structure
 
 A theme can provide templates for website pages, single-document HTML, and
