@@ -12,8 +12,13 @@
   }
 
   if _is-html() {
+    let note_class = if numbering == none {
+      "calepin-sidenote calepin-sidenote-unnumbered"
+    } else {
+      "calepin-sidenote calepin-sidenote-numbered"
+    }
     if numbering == none {
-      return html.elem("span", attrs: (class: "marginnote"))[#body]
+      return html.elem("span", attrs: (class: note_class))[#body]
     }
     return {
       _sidenote-counter.step()
@@ -24,7 +29,10 @@
           "a",
           attrs: (role: "doc-noteref", href: "#" + id, id: id + "ref"),
         )[#str(n)]
-        html.elem("span", attrs: (class: "sidenote", id: id))[#body]
+        html.elem(
+          "span",
+          attrs: (class: note_class, id: id, "data-sidenote-number": str(n)),
+        )[#body]
       }
     }
   }

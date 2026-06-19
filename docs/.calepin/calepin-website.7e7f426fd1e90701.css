@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
 
-:root,
-html[data-theme="light"] {
+:root {
   color-scheme: light;
 
   /* Color */

@@ -11,11 +11,14 @@ You can start small and expand only where needed.
 = Create a local theme
 
 Built-in themes are compiled into the Calepin binary, so you customize them by copying
-one into your project first.
+one into your project first. Use `--theme` to choose which built-in theme gets ejected:
+that theme becomes the base for your local customizations.
 
 ```sh
-calepin new theme                  # copy Calepin theme to themes/calepin/
-calepin new theme themes/my-theme  # copy into a custom directory
+calepin new theme                          # eject the default `calepin` theme to themes/calepin/
+calepin new theme --theme calepin          # same, explicitly
+calepin new theme --theme academic          # eject the `academic` theme
+calepin new theme --theme calepin themes/my  # copy into a custom directory
 ```
 
 Then point Calepin at your copy:

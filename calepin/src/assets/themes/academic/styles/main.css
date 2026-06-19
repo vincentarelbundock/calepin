@@ -1,5 +1,6 @@
 :root {
   --calepin-page-width: calc(var(--calepin-content-width) + var(--calepin-margin-gap) + var(--calepin-margin-width));
+  --calepin-margin-width: 16rem;
 }
 
 .academic-document-topbar {
