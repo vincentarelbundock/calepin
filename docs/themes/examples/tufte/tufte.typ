@@ -78,31 +78,16 @@
   fig-width: width,
 )[#body]
 
-#let rank-k = $k$
-#let user-vector = $u_i$
-#let item-vector = $v_j$
-#let global-mean = $mu$
-#let rating-model = [
-  $ hat(R)_(i, j) = mu + u_i^T v_j $
-]
-#let factorization-loss = [
-  $
-    L = sum_((i, j) in Omega) (r_(i, j) - hat(R)_(i, j))^2
-      + lambda (sum_i ||u_i||^2 + sum_j ||v_j||^2)
-  $
-]
-
-
 = Matrix factorization with Calepin
 
 Matrix factorization represents a rectangular data matrix as the product of
 two thinner matrices. In recommender systems, the rows are users, the columns
-are items, and the observed entries are ratings. A rank #rank-k model writes
+are items, and the observed entries are ratings. A rank $k$ model writes
 
-#rating-model
+$ hat(R)_(i, j) = mu + u_i^T v_j $
 
-where #user-vector is a user vector, #item-vector is an item vector, and
-#global-mean is the global average rating. The dot product is large when the
+where $u_i$ is a user vector, $v_j$ is an item vector, and
+$mu$ is the global average rating. The dot product is large when the
 user and item point in similar latent directions.#sidenote(numbering: auto)[The sign and
 rotation of the latent dimensions are not identified. What matters for
 prediction is the dot product, not a unique interpretation of each axis.]
@@ -184,7 +169,10 @@ to a file under `.calepin/`.#sidenote(numbering: none)[#lorem(25)]
 The loss is squared error on observed ratings plus a small penalty that keeps
 the latent vectors from growing too large:
 
-#factorization-loss
+$
+  L = sum_((i, j) in Omega) (r_(i, j) - hat(R)_(i, j))^2
+    + lambda (sum_i ||u_i||^2 + sum_j ||v_j||^2)
+  $
 
 Here is a simple stochastic gradient descent fit.
 
@@ -297,6 +285,6 @@ plot(mpg ~ hp, data = mtcars)
 Matrix factorization is useful because it shares information across rows and
 columns.#sidefigure()[#calepin.results("fig-blahblah")] But this sharing is
 also a modeling assumption. A practical workflow should check prediction error
-on held-out observed entries, tune the rank #rank-k, and inspect whether the
+on held-out observed entries, tune the rank $k$, and inspect whether the
 completed matrix makes domain sense. Calepin is useful here because the prose,
 the fitted model, and the diagnostics all live in the same executable document.
