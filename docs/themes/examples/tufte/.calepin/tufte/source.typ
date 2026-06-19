@@ -4,13 +4,14 @@
 
 #show: marginalia.setup.with(
   outer: (far: 6mm, width: 68mm, sep: 6mm),
-  inner: (far: 5mm, width: 0pt, sep: 0mm),
+  inner: (far: 2.2cm, width: 0mm, sep: 0mm),
+  top: 2.0cm,
+  bottom: 2.0cm,
   book: false,
 )
 
 #set page(
   paper: "us-letter",
-  margin: (inside: 2.2cm, outside: 8.0cm, y: 2.0cm),
   numbering: "1",
   number-align: right,
 )
@@ -43,12 +44,14 @@
     side
   }
 }
+
 #let sidenote(body, numbering: auto, side: auto) = {
   calepin.elements.sidenote(body, numbering: numbering, side: _tufte-marginalia-side(side))
 }
 #let sidefigure(body, caption: none, side: auto) = {
   calepin.elements.sidefigure(body, caption: caption, side: _tufte-marginalia-side(side))
 }
+
 #let chunk = calepin.chunk
 #let newthought = smallcaps
 
