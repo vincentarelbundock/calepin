@@ -108,10 +108,6 @@ internals.
   ["Syntax", code(`--calepin-syntax-border`), "Syntax border color derived from foreground/background."],
 )
 
-Syntax styling also emits token families used internally per theme, such as
-`--calepin-syntax-t1-*` and `--calepin-syntax-f1-*`, whose numeric suffixes
-are internal implementation detail and can be unstable across runs.
-
 = Raw HTML plus CSS
 
 Set `theme = "typst"` when you do not want a bundled base theme. Configured
