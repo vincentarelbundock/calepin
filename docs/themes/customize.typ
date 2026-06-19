@@ -30,7 +30,7 @@ styles = ["styles/raw.css"]
 
 Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
 namespace. The recommended best practice is to override these tokens from project CSS
-rather than trying to target the internals directly.
+rather than try to target the internals directly.
 
 #table(
   columns: (1.5fr, 1.5fr, 3.7fr),
