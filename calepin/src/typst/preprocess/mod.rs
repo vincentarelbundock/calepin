@@ -801,7 +801,7 @@ mod tests {
             dir.path(),
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
-            &crate::theme::ThemeSelection::Disabled,
+            &crate::theme::ThemeSelection::Typst,
             0,
         )
         .unwrap();
@@ -1023,7 +1023,7 @@ mod tests {
             assert!(source.source.contains("_fenced-chunks-runs"));
         }
         assert!(crate::theme::notebook_source(
-            &crate::theme::ThemeSelection::Disabled,
+            &crate::theme::ThemeSelection::Typst,
             &crate::theme::NotebookTemplateContext::default(),
         )
         .unwrap()

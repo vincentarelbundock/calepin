@@ -40,10 +40,10 @@ theme = "calepin"
 theme = "academic"
 ```
 
-Or select one for a single compile:
+For a single document, set the theme in the source:
 
-```sh
-calepin compile paper.typ --theme academic
+```typ
+#calepin.setup(theme: "academic")
 ```
 
 Website scaffolds are also theme-aware:

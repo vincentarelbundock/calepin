@@ -168,8 +168,6 @@ impl SetupDefaults {
     pub fn theme_selection(&self, root: &Path) -> Result<Option<crate::theme::ThemeSelection>> {
         match &self.theme {
             None | Some(Value::Null) => Ok(None),
-            Some(Value::Bool(false)) => Ok(Some(crate::theme::ThemeSelection::Disabled)),
-            Some(Value::Bool(true)) => Ok(Some(crate::theme::ThemeSelection::Default)),
             Some(Value::String(value)) => {
                 Ok(Some(crate::theme::ThemeSelection::parse(value, root)?))
             }
@@ -473,5 +471,31 @@ mod tests {
         assert_eq!(engine, EngineName::Jupyter("octave".to_string()));
         assert_eq!(engine.as_str(), "octave");
         assert!(!engine.is_diagram());
+    }
+
+    #[test]
+    fn setup_theme_typst_selects_raw_typst_output() {
+        let defaults = SetupDefaults {
+            theme: Some(Value::String("typst".to_string())),
+            ..SetupDefaults::default()
+        };
+
+        assert_eq!(
+            defaults.theme_selection(Path::new("/tmp")).unwrap(),
+            Some(crate::theme::ThemeSelection::Typst)
+        );
+    }
+
+    #[test]
+    fn setup_theme_rejects_boolean_values() {
+        for value in [Value::Bool(false), Value::Bool(true)] {
+            let defaults = SetupDefaults {
+                theme: Some(value),
+                ..SetupDefaults::default()
+            };
+
+            let err = defaults.theme_selection(Path::new("/tmp")).unwrap_err();
+            assert!(err.to_string().contains("invalid setup theme value"));
+        }
     }
 }

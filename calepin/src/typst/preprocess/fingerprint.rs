@@ -149,7 +149,7 @@ fn path_fingerprint(path: &Path) -> String {
 fn theme_fingerprint(theme: &crate::theme::ThemeSelection) -> String {
     match theme {
         crate::theme::ThemeSelection::Default => "default".to_string(),
-        crate::theme::ThemeSelection::Disabled => "disabled".to_string(),
+        crate::theme::ThemeSelection::Typst => "typst".to_string(),
         crate::theme::ThemeSelection::Builtin(name) => format!("builtin:{name}"),
         crate::theme::ThemeSelection::Dir(path) => format!("dir:{}", path.display()),
     }

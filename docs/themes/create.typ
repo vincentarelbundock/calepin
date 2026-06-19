@@ -18,7 +18,7 @@ calepin new theme --theme academic    # copies academic to themes/academic/
 calepin new theme themes/my-theme --theme academic
 ```
 
-Then point your site or compile command at the copy:
+Then point your site or document at the copy:
 
 ```toml
 theme = "themes/calepin"
@@ -187,10 +187,11 @@ bundle:
 calepin new theme
 ```
 
-Then edit `themes/calepin/notebook.typ.jinja` and select that local theme:
+Then edit `themes/calepin/notebook.typ.jinja` and select that local theme in
+`calepin.toml`:
 
-```sh
-calepin compile paper.typ --theme themes/calepin
+```toml
+theme = "themes/calepin"
 ```
 
 Use `document.body` where the notebook source should appear:
@@ -227,6 +228,6 @@ For output-specific branches, use Typst's runtime input instead of MiniJinja:
 #let is-html = sys.inputs.at("calepin-target", default: "paged") == "html"
 ```
 
-Set `theme = false` or use an empty `notebook.typ.jinja` to disable notebook
+Set `theme = "typst"` or use an empty `notebook.typ.jinja` to disable notebook
 Typst styling. Local themes that still use the older `paged.typ.jinja` filename
 continue to work, but new themes should use `notebook.typ.jinja`.

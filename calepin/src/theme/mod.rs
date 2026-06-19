@@ -25,18 +25,18 @@ pub const DEFAULT_THEME_NAME: &str = "calepin";
 pub enum ThemeSelection {
     #[default]
     Default,
-    /// `theme = false`: raw output, no theming for any target.
-    Disabled,
+    /// `theme = "typst"`: raw Typst output, no Calepin theming for any target.
+    Typst,
     Builtin(&'static str),
     Dir(PathBuf),
 }
 
 impl ThemeSelection {
-    /// Parse a CLI or config value. Relative path-like values resolve
-    /// against `base_dir` (the config file's directory, or the CLI's cwd).
+    /// Parse a config or setup value. Relative path-like values resolve
+    /// against `base_dir` (the config file's directory or document root).
     pub fn parse(value: &str, base_dir: &Path) -> Result<Self> {
-        if value == "false" || value == "none" {
-            return Ok(Self::Disabled);
+        if value == "typst" {
+            return Ok(Self::Typst);
         }
         if let Some(name) = builtin_names().into_iter().find(|name| *name == value) {
             return Ok(Self::Builtin(name));
@@ -54,7 +54,7 @@ impl ThemeSelection {
             return Ok(Self::Dir(path));
         }
         Err(anyhow!(
-            "unknown theme `{value}`; use one of {} or a path to a theme directory",
+            "unknown theme `{value}`; use `typst`, one of {}, or a path to a theme directory",
             builtin_names().join(", ")
         ))
     }
@@ -141,16 +141,19 @@ mod tests {
     }
 
     #[test]
-    fn parse_false_and_none_disable() {
+    fn parse_typst_selects_raw_typst_output() {
         let base = Path::new("/tmp");
         assert_eq!(
-            ThemeSelection::parse("false", base).unwrap(),
-            ThemeSelection::Disabled
+            ThemeSelection::parse("typst", base).unwrap(),
+            ThemeSelection::Typst
         );
-        assert_eq!(
-            ThemeSelection::parse("none", base).unwrap(),
-            ThemeSelection::Disabled
-        );
+    }
+
+    #[test]
+    fn parse_false_and_none_are_unknown_theme_names() {
+        let base = Path::new("/tmp");
+        assert!(ThemeSelection::parse("false", base).is_err());
+        assert!(ThemeSelection::parse("none", base).is_err());
     }
 
     #[test]
@@ -200,18 +203,15 @@ mod tests {
     }
 
     #[test]
-    fn disabled_selection_resolves_to_no_entry_and_no_notebook_source() {
+    fn typst_selection_resolves_to_no_entry_and_no_notebook_source() {
+        assert!(resolve_html_entry(&ThemeSelection::Typst, HtmlScope::Site)
+            .unwrap()
+            .is_none());
         assert!(
-            resolve_html_entry(&ThemeSelection::Disabled, HtmlScope::Site)
+            notebook_source(&ThemeSelection::Typst, &NotebookTemplateContext::default())
                 .unwrap()
                 .is_none()
         );
-        assert!(notebook_source(
-            &ThemeSelection::Disabled,
-            &NotebookTemplateContext::default()
-        )
-        .unwrap()
-        .is_none());
     }
 
     #[test]

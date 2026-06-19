@@ -141,7 +141,6 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         config: config_path,
         src: Some(args.input),
         out: args.output,
-        theme: args.theme,
         parallelism: None,
         render_pdf,
         quiet: args.common.quiet,
@@ -175,7 +174,6 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         config: config_path,
         src: Some(args.input.clone()),
         out: args.output.clone(),
-        theme: None,
         parallelism: None,
         render_pdf: None,
         quiet: args.common.quiet,
@@ -214,7 +212,6 @@ struct WebsiteBuildOptions {
     config: PathBuf,
     src: Option<PathBuf>,
     out: Option<PathBuf>,
-    theme: Option<String>,
     parallelism: Option<usize>,
     /// `None` defers to the `pdf` key in calepin.toml (default: HTML only).
     render_pdf: Option<bool>,
@@ -288,13 +285,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     };
 
     let calepin_config = CalepinConfig::load(&src_dir, Some(&config_path))?;
-    let cli_theme = args
-        .theme
-        .as_deref()
-        .map(|value| crate::theme::ThemeSelection::parse(value, &current_dir))
-        .transpose()?;
     let config_theme = calepin_config.theme_selection()?.unwrap_or_default();
-    let site_theme = cli_theme.clone().unwrap_or_else(|| config_theme.clone());
+    let site_theme = config_theme.clone();
     let theme_dir = match &site_theme {
         crate::theme::ThemeSelection::Dir(dir) => Some(
             dir.canonicalize()
@@ -368,7 +360,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         quiet: args.quiet,
         timeout: args.timeout,
         params: &args.params,
-        cli_theme: cli_theme.clone(),
         fallback_theme: config_theme.clone(),
         html_syntax_theme: html_syntax_theme.clone(),
         parallelism: args.parallelism,
@@ -2580,7 +2571,6 @@ struct WebsitePreprocessOptions<'a> {
     quiet: bool,
     timeout: Option<u64>,
     params: &'a [String],
-    cli_theme: Option<crate::theme::ThemeSelection>,
     fallback_theme: crate::theme::ThemeSelection,
     html_syntax_theme: HtmlSyntaxTheme,
     parallelism: Option<usize>,
@@ -2617,7 +2607,7 @@ fn preprocess_documents(
                 progress: false,
                 timeout: options.timeout,
                 sync_pages: false,
-                theme: options.cli_theme.clone(),
+                theme: None,
                 fallback_theme: options.fallback_theme.clone(),
                 html_syntax_theme: Some(options.html_syntax_theme.clone()),
                 param_overrides: options.params.to_vec(),
@@ -3423,9 +3413,9 @@ mod tests {
     }
 
     #[test]
-    fn theme_key_false_disables() {
+    fn theme_key_typst_selects_raw_typst_output() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("calepin.toml"), "theme = false").unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), r#"theme = "typst""#).unwrap();
 
         let config =
             crate::config::CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
@@ -3433,7 +3423,7 @@ mod tests {
 
         assert_eq!(
             config.theme_selection().unwrap(),
-            Some(crate::theme::ThemeSelection::Disabled)
+            Some(crate::theme::ThemeSelection::Typst)
         );
     }
 
@@ -3485,7 +3475,6 @@ styles = ["styles/site.css"]
             config: root.join("calepin.toml"),
             src: Some(root.to_path_buf()),
             out: Some(root.join("out")),
-            theme: None,
             parallelism: Some(1),
             render_pdf: Some(false),
             quiet: true,
@@ -3528,7 +3517,6 @@ styles = ["../styles/site.css"]
             config: root.join("config/calepin.toml"),
             src: Some(src),
             out: Some(root.join("out")),
-            theme: None,
             parallelism: Some(1),
             render_pdf: Some(false),
             quiet: true,
@@ -3568,7 +3556,6 @@ styles = ["../styles/site.css"]
             config: config.join("calepin.toml"),
             src: Some(src),
             out: Some(root.join("out")),
-            theme: None,
             parallelism: Some(1),
             render_pdf: Some(false),
             quiet: true,
@@ -3604,7 +3591,6 @@ styles = ["../styles/site.css"]
             config: src.join("calepin.toml"),
             src: Some(src.clone()),
             out: Some(src.join("tmp/../_site")),
-            theme: None,
             parallelism: Some(1),
             render_pdf: Some(false),
             quiet: true,

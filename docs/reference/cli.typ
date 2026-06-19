@@ -91,9 +91,6 @@ Options:
           
           [possible values: pdf, png, svg, html]
 
-      --theme <THEME>
-          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false
-
       --minify
           Minify HTML output after theming and asset processing
 

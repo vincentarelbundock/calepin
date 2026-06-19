@@ -66,11 +66,11 @@ is the public customization surface for built-in themes.
 
 = Raw HTML plus CSS
 
-Set `theme = false` when you do not want a bundled base theme. Configured
+Set `theme = "typst"` when you do not want a bundled base theme. Configured
 styles still apply to HTML output:
 
 ```toml
-theme = false
+theme = "typst"
 styles = ["styles/raw.css"]
 ```
 

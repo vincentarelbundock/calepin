@@ -15,7 +15,7 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
     pub config_dir: PathBuf,
-    pub theme: Option<RawThemeValue>,
+    pub theme: Option<String>,
     pub styles: Vec<CssOverride>,
 }
 
@@ -24,13 +24,6 @@ pub struct CssOverride {
     pub name: String,
     pub path: PathBuf,
     pub css: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(untagged)]
-pub enum RawThemeValue {
-    Enabled(String),
-    Toggle(bool),
 }
 
 impl CalepinConfig {
@@ -71,9 +64,7 @@ impl CalepinConfig {
     pub fn theme_selection(&self) -> Result<Option<crate::theme::ThemeSelection>> {
         match &self.theme {
             None => Ok(None),
-            Some(RawThemeValue::Toggle(false)) => Ok(Some(crate::theme::ThemeSelection::Disabled)),
-            Some(RawThemeValue::Toggle(true)) => Ok(Some(crate::theme::ThemeSelection::Default)),
-            Some(RawThemeValue::Enabled(value)) => Ok(Some(crate::theme::ThemeSelection::parse(
+            Some(value) => Ok(Some(crate::theme::ThemeSelection::parse(
                 value,
                 &self.config_dir,
             )?)),
@@ -155,7 +146,7 @@ impl ExecutablePaths {
 #[serde(default)]
 struct RawCalepinConfig {
     executables: RawExecutablePaths,
-    theme: Option<RawThemeValue>,
+    theme: Option<String>,
     styles: Vec<PathBuf>,
 }
 
@@ -397,6 +388,32 @@ styles = ["styles/site.css"]
             config.theme_selection().unwrap(),
             Some(crate::theme::ThemeSelection::Dir(theme_dir))
         );
+    }
+
+    #[test]
+    fn config_theme_typst_selects_raw_typst_output() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), r#"theme = "typst""#).unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        assert_eq!(
+            config.theme_selection().unwrap(),
+            Some(crate::theme::ThemeSelection::Typst)
+        );
+    }
+
+    #[test]
+    fn config_theme_rejects_boolean_values() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "theme = false").unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("failed to parse"), "{err}");
     }
 
     #[test]

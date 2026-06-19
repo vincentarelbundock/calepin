@@ -87,7 +87,7 @@ struct SharedImports {
     scripts: Vec<String>,
 }
 
-/// Resolve the layout for `scope`. `None` means theming is disabled.
+/// Resolve the layout for `scope`. `None` means raw Typst output.
 /// Fallback: if the selected theme lacks the entry file, use the builtin
 /// default bundle's entry with the default's assets. One level, no chains.
 pub fn resolve_html_entry(
@@ -96,7 +96,7 @@ pub fn resolve_html_entry(
 ) -> Result<Option<HtmlEntry>> {
     let entry = scope.entry_file();
     match selection {
-        ThemeSelection::Disabled => Ok(None),
+        ThemeSelection::Typst => Ok(None),
         ThemeSelection::Default => Ok(Some(bundle_entry(&CALEPIN, entry, true)?)),
         ThemeSelection::Builtin(name) => {
             let bundle = require_builtin(name)?;
@@ -130,8 +130,8 @@ pub fn resolve_explicit_site_html_entry(
 ) -> Result<Option<HtmlEntry>> {
     validate_explicit_html_layout_path(layout_path)?;
     match selection {
-        ThemeSelection::Disabled => Err(anyhow!(
-            "page layout `{layout_path}` requires an HTML theme, but theming is disabled"
+        ThemeSelection::Typst => Err(anyhow!(
+            "page layout `{layout_path}` requires an HTML theme, but theme is `typst`"
         )),
         ThemeSelection::Default => explicit_bundle_entry(&CALEPIN, layout_path, true),
         ThemeSelection::Builtin(name) => {

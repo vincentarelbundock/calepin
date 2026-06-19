@@ -75,7 +75,7 @@ pub fn notebook_source(
             .map(|source| NotebookSource { source, owns_body })
     };
     match selection {
-        ThemeSelection::Disabled => Ok(None),
+        ThemeSelection::Typst => Ok(None),
         ThemeSelection::Default => {
             render(DEFAULT_THEME_NAME, NOTEBOOK_TEMPLATE, default_source()).map(Some)
         }

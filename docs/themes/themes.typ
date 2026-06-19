@@ -17,20 +17,18 @@ The default theme is `calepin`. Select a different built-in or local theme with
 theme = "calepin"           # the default documentation theme
 theme = "academic"          # a built-in essay/blog theme
 theme = "themes/my-theme"   # a local theme directory
-theme = false               # no base theme: raw output
+theme = "typst"             # raw Typst output, no Calepin theme
 ```
 
-The same values work with `--theme` on `calepin compile` and inside a document
-with `#calepin.setup(theme: ...)`:
+The same string values work inside a document with `#calepin.setup(theme: ...)`:
 
-```sh
-calepin compile paper.typ --theme calepin
+```typ
+#calepin.setup(theme: "academic")
 ```
 
-When several theme settings are present during a compile, the command line
-wins, then the document, then `calepin.toml`. `calepin watch` does not have a
-`--theme` option; it uses the document setting when present, otherwise the
-website's `calepin.toml` setting, otherwise the default theme.
+When several theme settings are present during a compile, the document setting
+wins, then `calepin.toml`, then the default theme. Use `--config` to choose an
+alternate TOML file for a render.
 
 = Structure
 
@@ -66,7 +64,7 @@ Use the smallest customization layer that fits the change:
   reading width, and small project rules.
 - Use #link("create.html")[local themes] when you need to edit HTML templates,
   JavaScript, partials, or the Typst notebook template.
-- Use `theme = false` plus `styles = [...]` when you want raw Typst HTML with
+- Use `theme = "typst"` plus `styles = [...]` when you want raw Typst HTML with
   your own CSS instead of a bundled base theme.
 
 See #link("builtin.html")[Built-in themes] for the bundled theme choices.

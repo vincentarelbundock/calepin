@@ -24,10 +24,9 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
         if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
             eprintln!("Created {}", dest.display());
             eprintln!(
-                "Select it with `theme = \"{}\"` in calepin.toml,",
+                "Select it with `theme = \"{}\"` in calepin.toml",
                 dest.display()
             );
-            eprintln!("or `--theme {}` on calepin compile/watch.", dest.display());
         }
         return Ok(());
     }
@@ -142,11 +141,6 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     let calepin_config =
         crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
     let config_styles = calepin_config.styles.clone();
-    let theme = args
-        .theme
-        .as_deref()
-        .map(|value| crate::theme::ThemeSelection::parse(value, &current_dir))
-        .transpose()?;
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
         root: None,
@@ -157,7 +151,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         progress: true,
         timeout: args.common.timeout,
         sync_pages: false,
-        theme,
+        theme: None,
         fallback_theme: crate::theme::ThemeSelection::Default,
         html_syntax_theme: None,
         param_overrides: args.common.params,

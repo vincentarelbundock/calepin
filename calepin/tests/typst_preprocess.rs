@@ -322,7 +322,7 @@ styles = ["styles/site.css"]
 }
 
 #[test]
-fn compile_html_theme_false_still_applies_config_styles() {
+fn compile_html_theme_typst_still_applies_config_styles() {
     if !has_command("typst") {
         return;
     }
@@ -339,7 +339,7 @@ Hello
     std::fs::write(
         dir.path().join("calepin.toml"),
         r#"
-theme = false
+theme = "typst"
 styles = ["styles/raw.css"]
 "#,
     )
@@ -375,7 +375,10 @@ styles = ["styles/raw.css"]
     assert!(!html.contains("calepin-copy-code"), "{html}");
     assert!(!html.contains("calepin-document-main"), "{html}");
     assert!(!html.contains("calepin-document-topbar"), "{html}");
-    assert!(!html.contains("cdn.jsdelivr.net/npm/@picocss/pico"), "{html}");
+    assert!(
+        !html.contains("cdn.jsdelivr.net/npm/@picocss/pico"),
+        "{html}"
+    );
 }
 
 #[test]
@@ -393,8 +396,11 @@ Hello
 "#,
     )
     .unwrap();
-    std::fs::write(dir.path().join("calepin.toml"), r#"styles = ["styles/site.css"]"#)
-        .unwrap();
+    std::fs::write(
+        dir.path().join("calepin.toml"),
+        r#"styles = ["styles/site.css"]"#,
+    )
+    .unwrap();
     std::fs::write(dir.path().join("styles/site.css"), "body { color: red; }").unwrap();
 
     let output = Command::new(calepin_bin())

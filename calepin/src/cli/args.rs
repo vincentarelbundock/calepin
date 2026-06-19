@@ -134,10 +134,6 @@ pub struct CompileArgs {
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
-    /// Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false.
-    #[arg(long = "theme", alias = "template")]
-    pub theme: Option<String>,
-
     /// Minify HTML output after theming and asset processing
     #[arg(long)]
     pub minify: bool,
@@ -333,8 +329,8 @@ mod tests {
     }
 
     #[test]
-    fn test_typst_compile_args_theme_name() {
-        let cli = Cli::try_parse_from([
+    fn test_typst_compile_rejects_theme_flag() {
+        let err = Cli::try_parse_from([
             "calepin",
             "compile",
             "paper.typ",
@@ -343,14 +339,9 @@ mod tests {
             "--theme",
             "calepin",
         ])
-        .unwrap();
+        .unwrap_err();
 
-        match cli.command {
-            Command::Compile(args) => {
-                assert_eq!(args.theme, Some("calepin".to_string()));
-            }
-            other => panic!("expected compile command, got {other:?}"),
-        }
+        assert!(err.to_string().contains("--theme"), "{err}");
     }
 
     #[test]
@@ -374,29 +365,8 @@ mod tests {
     }
 
     #[test]
-    fn test_typst_compile_args_theme_user_theme_name() {
-        let cli = Cli::try_parse_from([
-            "calepin",
-            "compile",
-            "paper.typ",
-            "--format",
-            "html",
-            "--theme",
-            "zensical",
-        ])
-        .unwrap();
-
-        match cli.command {
-            Command::Compile(args) => {
-                assert_eq!(args.theme, Some("zensical".to_string()));
-            }
-            other => panic!("expected compile command, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn test_typst_compile_args_template_alias() {
-        let cli = Cli::try_parse_from([
+    fn test_typst_compile_rejects_template_alias() {
+        let err = Cli::try_parse_from([
             "calepin",
             "compile",
             "paper.typ",
@@ -405,14 +375,9 @@ mod tests {
             "--template",
             "calepin",
         ])
-        .unwrap();
+        .unwrap_err();
 
-        match cli.command {
-            Command::Compile(args) => {
-                assert_eq!(args.theme, Some("calepin".to_string()));
-            }
-            other => panic!("expected compile command, got {other:?}"),
-        }
+        assert!(err.to_string().contains("--template"), "{err}");
     }
 
     #[test]
