@@ -296,7 +296,10 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let config_theme = calepin_config.theme_selection()?.unwrap_or_default();
     let site_theme = cli_theme.clone().unwrap_or_else(|| config_theme.clone());
     let theme_dir = match &site_theme {
-        crate::theme::ThemeSelection::Dir(dir) => Some(dir.clone()),
+        crate::theme::ThemeSelection::Dir(dir) => Some(
+            dir.canonicalize()
+                .with_context(|| format!("failed to resolve theme directory {}", dir.display()))?,
+        ),
         _ => None,
     };
     let site_entry = html_entry_with_config_styles(
@@ -589,6 +592,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let manifest_progress = progress.spinner("[site] write manifest");
     write_manifest(&out_dir, &expected_outputs, pagefind_manifest)?;
     manifest_progress.finish("[done] write manifest");
+    let out_dir = out_dir
+        .canonicalize()
+        .with_context(|| format!("failed to resolve {}", out_dir.display()))?;
     Ok(WebsiteBuildResult {
         src_dir,
         out_dir,
@@ -3538,6 +3544,85 @@ styles = ["../styles/site.css"]
         let canonical_style = root.join("styles/site.css").canonicalize().unwrap();
         assert_eq!(result.style_paths, vec![canonical_style.clone()]);
         assert!(should_rebuild_for_path(&result, &canonical_style));
+    }
+
+    #[test]
+    fn website_build_result_canonicalizes_config_theme_dir() {
+        if !has_command("typst") {
+            return;
+        }
+
+        let dir = typst_accessible_tempdir();
+        let root = dir.path();
+        let src = root.join("docs");
+        let config = root.join("config");
+        let theme = root.join("theme");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::create_dir_all(&config).unwrap();
+        std::fs::create_dir_all(theme.join("layouts")).unwrap();
+        std::fs::write(theme.join("layouts/webpage.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(config.join("calepin.toml"), r#"theme = "../theme""#).unwrap();
+        std::fs::write(src.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
+
+        let result = build_site(WebsiteBuildOptions {
+            config: config.join("calepin.toml"),
+            src: Some(src),
+            out: Some(root.join("out")),
+            theme: None,
+            parallelism: Some(1),
+            render_pdf: Some(false),
+            quiet: true,
+            timeout: None,
+            params: Vec::new(),
+            typst_args: Vec::new(),
+            incremental_inputs: None,
+            clean: true,
+            minify_html: false,
+        })
+        .unwrap();
+
+        let canonical_theme = theme.canonicalize().unwrap();
+        let canonical_theme_file = theme.join("layouts/webpage.html").canonicalize().unwrap();
+        assert_eq!(result.theme_dir, Some(canonical_theme));
+        assert!(should_rebuild_for_path(&result, &canonical_theme_file));
+    }
+
+    #[test]
+    fn website_build_result_normalizes_created_output_dir_inside_source() {
+        if !has_command("typst") {
+            return;
+        }
+
+        let dir = typst_accessible_tempdir();
+        let root = dir.path();
+        let src = root.join("docs");
+        std::fs::create_dir_all(src.join("tmp")).unwrap();
+        std::fs::write(src.join("calepin.toml"), r#"theme = "calepin""#).unwrap();
+        std::fs::write(src.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
+
+        let result = build_site(WebsiteBuildOptions {
+            config: src.join("calepin.toml"),
+            src: Some(src.clone()),
+            out: Some(src.join("tmp/../_site")),
+            theme: None,
+            parallelism: Some(1),
+            render_pdf: Some(false),
+            quiet: true,
+            timeout: None,
+            params: Vec::new(),
+            typst_args: Vec::new(),
+            incremental_inputs: None,
+            clean: true,
+            minify_html: false,
+        })
+        .unwrap();
+
+        let canonical_out = src.join("_site").canonicalize().unwrap();
+        assert_eq!(result.out_dir, canonical_out);
+        assert!(!should_rebuild_for_path(
+            &result,
+            &canonical_out.join("index.html")
+        ));
     }
 
     #[test]
