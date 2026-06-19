@@ -1,9 +1,24 @@
 #set document(title: [Themes])
+#import "/.calepin/calepin.typ" as calepin
+
 #metadata((title: "Overview")) <website-metadata>
 
 #title()
 
 Themes control how _Calepin_ renders two types of content: websites and notebooks (HTML or PDF). A website theme can provide MiniJinja HTML templates, partials, CSS, JavaScript, and notebook themes add typst-side template support for HTML and PDF outputs. The default theme is called `calepin`. 
+
+#calepin.elements.gallery(
+  (
+    ("/themes/screenshots/calepin_website_dark.png", "Calepin website theme in dark mode", [Calepin website theme in dark mode]),
+    ("/themes/screenshots/calepin_website_light.png", "Calepin website theme in light mode", [Calepin website theme in light mode]),
+    ("/themes/screenshots/academic_website_dark.png", "Academic website theme in dark mode", [Academic website theme in dark mode]),
+    ("/themes/screenshots/academic_website_light.png", "Academic website theme in light mode", [Academic website theme in light mode]),
+    ("/themes/screenshots/tufte_notebook_dark.png", "Tufte notebook theme in dark mode", [Tufte notebook theme in dark mode]),
+    ("/themes/screenshots/tufte_notebook_light.png", "Tufte notebook theme in light mode", [Tufte notebook theme in light mode]),
+  ),
+  columns: 3,
+  max-width: 32em,
+)
 
 = Choosing a theme
 

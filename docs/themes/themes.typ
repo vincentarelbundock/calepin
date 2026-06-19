@@ -15,11 +15,9 @@ Themes control how _Calepin_ renders two types of content: websites and notebook
     ("/themes/screenshots/academic_website_light.png", "Academic website theme in light mode", [Academic website theme in light mode]),
     ("/themes/screenshots/tufte_notebook_dark.png", "Tufte notebook theme in dark mode", [Tufte notebook theme in dark mode]),
     ("/themes/screenshots/tufte_notebook_light.png", "Tufte notebook theme in light mode", [Tufte notebook theme in light mode]),
-    ("/themes/screenshots/tufte_notebook_pdf_01.png", "Tufte notebook PDF page 1", [Tufte notebook PDF page 1]),
-    ("/themes/screenshots/tufte_notebook_pdf_02.png", "Tufte notebook PDF page 2", [Tufte notebook PDF page 2]),
   ),
-  columns: 2,
-  max-width: 42em,
+  columns: 3,
+  max-width: 32em,
 )
 
 = Choosing a theme

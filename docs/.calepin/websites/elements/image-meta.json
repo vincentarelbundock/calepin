@@ -197,6 +197,20 @@
       "width": 3024,
       "height": 1673
     },
+    "/themes/screenshots/tufte_notebook_dark.png": {
+      "path": "themes/screenshots/tufte_notebook_dark.png",
+      "xxh3": "c795d9626b80fb36",
+      "bytes": 327629,
+      "width": 3023,
+      "height": 1672
+    },
+    "/themes/screenshots/tufte_notebook_light.png": {
+      "path": "themes/screenshots/tufte_notebook_light.png",
+      "xxh3": "0e0676c570890895",
+      "bytes": 301986,
+      "width": 3023,
+      "height": 1672
+    },
     "assets/calepin_vscode-thumb.png": {
       "path": "assets/calepin_vscode-thumb.png",
       "xxh3": "100cb8f7a64ba31c",
@@ -343,6 +357,20 @@
       "bytes": 357247,
       "width": 3024,
       "height": 1673
+    },
+    "themes/screenshots/tufte_notebook_dark.png": {
+      "path": "themes/screenshots/tufte_notebook_dark.png",
+      "xxh3": "c795d9626b80fb36",
+      "bytes": 327629,
+      "width": 3023,
+      "height": 1672
+    },
+    "themes/screenshots/tufte_notebook_light.png": {
+      "path": "themes/screenshots/tufte_notebook_light.png",
+      "xxh3": "0e0676c570890895",
+      "bytes": 301986,
+      "width": 3023,
+      "height": 1672
     }
   }
 }
