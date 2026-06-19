@@ -298,8 +298,13 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         crate::theme::ThemeSelection::Dir(dir) => Some(dir.clone()),
         _ => None,
     };
-    let site_entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?;
-    let mut external_theme_assets = site_entry.as_ref().is_some_and(|entry| entry.is_default);
+    let site_entry = html_entry_with_config_styles(
+        crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?,
+        &calepin_config.styles,
+    );
+    let mut external_theme_assets = site_entry
+        .as_ref()
+        .is_some_and(|entry| entry.is_default || !calepin_config.styles.is_empty());
     let languages = configured_languages(&src_dir, &config)?;
     let (section_plans, mut typ_files) = discover_site_pages(
         &src_dir,
@@ -366,11 +371,11 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         external_theme_assets = true;
     }
     let theme_assets = if external_theme_assets {
-        let entry = crate::theme::resolve_html_entry(
-            &crate::theme::ThemeSelection::Default,
-            crate::theme::HtmlScope::Site,
-        )?
-        .expect("default theme must provide a site entry");
+        let entry = if !calepin_config.styles.is_empty() {
+            site_entry.clone().unwrap_or_else(default_site_html_entry)
+        } else {
+            default_site_html_entry()
+        };
         ThemeGeneratedAssets::from_entry(&entry, &html_syntax_theme)?
     } else {
         ThemeGeneratedAssets::default()
@@ -509,6 +514,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
                 .as_ref()
                 .map(|asset| vec![slash_path(&asset.rel_path)])
                 .unwrap_or_default(),
+            config_styles: calepin_config.styles.clone(),
             syntax_theme: html_syntax_theme,
             parallelism: args.parallelism,
             typst_args: args.typst_args,
@@ -1203,6 +1209,7 @@ struct BuildContext {
     languages: Option<Vec<LanguageInfo>>,
     theme_stylesheet: Option<String>,
     theme_scripts: Vec<String>,
+    config_styles: Vec<crate::config::CssOverride>,
     syntax_theme: HtmlSyntaxTheme,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
@@ -2672,6 +2679,29 @@ fn render_documents(
     Ok(())
 }
 
+fn default_site_html_entry() -> crate::theme::HtmlEntry {
+    crate::theme::resolve_html_entry(
+        &crate::theme::ThemeSelection::Default,
+        crate::theme::HtmlScope::Site,
+    )
+    .expect("default theme must resolve")
+    .expect("default theme must provide a site entry")
+}
+
+fn html_entry_with_config_styles(
+    entry: Option<crate::theme::HtmlEntry>,
+    styles: &[crate::config::CssOverride],
+) -> Option<crate::theme::HtmlEntry> {
+    match entry {
+        Some(mut entry) => {
+            entry.append_styles(styles.to_vec());
+            Some(entry)
+        }
+        None if !styles.is_empty() => Some(crate::theme::style_only_html_entry(styles.to_vec())),
+        None => None,
+    }
+}
+
 fn render_document(
     context: &BuildContext,
     site: &SiteModel,
@@ -2705,14 +2735,27 @@ fn render_document(
     } else {
         crate::theme::resolve_html_entry(&preprocessed.theme, crate::theme::HtmlScope::Site)?
     };
-    if page_site_entry
+    let page_uses_generated_config_styles =
+        !context.config_styles.is_empty() && context.theme_stylesheet.is_some();
+    let page_links_generated_stylesheet = page_site_entry
         .as_ref()
         .is_some_and(|entry| entry.is_default)
-    {
+        || page_uses_generated_config_styles;
+    let page_site_entry = if page_uses_generated_config_styles {
+        page_site_entry.or_else(|| Some(crate::theme::style_only_html_entry(Vec::new())))
+    } else {
+        html_entry_with_config_styles(page_site_entry, &context.config_styles)
+    };
+    if page_links_generated_stylesheet {
         if let Some(stylesheet) = context.theme_stylesheet.as_deref() {
             site_context.stylesheet =
                 Some(html_escape(&page_relative_url(&current_href, stylesheet)));
         }
+    }
+    if page_site_entry
+        .as_ref()
+        .is_some_and(|entry| entry.is_default)
+    {
         site_context.scripts = context
             .theme_scripts
             .iter()
@@ -3297,6 +3340,46 @@ styles = ["styles/site.css"]
             "the site TOC should not move below page content at a desktop/tablet breakpoint"
         );
         assert!(script.content.contains("data-calepin-theme-toggle"));
+    }
+
+    #[test]
+    fn theme_generated_assets_include_config_styles_last() {
+        let mut entry = crate::theme::resolve_html_entry(
+            &crate::theme::ThemeSelection::Default,
+            crate::theme::HtmlScope::Site,
+        )
+        .unwrap()
+        .unwrap();
+        entry.append_styles(vec![crate::config::CssOverride {
+            name: "site.css".to_string(),
+            path: PathBuf::from("/project/styles/site.css"),
+            css: "/* config style */\n:root { --site: yes; }".to_string(),
+        }]);
+
+        let assets = ThemeGeneratedAssets::from_entry(&entry, &HtmlSyntaxTheme::builtin()).unwrap();
+        let stylesheet = assets.stylesheet.as_ref().unwrap();
+
+        let theme_pos = stylesheet.content.find(".calepin-website-shell").unwrap();
+        let override_pos = stylesheet.content.find("--site: yes").unwrap();
+        assert!(override_pos > theme_pos);
+    }
+
+    #[test]
+    fn html_entry_with_config_styles_uses_style_only_entry_when_theme_disabled() {
+        let entry = html_entry_with_config_styles(
+            None,
+            &[crate::config::CssOverride {
+                name: "site.css".to_string(),
+                path: PathBuf::from("/project/styles/site.css"),
+                css: ":root { --site: yes; }".to_string(),
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(entry.theme_name, "styles");
+        assert!(!entry.is_default);
+        assert_eq!(entry.styles.len(), 1);
+        assert!(entry.styles[0].1.contains("--site: yes"));
     }
 
     #[test]
