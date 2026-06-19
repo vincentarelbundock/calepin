@@ -252,6 +252,7 @@ struct WebsiteBuildResult {
     out_dir: PathBuf,
     config_path: PathBuf,
     theme_dir: Option<PathBuf>,
+    style_paths: Vec<PathBuf>,
     page_fingerprints: BTreeMap<PathBuf, u64>,
     nav_signature: u64,
     /// Hash of the pages index; when it changes, every page may render
@@ -330,6 +331,11 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config.highlight_light.as_deref(),
         config.highlight_dark.as_deref(),
     )?;
+    let style_paths = calepin_config
+        .styles
+        .iter()
+        .map(|style| style.path.clone())
+        .collect();
 
     let build_set = match &args.incremental_inputs {
         Some(inputs) => {
@@ -583,6 +589,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         out_dir,
         config_path,
         theme_dir,
+        style_paths,
         page_fingerprints,
         nav_signature,
         pages_signature,
@@ -609,6 +616,9 @@ fn watch_site(
     ];
     if let Some(theme_dir) = current.theme_dir.as_deref() {
         watches.push((theme_dir.to_path_buf(), RecursiveMode::Recursive));
+    }
+    for style_path in &current.style_paths {
+        watches.push((style_path.clone(), RecursiveMode::NonRecursive));
     }
 
     if !quiet {
@@ -665,6 +675,13 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
         if path.starts_with(theme_dir) {
             return true;
         }
+    }
+    if initial
+        .style_paths
+        .iter()
+        .any(|style_path| path == style_path)
+    {
+        return true;
     }
     // A distinct output directory only ever receives generated copies; reacting
     // to them would re-trigger the build that produced them.
@@ -3329,10 +3346,26 @@ mod tests {
             out_dir: root.to_path_buf(),
             config_path: root.join("calepin.toml"),
             theme_dir: None,
+            style_paths: Vec::new(),
             page_fingerprints: fingerprint_files(pages).unwrap(),
             nav_signature: 0,
             pages_signature: 0,
         }
+    }
+
+    fn has_command(command: &str) -> bool {
+        std::process::Command::new(command)
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+
+    fn typst_accessible_tempdir() -> tempfile::TempDir {
+        tempfile::Builder::new()
+            .prefix("calepin-website-test-")
+            .tempdir_in(env!("CARGO_MANIFEST_DIR"))
+            .unwrap()
     }
 
     fn test_page_info(src: &Path, files: &[PathBuf], pdf_files: &BTreeSet<PathBuf>) -> PageInfoMap {
@@ -3399,6 +3432,46 @@ styles = ["styles/site.css"]
         );
 
         assert_eq!(config.title, None);
+    }
+
+    #[test]
+    fn website_build_result_tracks_config_style_paths() {
+        if !has_command("typst") {
+            return;
+        }
+
+        let dir = typst_accessible_tempdir();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("styles")).unwrap();
+        std::fs::write(root.join("styles/site.css"), "body { color: red; }").unwrap();
+        std::fs::write(
+            root.join("calepin.toml"),
+            r#"
+theme = "calepin"
+styles = ["styles/site.css"]
+"#,
+        )
+        .unwrap();
+        std::fs::write(root.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
+
+        let result = build_site(WebsiteBuildOptions {
+            config: root.join("calepin.toml"),
+            src: Some(root.to_path_buf()),
+            out: Some(root.join("out")),
+            theme: None,
+            parallelism: Some(1),
+            render_pdf: Some(false),
+            quiet: true,
+            timeout: None,
+            params: Vec::new(),
+            typst_args: Vec::new(),
+            incremental_inputs: None,
+            clean: true,
+            minify_html: false,
+        })
+        .unwrap();
+
+        assert_eq!(result.style_paths, vec![root.join("styles/site.css")]);
     }
 
     #[test]
@@ -5694,6 +5767,21 @@ target = "index.typ"
         assert!(!should_rebuild_for_path(&current, &out.join("index.typ")));
         assert!(!should_rebuild_for_path(&current, &out.join("style.css")));
         assert!(should_rebuild_for_path(&current, &src.join("index.typ")));
+    }
+
+    #[test]
+    fn should_rebuild_for_path_tracks_config_style_outside_source_dir() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let style = temp.path().join("config/styles/site.css");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(style.parent().unwrap()).unwrap();
+        fs::write(&style, "body { color: red; }").unwrap();
+
+        let mut current = test_build_result(&src, &[]);
+        current.style_paths = vec![style.clone()];
+
+        assert!(should_rebuild_for_path(&current, &style));
     }
 
     #[test]
