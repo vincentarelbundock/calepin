@@ -1,4 +1,10 @@
 #import "/.calepin/calepin.typ" as calepin
+#import "@preview/marginalia:0.2.0" as marginalia
+
+#show: marginalia.setup.with(
+  outer: (far: 8mm, width: 48mm, sep: 6mm),
+  book: false,
+)
 
 #let sidenote = calepin.elements.sidenote
 #let sidefigure = calepin.elements.sidefigure

@@ -539,6 +539,25 @@ styles = ["../theme.css"]
     }
 
     #[test]
+    fn academic_notebook_installs_margin_elements_without_page_setup() {
+        let source = notebook_source(
+            &ThemeSelection::Builtin("academic"),
+            &NotebookTemplateContext::default(),
+        )
+        .unwrap()
+        .unwrap();
+
+        assert!(
+            source.source.contains("set-margin-impl"),
+            "academic paged output should keep marginalia-backed margin elements"
+        );
+        assert!(
+            !source.source.contains("#show: marginalia.setup"),
+            "academic paged output should not reserve margin space automatically"
+        );
+    }
+
+    #[test]
     fn legacy_paged_typ_jinja_still_works_for_local_themes() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(

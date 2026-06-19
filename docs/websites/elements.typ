@@ -78,6 +78,36 @@ The namespace includes a compact set of reusable elements for cards, galleries, 
   A card wraps content with matching style in HTML and paged output.
 ]
 
+== Side notes and side figures
+
+`calepin.elements.sidenote` and `calepin.elements.sidefigure` place supporting
+material in the margin. In HTML output, the built-in `academic` theme supports
+these elements directly and reserves the side column only on pages that use them.
+
+In PDF output, Calepin leaves page geometry under your control. The `academic`
+theme connects these elements to `marginalia`, but it does not automatically
+reserve a wide outer margin. Add a `marginalia.setup` rule near the top of the
+document or in a local theme when you want Tufte-style PDF margins:
+
+```typ
+#import "@preview/marginalia:0.2.0" as marginalia
+
+#show: marginalia.setup.with(
+  outer: (far: 8mm, width: 48mm, sep: 6mm),
+  book: false,
+)
+```
+
+Use `numbering: none` for an unnumbered side note.
+
+```typ
+Text#calepin.elements.sidenote[A margin note.] continues.
+
+#calepin.elements.sidefigure(caption: [A small figure.])[
+  #image("figure.svg")
+]
+```
+
 == Gallery
 
 `calepin.elements.gallery` accepts image items as tuples or dictionaries and handles local image metadata automatically in static outputs. In HTML output, it can activate lightbox behavior.
