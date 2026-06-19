@@ -1,5 +1,4 @@
-#set document(title: [Built-in themes])
-#metadata((title: "Built-in")) <website-metadata>
+#set document(title: [Built-in])
 #import "/.calepin/calepin.typ" as calepin
 
 #title()

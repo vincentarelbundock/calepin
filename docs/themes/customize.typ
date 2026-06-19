@@ -32,6 +32,8 @@ Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
 namespace. The recommended best practice is to override these tokens from project CSS
 rather than try to target the internals directly.
 
+This override uses token variables for major surfaces and then applies your own typography and border styles, while leaving all Calepin component structure intact.
+
 ```css
 /* styles/custom.css */
 :root {
@@ -52,7 +54,6 @@ pre {
 }
 ```
 
-This override uses token variables for major surfaces and then applies your own typography and border styles, while leaving all Calepin component structure intact.
 
 = Light and dark themes
 

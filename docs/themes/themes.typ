@@ -3,9 +3,11 @@
 
 #title()
 
-Themes control how _Calepin_ renders two types of content: websites and notebooks (HTML or PDF). A website theme can provide MiniJinja HTML templates, partials, CSS, JavaScript, and notebook themes add typst-side template support for HTML and PDF outputs.
+Themes control how _Calepin_ renders two types of content: websites and notebooks (HTML or PDF). A website theme can provide MiniJinja HTML templates, partials, CSS, JavaScript, and notebook themes add typst-side template support for HTML and PDF outputs. The default theme is called `calepin`. 
 
-The default theme is `calepin`. Select a different built-in or local theme with `theme` in a website's `calepin.toml`:
+= Choosing a theme
+
+Select a different built-in or local theme with `theme` in a website's `calepin.toml`:
 
 ```toml
 theme = "calepin"           # the default documentation theme

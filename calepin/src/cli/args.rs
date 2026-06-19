@@ -92,7 +92,6 @@ pub struct NewArgs {
     /// Overwrite the file if it already exists
     #[arg(short, long)]
     pub force: bool,
-
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -310,10 +309,7 @@ mod tests {
 
     #[test]
     fn test_new_website_with_output_from_positional_arg() {
-        let cli = Cli::try_parse_from([
-            "calepin", "new", "website", "my_site",
-        ])
-        .unwrap();
+        let cli = Cli::try_parse_from(["calepin", "new", "website", "my_site"]).unwrap();
 
         match cli.command {
             Command::New(args) => {
