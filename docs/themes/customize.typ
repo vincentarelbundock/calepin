@@ -19,10 +19,7 @@ extension. The setting affects HTML output only.
 
 = Style raw HTML with CSS
 
-In some contexts, it can be useful to generate raw HTML documents, and to define CSS to style
-those raw classless elements directly. One way to achieve this is to use the `typst` theme, which
-creates unstyled HTML that leaves styling fully in your project CSS. Set `theme = "typst"` when you
-do not want a bundled base theme. Configured styles still apply to HTML output:
+In some contexts, it can be useful to generate very simple HTML documents, and to define CSS to style raw classless HTML elements directly. One way to achieve this is to use the `typst` theme, which creates unstyled HTML that leaves styling fully in your project CSS. Set `theme = "typst"` when you do not want a bundled base theme. Configured styles still apply to HTML output:
 
 ```toml
 theme = "typst"
@@ -32,8 +29,8 @@ styles = ["styles/raw.css"]
 = Theme tokens
 
 Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
-namespace. Override these tokens from project CSS instead of relying on theme
-internals.
+namespace. You can override these tokens from project CSS if you want more control than the built-in
+theme defaults provide.
 
 #table(
   columns: (1.5fr, 1.5fr, 3.7fr),
