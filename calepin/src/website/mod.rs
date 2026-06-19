@@ -2710,23 +2710,15 @@ fn html_entry_with_config_styles(
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct HtmlEntryAssetKey {
-    theme_name: String,
-    layout: String,
-    partials: Vec<(String, String)>,
     styles: Vec<(String, String)>,
     scripts: Vec<(String, String)>,
-    is_default: bool,
 }
 
 impl From<&crate::theme::HtmlEntry> for HtmlEntryAssetKey {
     fn from(entry: &crate::theme::HtmlEntry) -> Self {
         Self {
-            theme_name: entry.theme_name.clone(),
-            layout: entry.layout.clone(),
-            partials: entry.partials.clone(),
             styles: entry.styles.clone(),
             scripts: entry.scripts.clone(),
-            is_default: entry.is_default,
         }
     }
 }
@@ -2745,6 +2737,9 @@ fn page_asset_decision(
     generated_scripts: &[String],
 ) -> PageAssetDecision {
     let styled_page_entry = html_entry_with_config_styles(page_entry.clone(), config_styles);
+    let page_references_site_stylesheet = styled_page_entry
+        .as_ref()
+        .is_some_and(html_entry_references_site_stylesheet);
     let matches_generated_entry =
         styled_page_entry
             .as_ref()
@@ -2752,9 +2747,7 @@ fn page_asset_decision(
             .is_some_and(|(page, generated)| {
                 HtmlEntryAssetKey::from(page) == HtmlEntryAssetKey::from(generated)
             });
-    let stylesheet = if matches_generated_entry
-        && generated_entry.is_some_and(html_entry_references_site_stylesheet)
-    {
+    let stylesheet = if matches_generated_entry && page_references_site_stylesheet {
         generated_stylesheet.map(str::to_string)
     } else {
         None
@@ -3539,6 +3532,41 @@ styles = ["styles/site.css"]
 
         assert_eq!(decision.stylesheet, None);
         assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
+    }
+
+    #[test]
+    fn page_asset_decision_reuses_generated_assets_for_matching_explicit_layout() {
+        let styles = vec![test_css_override()];
+        let generated_entry = html_entry_with_config_styles(
+            crate::theme::resolve_html_entry(
+                &crate::theme::ThemeSelection::Default,
+                crate::theme::HtmlScope::Site,
+            )
+            .unwrap(),
+            &styles,
+        )
+        .unwrap();
+        let page_entry = crate::theme::resolve_explicit_site_html_entry(
+            &crate::theme::ThemeSelection::Default,
+            "layouts/landing.html",
+        )
+        .unwrap();
+        let scripts = vec![".calepin/calepin-website.calepin.js".to_string()];
+
+        let decision = page_asset_decision(
+            page_entry,
+            &styles,
+            Some(&generated_entry),
+            Some(".calepin/calepin-website.calepin.css"),
+            &scripts,
+        );
+
+        assert_eq!(
+            decision.stylesheet.as_deref(),
+            Some(".calepin/calepin-website.calepin.css")
+        );
+        assert_eq!(decision.scripts, scripts);
+        assert_config_style_count(decision.html_entry.as_ref().unwrap(), 0);
     }
 
     fn test_css_override() -> crate::config::CssOverride {
