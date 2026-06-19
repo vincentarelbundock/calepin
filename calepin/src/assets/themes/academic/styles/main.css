@@ -51,13 +51,6 @@
   padding-block: 2.4rem 4rem;
 }
 
-body:has(.academic-document-main .calepin-sidenote) .academic-document-topbar,
-body:has(.academic-document-main .calepin-sidefigure) .academic-document-topbar,
-body:has(.academic-document-main .calepin-sidenote) .academic-document-main,
-body:has(.academic-document-main .calepin-sidefigure) .academic-document-main {
-  width: min(100% - 2rem, var(--calepin-page-width));
-}
-
 .academic-document-main > :not(.fullwidth):not(.full-width):not(.calepin-figure-grid) {
   max-width: var(--calepin-content-width);
 }
