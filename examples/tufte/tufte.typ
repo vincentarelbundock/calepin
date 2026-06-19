@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
-#let elements = calepin.elements
+#let sidenote = calepin.elements.sidenote
+#let sidefigure = calepin.elements.sidefigure
 
 #let setup(
   title: none,
@@ -68,7 +69,7 @@ are items, and the observed entries are ratings. A rank #rank-k model writes
 
 where #user-vector is a user vector, #item-vector is an item vector, and
 #global-mean is the global average rating. The dot product is large when the
-user and item point in similar latent directions.#elements.sidenote(numbering: auto)[The sign and
+user and item point in similar latent directions.#sidenote(numbering: auto)[The sign and
 rotation of the latent dimensions are not identified. What matters for
 prediction is the dot product, not a unique interpretation of each axis.]
 
@@ -142,7 +143,7 @@ plt.tight_layout()
 
 In HTML output, this figure is a useful asset-inlining check: a self-contained
 render should embed the generated PNG directly in the page instead of linking
-to a file under `.calepin/`.#calepin.elements.sidenote(numbering: auto)[#lorem(25)]
+to a file under `.calepin/`.#sidenote(numbering: none)[#lorem(25)]
 
 == Fitting a rank-2 model
 
@@ -204,7 +205,7 @@ for epoch, value in checkpoints:
     print(f"epoch {epoch:4d}: observed RMSE = {value:.3f}")
 ```
 
-#elements.sidefigure[
+#sidefigure[
 #chunk("python", echo: false, results: "typst")[```python
 def cell(value):
     return f"[{value}]"

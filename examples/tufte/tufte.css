@@ -4,13 +4,9 @@
  * Sidenotes and side figures use `academic`'s existing classes.
  */
 
-:root {
+:root, html[data-theme="light"] {
   --calepin-font-body: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --calepin-font-heading: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --calepin-heading-weight: 400;
-  --calepin-font-size: 112.5%;
-  --calepin-margin-width: 280px;
-  --calepin-margin-gap: 40px;
   --calepin-surface-code: #fffdf0;
   --calepin-surface-output: #fffdf0;
   --calepin-surface: #fffdf0;
@@ -24,12 +20,7 @@
   --calepin-color-link-hover: #5f2520;
 }
 
-html[data-theme="light"] {
-  color-scheme: light;
-}
-
 html[data-theme="dark"] {
-  color-scheme: dark;
   --calepin-color-background: #18130d;
   --calepin-color-text: #f6efe8;
   --calepin-color-muted: #c5baa7;
@@ -44,16 +35,20 @@ html[data-theme="dark"] {
 }
 
 html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
+
+html,
+body {
+  color-scheme: light dark !important;
   background: var(--calepin-color-background);
   color: var(--calepin-color-text);
-  overflow-x: hidden;
+  font-family: var(--calepin-font-body);
 }
 
 body {
   margin: 0;
-  background: var(--calepin-color-background);
-  color: var(--calepin-color-text);
-  font-family: var(--calepin-font-body);
   overflow-x: hidden;
   font-size: var(--calepin-font-size);
 }
@@ -85,6 +80,15 @@ figcaption {
   line-height: 1.35;
 }
 
+.calepin-content .fullwidth,
+.calepin-content .full-width,
+.calepin-content figure.fullwidth,
+.calepin-content figure.full-width {
+  width: min(100% - 2rem, var(--calepin-page-width));
+  max-width: var(--calepin-page-width);
+}
+
+
 .calepin-math-inline {
   font-style: italic;
   white-space: nowrap;
@@ -102,21 +106,6 @@ figcaption {
 
 [role="doc-noteref"] {
   color: var(--calepin-color-accent);
-}
-
-.cell-output {
-  background: var(--calepin-surface-output);
-  border: 1px solid #ded8ca;
-  border-left: 3px solid #b6aa90;
-  border-radius: 4px;
-  color: #2f2b25;
-}
-
-.cell-output-stderr {
-  background: #fff6f2;
-  border-color: #d9b8a9;
-  border-left-color: #9f4b3e;
-  color: #5d2d27;
 }
 
 section[role="doc-endnotes"] {

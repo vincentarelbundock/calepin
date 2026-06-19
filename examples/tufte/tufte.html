@@ -1,0 +1,2158 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Matrix factorization with Calepin</title><style>/* Alignment */
+mtable.right-align mtd,
+mtable mtd.right-align,
+mtable.left-align mtd.right-align,
+mtable.aligned mtd:nth-child(odd) {
+  justify-items: end;
+  text-align: right;
+}
+mtable.cases mtd,
+mtable.left-align mtd,
+mtable mtd.left-align,
+mtable.aligned mtd:nth-child(even),
+math:is(:not([display])) > mtable.multiline-equation mtd {
+  justify-items: start;
+  text-align: left;
+}
+mtable.cases mtd,
+mtable.aligned mtd,
+mtable mtd.flushed,
+mtable mtd.left-flush {
+  padding-left: 0;
+}
+mtable.cases mtd,
+mtable.aligned mtd,
+mtable mtd.flushed,
+mtable mtd.right-flush {
+  padding-right: 0;
+}
+
+/* Tables */
+mtable {
+  math-style: inherit;
+}
+mtd {
+  math-depth: auto-add;
+  math-style: compact;
+  math-shift: compact;
+}
+
+/* Equations */
+mtable.multiline-equation mtd {
+  math-depth: inherit;
+  math-style: inherit;
+  math-shift: inherit;
+  padding: 0;
+}
+math > mtable.multiline-equation mtr:not(:last-child) mtd {
+  padding-bottom: 0.5em;
+}
+
+/* Fractions */
+mfrac {
+  padding-inline: 0;
+  margin-inline: 0.1em;
+}
+
+/* Accents */
+mover[accent="true" i] > :first-child {
+  font-feature-settings: "dtls";
+}
+mover.dotted[accent="true" i] > :first-child {
+  font-feature-settings: "dtls" 0;
+}
+
+/* Other rules for scriptlevel, displaystyle and math-shift */
+munder > :nth-child(2),
+munderover > :nth-child(2) {
+  math-shift: compact
+}
+munder[accentunder="true" i] > :not(:first-child),
+mover[accent="true" i] > :not(:first-child) {
+  math-depth: inherit;
+  math-style: inherit;
+  math-shift: inherit;
+}</style>
+
+
+    <meta name="color-scheme" content="light dark">
+    <script>
+(() => {
+  "use strict";
+  const storageKey = "calepin-academic-document-theme";
+  const param = "";
+  const normalize = (value) => (value === "light" || value === "dark" ? value : "");
+  const root = document.documentElement;
+  const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  const systemTheme = () => media && media.matches ? "dark" : "light";
+
+  let mode = "";
+  if (param) {
+    try {
+      mode = normalize(new URL(window.location.href).searchParams.get(param) || "");
+    } catch {
+      mode = "";
+    }
+  }
+
+  if (!mode) {
+    try {
+      mode = normalize(localStorage.getItem(storageKey) || "");
+    } catch {
+      mode = "";
+    }
+  }
+
+  const theme = mode || systemTheme();
+  root.dataset.calepinThemeMode = mode;
+  root.dataset.theme = theme;
+  root.style.colorScheme = theme;
+})();
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
+
+:root {
+  color-scheme: light;
+
+  /* Color */
+  --calepin-color-background: #ffffff;
+  --calepin-color-text: #1f2933;
+  --calepin-color-muted: #5f6b7a;
+  --calepin-color-border: #d8dee6;
+  --calepin-color-accent: #1c9bad;
+  --calepin-color-accent-hover: #16808f;
+  --calepin-color-accent-soft: rgba(28, 155, 173, 0.12);
+  --calepin-color-accent-soft: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+  --calepin-color-accent-contrast: #ffffff;
+  --calepin-color-link: var(--calepin-color-accent);
+  --calepin-color-link-hover: var(--calepin-color-accent-hover);
+  --calepin-color-focus: var(--calepin-color-accent);
+  --calepin-color-selection: rgba(28, 155, 173, 0.24);
+  --calepin-color-selection: color-mix(in srgb, var(--calepin-color-accent) 24%, transparent);
+  --calepin-color-info: #1c7ed6;
+  --calepin-color-success: #2e7d32;
+  --calepin-color-warning: #b26a00;
+  --calepin-color-danger: #b3261e;
+  --calepin-color-important: #7c3aed;
+  --calepin-color-info-soft: rgba(28, 126, 214, 0.12);
+  --calepin-color-info-soft: color-mix(in srgb, var(--calepin-color-info) 12%, transparent);
+  --calepin-color-success-soft: rgba(46, 125, 50, 0.12);
+  --calepin-color-success-soft: color-mix(in srgb, var(--calepin-color-success) 12%, transparent);
+  --calepin-color-warning-soft: rgba(178, 106, 0, 0.14);
+  --calepin-color-warning-soft: color-mix(in srgb, var(--calepin-color-warning) 14%, transparent);
+  --calepin-color-danger-soft: rgba(179, 38, 30, 0.12);
+  --calepin-color-danger-soft: color-mix(in srgb, var(--calepin-color-danger) 12%, transparent);
+  --calepin-color-important-soft: rgba(124, 58, 237, 0.12);
+  --calepin-color-important-soft: color-mix(in srgb, var(--calepin-color-important) 12%, transparent);
+
+  /* Callouts */
+  --calepin-callout-note-color: var(--calepin-color-info);
+  --calepin-callout-tip-color: var(--calepin-color-success);
+  --calepin-callout-warning-color: var(--calepin-color-warning);
+  --calepin-callout-caution-color: var(--calepin-color-danger);
+  --calepin-callout-important-color: var(--calepin-color-important);
+
+  /* Surfaces */
+  --calepin-surface: #ffffff;
+  --calepin-surface-muted: #f4f7f9;
+  --calepin-surface-raised: #ffffff;
+  --calepin-surface-inset: #eef3f6;
+  --calepin-surface-code: #f7f7f5;
+  --calepin-surface-output: var(--calepin-surface-muted);
+
+  /* Typography */
+  --calepin-font-body: var(--pico-font-family);
+  --calepin-font-heading: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+  --calepin-font-mono: var(--pico-font-family-monospace);
+  --calepin-font-size: 100%;
+  --calepin-font-size-sm: 0.875rem;
+  --calepin-font-size-aside: 0.84rem;
+  --calepin-line-height: 1.65;
+  --calepin-line-height-tight: 1.25;
+  --calepin-heading-weight: 700;
+  --calepin-code-font-size: 0.92em;
+
+  /* Spacing */
+  --calepin-space-xs: 0.5rem;
+  --calepin-space-sm: 0.75rem;
+  --calepin-space-md: 1rem;
+  --calepin-space-lg: 1.5rem;
+  --calepin-space-xl: 2rem;
+  --calepin-space-2xl: 3rem;
+  --calepin-block-gap: var(--calepin-space-lg);
+  --calepin-inline-gap: var(--calepin-space-md);
+  --calepin-section-gap: var(--calepin-space-2xl);
+
+  /* Layout */
+  --calepin-content-width: 39rem;
+  --calepin-wide-width: 68rem;
+  --calepin-page-width: var(--calepin-wide-width);
+  --calepin-margin-width: 11.5rem;
+  --calepin-margin-gap: 2rem;
+  --calepin-page-padding-inline: clamp(1rem, 4vw, 2rem);
+  --pico-font-size: 100%;
+  --calepin-radius-sm: 0.25rem;
+  --calepin-radius-md: 0.5rem;
+  --calepin-radius-lg: 0.75rem;
+  --calepin-border-width: 1px;
+  --calepin-border: var(--calepin-border-width) solid var(--calepin-color-border);
+  --calepin-topbar-height: 3.5rem;
+  --calepin-sidebar-width: 12rem;
+  --calepin-shell-gap: 1.5rem;
+  --calepin-shadow-card: 0 10px 30px color-mix(in srgb, var(--calepin-color-text) 8%, transparent);
+  --calepin-focus-ring: 0 0 0 3px color-mix(in srgb, var(--calepin-color-focus) 28%, transparent);
+
+  /* Layers */
+  --calepin-z-topbar: 20;
+  --calepin-z-backdrop: 25;
+  --calepin-z-drawer: 30;
+  --calepin-z-popover: 40;
+  --calepin-z-modal: 50;
+
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --calepin-color-background: #111820;
+  --calepin-color-text: #d8dee9;
+  --calepin-color-muted: #9aa7b6;
+  --calepin-color-border: #344252;
+  --calepin-color-accent: #67d4df;
+  --calepin-color-accent-hover: #8be4ec;
+  --calepin-color-accent-contrast: #071316;
+  --calepin-color-link: var(--calepin-color-accent);
+  --calepin-color-link-hover: var(--calepin-color-accent-hover);
+  --calepin-color-focus: var(--calepin-color-accent);
+  --calepin-color-info: #74c0fc;
+  --calepin-color-success: #8ce99a;
+  --calepin-color-warning: #ffd43b;
+  --calepin-color-danger: #ff8787;
+  --calepin-color-important: #b197fc;
+  --calepin-surface: #17202a;
+  --calepin-surface-muted: #202b36;
+  --calepin-surface-raised: #1d2833;
+  --calepin-surface-inset: #101820;
+  --calepin-surface-code: #151d26;
+  --calepin-surface-output: var(--calepin-surface-muted);
+  --calepin-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --pico-font-size: 106.25%;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    color-scheme: dark;
+    --calepin-color-background: #111820;
+    --calepin-color-text: #d8dee9;
+    --calepin-color-muted: #9aa7b6;
+    --calepin-color-border: #344252;
+    --calepin-color-accent: #67d4df;
+    --calepin-color-accent-hover: #8be4ec;
+    --calepin-color-accent-contrast: #071316;
+    --calepin-color-link: var(--calepin-color-accent);
+    --calepin-color-link-hover: var(--calepin-color-accent-hover);
+    --calepin-color-focus: var(--calepin-color-accent);
+    --calepin-color-info: #74c0fc;
+    --calepin-color-success: #8ce99a;
+    --calepin-color-warning: #ffd43b;
+    --calepin-color-danger: #ff8787;
+    --calepin-color-important: #b197fc;
+    --calepin-surface: #17202a;
+    --calepin-surface-muted: #202b36;
+    --calepin-surface-raised: #1d2833;
+    --calepin-surface-inset: #101820;
+    --calepin-surface-code: #151d26;
+    --calepin-surface-output: var(--calepin-surface-muted);
+    --calepin-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.22);
+  }
+}
+
+:root,
+html[data-theme="light"],
+html[data-theme="dark"] {
+  --pico-background-color: var(--calepin-color-background);
+  --pico-color: var(--calepin-color-text);
+  --pico-muted-color: var(--calepin-color-muted);
+  --pico-muted-border-color: var(--calepin-color-border);
+  --pico-card-background-color: var(--calepin-surface-raised);
+  --pico-card-sectioning-background-color: var(--calepin-surface-muted);
+  --pico-code-background-color: var(--calepin-surface-code);
+  --pico-code-color: var(--calepin-color-text);
+  --pico-primary: var(--calepin-color-accent);
+  --pico-primary-background: var(--calepin-color-accent);
+  --pico-primary-border: var(--calepin-color-accent);
+  --pico-primary-underline: transparent;
+  --pico-primary-hover: var(--calepin-color-accent-hover);
+  --pico-primary-hover-background: var(--calepin-color-accent-hover);
+  --pico-primary-hover-border: var(--calepin-color-accent-hover);
+  --pico-primary-hover-underline: transparent;
+  --pico-primary-focus: color-mix(in srgb, var(--calepin-color-focus) 40%, transparent);
+  --pico-primary-inverse: var(--calepin-color-accent-contrast);
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-text);
+  font-family: var(--calepin-font-body);
+}
+
+body {
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-text);
+  font-family: var(--calepin-font-body);
+  font-variant-numeric: oldstyle-nums;
+}
+
+a,
+a:hover,
+a:focus,
+a:focus-visible,
+a:active,
+a:visited {
+  color: var(--calepin-color-link);
+  text-decoration: none;
+}
+
+a:hover,
+a:focus,
+a:focus-visible,
+a:active {
+  color: var(--calepin-color-link-hover);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--calepin-font-heading);
+  font-weight: var(--calepin-heading-weight);
+  margin-top: 2rem;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: var(--calepin-line-height-tight);
+  margin-bottom: 1.15rem;
+}
+
+h2 {
+  margin-top: 2.8rem;
+  font-size: 1.55rem;
+}
+
+h3 {
+  margin-top: 2.1rem;
+  font-size: 1.2rem;
+}
+
+.calepin-content :where(p, li, dd) {
+  line-height: var(--calepin-line-height);
+}
+
+.calepin-content {
+  min-width: 0;
+}
+
+.calepin-content > :first-child {
+  margin-top: 0;
+}
+
+.calepin-content img,
+.calepin-content svg,
+.calepin-content video,
+.calepin-content canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.calepin-content math[display="block"] {
+  margin-block: var(--calepin-block-gap);
+}
+
+figure {
+  text-align: center;
+}
+
+figure > img {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.calepin-content figure {
+  margin: var(--calepin-block-gap) 0;
+}
+
+.calepin-content figcaption {
+  max-width: 34rem;
+  margin-top: 0.6rem;
+  color: var(--calepin-color-muted);
+  font-size: var(--calepin-font-size-sm);
+  line-height: 1.45;
+}
+
+.calepin-content .fullwidth,
+.calepin-content .full-width,
+.calepin-content figure.fullwidth,
+.calepin-content figure.full-width {
+  width: min(100vw - 2rem, var(--calepin-page-width));
+  max-width: var(--calepin-page-width);
+}
+
+.calepin-content blockquote {
+  margin: var(--calepin-block-gap) 0;
+  padding: 0.15rem 0 0.15rem 1.1rem;
+  border-left: 2px solid var(--calepin-color-accent);
+  color: var(--calepin-color-muted);
+}
+
+.calepin-content .calepin-float-right {
+  float: right;
+  width: min(32%, 12rem);
+  height: auto;
+  margin: 0.25rem 0 1rem 1.25rem;
+  border-radius: var(--calepin-radius-md);
+}
+
+.calepin-content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin-block: var(--calepin-block-gap);
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.calepin-content th,
+.calepin-content td {
+  padding: 0.45rem 0.65rem;
+  border-bottom: var(--calepin-border-width) solid var(--calepin-color-border);
+  vertical-align: top;
+}
+
+.calepin-content th {
+  font-weight: 700;
+}
+
+.calepin-landing,
+.calepin-landing-page {
+  width: 100%;
+  margin: 0;
+}
+
+.calepin-landing > :first-child,
+.calepin-landing-page > :first-child {
+  margin-top: 0;
+}
+
+.landing-button,
+.landing-button:visited {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
+  border: var(--calepin-border);
+  border-radius: var(--calepin-radius-md);
+  color: inherit;
+  font-weight: 650;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.landing-button-primary,
+.landing-button-primary:visited {
+  border-color: var(--calepin-color-accent);
+  background: var(--calepin-color-accent);
+  color: var(--calepin-color-accent-contrast);
+}
+
+.landing-button-primary:hover,
+.landing-button-primary:focus-visible {
+  border-color: var(--calepin-color-accent-hover);
+  background: var(--calepin-color-accent-hover);
+  color: var(--calepin-color-accent-contrast);
+}
+
+.landing-button-secondary,
+.landing-button-secondary:visited {
+  border-color: var(--calepin-color-border);
+  background: var(--calepin-surface);
+  color: inherit;
+}
+
+.landing-button-secondary:hover,
+.landing-button-secondary:focus-visible {
+  border-color: color-mix(in srgb, var(--calepin-color-accent) 50%, var(--calepin-color-border));
+  color: var(--calepin-color-accent-hover);
+}
+
+.landing-command-row,
+.landing-cta-row,
+.landing-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--calepin-space-sm);
+  align-items: center;
+}
+
+.landing-command-row code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  border: var(--calepin-border);
+  border-radius: var(--calepin-radius-md);
+  background: var(--calepin-surface-muted);
+  color: var(--calepin-color-text);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.landing-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--calepin-space-lg);
+  margin-block: var(--calepin-section-gap);
+}
+
+.landing-panel {
+  padding-block: var(--calepin-space-md);
+  border-top: var(--calepin-border);
+}
+
+.landing-checklist {
+  padding-left: 1.1rem;
+}
+
+@media (max-width: 48rem) {
+  h1 {
+    font-size: 1.9rem;
+  }
+
+  .landing-two-column {
+    grid-template-columns: 1fr;
+  }
+
+  .calepin-content .calepin-float-right {
+    float: none;
+    display: block;
+    width: min(100%, 16rem);
+    margin: 0.75rem auto 1.2rem;
+  }
+}
+
+    </style>
+<style>
+:root {
+  --calepin-syntax-foreground: #003b4f;
+  --calepin-syntax-background: #f7f7f5;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --scope-1-foreground: #4759ab;
+  --scope-2-foreground: #ad0000;
+  --scope-3-foreground: #5e5e5e;
+  --scope-4-foreground: #5e5e5e;
+  --scope-5-foreground: #667321;
+  --scope-6-foreground: #003b4f;
+  --scope-6-font-weight: 700;
+  --fallback-7-foreground: #003b4f;
+  --fallback-8-foreground: #003b4f;
+  --fallback-9-foreground: #ad0000;
+  --fallback-10-foreground: #003b4f;
+  --fallback-11-foreground: #5e5e5e;
+  --fallback-12-foreground: #667321;
+
+}
+
+div.sourceCode,
+pre.sourceCode,
+.cell-output,
+.cell-output-stdout,
+.cell-output-stderr {
+  position: relative;
+  display: flow-root;
+}
+
+pre {
+  background: var(--calepin-surface-code);
+  border-radius: var(--calepin-radius-sm);
+  color: var(--calepin-color-text);
+  overflow: auto;
+  padding: var(--calepin-space-md);
+}
+
+pre > code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.sourceCode .calepin-syntax-scope-1,
+pre code .calepin-syntax-scope-1 {
+  color: var(--scope-1-foreground);
+}
+
+.sourceCode .calepin-syntax-scope-2,
+pre code .calepin-syntax-scope-2 {
+  color: var(--scope-2-foreground);
+}
+
+.sourceCode .calepin-syntax-scope-3,
+pre code .calepin-syntax-scope-3 {
+  color: var(--scope-3-foreground);
+}
+
+.sourceCode .calepin-syntax-scope-4,
+pre code .calepin-syntax-scope-4 {
+  color: var(--scope-4-foreground);
+}
+
+.sourceCode .calepin-syntax-scope-5,
+pre code .calepin-syntax-scope-5 {
+  color: var(--scope-5-foreground);
+}
+
+.sourceCode .calepin-syntax-scope-6,
+pre code .calepin-syntax-scope-6 {
+  color: var(--scope-6-foreground);
+  font-weight: var(--scope-6-font-weight);
+}
+
+.sourceCode .calepin-syntax-fallback-7,
+pre code .calepin-syntax-fallback-7 {
+  color: var(--fallback-7-foreground);
+}
+
+.sourceCode .calepin-syntax-fallback-8,
+pre code .calepin-syntax-fallback-8 {
+  color: var(--fallback-8-foreground);
+}
+
+.sourceCode .calepin-syntax-fallback-9,
+pre code .calepin-syntax-fallback-9 {
+  color: var(--fallback-9-foreground);
+}
+
+.sourceCode .calepin-syntax-fallback-10,
+pre code .calepin-syntax-fallback-10 {
+  color: var(--fallback-10-foreground);
+}
+
+.sourceCode .calepin-syntax-fallback-11,
+pre code .calepin-syntax-fallback-11 {
+  color: var(--fallback-11-foreground);
+}
+
+.sourceCode .calepin-syntax-fallback-12,
+pre code .calepin-syntax-fallback-12 {
+  color: var(--fallback-12-foreground);
+}
+
+
+
+pre.numberSource code > span > a:first-child::before {
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
+:is(.cell-output, .cell-output-stdout, .cell-output-stderr) pre {
+  border-left: var(--calepin-border-width) solid var(--calepin-color-border);
+}
+
+.calepin-copy-code {
+  appearance: none;
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--calepin-radius-sm);
+  background: rgba(31, 41, 51, 0.07);
+  color: rgba(31, 41, 51, 0.58);
+  box-shadow: none;
+  opacity: 0.62;
+  cursor: pointer;
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+div.sourceCode:hover .calepin-copy-code,
+.cell-output:hover .calepin-copy-code,
+.cell-output-stdout:hover .calepin-copy-code,
+.cell-output-stderr:hover .calepin-copy-code,
+.calepin-copy-code:focus-visible {
+  background: rgba(31, 41, 51, 0.12);
+  color: rgba(31, 41, 51, 0.82);
+  opacity: 1;
+}
+
+.calepin-copy-code svg {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+.calepin-copy-code.copied {
+  background: rgba(31, 122, 77, 0.12);
+  color: #1f7a4d;
+  opacity: 1;
+}
+
+html[data-theme="dark"] {
+  --calepin-syntax-foreground: #d8e7ef;
+  --calepin-syntax-background: #161b22;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --scope-1-foreground: #9db8ff;
+  --scope-2-foreground: #ffb3a7;
+  --scope-3-foreground: #b5bdc9;
+  --scope-4-foreground: #b5bdc9;
+  --scope-5-foreground: #c3d86c;
+  --scope-6-foreground: #d8e7ef;
+  --scope-6-font-weight: 700;
+  --fallback-7-foreground: #d8e7ef;
+  --fallback-8-foreground: #d8e7ef;
+  --fallback-9-foreground: #ffb3a7;
+  --fallback-10-foreground: #d8e7ef;
+  --fallback-11-foreground: #b5bdc9;
+  --fallback-12-foreground: #c3d86c;
+
+}
+
+html[data-theme="dark"] .calepin-copy-code {
+  background: rgba(216, 222, 233, 0.08);
+  color: rgba(216, 222, 233, 0.68);
+}
+
+html[data-theme="dark"] div.sourceCode:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output-stdout:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output-stderr:hover .calepin-copy-code,
+html[data-theme="dark"] .calepin-copy-code:focus-visible {
+  background: rgba(216, 222, 233, 0.14);
+  color: rgba(216, 222, 233, 0.92);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+  --calepin-syntax-foreground: #d8e7ef;
+  --calepin-syntax-background: #161b22;
+  --calepin-syntax-border: color-mix(in srgb, var(--calepin-syntax-foreground) 18%, var(--calepin-syntax-background));
+  --scope-1-foreground: #9db8ff;
+  --scope-2-foreground: #ffb3a7;
+  --scope-3-foreground: #b5bdc9;
+  --scope-4-foreground: #b5bdc9;
+  --scope-5-foreground: #c3d86c;
+  --scope-6-foreground: #d8e7ef;
+  --scope-6-font-weight: 700;
+  --fallback-7-foreground: #d8e7ef;
+  --fallback-8-foreground: #d8e7ef;
+  --fallback-9-foreground: #ffb3a7;
+  --fallback-10-foreground: #d8e7ef;
+  --fallback-11-foreground: #b5bdc9;
+  --fallback-12-foreground: #c3d86c;
+
+  }
+
+  html:not([data-theme]) .calepin-copy-code {
+    background: rgba(216, 222, 233, 0.08);
+    color: rgba(216, 222, 233, 0.68);
+  }
+
+  html:not([data-theme]) div.sourceCode:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output-stdout:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output-stderr:hover .calepin-copy-code,
+  html:not([data-theme]) .calepin-copy-code:focus-visible {
+    background: rgba(216, 222, 233, 0.14);
+    color: rgba(216, 222, 233, 0.92);
+  }
+}
+
+    </style>
+<style>
+[data-calepin-theme-toggle],
+.calepin-nav-toggle {
+  min-width: 0;
+  border: 0;
+  border-radius: var(--calepin-radius-sm);
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-size: 0.82rem;
+}
+
+[data-calepin-theme-toggle] {
+  display: inline-grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  line-height: 1;
+}
+
+[data-calepin-theme-toggle]:hover,
+[data-calepin-theme-toggle]:focus,
+[data-calepin-theme-toggle]:active,
+.calepin-nav-toggle:hover,
+.calepin-nav-toggle:focus,
+.calepin-nav-toggle:active {
+  border: 0;
+  background: var(--calepin-color-accent-soft);
+  box-shadow: none;
+  color: inherit;
+}
+
+[data-calepin-theme-toggle]:focus-visible,
+.calepin-nav-toggle:focus-visible {
+  outline: 2px solid var(--calepin-color-focus);
+  outline-offset: 2px;
+}
+
+[data-calepin-theme-toggle] svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: inherit;
+  stroke: currentColor;
+  fill: none;
+}
+
+[data-calepin-theme-toggle] svg path[fill="currentColor"] {
+  fill: currentColor;
+}
+
+.calepin-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  width: 1.05em;
+  height: 1.05em;
+  flex: 0 0 auto;
+}
+
+.calepin-nav-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+a:has(.calepin-nav-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.calepin-site-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--calepin-z-topbar);
+  min-height: var(--calepin-topbar-height);
+  border-bottom: var(--calepin-border);
+  background: color-mix(in srgb, var(--calepin-color-background) 94%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.calepin-site-nav {
+  min-height: var(--calepin-topbar-height);
+  gap: 1rem;
+}
+
+.calepin-site-brand {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: inherit;
+  font-family: var(--calepin-font-heading);
+  font-weight: var(--calepin-heading-weight);
+  text-decoration: none;
+}
+
+.calepin-site-logo {
+  display: block;
+  width: auto;
+  max-height: 1.8rem;
+}
+
+.calepin-site-topbar a,
+.calepin-site-topbar a:hover,
+.calepin-site-topbar a:focus,
+.calepin-site-topbar a:focus-visible,
+.calepin-site-topbar a:active,
+.calepin-site-topbar a:visited,
+.calepin-site-topbar a.active,
+.calepin-site-topbar a[aria-current] {
+  color: inherit;
+  text-decoration: none;
+}
+
+.calepin-site-menu a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0.1rem 0;
+  border-bottom: 1px solid transparent;
+  color: inherit;
+  font-size: 0.92rem;
+}
+
+.calepin-site-menu a:hover,
+.calepin-site-menu a:focus-visible,
+.calepin-site-menu a.active,
+.calepin-site-menu a[aria-current] {
+  border-bottom-color: var(--calepin-color-accent);
+  color: inherit;
+}
+
+.calepin-nav-toggle {
+  display: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  gap: 0.22rem;
+}
+
+.calepin-nav-toggle span {
+  display: block;
+  width: 1.05rem;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.calepin-language-picker.dropdown {
+  margin: 0;
+  width: max-content;
+}
+
+.calepin-language-picker-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: max-content;
+  max-width: none;
+  border: 0;
+  padding-inline: 0.65rem;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.calepin-language-picker-button:hover,
+.calepin-language-picker-button:focus,
+.calepin-language-picker-button:active {
+  border: 0;
+  background: color-mix(in srgb, var(--calepin-color-muted) 10%, transparent);
+  box-shadow: none;
+  color: inherit;
+}
+
+.calepin-language-picker-button::after {
+  display: none;
+}
+
+.calepin-language-picker-button span,
+.calepin-language-picker-menu a span {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.calepin-language-picker-menu a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: max-content;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.calepin-language-picker-menu {
+  min-width: 100%;
+  width: max-content;
+}
+
+.calepin-language-picker-menu a[aria-current="true"] {
+  background: var(--calepin-surface-muted);
+}
+
+    </style>
+<style>
+:root {
+  --calepin-page-width: calc(var(--calepin-content-width) + var(--calepin-margin-gap) + var(--calepin-margin-width));
+}
+
+.academic-document-topbar {
+  display: flex;
+  justify-content: flex-end;
+  width: min(100% - 2rem, var(--calepin-page-width));
+  margin-inline: auto;
+  border-bottom: 0;
+}
+
+.academic-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  width: min(100% - 2rem, var(--calepin-page-width));
+  margin-inline: auto;
+}
+
+.academic-brand {
+  font-size: 1.2rem;
+}
+
+.academic-menu {
+  display: contents;
+}
+
+.academic-language-picker {
+  width: auto;
+  min-width: 7rem;
+  margin: 0;
+  padding: 0.3rem 1.8rem 0.3rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.academic-page {
+  width: min(100% - 2rem, var(--calepin-content-width));
+  margin-inline: auto;
+  padding-block: 3.2rem 4rem;
+}
+
+.academic-main {
+  width: min(100%, var(--calepin-content-width));
+}
+
+.academic-document-main {
+  width: min(100% - 2rem, var(--calepin-page-width));
+  margin-inline: auto;
+  padding-block: 2.4rem 4rem;
+}
+
+.academic-document-main > :not(.fullwidth):not(.full-width):not(.calepin-figure-grid) {
+  max-width: var(--calepin-content-width);
+}
+
+.academic-document-main > .calepin-figure-width {
+  margin-inline: 0 auto !important;
+  max-width: var(--calepin-content-width) !important;
+}
+
+.calepin-sidenote,
+.calepin-sidefigure {
+  display: block;
+  float: right;
+  clear: right;
+  width: var(--calepin-margin-width);
+  margin: 0.25rem calc(-1 * (var(--calepin-margin-width) + var(--calepin-margin-gap))) 1rem var(--calepin-margin-gap);
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  scroll-margin-top: calc(var(--calepin-topbar-height) + 1rem);
+}
+
+.calepin-sidenote p,
+.calepin-sidefigure figcaption {
+  margin: 0 0 0.7rem;
+  line-height: inherit;
+}
+
+.calepin-sidenote-numbered::before {
+  content: "[" attr(data-sidenote-number) "]";
+  display: inline-block;
+  margin-right: 0.28rem;
+  color: var(--calepin-color-accent);
+  font-size: 0.82em;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* In-text marker for a numbered sidenote. The number is emitted by the sidenote
+   element; CSS only renders it as a superscript. */
+[role="doc-noteref"] {
+  color: var(--calepin-color-accent);
+  font-size: 0.75em;
+  font-weight: 600;
+  vertical-align: super;
+  line-height: 0;
+  text-decoration: none;
+}
+
+/* A figure, table, or code output placed in the margin. */
+.calepin-sidefigure {
+  margin-top: 0.4rem;
+}
+
+.calepin-sidefigure figure,
+.calepin-sidefigure img,
+.calepin-sidefigure svg,
+.calepin-sidefigure table {
+  width: 100%;
+  margin: 0;
+}
+
+.calepin-sidefigure table {
+  font-size: 0.8rem;
+}
+
+.academic-page-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  width: min(100% - 2rem, var(--calepin-page-width));
+  margin: 0 auto 4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--calepin-color-border);
+}
+
+.academic-page-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.academic-page-nav-link-next {
+  grid-column: 2;
+  justify-self: end;
+  text-align: right;
+}
+
+.academic-page-nav-link:hover,
+.academic-page-nav-link:focus-visible {
+  color: var(--calepin-color-accent);
+}
+
+.academic-landing {
+  width: min(100% - 2rem, var(--calepin-page-width));
+  margin-inline: auto;
+  padding-block: 3rem 5rem;
+}
+
+.academic-landing .landing-hero {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 1rem;
+  max-width: var(--calepin-content-width);
+  min-height: min(52vh, 32rem);
+  border-bottom: 1px solid var(--calepin-color-border);
+}
+
+.academic-landing .landing-hero h1,
+.academic-landing .landing-hero h2 {
+  margin: 0;
+}
+
+@media (max-width: 56rem) {
+  .calepin-sidenote,
+  .calepin-sidefigure {
+    display: block;
+    float: none;
+    width: auto;
+    margin: 0.75rem 0 1.2rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--calepin-color-border);
+    border-radius: var(--calepin-radius-sm);
+    background: var(--calepin-surface-muted);
+  }
+}
+
+@media (max-width: 48rem) {
+  .academic-nav {
+    position: relative;
+  }
+
+  .academic-nav-toggle {
+    display: inline-grid;
+    margin-left: auto;
+  }
+
+  .academic-menu {
+    position: absolute;
+    inset: calc(var(--calepin-topbar-height) - 0.35rem) 0 auto auto;
+    display: none;
+    width: max-content;
+    max-width: calc(100vw - 2rem);
+    padding: 0.75rem;
+    border: 1px solid var(--calepin-color-border);
+    border-radius: var(--calepin-radius-sm);
+    background: var(--calepin-color-background);
+    box-shadow: var(--calepin-shadow-card);
+  }
+
+  .academic-menu.is-open {
+    display: grid;
+    gap: 0.25rem;
+    justify-items: stretch;
+  }
+
+  .academic-menu a {
+    display: flex;
+    min-height: 2.35rem;
+    padding: 0.25rem 0.2rem;
+    border-bottom: 0;
+  }
+
+  .academic-page,
+  .academic-document-main,
+  .academic-landing {
+    width: min(100% - 1.25rem, var(--calepin-content-width));
+    padding-block: 2rem 3rem;
+  }
+
+  .academic-page-nav {
+    grid-template-columns: 1fr;
+    width: min(100% - 1.25rem, var(--calepin-content-width));
+  }
+
+  .academic-page-nav-link-next {
+    grid-column: 1;
+    justify-self: start;
+    text-align: left;
+  }
+}
+
+    </style>
+<style>
+/*
+ *
+ * Built as a lightweight CSS overlay on top of the built-in `academic` theme.
+ * Sidenotes and side figures use `academic`'s existing classes.
+ */
+
+:root, html[data-theme="light"] {
+  --calepin-font-body: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --calepin-font-heading: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --calepin-surface-code: #fffdf0;
+  --calepin-surface-output: #fffdf0;
+  --calepin-surface: #fffdf0;
+  --calepin-surface-muted: #fff8eb;
+  --calepin-color-background: #fffff8;
+  --calepin-color-text: #12110f;
+  --calepin-color-muted: #5a5650;
+  --calepin-color-accent: #7a2e2a;
+  --calepin-color-accent-hover: #5f2520;
+  --calepin-color-link: #7a2e2a;
+  --calepin-color-link-hover: #5f2520;
+}
+
+html[data-theme="dark"] {
+  --calepin-color-background: #18130d;
+  --calepin-color-text: #f6efe8;
+  --calepin-color-muted: #c5baa7;
+  --calepin-color-accent: #d58a7f;
+  --calepin-color-accent-hover: #f0b7ab;
+  --calepin-color-link: #d58a7f;
+  --calepin-color-link-hover: #f0b7ab;
+  --calepin-surface-code: #1f1a14;
+  --calepin-surface-output: #1f1a14;
+  --calepin-surface: #1f1a14;
+  --calepin-surface-muted: #2b241b;
+}
+
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
+
+html,
+body {
+  color-scheme: light dark !important;
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-text);
+  font-family: var(--calepin-font-body);
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  font-size: var(--calepin-font-size);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--calepin-color-text);
+  line-height: 1.1;
+  font-weight: var(--calepin-heading-weight);
+}
+
+a,
+a:visited {
+  color: var(--calepin-color-link);
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.16em;
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--calepin-color-link-hover);
+}
+
+figcaption {
+  color: var(--calepin-color-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.calepin-content .fullwidth,
+.calepin-content .full-width,
+.calepin-content figure.fullwidth,
+.calepin-content figure.full-width {
+  width: min(100% - 2rem, var(--calepin-page-width));
+  max-width: var(--calepin-page-width);
+}
+
+
+.calepin-math-inline {
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.calepin-math-display {
+  max-width: var(--calepin-content-width);
+  margin: 1.1rem 0;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+  font-style: italic;
+  text-align: center;
+  white-space: nowrap;
+}
+
+[role="doc-noteref"] {
+  color: var(--calepin-color-accent);
+}
+
+section[role="doc-endnotes"] {
+  margin-top: 2.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d8d1c3;
+  color: var(--calepin-color-muted);
+  font-size: 0.86rem;
+}
+
+    </style>
+
+
+</head><body>
+    <header class="academic-document-topbar calepin-site-topbar calepin-document-topbar">
+        
+        
+        <button class="academic-theme-toggle" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-academic-document-theme">Theme</button>
+    </header>
+    <main class="academic-main academic-document-main calepin-content calepin-document-main">
+        <h2 id="matrix-factorization-with-calepin">Matrix factorization with Calepin</h2><p>Matrix factorization represents a rectangular data matrix as the product of two thinner matrices. In recommender systems, the rows are users, the columns are items, and the observed entries are ratings. A rank <math><mi>𝑘</mi></math> model writes</p><math display="block"><msub><mover accent="true"><mi>𝑅</mi><mo>̂</mo></mover><mrow><mi>𝑖</mi><mo rspace="0em">,</mo><mi>𝑗</mi></mrow></msub><mo>=</mo><mi>𝜇</mi><mo>+</mo><msubsup><mi>𝑢</mi><mi>𝑖</mi><mi>𝑇</mi></msubsup><msub><mi>𝑣</mi><mi>𝑗</mi></msub></math><p>where <math><msub><mi>𝑢</mi><mi>𝑖</mi></msub></math> is a user vector, <math><msub><mi>𝑣</mi><mi>𝑗</mi></msub></math> is an item vector, and <math><mi>𝜇</mi></math> is the global average rating. The dot product is large when the user and item point in similar latent directions.<a role="doc-noteref" href="#sn-1" id="sn-1ref">1</a><span class="calepin-sidenote calepin-sidenote-numbered" id="sn-1" data-sidenote-number="1">The sign and rotation of the latent dimensions are not identified. What matters for prediction is the dot product, not a unique interpretation of each axis.</span></p><h3 id="a-small-ratings-matrix">A small ratings matrix</h3><p>We will fit a rank-2 model to a tiny ratings matrix. Missing values are written as <code>None</code>.</p><div class="sourceCode" data-lang="python"><pre><code data-lang="python">import math
+import random
+
+users <span class="calepin-syntax-scope-4">=</span> [<span class="calepin-syntax-scope-3">"</span>Ada<span class="calepin-syntax-scope-3">"</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-3">"</span>Ben<span class="calepin-syntax-scope-3">"</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-3">"</span>Cy<span class="calepin-syntax-scope-3">"</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-3">"</span>Dee<span class="calepin-syntax-scope-3">"</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-3">"</span>Eli<span class="calepin-syntax-scope-3">"</span>]
+items <span class="calepin-syntax-scope-4">=</span> [<span class="calepin-syntax-scope-3">"</span>Linear algebra<span class="calepin-syntax-scope-3">"</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-3">"</span>Optimization<span class="calepin-syntax-scope-3">"</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-3">"</span>Sci-fi<span class="calepin-syntax-scope-3">"</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-3">"</span>Cooking<span class="calepin-syntax-scope-3">"</span>]
+
+ratings <span class="calepin-syntax-scope-4">=</span> [
+    [<span class="calepin-syntax-scope-2">5</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">4</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> None<span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">1</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span>]<span class="calepin-syntax-scope-3">,</span>
+    [<span class="calepin-syntax-scope-2">4</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> None<span class="calepin-syntax-scope-3">,</span> None<span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">1</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span>]<span class="calepin-syntax-scope-3">,</span>
+    [<span class="calepin-syntax-scope-2">1</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">1</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">5</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">4</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span>]<span class="calepin-syntax-scope-3">,</span>
+    [None<span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">1</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">4</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">5</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span>]<span class="calepin-syntax-scope-3">,</span>
+    [<span class="calepin-syntax-scope-2">5</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> None<span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">1</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> None]<span class="calepin-syntax-scope-3">,</span>
+]
+
+observed <span class="calepin-syntax-scope-4">=</span> [
+    (i<span class="calepin-syntax-scope-3">,</span> j<span class="calepin-syntax-scope-3">,</span> value)
+    for i<span class="calepin-syntax-scope-3">,</span> row in <span class="calepin-syntax-scope-1">enumerate</span>(ratings)
+    for j<span class="calepin-syntax-scope-3">,</span> value in <span class="calepin-syntax-scope-1">enumerate</span>(row)
+    if value <span class="calepin-syntax-scope-3">is</span> <span class="calepin-syntax-scope-3">not</span> None
+]
+
+def <span class="calepin-syntax-scope-1">show_matrix</span>(<span class="calepin-syntax-scope-5">matrix</span>):
+    <span class="calepin-syntax-scope-1">print</span>(<span class="calepin-syntax-scope-3">"</span>          <span class="calepin-syntax-scope-3">"</span> <span class="calepin-syntax-scope-3">+</span> <span class="calepin-syntax-scope-3">"</span>  <span class="calepin-syntax-scope-3">"</span>.<span class="calepin-syntax-scope-1">join</span>(f<span class="calepin-syntax-scope-3">"</span>{name[<span class="calepin-syntax-scope-3">:</span><span class="calepin-syntax-scope-2">4</span>]:>4}<span class="calepin-syntax-scope-3">"</span> for name in items))
+    for name<span class="calepin-syntax-scope-3">,</span> row in <span class="calepin-syntax-scope-1">zip</span>(users<span class="calepin-syntax-scope-3">,</span> matrix):
+        cells <span class="calepin-syntax-scope-4">=</span> [<span class="calepin-syntax-scope-3">"</span>   .<span class="calepin-syntax-scope-3">"</span> if value <span class="calepin-syntax-scope-3">is</span> None else f<span class="calepin-syntax-scope-3">"</span>{value:4.1f}<span class="calepin-syntax-scope-3">"</span> for value in row]
+        <span class="calepin-syntax-scope-1">print</span>(f<span class="calepin-syntax-scope-3">"</span>{name:>4}      <span class="calepin-syntax-scope-3">"</span> <span class="calepin-syntax-scope-3">+</span> <span class="calepin-syntax-scope-3">"</span>  <span class="calepin-syntax-scope-3">"</span>.<span class="calepin-syntax-scope-1">join</span>(cells))
+
+<span class="calepin-syntax-scope-1">show_matrix</span>(ratings)
+</code></pre></div><div class="cell-output cell-output-stdout"><pre><code>          Line  Opti  Sci-  Cook
+ Ada       5.0   4.0     .   1.0
+ Ben       4.0     .     .   1.0
+  Cy       1.0   1.0   5.0   4.0
+ Dee         .   1.0   4.0   5.0
+ Eli       5.0     .   1.0     .</code></pre></div><p>The model should use the observed entries to fill in the missing cells. With only two latent dimensions, it has to compress the observed pattern rather than memorize every rating separately.</p><h3 id="a-synthetic-rank-2-heatmap">A synthetic rank-2 heatmap</h3><p>Before fitting the ratings data, it is useful to look at an exactly rank-2 matrix. The following chunk imports NumPy, generates two skinny factors, and plots their product with Matplotlib.</p><div class="sourceCode" data-lang="python"><pre><code data-lang="python">import numpy as np
+import matplotlib.pyplot as plt
+
+rng <span class="calepin-syntax-scope-4">=</span> np.random.<span class="calepin-syntax-scope-1">default_rng</span>(<span class="calepin-syntax-scope-2">7</span>)
+left <span class="calepin-syntax-scope-4">=</span> rng.<span class="calepin-syntax-scope-1">normal</span>(<span class="calepin-syntax-scope-5">size</span><span class="calepin-syntax-scope-4">=</span>(<span class="calepin-syntax-scope-2">18</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">2</span>))
+right <span class="calepin-syntax-scope-4">=</span> rng.<span class="calepin-syntax-scope-1">normal</span>(<span class="calepin-syntax-scope-5">size</span><span class="calepin-syntax-scope-4">=</span>(<span class="calepin-syntax-scope-2">2</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">14</span>))
+rank_two <span class="calepin-syntax-scope-4">=</span> left <span class="calepin-syntax-scope-3">@</span> right
+
+plt.<span class="calepin-syntax-scope-1">figure</span>(<span class="calepin-syntax-scope-5">figsize</span><span class="calepin-syntax-scope-4">=</span>(<span class="calepin-syntax-scope-2">6</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">3</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">8</span>))
+image <span class="calepin-syntax-scope-4">=</span> plt.<span class="calepin-syntax-scope-1">imshow</span>(rank_two<span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-5">aspect</span><span class="calepin-syntax-scope-4">=</span><span class="calepin-syntax-scope-3">"</span>auto<span class="calepin-syntax-scope-3">"</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-5">cmap</span><span class="calepin-syntax-scope-4">=</span><span class="calepin-syntax-scope-3">"</span>viridis<span class="calepin-syntax-scope-3">"</span>)
+plt.<span class="calepin-syntax-scope-1">title</span>(<span class="calepin-syntax-scope-3">"</span>Synthetic rank-2 matrix<span class="calepin-syntax-scope-3">"</span>)
+plt.<span class="calepin-syntax-scope-1">xlabel</span>(<span class="calepin-syntax-scope-3">"</span>column<span class="calepin-syntax-scope-3">"</span>)
+plt.<span class="calepin-syntax-scope-1">ylabel</span>(<span class="calepin-syntax-scope-3">"</span>row<span class="calepin-syntax-scope-3">"</span>)
+plt.<span class="calepin-syntax-scope-1">colorbar</span>(image<span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-5">fraction</span><span class="calepin-syntax-scope-4">=</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">046</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-5">pad</span><span class="calepin-syntax-scope-4">=</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">04</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-5">label</span><span class="calepin-syntax-scope-4">=</span><span class="calepin-syntax-scope-3">"</span>value<span class="calepin-syntax-scope-3">"</span>)
+plt.<span class="calepin-syntax-scope-1">tight_layout</span>()</code></pre></div><div class="cell-output cell-output-stdout"><pre><code>&lt;matplotlib.colorbar.Colorbar object at 0x10a32b380></code></pre></div><div class="calepin-figure-width" style="width: 80%; max-width: 100%; margin-inline: auto;"><figure><p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA6kAAAJICAYAAACDsKIgAAAAOnRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjEwLjksIGh0dHBzOi8vbWF0cGxvdGxpYi5vcmcvJkbTWQAAAAlwSFlzAAAYmwAAGJsBSXWDlAAAZONJREFUeJzt3Qm8TeX6wPFnn9E8HMSJzKFy6nJJRRERKSmNUsYot6suciWKSLmVQsaIFJFChgZDEZEyRF1jhpAjmceOM6z/53m7+/zPcWb2sNbav+/ns+xtr7XXfvdee5+9n/W87/N6LMuyBAAAAAAAGwgLdgMAAAAAAPAiSAUAAAAA2AZBKgAAAADANghSAQAAAAC2QZAKAAAAALANglQAAAAAgG0QpAIAAAAAbIMgFQAAAABgGwSpAAAAAADbIEgFAAAAANgGQSoAAAAAwDYIUgEAAAAAtkGQCgAAAACwDYJUAAAAAIBtEKQCAAAAAGyDIBVAwO3cuVP+/e9/y/XXXy/FixeXyMhIKVWqlFxzzTXSvHlzGTBggCxfvlySk5MdfXQaNWokHo9HOnToIE6gbdVlypQpwW6Krenx1NdJj6+//Pnnn/Lpp5/KU089ZT4nMTEx5nOilzfddJMMGTJE/vjjD789fijQ97n3PQ8AsBeCVAABNXLkSLn66qvlP//5j/zwww9y/PhxSUpKksOHD8vmzZvlyy+/ND/ANQDYsGGD7Y7Onj17Un/YLlu2TOxu4MCBpq0VK1YMdlOQB5dddpm0bt1aRo8ebT4nx44dM58TvVy9erU5kXPVVVfJF198ERKvq75/9X2s72cAgPsRpAIImOnTp8vTTz8t58+flyuuuEJef/11Wbdunfz+++8SHx8vq1atMrc1aNCAo4KQdurUKYmIiJB77rlHpk6dKtu2bZOjR4+ay1deeUXy588vR44cMet//PHHYDcXAACfivDt7gAga88//3xqVmT9+vWmq29aZcqUkRtvvFF69eol//3vf00XYASOZVm83DbxxBNPmM9LuXLl0t2un5m+ffuaz0njxo1Nt+D+/fvLggULgtZWJ3fbdkpXfAAINWRSAQTEjh07TFdZ9fjjj2cIUC+k41O1yyMQisaOHZshQE2rYcOGcscdd5jrixcvlsTExAC2DgAA/yJIBRAQaYu8FC5cOM/31wA3LCzMjEsbN25cjttfeeWVZtsHHngg2+JA7733nulerEFzgQIF5LrrrjPjZbVL8oU0A1ypUqXU/996662p+8vNONUVK1aYcYaaMY6Ojjb7+uc//2m6O+fk4MGDJrP297//3bRV71++fHlp166dfP/99xm213ZoewYNGmT+/+uvv2Zo64XjVHNTOCkhIcG8/lrgKjY21rSjdOnSUqdOHenTp4/JkF9qIaI1a9bII488Yp5fVFRUunZqtlefr2YPtYBQiRIlTEEhfU3q1q0rL774oukGm9tiOToW+tlnnzXvl3z58pn9tWjRQr7++mu5WBowPvroo+YxtMvuhAkTxB9q1qxpLvW9qs8jr7zvEV3086VdjPX10xNEBQsWNO9Tfb9ql/y0tKiZ3l62bFnzmlWrVs28zzSrm5UDBw7I+PHj5e6775YKFSqY++nnrXLlyvLYY4+ZY57de0Pfv0of58L3cdpxqheOwd6yZYt07drVPI4+ZtoiSVkVTjpz5ozUqFHD3K73O3nyZKZt0zYVK1bMbNekSRNJSUnJ1esOAMgFCwACYPPmzdqX1CytWrW6qH00bdrU3L9u3brZbrd8+fLUx/r888/TrfPePnHiROu+++5L/f+FS7Nmzazk5OR0961QoUKW23uXr7/+OnX7hg0bmtvat29vDR8+3AoLC8v0PuXLl7f279+f5fP56KOPrIIFC2b7uC+99FK6+2g7cmqrPp/MXpvJkydn2o5NmzZZlStXztM+c0NfH72vvl7jxo2zwsPDs9zn3Llzc3xeZcqUsTZs2JDpY+lz82733//+1ypbtmym+/B4PNZ7772XY3svdPr0aev222836/Ply2fNnj3b8pdOnTqltlcfN6/SvkdWrlxpVa1aNdPXQp/H0qVLzX1eeeUV89pktp1+Pi/8zHgVK1Ys22Om+xw6dGiWr3V2y4svvpi6vV73vmfmzZtn5c+fP8P2mb0XLrR+/XorKirKrGvbtm2G9UlJSdZNN91k1pcoUcL67bff8vz6AwCyRpAKICBSUlLSBQRdu3a1tm7dmqd9zJw5M/X+P//8c5bbeX/YXnHFFRl+NHvvr8GWBkP//ve/rZ9++sk6evSo9eOPP1r33HNP6jbjx49Pd98zZ86YwMa7/rPPPrNOnTqVbtEfrxcGqZUqVTI/wlu3bm2CgcOHD1u7du2yBgwYkPqD/+GHH870uSxcuDB1mwYNGpigZ9++fdaRI0es77//3mrXrl1qe959993U+2k7tD3PPfdcaiB8YVv1+eQ2SN29e7cVExOTGrT06dPHWrt2rXkuBw4cMEFM7969czyBkN3xKl26tBUREWHdeOON5uTC77//bu3du9cEG14LFiwwJzn02OhruXPnTtMGfT/obdWqVUt9zc+dO5fhsdIGJvoeqFixojV16lTzmv7xxx/WnDlzzPtG1xcqVMjsO7dBqt5fn7+uK1q0qLVs2TLLX/7880/rsssuM48VFxd3UftIG6Tqa1GqVCnzGv7666/muXzyyScm4PeunzVrlrn+wAMPWKtXrzbvwS1btlgdO3ZM3c8777yT6WNpQDdw4EDryy+/NMdK96/vKf1/mzZtsjyppM9T36v6/tX1+n6+8H2ckJCQIUgtUqSIVbhwYeuqq64y7db3qC4ff/xxroJUpSeWvOunTJmSbp1+dr3rPv3004t6/QEAWSNIBRAw06dPz5DVKFeunAkMhwwZYjKg58+fz/L++mO0ZMmS5n49e/bMdBv90erNOvbv3z/D+rSP/cEHH2RYr0Ht3/72N7O+Xr16GdbrD+vMsqaZ8Qapujz++OOZbvPPf/7TrNeszYkTJ9Kt0yBLAzdd/8gjj5hAPzMaMOo2GrRcGJilzSzlJLsgtUWLFqntXLFiRZb7SExMtPIqbbZMA/G0QUde6fGvUqVKhqA9s8BET5poIHyhdevWpW4zduzYXAWp+r7wBsixsbHmhIc/vfDCC9m2Ma9BqgbkmZ00Wrx4ceo2egLhiSeeyHRf3qyinmC4GN738C233JLpem8vhrRZ08x43++66PE4fvx4ltvmFKTq56158+apr8/27dvN7fp3ytsronv37nl6ngCA3GFMKoCAefjhh+Xjjz82Y9m89u/fL3PmzDFjDLUYzOWXX27mgNRxYRfS8Yk6fk198MEHmRaL+eijj8x9dZxYx44ds2yLVkfVcY8X0nGv3sfQeVp1bspLpWPvdJxrZrxt1HGFGzduTLduxowZZryq3l/ny7xw7JyXjiPUMYSHDh2SRYsWia9t375dPv/8c3O9d+/e2U4RpGMwL4VOQaTH+WIVKlRI7r333tSCQtl54YUXMi3OVbt2bbn22mvNdZ2jNCc//fSTGR+rr5OObf3222/N2GZ/+eqrr+Tll18213UscJcuXS55nzo2unr16hlu17GWJUuWNNf1uLz66quZ3v+hhx4ylzp+9WI+M+3btzeXOg3V2bNnxRdeeuklKVq06EXf3zs+W8dcnz592vz90s+jjgPX8ac6JviNN97wSVsBAOkRpAIIqDZt2siuXbvkk08+MQGaFl1JG3xpAZghQ4ZIvXr10hVb8vL+INeALLNpN959911zqUV4tOhJVrQ4Tla8P9Y1cDx27JhcqhtuuMEUWMnusbzFkdJasmRJakAdHh5ufihntugPZi30ktugKq+87VD+nLJDixbpcc+JBkFa8KpVq1amuJIG8WkL6bz22mtmO51TNDu5eQ9ceEwu9M0338jNN99s5vnVolYrV65MV1zL1zQQ1mJgycnJ5j314YcfXvKJgexeC2/xIO/7OKugr2rVqqmfGZ3PNTNr1641U+voCQDdj76nvcdMizV5j+3OnTsv+fnoPrM7vrmlAaq+13R/GoDHxcXJvn37TBEmfe31EgDge8yTCiDgNCOj2S5vxkurZ65evVpmzZol77//vvmhq/OkalVOzbKmddVVV5mslWZcNCC955570k1zo1ks1alTp2zboBnbrGjQ4+WLrM7FPtbWrVvN5dKlS3NdETmzwP5SeYMGbatmCv0lu5MKXnpyQoOP3FQRPnHixCUfl+yOv1aOvf32201VW8046ns1u+OkAVhWFXC1QrFWSs6O9jpo1qyZqV6s7Zs/f35qcHipsnst8ufPn+tt1Llz5zKs18rUr7zySq7m4s3puOWGZn+LFCkivqDH+F//+pcMHz489fOlGVRvdWUAgO+RSQUQdPpjUn8ITpw40UzT4v2xPnfuXJO1yCqb+sUXX6TLdHmzqJql0YxtdjSLkxu5+VGdk4t9rIv5sZ7dNCAXyzsFx8VMHZQXaQP27LqFaoCq2cMePXqYLr27d+82gZtOoaJL3759zbY5dTvNzXHJ7vhrAOt9vfU9nFNWTbuo62uY2dKtW7ds76vBUdOmTc20J3qSZ/bs2dl2u86r3LwWF/s+njlzpgwdOtTcrlnnadOmmZNQ+pz0vaXHTLtMe/mqi70v6fRGXnqc77vvPp/uHwCQHkEqAFu5/vrr042xyyxjpt0d9Ye9/pidOnWquU27P3qv69ixtJkdp9LxlUozzv8rdJfjkt0cpxfLm5HSYCKYtJu4nphQo0aNkhEjRshtt91m5sSMiYkxr5cuvhrTmBPt3vv222+b65pF1fdlZuOkL5V2OdcAVTPrGpxr0KcndZxCx1Mr7QGhc7O2bdtWrr76apPt1M+xHjN/vG6+oifKunfvnvp/PTGRU08NAMClIUgFYDve8Wkqs4BDiwTpD101efJkc6kFgw4cOGCud+7cWdzA2/3VF2P0LoW3S6keC+1SHSw//vhj6nU9EZGVtFk5f/vHP/4hY8aMMWMWNfOvGTbtrp4ZHc+b15MLmmls3ry5KaqlRb10u9atW4uTeI+bBvH6HIJ9zPJCx3troSQ9UVC8eHEZOHCguX3hwoXmRAkAwD8IUgHYTtouvlmNg/NmWzW7pONZvV19tSiLVjz1Fx076KXZW3/yZss2bdokmzdvvqT2XkpbNVvppUVkgiUhISH1elbPZ+/evaaYUSA9+eSTMm7cOBOozps3z3Q1zypQzQs9KdCyZUv5/vvvzb71MTKrSG133uOW3XtQx6L7+318MbSKsvf9NGHCBFNJ2zuUoE+fPrYNrgHA6QhSAQSEZgP79etnxg5mR4OMd955J7WbqVYUzYwGot5pPrSaqwYHKrtpZ3xBu5V6qxF7M7f+ohkcrS6qmTbNwuU0RlXHZqYN5JR3+hAd/3exY/20WJIGS94pYvSkQFZ8MZ4wN4WVPv300wzrtcuonrwIdCCjtMiXBjH63tCq09pF+8JjkRd6X82YarVg9eabb8rjjz8uTuQ9bvoZzWyMr2aH01aQzoz3fezvz1xaWpxt0KBBqb0zvONQ9e9TuXLlTLdfzehnVigKAHBpCFIBBIT+kNPqnjpH6oMPPmgyclo8Raec0SkrtEvgsGHDzDg/vU1p1iK7iqfebKqOB9TMlRaU0cDOn3Ssq7c7so610wynBhQanOnii0JLaYu/6A94LVijU8toUK5dDPUxtfuhVrrVMbsaHGkQqcHkheNGvVllbaNO7aP38bY1L8GcPlcN0HU/Wsn2ueeeM/PI6rHTuSM126S31a9fX/xFn4s34Hn66adl5MiR5uSHBuA6VlXn2dVCSjreMRj0/Thp0iTTpVW7g2rl6YsJVPW46Lyj3nle9XXVICmrKYh0CUZgnlv6eVfLly833fR1Khc9WaU9BHr27Glet5yOmfd9rF2qdVyrzoXsfR9rl1xf0xNCmrXW11WnydLxz17a7VeLYOlx1r9hvXr18vnjA0DIswAgALZv325FRUVpBJfjEhERYb344os57vPYsWNW/vz5U+9333335Xgf77aTJ0/Ocpuvv/46dbvdu3dnWK/3zartel+vhg0bmtvat29/SW1asGCBFRMTk+PrFh4ebh09ejTD/Rs1apTp9hUqVMhTOzZu3GhVrFgx2zZcuM/c0NdH76uvV06WL1+e7phfuPTu3du8d7JqS9pjd7Ftyqm9U6ZMscLCwsw2zZs3t86dO2flhb7ncvM5yep9l1s5vc/z8j7Obl9nzpyx6tatm2Xbr7nmGmvNmjXZPpfNmzdb+fLly/T+af9WZHfs8/JeeOihh8zt+jdr3bp1md6/X79+qfefO3dujo8HAMg9MqkAAkKzfJrx+uijj0yxGa30edlll5mxZpoB1es6pYZ2CdZMobdASXaKFSuWbqqZQBVM0q63OqerZhRLlCiR66k5LpZmSbWyrXZrvvXWW6VUqVKmyqtmWqtUqSJ33323ySrqWF7N8lxIu1nq6xoXF2eKTnm7K+eVjvfVuUH1sbQd2gVTj1+ZMmVMpkunfsmsG64v3XLLLWaMpmYave8fffw777zTdLPV1yjYdJoc7Smg7wvN8Orx8cfUQE6h71PNfmrPiBo1apjeETpNVK1atcyYTz2eeiyzo/Mj6xzIWnxJu9qmHRvua9p7YcaMGea6tq927dqZbqddgevVq5f6tyeQXZEBwO08GqkGuxEAcKlFa/SHq84hmVX1UAAAADgDv+YAOJZmp7wZD81uEqACAAA4H0EqAMfSOVKPHz9uglOnVj4FAABAehEX/B8AbE8r+Wo12f79+5v/6/jE8uXLB7tZAAAA8AHGpAJwlAuL/ui0KBs3bjRjUgEAAOB8dPcF4EhaWVarpq5cuZIAFQAAwEXo7gvAUShIDgAA4G5kUgEAAAAAtkGQCgAAAACwDYJUAAAAAIBtEKQCAAAAAGyDIBUAAAAAYBtU9/WzggULSmJiolx22WX+figAAAAgaA4dOiSRkZFy5syZgD5unTp15ODBg37bf5kyZWTt2rV+2z8yIkj1Mw1QE5OS5OCZ0+J4KeIO9B+wF0vcwyPu4JZj4pbj4XHJAUlxyQFxydNwzefcTcfEBb+zkpOSgvK4GqDGx/8msaV9H9rE/x6c5xTqCFL9TDOoGqCWHfa8OF3k8XBxg6QCKe74fRHhjl8YYefdc9YgJdod7y2PS46JFeWO4yEueR7hRyPFDVLyueN4hJ13S2QnkhLpju/DiLPO/9u75+WX5LLChYLy2LGlw2XP+go+32/F2nt8vk/kzPmfBgAAAACAa5BJBQAAAOB4yZY7ejqATCoAAAAAwEZCvrvvrFmzpFGjRlK8eHFTife6666T//znP6bgEQAAAAD705HJKWL5fHHHiGfnCekg9ZlnnpEHHnhAvv32W7n++uulefPmsnfvXvn3v/8tjRs3lnPnzgW7iQAAAABcqk+fPuLxeMwyZMiQYDfHNkJ2TOrcuXNlxIgRUqhQIVm+fLnUrl3b3H748GEToK5cuVIGDBggr7/+erCbCgAAACAHKQ6bx2fVqlXyxhtvmADVssjZphWymdShQ4eay759+6YGqKpkyZIyZswYc/3tt9+WEydOBK2NAAAAAHLB0sJJls8Xf/X3PXv2rHTo0EFiY2Pl7rvv5hBfICSD1N9++01++OEHc71t27YZ1jdo0ECuuOIKSUhIkM8++ywILQQAAADgVs8995zs2LFDJkyYIEWLFg12c2wnJIPUDRs2mMuYmBipVKlSptvUqVMn3bYAAAAA7MsfhZP8YdmyZTJq1Ch57LHH5I477vDLYzhdSI5J3b17t7ksX758lttoJjXtttkpV65cluvi4+PFU6TwRbUTAAAAgHucPn1aOnXqJKVLl5a33nor2M2xrZAMUk+dOmUudcqZrGhBJXXy5MmAtQsAAABA3ulkMcl+yHzqfg/Gx2eblNq/f3+u99e7d2+TBJszZ46ZAhOZC8kg1deye2PqG/rgmdMBbQ8AAAAAe1m0aJGMHz9eHnroIWndunWwm2NrIRmkFi78V/fbM2fOZJuKV0WKFAlYuwAAAABcHH+NIdUKvHnJlmZGZwzp3LmzlCpVyoxHRfZCMkitWLGiudy3b1+W23jXebcFAAAAgIvxzDPPmEB35syZZspLZC8kg9RatWqZyyNHjpg+4ZlV+F27dq25TDuHKgAAAAB7MvOa2pSOQY2IiJAxY8aYJa2tW7eay0mTJsmSJUukTJkyMmPGDAllIRmk6jjRunXrmrlSp0+fLs8//3y69StXrjSZ1OjoaMpCAwAAADan4WmKn/brK0lJSbJ8+fIs1+/Zs8csFSpUkFAXkvOkqn79+pnLV199VdavX596u2ZXu3fvbq4/9dRTTK4LAAAA4JIcP35cLMvKdGnfvr3ZZvDgweb/e/bsCflXOyQzqUoravXo0UNGjhwpN9xwgzRp0sRMSbN06VLzJqpfv755owAAAACwP39MQYPgCNlMqhoxYoQZvHzjjTfKqlWr5LPPPjNdgTW7+tVXX0n+/PmD3UQAAAAACCkhm0n1euCBB8wCAAAAwLmSSaS6RsgHqQAAAAAQLFOmTDEL/h9BKgAAAADH80d1XwQHQWoAeJJF8h1w/kudfNUZcYUj+cQNoo6GixskFnfPV0q+353/OVd/ljsvbpBvf5S4QaG97ui/drblSXGDxG1FxA0SSyWJW3j+dEeJlcTSLvjbGx68v1f6yMni8ct+EXju+FQDAAAAAFzBHaf9AQAAAIS0FNKerkEmFQAAAABgG2RSAQAAADieP8akIjjIpAIAAAAAbINMKgAAAABHo7qvu5BJBQAAAADYBplUAAAAAA7nkRTLH2NSGecaDASpAAAAAByPwknuQXdfAAAAAIBtkEkFAAAA4HjJ5N9cg0wqAAAAAMA2yKQCAAAAcPwUNP4onKT7ReCRSQUAAAAA2AaZVAAAAACOR3Vf9yBIBQAAAOB4yRadRN2CIwkAAAAAsA0yqQAAAAAczRKPpPgh/6b7ReCRSQUAAAAA2AaZVAAAAACOR+Ek9yCTCgAAAACwDTKpAAAAAByP6r7uQSYVAAAAAGAbZFIBAAAAOF4KlXhdgyAVAAAAgKNZpnCSP6agQTAQpAaIJ0Ucz7LcMU+UFe6SPzcueRpu4kkWV/BEueAPlnLJ04g8444Pe5ECf4obHEssKq7gccf7ylXf6wnh4ngu+a2I4CNIBQAAAOB4FE5yDwonAQAAAABsg0wqAAAAAIfzSIpf8m90YQ4GMqkAAAAAANsgkwoAAADA0SxLx6R6/LJfBF5IZlITExNl6dKl8uyzz0rdunWlWLFiEhkZKWXKlJFWrVrJwoULg91EAAAAAHmgU9D4ekFwhGQmdfny5dK0aVNzXQPTBg0aSMGCBWXz5s0yf/58s3Tt2lXGjRsnHg/90AEAAAAgUELy9EBYWJi0adNGvvnmG4mPj5cFCxbIzJkz5aeffpIZM2ZIeHi4TJgwQd5///1gNxUAAABALqRYYT5ffGnatGny2GOPyXXXXSeXXXaZ6clZtGhRuf766+WVV16R06dPc5xDOUht3LixfPzxx3LzzTdnWPfggw9Khw4dzPWpU6cGoXUAAAAA3Gbs2LHywQcfSFJSktSuXVvuv/9+qVOnjvz888/Sr18/qVWrlhw4cCDYzbSFkOzumxN9g6h9+/YFuykAAAAAcqD1jfwxhtSXdZPeeOMNufLKKyUmJibd7UeOHJHWrVvLypUrpVevXvLhhx9KqAvJTGpOduzYYS5jY2OD3RQAAAAALlCvXr0MAaoqUaKEDB061FxftGhREFpmP2RSL3Dw4EGZMmWKua7jVnOjXLlyWa7TMa9hBQtfyjECAAAAkAN/TEETKBERf4Vl0dHRwW6KLZBJTUP7h7dr105OnDghcXFx0q1bt+AdGQAAAACud+rUKRk4cKC5rtNhgkxqOk888YSZP1VT7lpYKSoqKlfvkf3792ebZf39JJW6AAAAAP/xSIpf8m8e0zMyu56T2cUCmdEuvdOnT5eUlBT5/fffZfXq1SZQbd68uQwbNswHbXY+uvv+z9NPPy2TJk2S4sWLy+LFi6VatWrBPTIAAAAAci3Zx1PG+MvmzZvlvffeS3db27ZtZfjw4WZKGtDd19AqWiNHjpRixYqZMxve6r4AAAAAQpsWU9VsaVZLXj3zzDNiWZacP39efvnlF1P19/PPP5err75avvnmG788B6dxxukGP+rTp0/qWQsNUHWuIgAAAADOoVPFpJguv75dfDkFzYUiIyOlSpUq0rNnTxOkHjt2zNTHOXfunIS6kA5S+/btK6+99poJULWLb926dYPdJAAAAAAhOD2NZlL37dsna9eulVAXsmNS+/fvbwYme7v4EqACAAAAzuWUMalZKViwoLk8dOiQhLqQDFLnzZsnL7/8srletWpVGT16dKbblSxZUl5//fUAtw4AAABAKDl8+LBs3LjRXK9GAdfQDFKPHj2ael3T6Vml1CtUqECQCgAAADhAso1HMmpF3w0bNkibNm0kX7586dZt375dunXrJgkJCXLDDTdIXFychLqQDFI7dOhgFgAAAABu4JEUy+OX/fqCduHVokgajOpMIjrvqlb33bt3r6xfv97MmXrVVVfJzJkzffJ4TheSQSoAAAAABMo111xjhhuuWLFCtm7darKqiYmJEhMTI02aNJF7771XOnbsKNHR0RwUglQAAAAATmf5qbuvr6agKVWqlPTr189He3M/MqmBEJkinlonxOmKflFE3ODotSniBilV3DGHVvj+/OIWKXGnxA3C9v5VXdDprJruOB4Vb8/7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fnsMV4ny7+45HvbC8bAfjom9cDzsheMRysfEf78VA+V0+KHU376BVKZMGUfvHxmRSXUBPXukOMNjDxwPe+F42A/HxF44HvbC8bAfjgkQeC7pRAQAAAAAcAOCVAAAAACAbRCkAgAAAABsgyAVAAAAAGAbBKkAAAAAANsgSAUAAAAA2AZT0AAAAAAAbINMKgAAAADANghSAQAAAAC2QZAKAAAAALANglQAAAAAgG0QpAIAAAAAbIMgFQAAAABgGwSpAAAAAADbIEh1sFmzZkmjRo2kePHiUrBgQbnuuuvkP//5jyQmJga7aSFFX++lS5fKs88+K3Xr1pVixYpJZGSklClTRlq1aiULFy4MdhNDXp8+fcTj8ZhlyJAhIf96BMv58+dl5MiR0qBBA4mJiZF8+fJJuXLlpEWLFjJz5kyOSwDt3btXnnrqKalevbrkz5/fHItKlSpJ+/btZePGjRwLH9u2bZuMGjVKOnToIHFxcRIREZHrv0dLliyRO+64Q0qWLGmOVY0aNeT555+X06dPc5wCeExSUlJk1apV8sILL5i/YSVKlDDf9XpcmjZtKtOmTRPLsjgmgK9YcKSnn35a/xJaERERVrNmzax7773XKlasmLmtQYMG1tmzZ4PdxJCxePFi87rrUqZMGatly5bWAw88YNWsWTP19q5du1opKSnBbmpI+vbbb62wsDDL4/GYYzF48OBgNykk7du3z7r66qvNMShZsqR15513Wg8++KB10003WQUKFLDatGkT7CaGjO+++84qXLiwORZly5a1WrVqZd1zzz1WpUqVUr9XPvroo2A305Xf2RcuOf09Gj58uNlO/37dcsst1v3332++Z/S26tWrW3/88UfAnkOoH5MdO3akbhMTE2N+e+nfsLp166bern/XEhISAv5cADciSHWgOXPmmD+GhQoVstatW5d6u35ZxcXFmXW9evUKahtDydKlS80P7G+++SbDuhkzZljh4eHmmLz33ntBaV8oO3PmjHXllVeaH+KtW7cmSA0SPWlWo0YN8/oPHDjQOn/+fIbjtGHDhmA1L+Rce+21qSfP0h6L5ORkq3///madnvQ8d+5cUNvpJu+8847Vu3dva9q0adaWLVusRx99NMe/R+vXrzfBqX6HfPbZZ+k+L02aNDH35+RO4I7JL7/8YjVu3Nj6/PPPraSkpHTrli1bZhUsWNDc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" alt="Heatmap of a generated rank-2 matrix" style="display: block; width: 100%;"></p><figcaption>Figure 1: Synthetic rank-2 matrix</figcaption></figure></div><p>In HTML output, this figure is a useful asset-inlining check: a self-contained render should embed the generated PNG directly in the page instead of linking to a file under <code>.calepin/</code>.<span class="calepin-sidenote calepin-sidenote-unnumbered">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim aeque doleamus.</span></p><h3 id="fitting-a-rank-2-model">Fitting a rank-2 model</h3><p>The loss is squared error on observed ratings plus a small penalty that keeps the latent vectors from growing too large:</p><math display="block"><mi>𝐿</mi><mo>=</mo><munder><mo form="prefix" lspace="0em">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>𝑖</mi><mo rspace="0em">,</mo><mi>𝑗</mi></mrow><mo>)</mo></mrow><mo lspace="0em" rspace="0em">∈</mo><mi mathvariant="normal">Ω</mi></mrow></munder><msup><mrow><mo>(</mo><mrow><msub><mi>𝑟</mi><mrow><mi>𝑖</mi><mo rspace="0em">,</mo><mi>𝑗</mi></mrow></msub><mo>−</mo><msub><mover accent="true"><mi>𝑅</mi><mo>̂</mo></mover><mrow><mi>𝑖</mi><mo rspace="0em">,</mo><mi>𝑗</mi></mrow></msub></mrow><mo>)</mo></mrow><mn>2</mn></msup><mo>+</mo><mi>𝜆</mi><mrow><mo>(</mo><mrow><munder><mo lspace="0em" rspace="0em">∑</mo><mi>𝑖</mi></munder><mo stretchy="false">‖</mo><msub><mi>𝑢</mi><mi>𝑖</mi></msub><msup><mo stretchy="false">‖</mo><mn>2</mn></msup><mo>+</mo><munder><mo form="prefix" lspace="0em" rspace="0em">∑</mo><mi>𝑗</mi></munder><mo stretchy="false">‖</mo><msub><mi>𝑣</mi><mi>𝑗</mi></msub><msup><mo stretchy="false">‖</mo><mn>2</mn></msup></mrow><mo>)</mo></mrow></math><p>Here is a simple stochastic gradient descent fit.</p><div class="sourceCode" data-lang="python"><pre><code data-lang="python">random.<span class="calepin-syntax-scope-1">seed</span>(<span class="calepin-syntax-scope-2">12</span>)
+
+rank <span class="calepin-syntax-scope-4">=</span> <span class="calepin-syntax-scope-2">2</span>
+learning_rate <span class="calepin-syntax-scope-4">=</span> <span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">025</span>
+regularization <span class="calepin-syntax-scope-4">=</span> <span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">02</span>
+epochs <span class="calepin-syntax-scope-4">=</span> <span class="calepin-syntax-scope-2">2400</span>
+
+mu <span class="calepin-syntax-scope-4">=</span> <span class="calepin-syntax-scope-1">sum</span>(value for _<span class="calepin-syntax-scope-3">,</span> _<span class="calepin-syntax-scope-3">,</span> value in observed) <span class="calepin-syntax-scope-3">/</span> <span class="calepin-syntax-scope-1">len</span>(observed)
+user_factors <span class="calepin-syntax-scope-4">=</span> [
+    [random.<span class="calepin-syntax-scope-1">uniform</span>(<span class="calepin-syntax-scope-3">-</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">35</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">35</span>) for _ in <span class="calepin-syntax-scope-1">range</span>(rank)]
+    for _ in users
+]
+item_factors <span class="calepin-syntax-scope-4">=</span> [
+    [random.<span class="calepin-syntax-scope-1">uniform</span>(<span class="calepin-syntax-scope-3">-</span><span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">35</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">35</span>) for _ in <span class="calepin-syntax-scope-1">range</span>(rank)]
+    for _ in items
+]
+
+def <span class="calepin-syntax-scope-1">dot</span>(<span class="calepin-syntax-scope-5">left</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-5">right</span>):
+    return <span class="calepin-syntax-scope-1">sum</span>(a <span class="calepin-syntax-scope-3">*</span> b for a<span class="calepin-syntax-scope-3">,</span> b in <span class="calepin-syntax-scope-1">zip</span>(left<span class="calepin-syntax-scope-3">,</span> right))
+
+def <span class="calepin-syntax-scope-1">predict</span>(<span class="calepin-syntax-scope-5">i</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-5">j</span>):
+    return mu <span class="calepin-syntax-scope-3">+</span> <span class="calepin-syntax-scope-1">dot</span>(user_factors[i]<span class="calepin-syntax-scope-3">,</span> item_factors[j])
+
+def <span class="calepin-syntax-scope-1">rmse</span>():
+    total <span class="calepin-syntax-scope-4">=</span> <span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">.</span><span class="calepin-syntax-scope-2">0</span>
+    for i<span class="calepin-syntax-scope-3">,</span> j<span class="calepin-syntax-scope-3">,</span> value in observed:
+        total <span class="calepin-syntax-scope-4">+=</span> (value <span class="calepin-syntax-scope-3">-</span> <span class="calepin-syntax-scope-1">predict</span>(i<span class="calepin-syntax-scope-3">,</span> j)) <span class="calepin-syntax-scope-3">*</span><span class="calepin-syntax-scope-3">*</span> <span class="calepin-syntax-scope-2">2</span>
+    return math.<span class="calepin-syntax-scope-1">sqrt</span>(total <span class="calepin-syntax-scope-3">/</span> <span class="calepin-syntax-scope-1">len</span>(observed))
+
+checkpoints <span class="calepin-syntax-scope-4">=</span> []
+for epoch in <span class="calepin-syntax-scope-1">range</span>(epochs <span class="calepin-syntax-scope-3">+</span> <span class="calepin-syntax-scope-2">1</span>):
+    if epoch <span class="calepin-syntax-scope-3">in</span> (<span class="calepin-syntax-scope-2">0</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">25</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">100</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">400</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">1200</span><span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-2">2400</span>):
+        checkpoints.<span class="calepin-syntax-scope-1">append</span>((epoch<span class="calepin-syntax-scope-3">,</span> <span class="calepin-syntax-scope-1">rmse</span>()))
+    random.<span class="calepin-syntax-scope-1">shuffle</span>(observed)
+    for i<span class="calepin-syntax-scope-3">,</span> j<span class="calepin-syntax-scope-3">,</span> value in observed:
+        error <span class="calepin-syntax-scope-4">=</span> value <span class="calepin-syntax-scope-3">-</span> <span class="calepin-syntax-scope-1">predict</span>(i<span class="calepin-syntax-scope-3">,</span> j)
+        old_user <span class="calepin-syntax-scope-4">=</span> user_factors[i][<span class="calepin-syntax-scope-3">:</span>]
+        old_item <span class="calepin-syntax-scope-4">=</span> item_factors[j][<span class="calepin-syntax-scope-3">:</span>]
+        for d in <span class="calepin-syntax-scope-1">range</span>(rank):
+            user_factors[i][d] <span class="calepin-syntax-scope-4">+=</span> learning_rate <span class="calepin-syntax-scope-3">*</span> (
+                error <span class="calepin-syntax-scope-3">*</span> old_item[d] <span class="calepin-syntax-scope-3">-</span> regularization <span class="calepin-syntax-scope-3">*</span> old_user[d]
+            )
+            item_factors[j][d] <span class="calepin-syntax-scope-4">+=</span> learning_rate <span class="calepin-syntax-scope-3">*</span> (
+                error <span class="calepin-syntax-scope-3">*</span> old_user[d] <span class="calepin-syntax-scope-3">-</span> regularization <span class="calepin-syntax-scope-3">*</span> old_item[d]
+            )
+
+for epoch<span class="calepin-syntax-scope-3">,</span> value in checkpoints:
+    <span class="calepin-syntax-scope-1">print</span>(f<span class="calepin-syntax-scope-3">"</span>epoch {epoch:4d}: observed RMSE = {value:.3f}<span class="calepin-syntax-scope-3">"</span>)</code></pre></div><div class="cell-output cell-output-stdout"><pre><code>epoch    0: observed RMSE = 1.755
+epoch   25: observed RMSE = 0.463
+epoch  100: observed RMSE = 0.270
+epoch  400: observed RMSE = 0.127
+epoch 1200: observed RMSE = 0.056
+epoch 2400: observed RMSE = 0.056</code></pre></div><figure class="calepin-sidefigure"><figure><table><tr><td><strong>Item</strong></td><td>factor 1</td><td>factor 2</td></tr><tr><td>Linear algebra</td><td>1.41</td><td>−0.73</td></tr><tr><td>Optimization</td><td>1.37</td><td>−0.03</td></tr><tr><td>Sci-fi</td><td>−1.26</td><td>−0.86</td></tr><tr><td>Cooking</td><td>−0.73</td><td>1.27</td></tr></table><figcaption>Table 1: Learned item factors</figcaption></figure></figure><p>The margin table is computed from the trained model. The exact coordinate system is arbitrary, but nearby items have similar factor vectors.</p><h3 id="completing-the-matrix">Completing the matrix</h3><p>The fitted model can now predict the missing ratings.</p><div class="sourceCode" data-lang="python"><pre><code data-lang="python">completed <span class="calepin-syntax-scope-4">=</span> []
+for i<span class="calepin-syntax-scope-3">,</span> row in <span class="calepin-syntax-scope-1">enumerate</span>(ratings):
+    out <span class="calepin-syntax-scope-4">=</span> []
+    for j<span class="calepin-syntax-scope-3">,</span> value in <span class="calepin-syntax-scope-1">enumerate</span>(row):
+        out.<span class="calepin-syntax-scope-1">append</span>(value if value <span class="calepin-syntax-scope-3">is</span> <span class="calepin-syntax-scope-3">not</span> None else <span class="calepin-syntax-scope-1">predict</span>(i<span class="calepin-syntax-scope-3">,</span> j))
+    completed.<span class="calepin-syntax-scope-1">append</span>(out)
+
+<span class="calepin-syntax-scope-1">show_matrix</span>(completed)</code></pre></div><div class="cell-output cell-output-stdout"><pre><code>          Line  Opti  Sci-  Cook
+ Ada       5.0   4.0   3.0   1.0
+ Ben       4.0   2.9   4.4   1.0
+  Cy       1.0   1.0   5.0   4.0
+ Dee       0.5   1.0   4.0   5.0
+ Eli       5.0   5.0   1.0   2.1</code></pre></div><p>The same fitted object can also list only the originally missing entries.</p><div class="sourceCode" data-lang="python"><pre><code data-lang="python">for i<span class="calepin-syntax-scope-3">,</span> row in <span class="calepin-syntax-scope-1">enumerate</span>(ratings):
+    for j<span class="calepin-syntax-scope-3">,</span> value in <span class="calepin-syntax-scope-1">enumerate</span>(row):
+        if value <span class="calepin-syntax-scope-3">is</span> None:
+            <span class="calepin-syntax-scope-1">print</span>(f<span class="calepin-syntax-scope-3">"</span>{users[i]:>3} -> {items[j]:&lt;14} {<span class="calepin-syntax-scope-1">predict</span>(i<span class="calepin-syntax-scope-3">,</span> j):.2f}<span class="calepin-syntax-scope-3">"</span>)</code></pre></div><div class="cell-output cell-output-stdout"><pre><code>Ada -> Sci-fi         3.03
+Ben -> Optimization   2.95
+Ben -> Sci-fi         4.43
+Dee -> Linear algebra 0.50
+Eli -> Optimization   5.02
+Eli -> Cooking        2.10</code></pre></div><h3 id="what-to-check">What to check</h3><p>Matrix factorization is useful because it shares information across rows and columns. But this sharing is also a modeling assumption. A practical workflow should check prediction error on held-out observed entries, tune the rank <math><mi>𝑘</mi></math>, and inspect whether the completed matrix makes domain sense. Calepin is useful here because the prose, the fitted model, and the diagnostics all live in the same executable document.</p>
+    </main>
+
+<script>
+(() => {
+  "use strict";
+
+  const buttons = document.querySelectorAll("[data-calepin-theme-toggle], #calepin-theme-button");
+  if (!buttons.length) return;
+
+  const order = ["", "light", "dark"];
+  const labels = { "": "Theme: Auto", light: "Theme: Light", dark: "Theme: Dark" };
+  const icons = {
+    "": `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.32" stroke="none"></path></svg>`,
+    light: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
+    dark: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79z"></path></svg>`,
+  };
+
+  const normalize = (value) => value === "light" || value === "dark" ? value : "";
+  const root = document.documentElement;
+  const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
+  const urlParam = (button) => button.dataset.calepinThemeParam || "";
+  const systemTheme = () => media && media.matches ? "dark" : "light";
+
+  function readUrl(button) {
+    const param = urlParam(button);
+    if (!param) return "";
+    try {
+      return normalize(new URL(window.location.href).searchParams.get(param) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function clearUrl(button) {
+    const param = urlParam(button);
+    if (!param) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete(param);
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      /* ignore URL errors */
+    }
+  }
+
+  function readStored(button) {
+    try {
+      return normalize(localStorage.getItem(storageKey(button)) || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function writeStored(button, value) {
+    try {
+      if (value) localStorage.setItem(storageKey(button), value);
+      else localStorage.removeItem(storageKey(button));
+    } catch {
+      /* ignore storage errors */
+    }
+  }
+
+  function readTheme(button) {
+    const fromUrl = readUrl(button);
+    if (fromUrl) {
+      writeStored(button, fromUrl);
+      clearUrl(button);
+      return fromUrl;
+    }
+    return readStored(button);
+  }
+
+  function applyTheme(value) {
+    const mode = normalize(value);
+    const theme = mode || systemTheme();
+    root.dataset.calepinThemeMode = mode;
+    root.dataset.theme = theme;
+    root.style.colorScheme = theme;
+    buttons.forEach((button) => {
+      const label = labels[mode] || labels[""];
+      button.innerHTML = icons[mode] || icons[""];
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    });
+  }
+
+  applyTheme(readTheme(buttons[0]));
+
+  buttons.forEach((button) => {
+    if (button.dataset.calepinThemeBound === "true") return;
+    button.dataset.calepinThemeBound = "true";
+    button.addEventListener("click", () => {
+      const current = normalize(root.dataset.calepinThemeMode || "");
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      applyTheme(next);
+      writeStored(button, next);
+    });
+  });
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) applyTheme(readTheme(buttons[0]));
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === storageKey(buttons[0])) applyTheme(readStored(buttons[0]));
+  });
+
+  if (media) {
+    const updateSystemTheme = () => {
+      if (!normalize(root.dataset.calepinThemeMode || "")) applyTheme("");
+    };
+    if (media.addEventListener) media.addEventListener("change", updateSystemTheme);
+    else if (media.addListener) media.addListener(updateSystemTheme);
+  }
+})();
+
+    </script>
+<script>
+(() => {
+  "use strict";
+
+  const selects = document.querySelectorAll("select[data-calepin-language-picker]");
+  if (!selects.length) return;
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function closeAll(except) {
+    document.querySelectorAll(".calepin-language-picker.is-open").forEach((picker) => {
+      if (picker === except) return;
+      picker.classList.remove("is-open");
+      picker.open = false;
+      const summary = picker.querySelector("summary");
+      if (summary) summary.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function enhance(select) {
+    if (select.dataset.calepinLanguageBound === "true") return;
+    select.dataset.calepinLanguageBound = "true";
+
+    const options = Array.from(select.options).filter((option) => option.value);
+    if (options.length <= 1) return;
+
+    const selected = options.find((option) => option.selected) || options[0];
+    const picker = document.createElement("details");
+    picker.className = "calepin-language-picker dropdown";
+
+    const summary = document.createElement("summary");
+    summary.className = "calepin-language-picker-button";
+    summary.setAttribute("role", "button");
+    summary.setAttribute("aria-haspopup", "menu");
+    summary.setAttribute("aria-expanded", "false");
+    summary.setAttribute("aria-label", select.getAttribute("aria-label") || "Language");
+    summary.innerHTML = `<span>${escapeHtml(selected.textContent)}</span>`;
+
+    const menu = document.createElement("ul");
+    menu.className = "calepin-language-picker-menu";
+    menu.setAttribute("role", "menu");
+
+    options.forEach((option) => {
+      const li = document.createElement("li");
+      const item = document.createElement("a");
+      item.href = option.value;
+      item.setAttribute("role", "menuitem");
+      item.innerHTML = `<span>${escapeHtml(option.textContent)}</span>`;
+      if (option.selected) item.setAttribute("aria-current", "true");
+      li.appendChild(item);
+      menu.appendChild(li);
+    });
+
+    summary.addEventListener("click", () => {
+      const open = !picker.open;
+      closeAll(open ? picker : null);
+      picker.classList.toggle("is-open", open);
+      summary.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    picker.addEventListener("toggle", () => {
+      picker.classList.toggle("is-open", picker.open);
+      summary.setAttribute("aria-expanded", picker.open ? "true" : "false");
+    });
+
+    picker.append(summary, menu);
+    select.hidden = true;
+    select.insertAdjacentElement("afterend", picker);
+  }
+
+  selects.forEach(enhance);
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".calepin-language-picker")) closeAll();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAll();
+  });
+})();
+
+    </script>
+<script>
+(() => {
+  "use strict";
+
+  const selector = window.CalepinCopyCode?.selector ||
+    "div.sourceCode, pre.sourceCode, .cell-output, .cell-output-stdout, .cell-output-stderr";
+  const buttonClass = window.CalepinCopyCode?.buttonClass || "calepin-copy-code";
+  const copiedClass = window.CalepinCopyCode?.copiedClass || "copied";
+  const icon = window.CalepinCopyCode?.icon ||
+    `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+  const copiedIcon = window.CalepinCopyCode?.copiedIcon ||
+    `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17 4 12"></path></svg>`;
+
+  function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      textarea.remove();
+    }
+    return Promise.resolve();
+  }
+
+  function codeText(node) {
+    if (!node) return "";
+    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    if (node.tagName === "BR") return "\n";
+    return Array.from(node.childNodes).map(codeText).join("");
+  }
+
+  document.querySelectorAll(selector).forEach((block) => {
+    if (block.dataset.calepinCopyBound === "true" || block.querySelector(`:scope > .${buttonClass}`)) {
+      return;
+    }
+    block.dataset.calepinCopyBound = "true";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = buttonClass;
+    button.setAttribute("aria-label", "Copy code");
+    button.setAttribute("title", "Copy code");
+    button.innerHTML = icon;
+    let restoreTimeout = null;
+    button.addEventListener("click", async () => {
+      if (restoreTimeout !== null) {
+        window.clearTimeout(restoreTimeout);
+        restoreTimeout = null;
+      }
+      const code = block.querySelector("pre code, code, pre");
+      const text = codeText(code);
+      try {
+        await copyText(text);
+        button.classList.add(copiedClass);
+        button.innerHTML = copiedIcon;
+        restoreTimeout = window.setTimeout(() => {
+          button.classList.remove(copiedClass);
+          button.innerHTML = icon;
+          restoreTimeout = null;
+        }, 900);
+      } catch {
+        button.classList.remove(copiedClass);
+        button.innerHTML = icon;
+      }
+    });
+    block.prepend(button);
+  });
+})();
+
+    </script>
+<script>
+(() => {
+  "use strict";
+
+  const pagefindModal = () => document.querySelector("pagefind-modal");
+
+  function modalSearchInput(modal) {
+    if (!modal) return null;
+    return modal.querySelector("pagefind-input input, input[type='search'], input");
+  }
+
+  function setModalSearchQuery(modal, query) {
+    if (!query) return false;
+    const input = modalSearchInput(modal);
+    if (!input) return false;
+    input.value = query;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return true;
+  }
+
+  function focusModalSearch(modal) {
+    const input = modalSearchInput(modal);
+    if (!input) return false;
+    input.focus();
+    return true;
+  }
+
+  async function openPagefindSearch(query) {
+    const modal = pagefindModal();
+    if (!modal) return false;
+
+    if (typeof modal.open !== "function" && window.customElements?.whenDefined) {
+      try {
+        await window.customElements.whenDefined("pagefind-modal");
+      } catch {
+        /* ignore custom element registration errors */
+      }
+    }
+
+    if (typeof modal.open !== "function") return false;
+    modal.open();
+
+    const sync = () => {
+      const hasQuery = setModalSearchQuery(modal, query);
+      const hasFocus = focusModalSearch(modal);
+      return hasQuery || hasFocus;
+    };
+
+    if (!sync()) {
+      requestAnimationFrame(() => {
+        if (!sync()) window.setTimeout(sync, 50);
+      });
+    }
+
+    return true;
+  }
+
+  function isTextEntryElement(element) {
+    if (!element) return false;
+    return (
+      element.isContentEditable ||
+      element.tagName === "INPUT" ||
+      element.tagName === "SELECT" ||
+      element.tagName === "TEXTAREA"
+    );
+  }
+
+  const SEARCH_SUGGESTION_LIMIT = 20;
+  const SEARCH_SUBRESULT_LIMIT = 3;
+  const SEARCH_SUGGESTION_MIN_LENGTH = 2;
+  const SEARCH_SUGGESTION_DELAY = 160;
+  let pagefindModulePromise = null;
+
+  function pagefindBundlePath() {
+    const script = document.querySelector(
+      'script[src$="pagefind-component-ui.js"], script[src$="pagefind-ui.js"]',
+    );
+    if (script?.src) return new URL("./", script.src).toString();
+    return new URL("pagefind/", window.location.href).toString();
+  }
+
+  function loadPagefindModule() {
+    if (!pagefindModulePromise) {
+      pagefindModulePromise = import(`${pagefindBundlePath()}pagefind.js`);
+    }
+    return pagefindModulePromise;
+  }
+
+  function plainTextFromHtml(html) {
+    const element = document.createElement("div");
+    element.innerHTML = html || "";
+    return element.textContent?.trim() || "";
+  }
+
+  function setSearchResultsOpen(input, results, isOpen) {
+    results.hidden = !isOpen;
+    input.setAttribute("aria-expanded", String(isOpen));
+  }
+
+  function clearSearchResults(input, results) {
+    results.innerHTML = "";
+    setSearchResultsOpen(input, results, false);
+  }
+
+  function renderSearchMessage(input, results, message) {
+    results.innerHTML = "";
+    const item = document.createElement("p");
+    item.className = "calepin-website-search-empty";
+    item.textContent = message;
+    results.appendChild(item);
+    setSearchResultsOpen(input, results, true);
+  }
+
+  function renderSearchResults(input, results, items) {
+    results.innerHTML = "";
+    if (!items.length) {
+      renderSearchMessage(input, results, "No results");
+      return;
+    }
+
+    const basePathPrefix = localCanonicalBasePathPrefix();
+    const addSearchLink = (item, className, titleClassName, excerptClassName) => {
+      const href = hrefWithoutLocalBasePath(item.meta?.url || item.url || "", basePathPrefix);
+      if (!href) return null;
+
+      const link = document.createElement("a");
+      link.className = className;
+      link.href = href;
+      link.setAttribute("role", "option");
+
+      const title = document.createElement("span");
+      title.className = titleClassName;
+      title.textContent = item.meta?.title || item.title || href;
+      link.appendChild(title);
+
+      const excerptText = plainTextFromHtml(item.excerpt || item.content || "");
+      if (excerptText) {
+        const excerpt = document.createElement("span");
+        excerpt.className = excerptClassName;
+        excerpt.textContent = excerptText;
+        link.appendChild(excerpt);
+      }
+
+      return link;
+    };
+
+    for (const item of items) {
+      const link = addSearchLink(
+        item,
+        "calepin-website-search-result",
+        "calepin-website-search-result-title",
+        "calepin-website-search-result-excerpt",
+      );
+      if (!link) continue;
+      results.appendChild(link);
+
+      const subResults = Array.isArray(item.sub_results)
+        ? item.sub_results.slice(0, SEARCH_SUBRESULT_LIMIT)
+        : [];
+      if (!subResults.length) continue;
+
+      const nested = document.createElement("div");
+      nested.className = "calepin-website-search-subresults";
+      for (const subResult of subResults) {
+        const subLink = addSearchLink(
+          subResult,
+          "calepin-website-search-subresult",
+          "calepin-website-search-subresult-title",
+          "calepin-website-search-subresult-excerpt",
+        );
+        if (subLink) nested.appendChild(subLink);
+      }
+      if (nested.children.length) results.appendChild(nested);
+    }
+
+    setSearchResultsOpen(input, results, Boolean(results.children.length));
+  }
+
+  function initNavbarSearch() {
+    const input = document.querySelector("[data-calepin-search-input]");
+    if (!input) return;
+    const form = input.closest("[data-calepin-search-form]");
+    const results = document.querySelector("[data-calepin-search-results]");
+
+    let opening = false;
+    let searchTimer = 0;
+    let searchToken = 0;
+    const openFromInput = async () => {
+      if (opening) return;
+      opening = true;
+      try {
+        const opened = await openPagefindSearch(input.value.trim());
+        if (opened) input.value = "";
+        if (opened && results) clearSearchResults(input, results);
+      } finally {
+        opening = false;
+      }
+    };
+
+    const scheduleSuggestions = () => {
+      if (!results) return;
+      window.clearTimeout(searchTimer);
+      const query = input.value.trim();
+      const token = ++searchToken;
+      if (query.length < SEARCH_SUGGESTION_MIN_LENGTH) {
+        clearSearchResults(input, results);
+        return;
+      }
+
+      searchTimer = window.setTimeout(async () => {
+        try {
+          const pagefind = await loadPagefindModule();
+          const search = await pagefind.search(query);
+          if (token !== searchToken || input.value.trim() !== query) return;
+          const items = await Promise.all(
+            search.results.slice(0, SEARCH_SUGGESTION_LIMIT).map((result) => result.data()),
+          );
+          if (token !== searchToken || input.value.trim() !== query) return;
+          renderSearchResults(input, results, items);
+        } catch {
+          if (token === searchToken) renderSearchMessage(input, results, "Search unavailable");
+        }
+      }, SEARCH_SUGGESTION_DELAY);
+    };
+
+    form?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      openFromInput();
+    });
+
+    input.addEventListener("input", scheduleSuggestions);
+    input.addEventListener("focus", scheduleSuggestions);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        openFromInput();
+      } else if (event.key === "Escape") {
+        if (results) clearSearchResults(input, results);
+        input.blur();
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!results || form?.contains(event.target)) return;
+      clearSearchResults(input, results);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const modifier = /Mac|iPhone|iPad|iPod/.test(window.navigator.platform)
+        ? event.metaKey
+        : event.ctrlKey;
+      if (
+        !modifier ||
+        event.altKey ||
+        event.shiftKey ||
+        event.key.toLowerCase() !== "k" ||
+        isTextEntryElement(document.activeElement)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      input.focus();
+    });
+  }
+
+  function isLoopbackHost(hostname) {
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname === "::1" ||
+      hostname === "[::1]"
+    );
+  }
+
+  function localCanonicalBasePathPrefix() {
+    if (!isLoopbackHost(window.location.hostname)) return "";
+    const canonical = document.querySelector('link[rel="canonical"]')?.href;
+    if (!canonical) return "";
+
+    try {
+      const canonicalPath = new URL(canonical).pathname;
+      const currentPath = window.location.pathname || "/";
+      if (canonicalPath === currentPath) return "";
+      if (canonicalPath.endsWith(currentPath)) {
+        return canonicalPath.slice(0, -currentPath.length).replace(/\/$/, "");
+      }
+      if (canonicalPath.endsWith("/index.html")) {
+        const indexPath = currentPath.endsWith("/") ? `${currentPath}index.html` : currentPath;
+        if (canonicalPath.endsWith(indexPath)) {
+          return canonicalPath.slice(0, -indexPath.length).replace(/\/$/, "");
+        }
+      }
+    } catch {
+      return "";
+    }
+    return "";
+  }
+
+  function hrefWithoutLocalBasePath(href, basePathPrefix) {
+    if (!href || !basePathPrefix) return href;
+    try {
+      const url = new URL(href, window.location.href);
+      if (url.origin !== window.location.origin) return href;
+      if (url.pathname !== basePathPrefix && !url.pathname.startsWith(`${basePathPrefix}/`)) {
+        return href;
+      }
+      url.pathname = url.pathname.slice(basePathPrefix.length) || "/";
+      return url.toString();
+    } catch {
+      return href;
+    }
+  }
+
+  function initPagefindLocalLinks() {
+    const basePathPrefix = localCanonicalBasePathPrefix();
+    if (!basePathPrefix) return;
+
+    const selector =
+      "pagefind-modal a[href], pagefind-searchbox a[href], .calepin-website-search-results a[href]";
+    const normalizeLinks = () => {
+      document.querySelectorAll(selector).forEach((link) => {
+        const next = hrefWithoutLocalBasePath(link.getAttribute("href"), basePathPrefix);
+        if (next && next !== link.getAttribute("href")) link.setAttribute("href", next);
+      });
+    };
+
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest(selector);
+      if (!link) return;
+      const next = hrefWithoutLocalBasePath(link.getAttribute("href"), basePathPrefix);
+      if (!next || next === link.getAttribute("href")) return;
+      event.preventDefault();
+      window.location.href = next;
+    });
+
+    normalizeLinks();
+    new MutationObserver(normalizeLinks).observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  const hasSearch = !!(
+    document.querySelector("pagefind-modal") ||
+    document.querySelector("pagefind-searchbox") ||
+    document.querySelector("[data-calepin-search-input]") ||
+    document.querySelector("[data-calepin-search-results]") ||
+    document.querySelector(".calepin-website-search-results")
+  );
+  if (!hasSearch) return;
+
+  initNavbarSearch();
+  initPagefindLocalLinks();
+})();
+
+    </script>
+<script>
+(() => {
+  "use strict";
+
+  const button = document.querySelector(".academic-nav-toggle");
+  const menu = document.getElementById("academic-menu");
+  if (!button || !menu) return;
+
+  function setOpen(open) {
+    menu.classList.toggle("is-open", open);
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  button.addEventListener("click", () => {
+    setOpen(!menu.classList.contains("is-open"));
+  });
+
+  menu.addEventListener("click", (event) => {
+    if (event.target.closest("a")) setOpen(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setOpen(false);
+  });
+})();
+
+    </script>
+
+</body></html>
