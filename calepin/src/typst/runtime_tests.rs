@@ -567,9 +567,7 @@ fn typst_compile_raw_size_applies_to_rewritten_and_explicit_chunks() {
 
 #set page(width: 420pt, height: 220pt, margin: 16pt)
 #set text(size: 20pt)
-#show raw.where(block: true): set text(size: .5em)
-
-#calepin.setup(fenced-chunks: true, echo: true)
+#calepin.setup(fenced-chunks: true, echo: true, code-size: .5em)
 
 #calepin.chunk_from_raw_plain("python", raw("print(\"rewritten\")\n", block: true, lang: "python"))
 

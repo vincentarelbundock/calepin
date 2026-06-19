@@ -248,10 +248,11 @@
       reg
     })
 
+    let code-size = options.at("code-size")
     if show-echo {
-      _input-block(code, lang: engine)
+      _input-block(code, lang: engine, code-size: code-size)
     } else if results-path == "" {
-      _input-block(code, lang: engine)
+      _input-block(code, lang: engine, code-size: code-size)
     }
     // `results: "hide"`/`"hidden"` runs the chunk but renders nothing here; the
     // output can still be shown elsewhere with `#calepin.results(label)`.

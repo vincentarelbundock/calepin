@@ -48,6 +48,7 @@
   message: true,
   error: false,
   placeholder: auto,
+  "code-size": none,
   "fig-device-format": "svg",
   "fig-device-dpi": 150,
   "fig-device-width": 6,
