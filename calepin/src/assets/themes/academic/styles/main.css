@@ -3,6 +3,17 @@
   --calepin-margin-width: 16rem;
 }
 
+.academic-topbar,
+.academic-document-topbar {
+  transition: transform 180ms ease;
+  will-change: transform;
+}
+
+.academic-topbar.is-hidden,
+.academic-document-topbar.is-hidden {
+  transform: translateY(-100%);
+}
+
 .academic-document-topbar {
   display: flex;
   justify-content: flex-end;
@@ -242,5 +253,12 @@ body:has(.academic-document-main .calepin-sidefigure) .academic-document-main {
     grid-column: 1;
     justify-self: start;
     text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .academic-topbar,
+  .academic-document-topbar {
+    transition: none;
   }
 }

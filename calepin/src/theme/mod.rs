@@ -203,6 +203,29 @@ mod tests {
     }
 
     #[test]
+    fn academic_assets_hide_topbar_on_down_scroll() {
+        let sel = ThemeSelection::Builtin("academic");
+        let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
+        let css = site
+            .styles
+            .iter()
+            .find(|(name, _)| name == "main.css")
+            .map(|(_, source)| source)
+            .expect("academic main.css should be included");
+        let js = site
+            .scripts
+            .iter()
+            .find(|(name, _)| name == "main.js")
+            .map(|(_, source)| source)
+            .expect("academic main.js should be included");
+
+        assert!(css.contains(".academic-topbar.is-hidden"), "{css}");
+        assert!(css.contains("transform: translateY(-100%)"), "{css}");
+        assert!(js.contains("initScrollAwareTopbar"), "{js}");
+        assert!(js.contains("lastScrollY"), "{js}");
+    }
+
+    #[test]
     fn typst_selection_resolves_to_no_entry_and_no_notebook_source() {
         assert!(resolve_html_entry(&ThemeSelection::Typst, HtmlScope::Site)
             .unwrap()
