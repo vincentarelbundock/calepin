@@ -149,21 +149,31 @@ impl HtmlSyntaxTheme {
 
     fn from_textmate_themes(light: TextMateTheme, dark: TextMateTheme) -> Self {
         let specs = union_rule_specs(&light, &dark);
+        let mut used_variable_names = BTreeSet::new();
         let mut tokens = specs
             .iter()
             .enumerate()
             .map(|(index, spec)| {
                 let emitted_color = sentinel_color(index);
+                let variable_name = syntax_variable_name(
+                    "scope",
+                    spec.scope.as_deref().unwrap_or("scope"),
+                    &mut used_variable_names,
+                );
                 HtmlSyntaxToken {
                     emitted_color: emitted_color.clone(),
-                    class_name: format!("calepin-syntax-t{}", index + 1),
-                    variable_name: format!("calepin-syntax-t{}", index + 1),
+                    class_name: format!("calepin-syntax-{variable_name}"),
+                    variable_name,
                     light: style_for_scope(&light, spec.scope.as_deref(), &light.foreground),
                     dark: style_for_scope(&dark, spec.scope.as_deref(), &dark.foreground),
                 }
             })
             .collect::<Vec<_>>();
-        tokens.extend(fallback_syntax_tokens(&light, &dark, tokens.len()));
+        tokens.extend(fallback_syntax_tokens(
+            &light,
+            &dark,
+            &mut used_variable_names,
+        ));
         let sentinel_rules = specs
             .into_iter()
             .enumerate()
@@ -303,17 +313,16 @@ fn style_for_scope(
 fn fallback_syntax_tokens(
     light: &TextMateTheme,
     dark: &TextMateTheme,
-    start_index: usize,
+    used_variable_names: &mut BTreeSet<String>,
 ) -> Vec<HtmlSyntaxToken> {
     fallback_emitted_colors()
         .iter()
-        .enumerate()
-        .map(|(index, (emitted_color, scope))| {
-            let token_index = start_index + index + 1;
+        .map(|(emitted_color, scope)| {
+            let variable_name = syntax_variable_name("fallback", scope, used_variable_names);
             HtmlSyntaxToken {
                 emitted_color: (*emitted_color).to_string(),
-                class_name: format!("calepin-syntax-f{}", token_index),
-                variable_name: format!("calepin-syntax-f{}", token_index),
+                class_name: format!("calepin-syntax-{variable_name}"),
+                variable_name,
                 light: style_for_scope(light, Some(scope), &light.foreground),
                 dark: style_for_scope(dark, Some(scope), &dark.foreground),
             }
@@ -366,6 +375,46 @@ fn css_font_style(font_style: &str) -> Vec<(&'static str, &'static str)> {
         }
     }
     declarations
+}
+
+fn syntax_variable_name(
+    kind: &str,
+    scope: &str,
+    used_variable_names: &mut BTreeSet<String>,
+) -> String {
+    let mut base = format!("{kind}-{}", sanitize_scope_name(scope));
+    if base == format!("{kind}-") {
+        base = format!("{kind}-token");
+    }
+
+    if used_variable_names.insert(base.clone()) {
+        return base;
+    }
+
+    let mut index = 2;
+    loop {
+        let candidate = format!("{base}-{index}");
+        if used_variable_names.insert(candidate.clone()) {
+            return candidate;
+        }
+        index += 1;
+    }
+}
+
+fn sanitize_scope_name(scope: &str) -> String {
+    let mut normalized = String::new();
+    let scope = scope.replace(',', " ");
+    for ch in scope.chars() {
+        if ch.is_ascii_alphanumeric() {
+            normalized.push(ch.to_ascii_lowercase());
+        } else if !normalized.ends_with('-') {
+            normalized.push('-');
+        }
+    }
+    normalized
+        .trim_start_matches('-')
+        .trim_end_matches('-')
+        .to_string()
 }
 
 fn resolve_config_path(config_dir: &Path, path: &Path) -> std::path::PathBuf {
