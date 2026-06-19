@@ -1157,6 +1157,7 @@ impl SiteModel {
             pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {
                 css: html_escape(&page_relative_url(current_href, PAGEFIND_CSS)),
                 js: html_escape(&page_relative_url(current_href, PAGEFIND_JS)),
+                bundle: html_escape(&page_relative_url(current_href, &format!("{PAGEFIND_DIR}/"))),
             }),
         }
     }
@@ -5188,6 +5189,7 @@ filenames = ["atom.xml", "rss.xml"]
 
         assert_eq!(pagefind.css, "../pagefind/pagefind-component-ui.css");
         assert_eq!(pagefind.js, "../pagefind/pagefind-component-ui.js");
+        assert_eq!(pagefind.bundle, "../pagefind/");
     }
 
     #[test]

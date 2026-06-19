@@ -77,6 +77,7 @@ struct SiteContext {
 pub(crate) struct SitePagefindEntry {
     pub(crate) css: String,
     pub(crate) js: String,
+    pub(crate) bundle: String,
 }
 
 #[derive(Serialize, Debug, Clone)]
