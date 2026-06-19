@@ -10,12 +10,6 @@
   book: false,
 )
 
-#set page(
-  paper: "us-letter",
-  numbering: "1",
-  number-align: right,
-)
-
 #let sidenote = calepin.elements.sidenote.with(side: "right")
 #let sidefigure = calepin.elements.sidefigure.with(side: "right")
 
@@ -210,7 +204,7 @@ for name, vector in zip(items, item_factors):
 
 fragment = (
     "#figure("
-    "table(columns: 3, inset: 0.28em, "
+    "table(columns: 3, align: (left, left, left), inset: 0.28em, "
     + ", ".join(rows)
     + "), caption: [Learned item factors])"
 )
