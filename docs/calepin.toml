@@ -96,10 +96,22 @@ title = "Slides"
   target = "slides/touying.typ"
 
 [[sidebar.section]]
-title = "More"
+title = "Themes"
 
   [[sidebar.section.item]]
-  target = "themes.typ"
+  target = "themes/themes.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/builtin.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/customize.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/create.typ"
+
+[[sidebar.section]]
+title = "More"
 
   [[sidebar.section.item]]
   target = "tips.typ"

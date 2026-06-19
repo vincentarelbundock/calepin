@@ -26,6 +26,10 @@ base_url = "https://example.com"
 # Default: "calepin".
 theme = "academic"
 
+# CSS files to append after the selected theme's CSS.
+# Default: [].
+styles = ["styles/site.css"]
+
 # Render .pdf files for every page.
 # Default: false.
 pdf = false
@@ -60,7 +64,23 @@ Use `--format html` for a one-time HTML-only build, regardless of `pdf`. Use `--
 
 Set `search = "pagefind"` to add static search to bundled website themes. _Calepin_ writes the Pagefind search bundle to `pagefind/` after rendering the site and links the bundled themes to the generated component script and stylesheet. Bundled themes mark the main page content with `data-pagefind-body`, so navigation, toolbars, and footers are excluded from the search index.
 
-Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
+Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, `styles`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
+
+= CSS styles
+
+Use `styles` for project CSS that should load after the selected theme:
+
+```toml
+theme = "academic"
+styles = ["styles/site.css", "styles/figures.css"]
+```
+
+Each file must be a `.css` file. Styles load in the listed order, after the
+theme's shared and local styles. This is the lightest way to adjust colors,
+fonts, spacing, or small component rules without ejecting a full theme.
+
+See #link("../themes/customize.html")[Customize themes] for the stable
+`--calepin-*` CSS tokens exposed by bundled themes.
 
 Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image("assets/diagram.svg")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`; if no logo is set, bundled themes use `title` as the site name.
 

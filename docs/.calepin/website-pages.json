@@ -126,13 +126,51 @@
     "translations": {}
   },
   {
-    "href": "themes.html",
+    "href": "themes/builtin.html",
     "language": null,
-    "meta": {},
-    "path": "themes.typ",
-    "pdf": "themes.pdf",
-    "title": "Themes",
-    "translation_key": "themes",
+    "meta": {
+      "title": "Built-in"
+    },
+    "path": "themes/builtin.typ",
+    "pdf": "themes/builtin.pdf",
+    "title": "Built-in",
+    "translation_key": "themes/builtin",
+    "translations": {}
+  },
+  {
+    "href": "themes/create.html",
+    "language": null,
+    "meta": {
+      "title": "Create a theme"
+    },
+    "path": "themes/create.typ",
+    "pdf": "themes/create.pdf",
+    "title": "Create a theme",
+    "translation_key": "themes/create",
+    "translations": {}
+  },
+  {
+    "href": "themes/customize.html",
+    "language": null,
+    "meta": {
+      "title": "Customize CSS"
+    },
+    "path": "themes/customize.typ",
+    "pdf": "themes/customize.pdf",
+    "title": "Customize CSS",
+    "translation_key": "themes/customize",
+    "translations": {}
+  },
+  {
+    "href": "themes/themes.html",
+    "language": null,
+    "meta": {
+      "title": "Overview"
+    },
+    "path": "themes/themes.typ",
+    "pdf": "themes/themes.pdf",
+    "title": "Overview",
+    "translation_key": "themes/themes",
     "translations": {}
   },
   {
