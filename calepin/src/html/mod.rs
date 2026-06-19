@@ -663,6 +663,56 @@ mod tests {
     }
 
     #[test]
+    fn bundled_website_themes_place_pagefind_config_before_component_script() {
+        let site_context = SiteContextInput {
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            pagefind: Some(SitePagefindEntry {
+                css: "pagefind/pagefind-component-ui.css".to_string(),
+                js: "pagefind/pagefind-component-ui.js".to_string(),
+                bundle: "pagefind/".to_string(),
+            }),
+            ..SiteContextInput::default()
+        };
+
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+            let entry = entry_for(&selection, HtmlScope::Site);
+            let theme_name = entry.theme_name.clone();
+            let themed = theme::apply_html_theme(
+                SAMPLE_HTML,
+                Some(&entry),
+                &HtmlSyntaxTheme::builtin(),
+                None,
+                None,
+                Some(&site_context),
+            )
+            .unwrap();
+
+            let config = themed
+                .find(r#"<pagefind-config bundle-path="pagefind/">"#)
+                .unwrap();
+            let script = themed
+                .find(r#"<script src="pagefind/pagefind-component-ui.js" type="module"></script>"#)
+                .unwrap();
+            let modal = themed.find("<pagefind-modal></pagefind-modal>").unwrap();
+
+            assert!(
+                config < script,
+                "{theme_name}: Pagefind config must precede component script"
+            );
+            assert!(
+                script < modal,
+                "{theme_name}: Pagefind modal should remain in the body"
+            );
+            assert_eq!(
+                themed.matches("<pagefind-config").count(),
+                1,
+                "{theme_name}: duplicate Pagefind config"
+            );
+        }
+    }
+
+    #[test]
     fn default_website_theme_places_main_menu_on_right_before_social_menu() {
         let site_context = SiteContextInput {
             menus: BTreeMap::from([

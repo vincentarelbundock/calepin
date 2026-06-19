@@ -10,5 +10,6 @@
 {% endif %}
 {% if site.pagefind %}
     <link rel="stylesheet" href="{{ site.pagefind.css }}">
+    <pagefind-config bundle-path="{{ site.pagefind.bundle }}"></pagefind-config>
     <script src="{{ site.pagefind.js }}" type="module"></script>
 {% endif %}
