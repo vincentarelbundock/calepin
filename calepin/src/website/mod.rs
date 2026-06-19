@@ -37,7 +37,7 @@ use crate::utils::http::timeout_agent;
 use crate::utils::progress::ProgressManager;
 use crate::utils::static_files::path_has_common_skip_dir;
 pub(crate) use crate::utils::static_files::COMMON_SKIP_DIRS as SKIP_DIRS;
-use crate::utils::watch::{is_rebuild_event, run_debounced_watch};
+use crate::utils::watch::{is_rebuild_event, run_debounced_watch_until};
 #[cfg(test)]
 use config::{LanguageConfig, SidebarItemConfig, SidebarSectionConfig};
 use config::{
@@ -334,8 +334,13 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let style_paths = calepin_config
         .styles
         .iter()
-        .map(|style| style.path.clone())
-        .collect();
+        .map(|style| {
+            style
+                .path
+                .canonicalize()
+                .with_context(|| format!("failed to resolve {}", style.path.display()))
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     let build_set = match &args.incremental_inputs {
         Some(inputs) => {
@@ -610,6 +615,62 @@ fn watch_site(
     })
     .context("failed to set Ctrl+C handler")?;
 
+    if !quiet {
+        eprintln!("Watching {}", current.src_dir.display());
+        eprintln!("Press Ctrl+C to stop.");
+    }
+
+    loop {
+        let watches = watch_roots(&current);
+        let mut restart = false;
+        run_debounced_watch_until(
+            &watches,
+            Duration::from_millis(350),
+            Duration::from_millis(200),
+            Arc::clone(&stop),
+            is_rebuild_event,
+            Some,
+            |raw_changed| {
+                let changed = raw_changed
+                    .iter()
+                    .filter(|path| should_rebuild_for_path(&current, path))
+                    .cloned()
+                    .collect::<Vec<_>>();
+                if changed.is_empty() {
+                    return true;
+                }
+                if !quiet {
+                    let names = changed
+                        .iter()
+                        .filter_map(|path| path.file_name())
+                        .map(|name| name.to_string_lossy().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    eprintln!("rebuilding {names}...");
+                }
+                match rebuild_changed_pages(&options, &current, &changed) {
+                    Ok(Some(next)) => {
+                        restart = watch_roots_changed(&current, &next);
+                        current = next;
+                        live.rebuilt();
+                        !restart
+                    }
+                    Ok(None) => true,
+                    Err(error) => {
+                        cwarn!("website rebuild failed: {}", error);
+                        live.set_error(format!("{error:#}"));
+                        true
+                    }
+                }
+            },
+        )?;
+        if stop.load(Ordering::Relaxed) || !restart {
+            return Ok(());
+        }
+    }
+}
+
+fn watch_roots(current: &WebsiteBuildResult) -> Vec<(PathBuf, RecursiveMode)> {
     let mut watches = vec![
         (current.src_dir.clone(), RecursiveMode::Recursive),
         (current.config_path.clone(), RecursiveMode::NonRecursive),
@@ -620,51 +681,11 @@ fn watch_site(
     for style_path in &current.style_paths {
         watches.push((style_path.clone(), RecursiveMode::NonRecursive));
     }
+    watches
+}
 
-    if !quiet {
-        eprintln!("Watching {}", current.src_dir.display());
-        eprintln!("Press Ctrl+C to stop.");
-    }
-
-    run_debounced_watch(
-        &watches,
-        Duration::from_millis(350),
-        Duration::from_millis(200),
-        stop,
-        is_rebuild_event,
-        Some,
-        |raw_changed| {
-            let changed = raw_changed
-                .iter()
-                .filter(|path| should_rebuild_for_path(&current, path))
-                .cloned()
-                .collect::<Vec<_>>();
-            if changed.is_empty() {
-                return;
-            }
-            if !quiet {
-                let names = changed
-                    .iter()
-                    .filter_map(|path| path.file_name())
-                    .map(|name| name.to_string_lossy().to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                eprintln!("rebuilding {names}...");
-            }
-            match rebuild_changed_pages(&options, &current, &changed) {
-                Ok(Some(next)) => {
-                    current = next;
-                    live.rebuilt();
-                }
-                Ok(None) => {}
-                Err(error) => {
-                    cwarn!("website rebuild failed: {}", error);
-                    live.set_error(format!("{error:#}"));
-                }
-            }
-        },
-    )
-    .map(|_| ())
+fn watch_roots_changed(previous: &WebsiteBuildResult, next: &WebsiteBuildResult) -> bool {
+    watch_roots(previous) != watch_roots(next)
 }
 
 fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
@@ -676,17 +697,17 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
             return true;
         }
     }
+    // A distinct output directory only ever receives generated copies; reacting
+    // to them would re-trigger the build that produced them.
+    if initial.out_dir != initial.src_dir && path.starts_with(&initial.out_dir) {
+        return false;
+    }
     if initial
         .style_paths
         .iter()
         .any(|style_path| path == style_path)
     {
         return true;
-    }
-    // A distinct output directory only ever receives generated copies; reacting
-    // to them would re-trigger the build that produced them.
-    if initial.out_dir != initial.src_dir && path.starts_with(&initial.out_dir) {
-        return false;
     }
     if !path.starts_with(&initial.src_dir) {
         return false;
@@ -3475,6 +3496,94 @@ styles = ["styles/site.css"]
     }
 
     #[test]
+    fn website_build_result_canonicalizes_config_style_paths() {
+        if !has_command("typst") {
+            return;
+        }
+
+        let dir = typst_accessible_tempdir();
+        let root = dir.path();
+        let src = root.join("docs");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::create_dir_all(root.join("config")).unwrap();
+        std::fs::create_dir_all(root.join("styles")).unwrap();
+        std::fs::write(root.join("styles/site.css"), "body { color: red; }").unwrap();
+        std::fs::write(
+            root.join("config/calepin.toml"),
+            r#"
+theme = "calepin"
+styles = ["../styles/site.css"]
+"#,
+        )
+        .unwrap();
+        std::fs::write(src.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
+
+        let result = build_site(WebsiteBuildOptions {
+            config: root.join("config/calepin.toml"),
+            src: Some(src),
+            out: Some(root.join("out")),
+            theme: None,
+            parallelism: Some(1),
+            render_pdf: Some(false),
+            quiet: true,
+            timeout: None,
+            params: Vec::new(),
+            typst_args: Vec::new(),
+            incremental_inputs: None,
+            clean: true,
+            minify_html: false,
+        })
+        .unwrap();
+
+        let canonical_style = root.join("styles/site.css").canonicalize().unwrap();
+        assert_eq!(result.style_paths, vec![canonical_style.clone()]);
+        assert!(should_rebuild_for_path(&result, &canonical_style));
+    }
+
+    #[test]
+    fn watch_roots_include_configured_styles() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let theme = temp.path().join("theme");
+        let style = temp.path().join("styles/site.css");
+        let mut current = test_build_result(&src, &[]);
+        current.theme_dir = Some(theme.clone());
+        current.style_paths = vec![style.clone()];
+
+        assert_eq!(
+            watch_roots(&current),
+            vec![
+                (src, RecursiveMode::Recursive),
+                (
+                    temp.path().join("docs/calepin.toml"),
+                    RecursiveMode::NonRecursive
+                ),
+                (theme, RecursiveMode::Recursive),
+                (style, RecursiveMode::NonRecursive),
+            ]
+        );
+    }
+
+    #[test]
+    fn watch_roots_changed_detects_style_and_theme_updates() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let style = temp.path().join("styles/site.css");
+        let theme = temp.path().join("theme");
+        let current = test_build_result(&src, &[]);
+
+        let mut style_next = current.clone();
+        style_next.style_paths = vec![style];
+        assert!(watch_roots_changed(&current, &style_next));
+
+        let mut theme_next = current.clone();
+        theme_next.theme_dir = Some(theme);
+        assert!(watch_roots_changed(&current, &theme_next));
+
+        assert!(!watch_roots_changed(&style_next, &style_next));
+    }
+
+    #[test]
     fn theme_generated_assets_use_fingerprinted_calepin_paths() {
         let entry = crate::theme::resolve_html_entry(
             &crate::theme::ThemeSelection::Default,
@@ -5782,6 +5891,23 @@ target = "index.typ"
         current.style_paths = vec![style.clone()];
 
         assert!(should_rebuild_for_path(&current, &style));
+    }
+
+    #[test]
+    fn should_rebuild_for_path_ignores_config_style_in_distinct_output_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("docs");
+        let out = temp.path().join("site");
+        let style = out.join("style.css");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&out).unwrap();
+        fs::write(&style, "body { color: red; }").unwrap();
+
+        let mut current = test_build_result(&src, &[]);
+        current.out_dir = out;
+        current.style_paths = vec![style.clone()];
+
+        assert!(!should_rebuild_for_path(&current, &style));
     }
 
     #[test]

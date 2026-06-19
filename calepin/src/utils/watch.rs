@@ -27,9 +27,32 @@ pub fn run_debounced_watch(
     debounce: Duration,
     poll: Duration,
     stop: Arc<AtomicBool>,
+    event_filter: impl FnMut(&notify::EventKind) -> bool,
+    path_filter: impl FnMut(PathBuf) -> Option<PathBuf>,
+    mut on_change: impl FnMut(&[PathBuf]),
+) -> Result<()> {
+    run_debounced_watch_until(
+        watches,
+        debounce,
+        poll,
+        stop,
+        event_filter,
+        path_filter,
+        |changed| {
+            on_change(changed);
+            true
+        },
+    )
+}
+
+pub fn run_debounced_watch_until(
+    watches: &[(PathBuf, RecursiveMode)],
+    debounce: Duration,
+    poll: Duration,
+    stop: Arc<AtomicBool>,
     mut event_filter: impl FnMut(&notify::EventKind) -> bool,
     mut path_filter: impl FnMut(PathBuf) -> Option<PathBuf>,
-    mut on_change: impl FnMut(&[PathBuf]),
+    mut on_change: impl FnMut(&[PathBuf]) -> bool,
 ) -> Result<()> {
     let (tx, rx) = mpsc::channel();
     let mut debouncer =
@@ -61,8 +84,8 @@ pub fn run_debounced_watch(
                         }
                     }
                 }
-                if !changed.is_empty() {
-                    on_change(&changed);
+                if !changed.is_empty() && !on_change(&changed) {
+                    break;
                 }
             }
             Ok(Err(errors)) => {
