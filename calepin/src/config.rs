@@ -14,6 +14,23 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
+    pub config_dir: PathBuf,
+    pub theme: Option<RawThemeValue>,
+    pub styles: Vec<CssOverride>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CssOverride {
+    pub name: String,
+    pub path: PathBuf,
+    pub css: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(untagged)]
+pub enum RawThemeValue {
+    Enabled(String),
+    Toggle(bool),
 }
 
 impl CalepinConfig {
@@ -32,15 +49,33 @@ impl CalepinConfig {
         // Relative paths written in the config resolve against the config
         // file's own directory, so a config can live anywhere and still point
         // at its siblings without `../` gymnastics.
-        let config_dir = path.parent().unwrap_or(root);
+        let config_dir = path.parent().unwrap_or(root).to_path_buf();
+        let styles = resolve_css_overrides(&config_dir, raw.styles)?;
         Ok(Self {
-            executables: ExecutablePaths::from_raw(root, config_dir, raw.executables),
+            executables: ExecutablePaths::from_raw(root, &config_dir, raw.executables),
+            config_dir,
+            theme: raw.theme,
+            styles,
         })
     }
 
     fn default_for_root(root: &Path) -> Self {
         Self {
             executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
+            config_dir: root.to_path_buf(),
+            theme: None,
+            styles: Vec::new(),
+        }
+    }
+
+    pub fn theme_selection(&self, base_dir: &Path) -> Result<Option<crate::theme::ThemeSelection>> {
+        match &self.theme {
+            None => Ok(None),
+            Some(RawThemeValue::Toggle(false)) => Ok(Some(crate::theme::ThemeSelection::Disabled)),
+            Some(RawThemeValue::Toggle(true)) => Ok(Some(crate::theme::ThemeSelection::Default)),
+            Some(RawThemeValue::Enabled(value)) => {
+                Ok(Some(crate::theme::ThemeSelection::parse(value, base_dir)?))
+            }
         }
     }
 }
@@ -119,6 +154,8 @@ impl ExecutablePaths {
 #[serde(default)]
 struct RawCalepinConfig {
     executables: RawExecutablePaths,
+    theme: Option<RawThemeValue>,
+    styles: Vec<PathBuf>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -154,6 +191,44 @@ fn resolve_tool_path(root: &Path, path: PathBuf) -> PathBuf {
         return path;
     }
     root.join(path)
+}
+
+fn resolve_css_overrides(config_dir: &Path, paths: Vec<PathBuf>) -> Result<Vec<CssOverride>> {
+    paths
+        .into_iter()
+        .map(|path| resolve_css_override(config_dir, path))
+        .collect()
+}
+
+fn resolve_css_override(config_dir: &Path, path: PathBuf) -> Result<CssOverride> {
+    if path.extension().and_then(|ext| ext.to_str()) != Some("css") {
+        return Err(anyhow!(
+            "configured style must be a .css file: {}",
+            path.display()
+        ));
+    }
+    let resolved = if path.is_absolute() {
+        path
+    } else {
+        config_dir.join(path)
+    };
+    if !resolved.is_file() {
+        return Err(anyhow!(
+            "configured style file not found: {}",
+            resolved.display()
+        ));
+    }
+    let css = std::fs::read_to_string(&resolved)
+        .with_context(|| format!("failed to read configured style {}", resolved.display()))?;
+    let name = resolved
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| resolved.display().to_string());
+    Ok(CssOverride {
+        name,
+        path: resolved,
+        css,
+    })
 }
 
 #[cfg(test)]
@@ -275,5 +350,88 @@ typst = "typst-dev"
         let config = config.unwrap();
 
         assert_eq!(config.executables.typst, PathBuf::from("typst-dev"));
+    }
+
+    #[test]
+    fn config_parses_theme_and_css_styles() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("styles")).unwrap();
+        std::fs::write(dir.path().join("styles/site.css"), ":root { --x: 1; }").unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            r#"
+theme = "academic"
+styles = ["styles/site.css"]
+"#,
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        assert_eq!(
+            config.theme_selection(dir.path()).unwrap(),
+            Some(crate::theme::ThemeSelection::Builtin("academic"))
+        );
+        assert_eq!(config.styles.len(), 1);
+        assert_eq!(config.styles[0].name, "site.css");
+        assert_eq!(config.styles[0].path, dir.path().join("styles/site.css"));
+        assert!(config.styles[0].css.contains("--x: 1"));
+    }
+
+    #[test]
+    fn config_styles_resolve_relative_to_config_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_dir = dir.path().join("project");
+        std::fs::create_dir_all(config_dir.join("styles")).unwrap();
+        std::fs::write(config_dir.join("styles/site.css"), "body { color: red; }").unwrap();
+        std::fs::write(
+            config_dir.join("calepin.toml"),
+            r#"styles = ["styles/site.css"]"#,
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&config_dir.join("calepin.toml"))).unwrap();
+
+        assert_eq!(config.config_dir, config_dir);
+        assert_eq!(
+            config.styles[0].path,
+            config.config_dir.join("styles/site.css")
+        );
+    }
+
+    #[test]
+    fn config_styles_reject_non_css_file() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("site.scss"), "body { color: red; }").unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), r#"styles = ["site.scss"]"#).unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
+
+        assert!(
+            err.contains("configured style must be a .css file"),
+            "{err}"
+        );
+        assert!(err.contains("site.scss"), "{err}");
+    }
+
+    #[test]
+    fn config_styles_reject_missing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            r#"styles = ["missing.css"]"#,
+        )
+        .unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("configured style file not found"), "{err}");
+        assert!(err.contains("missing.css"), "{err}");
     }
 }
