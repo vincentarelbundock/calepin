@@ -20,10 +20,16 @@ theme = "themes/my-theme"   # a local theme directory
 theme = "typst"             # raw Typst output, no Calepin theme
 ```
 
-The same string values can be set per document or selected with a config file:
+If the `calepin.toml` file is not located in the same directory as the document or website being compiled, you can specify the path to the config file with `--config`:
 
 ```sh
 calepin compile notebook.typ --config=/path/to/calepin.toml
+```
+
+You can also set the theme in-document with:
+
+```typ
+#calepin.setup(theme: "academic")
 ```
 
 When several theme settings are present during a compile, the document setting
