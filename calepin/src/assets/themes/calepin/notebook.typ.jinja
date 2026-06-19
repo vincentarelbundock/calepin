@@ -1,5 +1,7 @@
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
+#show raw.where(block: true): set text(size: .8em)
+
 #show raw.where(block: true): it => {
   if it.theme != auto {
     it
