@@ -363,6 +363,11 @@ h3 {
   min-width: 0;
 }
 
+.calepin-document-main {
+  width: min(100% - 2rem, var(--calepin-content-width));
+  margin-inline: auto;
+}
+
 .calepin-content > :first-child {
   margin-top: 0;
 }
@@ -1000,13 +1005,13 @@ a:has(.calepin-nav-icon) {
 <style>
 :root {
   --calepin-page-width: calc(var(--calepin-content-width) + var(--calepin-margin-gap) + var(--calepin-margin-width));
-  --calepin-margin-width: 12.5rem;
+  --calepin-margin-width: 16rem;
 }
 
 .academic-document-topbar {
   display: flex;
   justify-content: flex-end;
-  width: min(100% - 2rem, var(--calepin-page-width));
+  width: min(100% - 2rem, var(--calepin-content-width));
   margin-inline: auto;
   border-bottom: 0;
 }
@@ -1046,7 +1051,7 @@ a:has(.calepin-nav-icon) {
 }
 
 .academic-document-main {
-  width: min(100% - 2rem, var(--calepin-page-width));
+  width: min(100% - 2rem, var(--calepin-content-width));
   margin-inline: auto;
   padding-block: 2.4rem 4rem;
 }
@@ -1168,7 +1173,7 @@ a:has(.calepin-nav-icon) {
   margin: 0;
 }
 
-@media (max-width: 56rem) {
+@media (max-width: 62rem) {
   .calepin-sidenote,
   .calepin-sidefigure {
     display: block;

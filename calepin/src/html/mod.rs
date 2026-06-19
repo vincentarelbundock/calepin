@@ -941,6 +941,19 @@ mod tests {
     }
 
     #[test]
+    fn academic_margin_content_stacks_before_it_can_overlap_text() {
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+
+        assert!(
+            css.contains("@media (max-width: 62rem)"),
+            "academic margin content should stack before the 16rem margin can overlap text"
+        );
+    }
+
+    #[test]
     fn academic_document_caps_sized_figures_to_text_column() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
         let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())

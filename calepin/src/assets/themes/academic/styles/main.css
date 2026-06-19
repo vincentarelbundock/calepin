@@ -168,7 +168,7 @@
   margin: 0;
 }
 
-@media (max-width: 56rem) {
+@media (max-width: 62rem) {
   .calepin-sidenote,
   .calepin-sidefigure {
     display: block;
