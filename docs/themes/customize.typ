@@ -19,9 +19,9 @@ extension. The setting affects HTML output only.
 
 = Style raw HTML with CSS
 
-Use this mode when you want complete control of the generated markup and CSS while still using
-Calepin's notebook execution model; it is especially useful for design systems that already
-have established HTML/CSS conventions.
+This setting is for teams that want complete control of the generated markup and CSS while still
+keeping Calepin's notebook execution model. It is especially useful for design systems with
+established HTML/CSS conventions.
 
 Set `theme = "typst"` when you do not want a bundled base theme. Configured styles still apply to HTML output:
 
@@ -29,8 +29,6 @@ Set `theme = "typst"` when you do not want a bundled base theme. Configured styl
 theme = "typst"
 styles = ["styles/raw.css"]
 ```
-
-This mode is useful when you want Typst's raw HTML structure and a completely project-owned stylesheet.
 
 = Theme tokens
 
