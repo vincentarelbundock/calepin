@@ -175,6 +175,17 @@
     setSearchResultsOpen(input, results, Boolean(results.children.length));
   }
 
+  function initMobileSearchTriggers() {
+    document.querySelectorAll("[data-calepin-mobile-search-trigger]").forEach((button) => {
+      if (button.dataset.calepinSearchBound === "true") return;
+      button.dataset.calepinSearchBound = "true";
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        openPagefindSearch("");
+      });
+    });
+  }
+
   function initNavbarSearch() {
     const input = document.querySelector("[data-calepin-search-input]");
     if (!input) return;
@@ -346,10 +357,12 @@
     document.querySelector("pagefind-searchbox") ||
     document.querySelector("[data-calepin-search-input]") ||
     document.querySelector("[data-calepin-search-results]") ||
+    document.querySelector("[data-calepin-mobile-search-trigger]") ||
     document.querySelector(".calepin-website-search-results")
   );
   if (!hasSearch) return;
 
+  initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
 })();

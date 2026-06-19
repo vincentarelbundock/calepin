@@ -25,7 +25,7 @@
                 {% for item in site.menus.social %}
                 {% include "partials/navbar-item.html" %}
                 {% endfor %}
-                <li><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
+                <li class="calepin-website-theme-item"><button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button></li>
                 {% if site.languages and site.languages | length > 1 %}
                 <li>
                     <select class="calepin-website-view-mode" aria-label="Language" data-calepin-language-picker>
@@ -42,9 +42,12 @@
                         <div class="calepin-website-search-results" role="listbox" aria-label="Search results" hidden data-calepin-search-results></div>
                     </form>
                 </li>
+                <li class="calepin-website-mobile-search-item">
+                    <button class="calepin-website-mobile-search-button outline secondary" type="button" aria-label="Search documentation" title="Search" data-calepin-mobile-search-trigger>⌕</button>
+                </li>
                 {% endif %}
-                <li>
-                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view">
+                <li class="calepin-website-view-mode-item">
+                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view" data-calepin-view-mode>
                         <option value="rendered">HTML</option>
                         <option value="source">Source</option>
                         <option value="pdf">PDF</option>
