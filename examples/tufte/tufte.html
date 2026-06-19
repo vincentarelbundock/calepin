@@ -1056,6 +1056,11 @@ a:has(.calepin-nav-icon) {
   padding-block: 2.4rem 4rem;
 }
 
+body:has(.academic-document-main .calepin-sidenote) .academic-document-main,
+body:has(.academic-document-main .calepin-sidefigure) .academic-document-main {
+  width: min(100% - 2rem, var(--calepin-page-width));
+}
+
 .academic-document-main > :not(.fullwidth):not(.full-width):not(.calepin-figure-grid) {
   max-width: var(--calepin-content-width);
 }
@@ -1071,11 +1076,14 @@ a:has(.calepin-nav-icon) {
   float: right;
   clear: right;
   width: var(--calepin-margin-width);
-  margin: 0.25rem calc(-1 * (var(--calepin-margin-width) + var(--calepin-margin-gap))) 1rem var(--calepin-margin-gap);
   color: var(--calepin-color-muted);
   font-size: 0.84rem;
   line-height: 1.45;
   scroll-margin-top: calc(var(--calepin-topbar-height) + 1rem);
+}
+
+.calepin-sidenote {
+  margin: 0.25rem calc(-1 * (var(--calepin-margin-width) + var(--calepin-margin-gap))) 1rem var(--calepin-margin-gap);
 }
 
 .calepin-sidenote p,
@@ -1107,7 +1115,7 @@ a:has(.calepin-nav-icon) {
 
 /* A figure, table, or code output placed in the margin. */
 .calepin-sidefigure {
-  margin-top: 0.4rem;
+  margin: 0.4rem 0 1rem var(--calepin-margin-gap);
 }
 
 .calepin-sidefigure figure,
@@ -1173,7 +1181,7 @@ a:has(.calepin-nav-icon) {
   margin: 0;
 }
 
-@media (max-width: calc(39rem + 16rem + 2rem + 16rem + 2rem)) {
+@media (max-width: calc(39rem + 16rem + 2rem + 2rem)) {
   .calepin-sidenote,
   .calepin-sidefigure {
     display: block;

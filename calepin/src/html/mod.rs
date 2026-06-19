@@ -911,7 +911,7 @@ mod tests {
     }
 
     #[test]
-    fn academic_document_does_not_reserve_margin_for_margin_content() {
+    fn academic_document_reserves_margin_only_for_margin_content() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
         let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
             .unwrap()
@@ -934,9 +934,16 @@ mod tests {
             "academic document topbar should stay aligned to the text column"
         );
         assert!(
-            !css.contains("body:has(.academic-document-main .calepin-sidenote)")
-                && !css.contains("body:has(.academic-document-main .calepin-sidefigure)"),
-            "academic side content should not trigger a special reserved margin"
+            css.contains("body:has(.academic-document-main .calepin-sidenote) .academic-document-main")
+                && css.contains("body:has(.academic-document-main .calepin-sidefigure) .academic-document-main"),
+            "academic side content should reserve a real margin column"
+        );
+        assert!(
+            css.contains(
+                r#".calepin-sidefigure {
+  margin: 0.4rem 0 1rem var(--calepin-margin-gap);"#
+            ),
+            "block side figures should sit in the reserved margin instead of using negative sidenote margins"
         );
     }
 
@@ -948,7 +955,7 @@ mod tests {
             .unwrap();
 
         assert!(
-            css.contains("@media (max-width: calc(39rem + 16rem + 2rem + 16rem + 2rem))"),
+            css.contains("@media (max-width: calc(39rem + 16rem + 2rem + 2rem))"),
             "academic margin content should stack before the 16rem margin can overlap text"
         );
     }
