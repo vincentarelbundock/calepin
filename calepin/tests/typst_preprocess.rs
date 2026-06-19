@@ -308,9 +308,17 @@ styles = ["styles/site.css"]
     );
 
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
-    let theme_pos = html.find(".calepin-site-topbar").unwrap();
     let config_pos = html.find("--config-style-marker").unwrap();
-    assert!(config_pos > theme_pos, "{html}");
+    let last_theme_pos = [
+        html.rfind("--calepin-color-background").unwrap(),
+        html.rfind(".calepin-copy-code").unwrap(),
+        html.rfind(".calepin-site-topbar").unwrap(),
+        html.rfind(".academic-page-nav-link-next").unwrap(),
+    ]
+    .into_iter()
+    .max()
+    .unwrap();
+    assert!(config_pos > last_theme_pos, "{html}");
 }
 
 #[test]
