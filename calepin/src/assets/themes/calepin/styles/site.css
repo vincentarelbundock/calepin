@@ -1234,7 +1234,8 @@ html:not([data-theme]) {
 
   .calepin-website-topbar nav > ul:last-child > .calepin-website-mobile-search-item,
   .calepin-website-topbar nav > ul:last-child > .calepin-website-theme-item {
-    display: list-item;
+    display: block;
+    list-style: none;
   }
 
   .calepin-website-search-input {
