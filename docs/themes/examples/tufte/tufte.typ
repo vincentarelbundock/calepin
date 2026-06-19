@@ -1,6 +1,8 @@
+// Imports
 #import "/.calepin/calepin.typ" as calepin
 #import "@preview/marginalia:0.3.1" as marginalia
 
+// Page margins
 #show: marginalia.setup.with(
   outer: (far: 6mm, width: 50mm, sep: 6mm),
   inner: (far: 2.2cm, width: 0mm, sep: 0mm),
@@ -9,39 +11,37 @@
   book: false,
 )
 
+// Margin helpers
 #let sidenote = calepin.elements.sidenote.with(side: "right")
 #let sidefigure = calepin.elements.sidefigure.with(side: "right")
 
+// Text and headings
 #set text(size: 10pt)
 #set par(
   leading: 0.45em,
   first-line-indent: 1.15em,
   spacing: 0.9em,
 )
-
 #set heading(numbering: none)
 #show heading: set align(left)
 #show heading.where(level: 1): smallcaps
 #show heading.where(level: 1): set text(size: 1.1em, weight: "regular")
 #show heading.where(level: 2): set text(size: 10.5pt, style: "italic", weight: "regular")
 
+// Figures and tables
 #set figure(gap: 0.55em)
 #set table(stroke: none)
 #set table(inset: 0.45em)
 
+// Notebook helpers
 #let chunk = calepin.chunk
 #let newthought = smallcaps
-
 #let setup(
-  title: none,
   echo: true,
   eval: true,
   results: "verbatim",
 ) = {
-  if title != none {
-    set document(title: title)
-  }
-
+  set document(title: [Matrix factorization with Calepin])
   calepin.setup(
     echo: echo,
     eval: eval,
@@ -49,7 +49,8 @@
   )
 }
 
-#setup(title: [Matrix factorization with Calepin])
+// Document options
+#setup()
 
 = Matrix factorization with Calepin
 
