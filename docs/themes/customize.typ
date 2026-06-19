@@ -32,29 +32,6 @@ Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
 namespace. The recommended best practice is to override these tokens from project CSS
 rather than try to target the internals directly.
 
-= Specify light and dark themes
-
-To define distinct values for light and dark mode, use `html[data-theme="light"]`
-and `html[data-theme="dark"]` selectors in your project stylesheet:
-
-```css
-html[data-theme="light"] {
-  --calepin-color-background: #f6f7f9;
-  --calepin-color-text: #111827;
-  --calepin-color-accent: #2563eb;
-}
-
-html[data-theme="dark"] {
-  --calepin-color-background: #101826;
-  --calepin-color-text: #f8fafc;
-  --calepin-color-accent: #60a5fa;
-}
-```
-
-Calepin sets `html[data-theme="light"]` or `html[data-theme="dark"]` when the theme
-toggle is forced by user preference, explicit control, or URL/state storage. If
-no explicit mode is set, the browser preference is used for initial mode.
-
 ```css
 /* styles/custom.css */
 :root {
@@ -76,6 +53,29 @@ pre {
 ```
 
 This override uses token variables for major surfaces and then applies your own typography and border styles, while leaving all Calepin component structure intact.
+
+= Light and dark themes
+
+To define distinct values for light and dark mode, use `html[data-theme="light"]`
+and `html[data-theme="dark"]` selectors in your project stylesheet:
+
+```css
+html[data-theme="light"] {
+  --calepin-color-background: #f6f7f9;
+  --calepin-color-text: #111827;
+  --calepin-color-accent: #2563eb;
+}
+
+html[data-theme="dark"] {
+  --calepin-color-background: #101826;
+  --calepin-color-text: #f8fafc;
+  --calepin-color-accent: #60a5fa;
+}
+```
+
+Calepin sets `html[data-theme="light"]` or `html[data-theme="dark"]` when the theme
+toggle is forced by user preference, explicit control, or URL/state storage. If
+no explicit mode is set, the browser preference is used for initial mode.
 
 = Theme tokens
 
