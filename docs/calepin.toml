@@ -5,7 +5,7 @@ logo = "assets/logo_short.svg"
 logo_alt = "Calepin"
 pdf = true
 minify = true
-# search = "pagefind"
+search = "pagefind"
 highlight-light = "assets/Catppuccin Latte.tmTheme"
 highlight-dark = "assets/Catppuccin Mocha.tmTheme"
 
