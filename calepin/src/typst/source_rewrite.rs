@@ -162,6 +162,7 @@ struct TypstParseState {
     brackets: Vec<BracketContext>,
     paren_depth: usize,
     pending_chunk_call: Option<PendingChunkCall>,
+    raw_fence_len: Option<usize>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -191,10 +192,31 @@ impl TypstParseState {
     }
 
     fn scan_line(&mut self, line: &str) {
+        if let Some(fence_len) = self.raw_fence_len {
+            let trimmed = line.trim_start();
+            let closing_len = leading_backtick_count(trimmed);
+            if closing_len >= fence_len {
+                self.raw_fence_len = None;
+                let tail = trimmed[closing_len..].trim_start();
+                if !tail.is_empty() {
+                    self.scan_line(tail);
+                }
+            }
+            return;
+        }
+
         let mut chars = line.char_indices().peekable();
         while let Some((idx, ch)) = chars.next() {
             if ch == '/' && chars.peek().is_some_and(|(_, next)| *next == '/') {
                 break;
+            }
+
+            if ch == '`' {
+                let fence_len = leading_backtick_count(&line[idx..]);
+                if fence_len >= 3 {
+                    self.raw_fence_len = Some(fence_len);
+                    break;
+                }
             }
 
             if ch == '"' {
@@ -651,6 +673,16 @@ mod tests {
         let source = "#calepin.chunk(\"python\")[\n```python\nprint(\"x\")\n```\n]\n";
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(rewritten, source);
+    }
+
+    #[test]
+    fn recovers_after_inline_raw_fence_body_in_custom_chunk_wrapper() {
+        let source = "#python_figure()[```python\nplot()\n```]\n\n```python\nprint(\"after\")\n```\n";
+        let rewritten = rewrite_calepin_imports(source);
+        assert_eq!(
+            rewritten,
+            "#python_figure()[```python\nplot()\n```]\n\n#calepin_runtime.chunk_from_raw_plain(\"python\", raw(\"print(\\\"after\\\")\\n\", block: true, lang: \"python\"))\n"
+        );
     }
 
     #[test]
