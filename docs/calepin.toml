@@ -18,6 +18,7 @@ filenames = ["atom.xml", "rss.xml"]
 include = ["assets/**", "index.typ", "themes/examples/tufte/**"]
 
 [pages]
+include = ["blog/*.typ"]
 exclude = ["themes/examples/**", "slides/examples/**"]
 
 [[menus.main]]

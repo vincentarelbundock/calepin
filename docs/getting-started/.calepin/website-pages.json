@@ -1,5 +1,25 @@
 [
   {
+    "href": "blog/static-website-generation.html",
+    "language": null,
+    "meta": {
+      "date": "2026-06-19",
+      "description": "The second major Calepin feature: building fast, flexible static websites from standard Typst files.",
+      "pdf": true,
+      "tags": [
+        "release",
+        "websites",
+        "typst"
+      ],
+      "title": "Calepin is now a static website generator"
+    },
+    "path": "blog/static-website-generation.typ",
+    "pdf": "blog/static-website-generation.pdf",
+    "title": "Calepin is now a static website generator",
+    "translation_key": "blog/static-website-generation",
+    "translations": {}
+  },
+  {
     "href": "compile_watch_serve.html",
     "language": null,
     "meta": {},

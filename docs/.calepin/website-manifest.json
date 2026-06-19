@@ -6,6 +6,8 @@
     "404.html",
     "404.pdf",
     "atom.xml",
+    "blog/static-website-generation.html",
+    "blog/static-website-generation.pdf",
     "compile_watch_serve.html",
     "compile_watch_serve.pdf",
     "getting-started/config.html",
