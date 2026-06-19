@@ -3,13 +3,13 @@
 #import "@preview/marginalia:0.2.0" as marginalia
 
 #show: marginalia.setup.with(
-  outer: (far: 8mm, width: 48mm, sep: 6mm),
+  outer: (far: 6mm, width: 60mm, sep: 6mm),
   book: false,
 )
 
 #set page(
   paper: "us-letter",
-  margin: (inside: 2.2cm, outside: 5.1cm, y: 2.0cm),
+  margin: (inside: 2.2cm, outside: 7.2cm, y: 2.0cm),
   numbering: "1",
   number-align: right,
 )
@@ -31,8 +31,14 @@
 #set table(stroke: none)
 #set table(inset: 0.45em)
 
-#let sidenote = calepin.elements.sidenote
-#let sidefigure = calepin.elements.sidefigure
+#let sidenote(body, numbering: auto, side: auto) = {
+  let resolved-side = if side == auto { "outer" } else { side }
+  calepin.elements.sidenote(body, numbering: numbering, side: resolved-side)
+}
+#let sidefigure(body, caption: none, side: auto) = {
+  let resolved-side = if side == auto { "outer" } else { side }
+  calepin.elements.sidefigure(body, caption: caption, side: resolved-side)
+}
 #let chunk = calepin.chunk
 #let newthought = smallcaps
 

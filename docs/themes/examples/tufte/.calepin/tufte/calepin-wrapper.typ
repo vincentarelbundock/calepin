@@ -32,24 +32,22 @@
 #import "/.calepin/calepin.typ" as calepin
 #import "@preview/marginalia:0.2.0" as marginalia
 
-// Wide outer margin so sidenotes and side figures have room.
-#show: marginalia.setup.with(
-  outer: (far: 8mm, width: 48mm, sep: 6mm),
-  book: false,
-)
-
-// Place margin elements with marginalia in paged output. Only non-default
-// arguments are forwarded so marginalia keeps its own defaults otherwise.
+// Place margin elements with marginalia in paged output. Page geometry stays
+// under author control; add `marginalia.setup` in the document or a local theme
+// when you want to reserve margin space.
 #calepin.elements.set-margin-impl(
   note: (body, numbering: auto, side: auto) => {
-    let args = (:)
-    if numbering == none { args.insert("numbering", none) }
-    if side != auto { args.insert("side", side) }
+    let numbering = if numbering == auto { "1" } else { numbering }
+    let args = (
+      numbering: numbering,
+      side: if side == auto { "outer" } else { side },
+    )
     marginalia.note(body, ..args)
   },
   figure: (body, caption: none, side: auto) => {
-    let args = (:)
-    if side != auto { args.insert("side", side) }
+    let args = (
+      side: if side == auto { "outer" } else { side },
+    )
     marginalia.notefigure(body, caption: caption, ..args)
   },
 )
