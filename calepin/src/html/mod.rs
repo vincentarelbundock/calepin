@@ -948,7 +948,7 @@ mod tests {
             .unwrap();
 
         assert!(
-            css.contains("@media (max-width: calc(39rem + 16rem + 2rem + 5rem))"),
+            css.contains("@media (max-width: calc(39rem + 16rem + 2rem + 16rem + 2rem))"),
             "academic margin content should stack before the 16rem margin can overlap text"
         );
     }

@@ -7,7 +7,6 @@
 :root, html[data-theme="light"] {
   --calepin-font-body: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --calepin-font-heading: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --calepin-margin-width: 16rem;
   --calepin-surface-code: #fffdf0;
   --calepin-surface-output: #fffdf0;
   --calepin-surface: #fffdf0;
