@@ -1,5 +1,4 @@
-#set document(title: [Customize themes])
-#metadata((title: "Customize CSS")) <website-metadata>
+#set document(title: [Customize])
 
 #title()
 
@@ -21,9 +20,8 @@ extension. The setting affects HTML output only.
 = Theme tokens
 
 Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
-namespace. Override these tokens from project CSS instead of targeting
-theme-specific internals such as `--academic-*`, `--pico-*`, or one-off
-component variables.
+namespace. Override these tokens from project CSS instead of relying on theme
+internals.
 
 Every color and surface token has explicit light, dark, and system-dark values:
 
@@ -61,8 +59,8 @@ and interface layers. For example:
 }
 ```
 
-_Calepin_ maps its tokens into Pico CSS variables internally, but `--calepin-*`
-is the public customization surface for built-in themes.
+Use `--calepin-*` variables for theme overrides; avoid relying on internal
+class names and generated implementation details.
 
 = Raw HTML plus CSS
 
