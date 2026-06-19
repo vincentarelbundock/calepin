@@ -68,14 +68,15 @@ impl CalepinConfig {
         }
     }
 
-    pub fn theme_selection(&self, base_dir: &Path) -> Result<Option<crate::theme::ThemeSelection>> {
+    pub fn theme_selection(&self) -> Result<Option<crate::theme::ThemeSelection>> {
         match &self.theme {
             None => Ok(None),
             Some(RawThemeValue::Toggle(false)) => Ok(Some(crate::theme::ThemeSelection::Disabled)),
             Some(RawThemeValue::Toggle(true)) => Ok(Some(crate::theme::ThemeSelection::Default)),
-            Some(RawThemeValue::Enabled(value)) => {
-                Ok(Some(crate::theme::ThemeSelection::parse(value, base_dir)?))
-            }
+            Some(RawThemeValue::Enabled(value)) => Ok(Some(crate::theme::ThemeSelection::parse(
+                value,
+                &self.config_dir,
+            )?)),
         }
     }
 }
@@ -201,6 +202,7 @@ fn resolve_css_overrides(config_dir: &Path, paths: Vec<PathBuf>) -> Result<Vec<C
 }
 
 fn resolve_css_override(config_dir: &Path, path: PathBuf) -> Result<CssOverride> {
+    let path = expand_home(path);
     if path.extension().and_then(|ext| ext.to_str()) != Some("css") {
         return Err(anyhow!(
             "configured style must be a .css file: {}",
@@ -370,13 +372,31 @@ styles = ["styles/site.css"]
             CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
 
         assert_eq!(
-            config.theme_selection(dir.path()).unwrap(),
+            config.theme_selection().unwrap(),
             Some(crate::theme::ThemeSelection::Builtin("academic"))
         );
         assert_eq!(config.styles.len(), 1);
         assert_eq!(config.styles[0].name, "site.css");
         assert_eq!(config.styles[0].path, dir.path().join("styles/site.css"));
         assert!(config.styles[0].css.contains("--x: 1"));
+    }
+
+    #[test]
+    fn config_theme_resolves_relative_to_config_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_dir = dir.path().join("project");
+        let theme_dir = config_dir.join("themes/local");
+        std::fs::create_dir_all(theme_dir.join("layouts")).unwrap();
+        std::fs::write(theme_dir.join("layouts/notebook.html"), "{{ body }}").unwrap();
+        std::fs::write(config_dir.join("calepin.toml"), r#"theme = "themes/local""#).unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&config_dir.join("calepin.toml"))).unwrap();
+
+        assert_eq!(
+            config.theme_selection().unwrap(),
+            Some(crate::theme::ThemeSelection::Dir(theme_dir))
+        );
     }
 
     #[test]
@@ -399,6 +419,27 @@ styles = ["styles/site.css"]
             config.styles[0].path,
             config.config_dir.join("styles/site.css")
         );
+    }
+
+    #[test]
+    fn config_styles_expand_home() {
+        let _env_lock = env_lock();
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("home");
+        std::fs::create_dir(&home).unwrap();
+        let css_path = home.join("site.css");
+        std::fs::write(&css_path, "body { color: red; }").unwrap();
+        let _home = EnvVarGuard::set("HOME", home.to_str().unwrap());
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            r#"styles = ["~/site.css"]"#,
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        assert_eq!(config.styles[0].path, css_path);
     }
 
     #[test]
