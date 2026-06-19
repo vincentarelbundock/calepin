@@ -912,6 +912,23 @@ mod tests {
     }
 
     #[test]
+    fn academic_document_aligns_sized_figures_with_text_column() {
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+
+        let margin_inline = element_property_with_inline(
+            &css,
+            ".academic-document-main > .calepin-figure-width",
+            "margin-inline",
+            "auto",
+        );
+
+        assert_eq!(margin_inline, "0 auto");
+    }
+
+    #[test]
     fn academic_site_theme_omits_toc_and_sidebar_nav_links() {
         let site_context = SiteContextInput {
             menus: BTreeMap::from([(

@@ -55,6 +55,7 @@
 }
 
 .academic-document-main > .calepin-figure-width {
+  margin-inline: 0 auto !important;
   max-width: var(--calepin-content-width) !important;
 }
 
