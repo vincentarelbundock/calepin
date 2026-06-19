@@ -129,6 +129,12 @@ fn rewrite_calepin_imports(source: &str) -> String {
             continue;
         }
 
+        if parse_state.raw_fence_len.is_some() {
+            parse_state.scan_line(line);
+            out.push_str(segment);
+            continue;
+        }
+
         if let Some((fence_len, lang)) = opening_fence(trimmed) {
             raw_block = Some(RawBlock {
                 fence_len,

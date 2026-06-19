@@ -214,9 +214,7 @@
 #let _results-hidden(mode) = mode in ("hide", "hidden")
 
 #let _raw-block(value, lang: none, theme: auto) = {
-  text(size: .8em)[
-    #raw(value, block: true, lang: lang, theme: theme)
-  ]
+  raw(value, block: true, lang: lang, theme: theme)
 }
 
 #let code-block(
