@@ -11,5 +11,15 @@
 {% if site.pagefind %}
     <link rel="stylesheet" href="{{ site.pagefind.css }}">
     <pagefind-config bundle-path="{{ site.pagefind.bundle }}"></pagefind-config>
+    <script>
+      (() => {
+        const config = document.querySelector("pagefind-config[bundle-path]");
+        if (config) {
+          let bundlePath = config.getAttribute("bundle-path") || "";
+          if (bundlePath && !bundlePath.endsWith("/")) bundlePath += "/";
+          config.setAttribute("bundle-path", new URL(bundlePath, window.location.href).toString());
+        }
+      })();
+    </script>
     <script src="{{ site.pagefind.js }}" type="module"></script>
 {% endif %}

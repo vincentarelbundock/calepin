@@ -691,14 +691,17 @@ mod tests {
             let config = themed
                 .find(r#"<pagefind-config bundle-path="pagefind/"></pagefind-config>"#)
                 .unwrap();
+            let normalizer = themed
+                .find(r#"new URL(bundlePath, window.location.href)"#)
+                .unwrap();
             let script = themed
                 .find(r#"<script src="pagefind/pagefind-component-ui.js" type="module"></script>"#)
                 .unwrap();
             let modal = themed.find("<pagefind-modal></pagefind-modal>").unwrap();
 
             assert!(
-                config < script,
-                "{theme_name}: Pagefind config must precede component script"
+                config < normalizer && normalizer < script,
+                "{theme_name}: Pagefind config and bundle path setup must precede component script"
             );
             assert!(
                 script < modal,
