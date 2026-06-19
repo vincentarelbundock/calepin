@@ -688,7 +688,9 @@ mod tests {
             )
             .unwrap();
 
-            let config = themed.find(r#"<pagefind-config></pagefind-config>"#).unwrap();
+            let config = themed
+                .find(r#"<pagefind-config bundle-path="pagefind/"></pagefind-config>"#)
+                .unwrap();
             let script = themed
                 .find(r#"<script src="pagefind/pagefind-component-ui.js" type="module"></script>"#)
                 .unwrap();
