@@ -128,9 +128,7 @@
   {
     "href": "themes/builtin.html",
     "language": null,
-    "meta": {
-      "title": "Built-in"
-    },
+    "meta": {},
     "path": "themes/builtin.typ",
     "pdf": "themes/builtin.pdf",
     "title": "Built-in",
@@ -140,24 +138,20 @@
   {
     "href": "themes/create.html",
     "language": null,
-    "meta": {
-      "title": "Create a theme"
-    },
+    "meta": {},
     "path": "themes/create.typ",
     "pdf": "themes/create.pdf",
-    "title": "Create a theme",
+    "title": "Create",
     "translation_key": "themes/create",
     "translations": {}
   },
   {
     "href": "themes/customize.html",
     "language": null,
-    "meta": {
-      "title": "Customize CSS"
-    },
+    "meta": {},
     "path": "themes/customize.typ",
     "pdf": "themes/customize.pdf",
-    "title": "Customize CSS",
+    "title": "Customize",
     "translation_key": "themes/customize",
     "translations": {}
   },

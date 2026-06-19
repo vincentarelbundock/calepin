@@ -10,7 +10,7 @@ _Calepin_ can turn a directory of Typst documents into a website. In fact, the w
 Use this command to scaffold an example site:
 
 ```sh
-calepin new website my_site/ --theme calepin
+calepin new website my_site/
 ```
 
 This creates a website source directory with enough structure to exercise the bundled themes:
@@ -21,10 +21,8 @@ This creates a website source directory with enough structure to exercise the bu
 - `my_site/about.typ`, `my_site/guide/*.typ`, and `my_site/fr/*.typ`: regular pages in two languages, with site menu and sidebar entries.
 - `my_site/blog.typ` and `my_site/posts/*.typ`: a small blog index and post source files using `calepin.pages()`.
 
-The `--theme` value selects the scaffold to create. Use `--theme academic` for
-the academic starter. The scaffold includes footnotes, code output, tables, top
-navigation, sidebar navigation, language metadata, posts, and PDF twins for
-every page.
+The scaffold uses the `calepin` theme by default. Edit `my_site/calepin.toml`
+to switch to another theme after creation.
 
 = Build
 

@@ -39,15 +39,13 @@ Arguments:
 
 Options:
   -f, --force          Overwrite the file if it already exists
-      --theme <THEME>  Builtin theme for website scaffolds or ejected themes (default: calepin)
   -h, --help           Print help
 
 Examples:
   calepin new paper.typ
-  calepin new website my_site/ --theme calepin
-  calepin new website my_site/ --theme academic
-  calepin new theme --theme academic
-  calepin new theme themes/my-theme --theme academic
+  calepin new website my_site/
+  calepin new theme
+  calepin new theme themes/my-theme
 ```
 
 = `calepin health`
@@ -90,9 +88,6 @@ Options:
           Output format passed to typst compile
           
           [possible values: pdf, png, svg, html]
-
-      --theme <THEME>
-          Theme bundle: a builtin name (calepin, academic), a path to a theme directory, or false
 
       --minify
           Minify HTML output after theming and asset processing

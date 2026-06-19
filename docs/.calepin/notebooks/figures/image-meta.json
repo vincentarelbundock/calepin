@@ -78,6 +78,20 @@
       "width": 1440,
       "height": 1100
     },
+    "/assets/screenshot_academic_dark.png": {
+      "path": "assets/screenshot_academic_dark.png",
+      "xxh3": "2f75ab14378d9c1c",
+      "bytes": 169331,
+      "width": 1440,
+      "height": 1000
+    },
+    "/assets/screenshot_academic_light.png": {
+      "path": "assets/screenshot_academic_light.png",
+      "xxh3": "bf466bca5d5626e8",
+      "bytes": 145209,
+      "width": 1440,
+      "height": 913
+    },
     "/assets/screenshot_notebook.png": {
       "path": "assets/screenshot_notebook.png",
       "xxh3": "dca0e15c967aefa9",
@@ -91,6 +105,48 @@
       "bytes": 296327,
       "width": 2310,
       "height": 1380
+    },
+    "/assets/screenshot_website_dark.png": {
+      "path": "assets/screenshot_website_dark.png",
+      "xxh3": "7604e5c61f3f183e",
+      "bytes": 182305,
+      "width": 1440,
+      "height": 1000
+    },
+    "/assets/screenshot_website_light.png": {
+      "path": "assets/screenshot_website_light.png",
+      "xxh3": "aaedc75611199eb6",
+      "bytes": 179920,
+      "width": 1440,
+      "height": 1000
+    },
+    "/themes/screenshots/academic_website_dark.png": {
+      "path": "themes/screenshots/academic_website_dark.png",
+      "xxh3": "c40acd64fd8cc43a",
+      "bytes": 439391,
+      "width": 3024,
+      "height": 1674
+    },
+    "/themes/screenshots/academic_website_light.png": {
+      "path": "themes/screenshots/academic_website_light.png",
+      "xxh3": "7ab63ec30c36a4b3",
+      "bytes": 404420,
+      "width": 3024,
+      "height": 1674
+    },
+    "/themes/screenshots/calepin_website_dark.png": {
+      "path": "themes/screenshots/calepin_website_dark.png",
+      "xxh3": "5e49725bc6386cb0",
+      "bytes": 240033,
+      "width": 3024,
+      "height": 1673
+    },
+    "/themes/screenshots/calepin_website_light.png": {
+      "path": "themes/screenshots/calepin_website_light.png",
+      "xxh3": "c1526546c4ac2712",
+      "bytes": 357247,
+      "width": 3024,
+      "height": 1673
     },
     "assets/calepin_vscode-thumb.png": {
       "path": "assets/calepin_vscode-thumb.png",
@@ -169,6 +225,20 @@
       "width": 1440,
       "height": 1100
     },
+    "assets/screenshot_academic_dark.png": {
+      "path": "assets/screenshot_academic_dark.png",
+      "xxh3": "2f75ab14378d9c1c",
+      "bytes": 169331,
+      "width": 1440,
+      "height": 1000
+    },
+    "assets/screenshot_academic_light.png": {
+      "path": "assets/screenshot_academic_light.png",
+      "xxh3": "bf466bca5d5626e8",
+      "bytes": 145209,
+      "width": 1440,
+      "height": 913
+    },
     "assets/screenshot_notebook.png": {
       "path": "assets/screenshot_notebook.png",
       "xxh3": "dca0e15c967aefa9",
@@ -182,6 +252,48 @@
       "bytes": 296327,
       "width": 2310,
       "height": 1380
+    },
+    "assets/screenshot_website_dark.png": {
+      "path": "assets/screenshot_website_dark.png",
+      "xxh3": "7604e5c61f3f183e",
+      "bytes": 182305,
+      "width": 1440,
+      "height": 1000
+    },
+    "assets/screenshot_website_light.png": {
+      "path": "assets/screenshot_website_light.png",
+      "xxh3": "aaedc75611199eb6",
+      "bytes": 179920,
+      "width": 1440,
+      "height": 1000
+    },
+    "themes/screenshots/academic_website_dark.png": {
+      "path": "themes/screenshots/academic_website_dark.png",
+      "xxh3": "c40acd64fd8cc43a",
+      "bytes": 439391,
+      "width": 3024,
+      "height": 1674
+    },
+    "themes/screenshots/academic_website_light.png": {
+      "path": "themes/screenshots/academic_website_light.png",
+      "xxh3": "7ab63ec30c36a4b3",
+      "bytes": 404420,
+      "width": 3024,
+      "height": 1674
+    },
+    "themes/screenshots/calepin_website_dark.png": {
+      "path": "themes/screenshots/calepin_website_dark.png",
+      "xxh3": "5e49725bc6386cb0",
+      "bytes": 240033,
+      "width": 3024,
+      "height": 1673
+    },
+    "themes/screenshots/calepin_website_light.png": {
+      "path": "themes/screenshots/calepin_website_light.png",
+      "xxh3": "c1526546c4ac2712",
+      "bytes": 357247,
+      "width": 3024,
+      "height": 1673
     }
   }
 }
