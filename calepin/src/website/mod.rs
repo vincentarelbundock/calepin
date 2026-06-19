@@ -370,13 +370,17 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     {
         external_theme_assets = true;
     }
-    let theme_assets = if external_theme_assets {
-        let entry = if !calepin_config.styles.is_empty() {
+    let theme_asset_entry = if external_theme_assets {
+        Some(if !calepin_config.styles.is_empty() {
             site_entry.clone().unwrap_or_else(default_site_html_entry)
         } else {
             default_site_html_entry()
-        };
-        ThemeGeneratedAssets::from_entry(&entry, &html_syntax_theme)?
+        })
+    } else {
+        None
+    };
+    let theme_assets = if let Some(entry) = theme_asset_entry.as_ref() {
+        ThemeGeneratedAssets::from_entry(entry, &html_syntax_theme)?
     } else {
         ThemeGeneratedAssets::default()
     };
@@ -514,6 +518,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
                 .as_ref()
                 .map(|asset| vec![slash_path(&asset.rel_path)])
                 .unwrap_or_default(),
+            generated_theme_entry: theme_asset_entry,
             config_styles: calepin_config.styles.clone(),
             syntax_theme: html_syntax_theme,
             parallelism: args.parallelism,
@@ -1209,6 +1214,7 @@ struct BuildContext {
     languages: Option<Vec<LanguageInfo>>,
     theme_stylesheet: Option<String>,
     theme_scripts: Vec<String>,
+    generated_theme_entry: Option<crate::theme::HtmlEntry>,
     config_styles: Vec<crate::config::CssOverride>,
     syntax_theme: HtmlSyntaxTheme,
     parallelism: Option<usize>,
@@ -2702,6 +2708,82 @@ fn html_entry_with_config_styles(
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct HtmlEntryAssetKey {
+    theme_name: String,
+    layout: String,
+    partials: Vec<(String, String)>,
+    styles: Vec<(String, String)>,
+    scripts: Vec<(String, String)>,
+    is_default: bool,
+}
+
+impl From<&crate::theme::HtmlEntry> for HtmlEntryAssetKey {
+    fn from(entry: &crate::theme::HtmlEntry) -> Self {
+        Self {
+            theme_name: entry.theme_name.clone(),
+            layout: entry.layout.clone(),
+            partials: entry.partials.clone(),
+            styles: entry.styles.clone(),
+            scripts: entry.scripts.clone(),
+            is_default: entry.is_default,
+        }
+    }
+}
+
+struct PageAssetDecision {
+    html_entry: Option<crate::theme::HtmlEntry>,
+    stylesheet: Option<String>,
+    scripts: Vec<String>,
+}
+
+fn page_asset_decision(
+    page_entry: Option<crate::theme::HtmlEntry>,
+    config_styles: &[crate::config::CssOverride],
+    generated_entry: Option<&crate::theme::HtmlEntry>,
+    generated_stylesheet: Option<&str>,
+    generated_scripts: &[String],
+) -> PageAssetDecision {
+    let styled_page_entry = html_entry_with_config_styles(page_entry.clone(), config_styles);
+    let matches_generated_entry =
+        styled_page_entry
+            .as_ref()
+            .zip(generated_entry)
+            .is_some_and(|(page, generated)| {
+                HtmlEntryAssetKey::from(page) == HtmlEntryAssetKey::from(generated)
+            });
+    let stylesheet = if matches_generated_entry
+        && generated_entry.is_some_and(html_entry_references_site_stylesheet)
+    {
+        generated_stylesheet.map(str::to_string)
+    } else {
+        None
+    };
+    let html_entry = if stylesheet.is_some() {
+        page_entry.or_else(|| Some(crate::theme::style_only_html_entry(Vec::new())))
+    } else {
+        styled_page_entry
+    };
+    let scripts = if matches_generated_entry {
+        generated_scripts.to_vec()
+    } else {
+        Vec::new()
+    };
+    PageAssetDecision {
+        html_entry,
+        stylesheet,
+        scripts,
+    }
+}
+
+fn html_entry_references_site_stylesheet(entry: &crate::theme::HtmlEntry) -> bool {
+    entry.layout.contains("site.stylesheet")
+        || entry
+            .partials
+            .iter()
+            .any(|(_, source)| source.contains("site.stylesheet"))
+}
+
 fn render_document(
     context: &BuildContext,
     site: &SiteModel,
@@ -2735,33 +2817,22 @@ fn render_document(
     } else {
         crate::theme::resolve_html_entry(&preprocessed.theme, crate::theme::HtmlScope::Site)?
     };
-    let page_uses_generated_config_styles =
-        !context.config_styles.is_empty() && context.theme_stylesheet.is_some();
-    let page_links_generated_stylesheet = page_site_entry
-        .as_ref()
-        .is_some_and(|entry| entry.is_default)
-        || page_uses_generated_config_styles;
-    let page_site_entry = if page_uses_generated_config_styles {
-        page_site_entry.or_else(|| Some(crate::theme::style_only_html_entry(Vec::new())))
-    } else {
-        html_entry_with_config_styles(page_site_entry, &context.config_styles)
-    };
-    if page_links_generated_stylesheet {
-        if let Some(stylesheet) = context.theme_stylesheet.as_deref() {
-            site_context.stylesheet =
-                Some(html_escape(&page_relative_url(&current_href, stylesheet)));
-        }
+    let asset_decision = page_asset_decision(
+        page_site_entry,
+        &context.config_styles,
+        context.generated_theme_entry.as_ref(),
+        context.theme_stylesheet.as_deref(),
+        &context.theme_scripts,
+    );
+    let page_site_entry = asset_decision.html_entry;
+    if let Some(stylesheet) = asset_decision.stylesheet.as_deref() {
+        site_context.stylesheet = Some(html_escape(&page_relative_url(&current_href, stylesheet)));
     }
-    if page_site_entry
-        .as_ref()
-        .is_some_and(|entry| entry.is_default)
-    {
-        site_context.scripts = context
-            .theme_scripts
-            .iter()
-            .map(|script| html_escape(&page_relative_url(&current_href, script)))
-            .collect();
-    }
+    site_context.scripts = asset_decision
+        .scripts
+        .iter()
+        .map(|script| html_escape(&page_relative_url(&current_href, script)))
+        .collect();
     compile_with_typst(
         &context.typst,
         &preprocessed.layout,
@@ -3380,6 +3451,111 @@ styles = ["styles/site.css"]
         assert!(!entry.is_default);
         assert_eq!(entry.styles.len(), 1);
         assert!(entry.styles[0].1.contains("--site: yes"));
+    }
+
+    #[test]
+    fn page_asset_decision_does_not_link_academic_assets_for_calepin_page() {
+        let styles = vec![test_css_override()];
+        let generated_entry = html_entry_with_config_styles(
+            crate::theme::resolve_html_entry(
+                &crate::theme::ThemeSelection::Builtin("academic"),
+                crate::theme::HtmlScope::Site,
+            )
+            .unwrap(),
+            &styles,
+        )
+        .unwrap();
+        let page_entry = crate::theme::resolve_html_entry(
+            &crate::theme::ThemeSelection::Default,
+            crate::theme::HtmlScope::Site,
+        )
+        .unwrap();
+
+        let decision = page_asset_decision(
+            page_entry,
+            &styles,
+            Some(&generated_entry),
+            Some(".calepin/calepin-website.academic.css"),
+            &[".calepin/calepin-website.academic.js".to_string()],
+        );
+
+        assert_eq!(decision.stylesheet, None);
+        assert!(decision.scripts.is_empty());
+        assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
+    }
+
+    #[test]
+    fn page_asset_decision_does_not_link_calepin_assets_for_academic_page() {
+        let styles = vec![test_css_override()];
+        let generated_entry = html_entry_with_config_styles(
+            crate::theme::resolve_html_entry(
+                &crate::theme::ThemeSelection::Default,
+                crate::theme::HtmlScope::Site,
+            )
+            .unwrap(),
+            &styles,
+        )
+        .unwrap();
+        let page_entry = crate::theme::resolve_html_entry(
+            &crate::theme::ThemeSelection::Builtin("academic"),
+            crate::theme::HtmlScope::Site,
+        )
+        .unwrap();
+
+        let decision = page_asset_decision(
+            page_entry,
+            &styles,
+            Some(&generated_entry),
+            Some(".calepin/calepin-website.calepin.css"),
+            &[".calepin/calepin-website.calepin.js".to_string()],
+        );
+
+        assert_eq!(decision.stylesheet, None);
+        assert!(decision.scripts.is_empty());
+        assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
+    }
+
+    #[test]
+    fn page_asset_decision_keeps_config_style_for_local_layout_that_loops_styles() {
+        let styles = vec![test_css_override()];
+        let local_entry = crate::theme::HtmlEntry {
+            theme_name: "local".to_string(),
+            layout: "{{ doc.head }}{% for style in styles %}<style>{{ style.css }}</style>{% endfor %}{{ doc.body }}".to_string(),
+            partials: Vec::new(),
+            styles: Vec::new(),
+            scripts: Vec::new(),
+            is_default: false,
+        };
+        let generated_entry =
+            html_entry_with_config_styles(Some(local_entry.clone()), &styles).unwrap();
+
+        let decision = page_asset_decision(
+            Some(local_entry),
+            &styles,
+            Some(&generated_entry),
+            Some(".calepin/calepin-website.local.css"),
+            &[],
+        );
+
+        assert_eq!(decision.stylesheet, None);
+        assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
+    }
+
+    fn test_css_override() -> crate::config::CssOverride {
+        crate::config::CssOverride {
+            name: "site.css".to_string(),
+            path: PathBuf::from("/project/styles/site.css"),
+            css: ":root { --site: yes; }".to_string(),
+        }
+    }
+
+    fn assert_config_style_count(entry: &crate::theme::HtmlEntry, expected: usize) {
+        let count = entry
+            .styles
+            .iter()
+            .filter(|(_, css)| css.contains("--site: yes"))
+            .count();
+        assert_eq!(count, expected);
     }
 
     #[test]
