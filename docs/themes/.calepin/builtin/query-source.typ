@@ -1,9 +1,9 @@
-#set document(title: [Built-in themes])
-#metadata((title: "Built-in")) <website-metadata>
+#set document(title: [Built-in])
+#import "/.calepin/calepin.typ" as calepin
 
 #title()
 
-_Calepin_ ships with two built-in themes. Built-in themes are compiled into the
+_Calepin_ ships with three built-in themes. Built-in themes are compiled into the
 binary, so they are always available by name and can be selected without adding
 theme files to your project.
 
@@ -17,13 +17,14 @@ It includes sidebar navigation, a top bar, previous and next page links, an
 on-page table of contents, dark mode, copy buttons on code blocks, and rendered,
 source, and PDF view switching.
 
-_Light mode_
-
-#image("/assets/screenshot_website_light.png", width: 100%, alt: "Screenshot of the Calepin documentation theme in light mode")
-
-_Dark mode_
-
-#image("/assets/screenshot_website_dark.png", width: 100%, alt: "Screenshot of the Calepin documentation theme in dark mode")
+#calepin.elements.gallery(
+  (
+    ("/themes/screenshots/calepin_website_dark.png", "Calepin theme dark website", [blah]),
+    ("/themes/screenshots/calepin_website_light.png", "Calepin theme light website", [blah]),
+  ),
+  columns: 2,
+  max-width: 42em,
+)
 
 = `academic`
 
@@ -35,31 +36,17 @@ It includes a centered narrow text column, margin-note support, top navigation,
 dark mode, copy buttons on code blocks, and the shared Calepin search and
 language controls.
 
-_Light mode_
+#calepin.elements.gallery(
+  (
+    ("/themes/screenshots/academic_website_dark.png", "academic theme dark website", [blah]),
+    ("/themes/screenshots/academic_website_light.png", "academic theme light website", [blah]),
+  ),
+  columns: 2,
+  max-width: 42em,
+)
 
-#image("/assets/screenshot_academic_light.png", width: 100%, alt: "Screenshot of the Calepin academic theme in light mode")
+= `typst`
 
-_Dark mode_
-
-#image("/assets/screenshot_academic_dark.png", width: 100%, alt: "Screenshot of the Calepin academic theme in dark mode")
-
-= Selecting a built-in theme
-
-Set `theme` in `calepin.toml`:
-
-```toml
-theme = "calepin"
-theme = "academic"
-```
-
-Or select one for a single compile:
-
-```sh
-calepin compile paper.typ --theme academic
-```
-
-Website scaffolds are also theme-aware:
-
-```sh
-calepin new website my-site --theme academic
-```
+`typst` disables the website and notebook themed wrappers and uses raw Typst
+output. Use this when you want unstyled HTML or the output unchanged from the
+Typst source.

@@ -27,4 +27,20 @@
   }
 }
 
-#include "/.calepin/builtin/query-source.typ"
+// Notebook theme
+#import "/.calepin/calepin.typ": _html-themed-raw-block
+
+#show raw.where(block: true): it => {
+  if it.theme != auto {
+    it
+  } else if it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
+    it.lang,
+    _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
+  ) {
+    it
+  } else {
+    _html-themed-raw-block(it)
+  }
+}
+
+#include "/.calepin/builtin/source.typ"
