@@ -9,13 +9,7 @@
   book: false,
 )
 
-#let sidenote(body, numbering: auto, side: auto) = {
-  if numbering == none {
-    calepin.elements.sidenote(body, numbering: numbering, side: "right")
-  } else {
-    calepin.elements.sidenote(body, numbering: numbering, side: "right", anchor-numbering: (.., i) => super(i))
-  }
-}
+#let sidenote = calepin.elements.sidenote.with(side: "right")
 #let sidefigure = calepin.elements.sidefigure.with(side: "right")
 
 #set text(size: 10pt)
