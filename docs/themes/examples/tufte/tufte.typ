@@ -7,7 +7,7 @@
   fallback: false,
 )
 
-#if is-paged {
+#if is-paged [
   #show: marginalia.setup.with(
     outer: (far: 8mm, width: 48mm, sep: 6mm),
     book: false,
@@ -36,7 +36,7 @@
   #set figure(gap: 0.55em)
   #set table(stroke: none)
   #set table(inset: 0.45em)
-}
+]
 
 #let sidenote = calepin.elements.sidenote
 #let sidefigure = calepin.elements.sidefigure

@@ -1,9 +1,48 @@
 #import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
+#import "@preview/marginalia:0.2.0" as marginalia
+
+#let is-paged = calepin.elements.target(
+  html: false,
+  paged: true,
+  fallback: false,
+)
+
+#if is-paged [
+  #show: marginalia.setup.with(
+    outer: (far: 8mm, width: 48mm, sep: 6mm),
+    book: false,
+  )
+
+  #set page(
+    paper: "us-letter",
+    margin: (inside: 2.2cm, outside: 5.1cm, y: 2.0cm),
+    numbering: "1",
+    number-align: right,
+  )
+
+  #set text(size: 10pt)
+  #set par(
+    leading: 0.45em,
+    first-line-indent: 1.15em,
+    spacing: 0.9em,
+  )
+
+  #set heading(numbering: none)
+  #show heading: set align(left)
+  #show heading.where(level: 1): smallcaps
+  #show heading.where(level: 1): set text(size: 1.1em, weight: "regular")
+  #show heading.where(level: 2): set text(size: 10.5pt, style: "italic", weight: "regular")
+
+  #set figure(gap: 0.55em)
+  #set table(stroke: none)
+  #set table(inset: 0.45em)
+]
 
 #let sidenote = calepin.elements.sidenote
 #let sidefigure = calepin.elements.sidefigure
 #let chunk = calepin.chunk
+#let newthought = smallcaps
 
 #let setup(
   title: none,
@@ -21,6 +60,7 @@
     results: results,
   )
 }
+
 
 #setup(title: [Matrix factorization with Calepin])
 
