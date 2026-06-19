@@ -351,6 +351,22 @@ mod tests {
     }
 
     #[test]
+    fn default_document_theme_constrains_text_width() {
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Document);
+        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
+            .unwrap()
+            .unwrap();
+
+        assert!(
+            css.contains(
+                r#".calepin-document-main {
+  width: min(100% - 2rem, var(--calepin-content-width));"#
+            ),
+            "default document pages should keep text at reading width"
+        );
+    }
+
+    #[test]
     fn document_theme_inlines_substituted_snippet_css() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Document);
         let themed = apply_html_theme(SAMPLE_HTML, Some(&entry)).unwrap();
