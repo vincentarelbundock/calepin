@@ -2770,11 +2770,53 @@ fn page_asset_decision(
 }
 
 fn html_entry_references_site_stylesheet(entry: &crate::theme::HtmlEntry) -> bool {
-    entry.layout.contains("site.stylesheet")
-        || entry
-            .partials
-            .iter()
-            .any(|(_, source)| source.contains("site.stylesheet"))
+    let partials = entry.partials.iter().cloned().collect::<BTreeMap<_, _>>();
+    let mut visited = BTreeSet::new();
+    html_source_references_site_stylesheet(&entry.layout, &partials, &mut visited)
+}
+
+fn html_source_references_site_stylesheet(
+    source: &str,
+    partials: &BTreeMap<String, String>,
+    visited: &mut BTreeSet<String>,
+) -> bool {
+    if source.contains("site.stylesheet") {
+        return true;
+    }
+    static_html_includes(source).into_iter().any(|name| {
+        visited.insert(name.clone())
+            && partials.get(&name).is_some_and(|partial| {
+                html_source_references_site_stylesheet(partial, partials, visited)
+            })
+    })
+}
+
+fn static_html_includes(source: &str) -> Vec<String> {
+    let mut includes = Vec::new();
+    let mut rest = source;
+    while let Some(start) = rest.find("{%") {
+        rest = &rest[start + 2..];
+        let Some(end) = rest.find("%}") else {
+            break;
+        };
+        let block = rest[..end].trim().trim_matches('-').trim();
+        if let Some(include) = static_include_name(block) {
+            includes.push(include);
+        }
+        rest = &rest[end + 2..];
+    }
+    includes
+}
+
+fn static_include_name(block: &str) -> Option<String> {
+    let rest = block.strip_prefix("include")?.trim_start();
+    let quote = rest.chars().next()?;
+    if quote != '"' && quote != '\'' {
+        return None;
+    }
+    let quoted = &rest[quote.len_utf8()..];
+    let end = quoted.find(quote)?;
+    Some(quoted[..end].to_string())
 }
 
 fn render_document(
@@ -3532,6 +3574,76 @@ styles = ["styles/site.css"]
 
         assert_eq!(decision.stylesheet, None);
         assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
+    }
+
+    #[test]
+    fn page_asset_decision_ignores_unused_stylesheet_partial() {
+        let styles = vec![test_css_override()];
+        let local_entry = crate::theme::HtmlEntry {
+            theme_name: "local".to_string(),
+            layout: "{{ doc.head }}{% for style in styles %}<style>{{ style.css }}</style>{% endfor %}{{ doc.body }}".to_string(),
+            partials: vec![(
+                "partials/styles.html".to_string(),
+                "{% if site.stylesheet %}<link rel=\"stylesheet\" href=\"{{ site.stylesheet }}\">{% endif %}".to_string(),
+            )],
+            styles: Vec::new(),
+            scripts: Vec::new(),
+            is_default: false,
+        };
+        let generated_entry =
+            html_entry_with_config_styles(Some(local_entry.clone()), &styles).unwrap();
+
+        let decision = page_asset_decision(
+            Some(local_entry),
+            &styles,
+            Some(&generated_entry),
+            Some(".calepin/calepin-website.local.css"),
+            &[],
+        );
+
+        assert_eq!(decision.stylesheet, None);
+        assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
+    }
+
+    #[test]
+    fn page_asset_decision_follows_whitespace_control_static_includes() {
+        let styles = vec![test_css_override()];
+        let local_entry = crate::theme::HtmlEntry {
+            theme_name: "local".to_string(),
+            layout: r#"{{ doc.head }}{%- include "partials/wrapper.html" -%}{{ doc.body }}"#
+                .to_string(),
+            partials: vec![
+                (
+                    "partials/wrapper.html".to_string(),
+                    r#"{%- include 'partials/styles.html' -%}"#.to_string(),
+                ),
+                (
+                    "partials/styles.html".to_string(),
+                    "{% if site.stylesheet %}<link rel=\"stylesheet\" href=\"{{ site.stylesheet }}\">{% endif %}".to_string(),
+                ),
+            ],
+            styles: Vec::new(),
+            scripts: Vec::new(),
+            is_default: false,
+        };
+        let generated_entry =
+            html_entry_with_config_styles(Some(local_entry.clone()), &styles).unwrap();
+        let scripts = vec![".calepin/calepin-website.local.js".to_string()];
+
+        let decision = page_asset_decision(
+            Some(local_entry),
+            &styles,
+            Some(&generated_entry),
+            Some(".calepin/calepin-website.local.css"),
+            &scripts,
+        );
+
+        assert_eq!(
+            decision.stylesheet.as_deref(),
+            Some(".calepin/calepin-website.local.css")
+        );
+        assert_eq!(decision.scripts, scripts);
+        assert_config_style_count(decision.html_entry.as_ref().unwrap(), 0);
     }
 
     #[test]
