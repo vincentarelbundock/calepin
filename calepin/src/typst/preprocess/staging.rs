@@ -124,7 +124,7 @@ fn html_raw_show_rule() -> &'static str {
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
-    it
+    chunk_from_raw_plain(it.lang, it)
   } else {
     _html-themed-raw-block(it)
   }
