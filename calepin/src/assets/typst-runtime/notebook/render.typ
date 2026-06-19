@@ -189,9 +189,6 @@
   if "fig-align" in options and options.at("fig-align") != none {
     out.insert("fig-align", options.at("fig-align"))
   }
-  if "code-size" in options and options.at("code-size") != none {
-    out.insert("code-size", options.at("code-size"))
-  }
   out
 }
 
@@ -216,13 +213,10 @@
 
 #let _results-hidden(mode) = mode in ("hide", "hidden")
 
-#let _raw-block(value, lang: none, theme: auto, code-size: none) = {
-  let raw-cell = raw(value, block: true, lang: lang, theme: theme)
-  if code-size == none {
-    raw-cell
-  } else {
-    text(size: code-size)[#raw-cell]
-  }
+#let _raw-block(value, lang: none, theme: auto) = {
+  text(size: .8em)[
+    #raw(value, block: true, lang: lang, theme: theme)
+  ]
 }
 
 #let code-block(
@@ -250,14 +244,14 @@
   ]
 }
 
-#let _paged-input-code-block(code, lang: none, code-size: none) = {
+#let _paged-input-code-block(code, lang: none) = {
   code-block(
     fill: rgb("#f7f7f5"),
     stroke: 0.5pt + rgb("#d8d8d2"),
     radius: 2pt,
     inset: (x: 0.65em, y: 0.45em),
   )[
-    #_raw-block(code, lang: lang, theme: _paged-syntax-theme, code-size: code-size)
+    #_raw-block(code, lang: lang, theme: _paged-syntax-theme)
   ]
 }
 
@@ -270,20 +264,20 @@
   }
 }
 
-#let _input-block(code, lang: none, code-size: none) = {
+#let _input-block(code, lang: none) = {
   if _is-html() {
     std.html.elem("div", attrs: (
       class: "sourceCode",
       "data-lang": _block-lang-label(lang),
     ))[
-      #_raw-block(code, lang: lang, theme: _input-syntax-theme, code-size: code-size)
+      #_raw-block(code, lang: lang, theme: _input-syntax-theme)
     ]
   } else {
-    _paged-input-code-block(code, lang: lang, code-size: code-size)
+    _paged-input-code-block(code, lang: lang)
   }
 }
 
-#let _output-block(output, stream: "stdout", code-size: none) = {
+#let _output-block(output, stream: "stdout") = {
   if _is-html() {
     let class = if stream == "stderr" {
       "cell-output cell-output-stderr"
@@ -291,7 +285,7 @@
       "cell-output cell-output-stdout"
     }
     std.html.elem("div", attrs: (class: class))[
-      #_raw-block(output, theme: _output-syntax-theme, code-size: code-size)
+      #_raw-block(output, theme: _output-syntax-theme)
     ]
   } else {
     let fill = if stream == "stderr" {
@@ -319,10 +313,10 @@
     )[
       #if stream == "stderr" {
         text(fill: rgb("#5f3328"))[
-          #_raw-block(output, theme: _paged-syntax-theme, code-size: code-size)
+          #_raw-block(output, theme: _paged-syntax-theme)
         ]
       } else {
-        _raw-block(output, theme: _paged-syntax-theme, code-size: code-size)
+        _raw-block(output, theme: _paged-syntax-theme)
       }
     ]
   }
@@ -626,7 +620,7 @@
     } else if inline-output {
       text
     } else {
-      _output-block(text, code-size: opts.at("code-size"))
+      _output-block(text)
     }
   } else if item-type == "diagnostic" {
     let level = item.at("level", default: "")
@@ -636,11 +630,10 @@
       _output-block(
         item.at("text", default: ""),
         stream: if level == "warning" { "stderr" } else { "stdout" },
-        code-size: opts.at("code-size"),
       )
     }
   } else if item-type == "error" {
-    _output-block(item.at("message", default: ""), stream: "stderr", code-size: opts.at("code-size"))
+    _output-block(item.at("message", default: ""), stream: "stderr")
   } else if item-type == "display" or item-type == "result" {
     _render-display-item(item, label, opts, fig-labels, anchor: anchor)
   }

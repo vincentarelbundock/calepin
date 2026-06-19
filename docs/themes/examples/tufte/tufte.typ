@@ -46,7 +46,6 @@
     echo: echo,
     eval: eval,
     results: results,
-    code-size: .8em,
   )
 }
 
