@@ -83,13 +83,13 @@ pub(super) fn run_parallel<I: Send, T: Send>(
                     if abort.load(Ordering::Relaxed) {
                         return Ok(());
                     }
-                    let Some(item) = {
+                    let Some(item) = ({
                         let mut queue = queue.lock().unwrap();
                         if abort.load(Ordering::Relaxed) {
                             return Ok(());
                         }
                         queue.pop_front()
-                    } else {
+                    }) else {
                         return Ok(());
                     };
                     match task(item) {
