@@ -7,7 +7,7 @@ use anyhow::{bail, Context, Result};
 use crate::typst::io::ensure_parent;
 
 use super::pagefind::PAGEFIND_DIR;
-use super::paths::rel_posix;
+use super::paths::{output_path_for_source_file, rel_posix};
 use super::{PageInfoMap, PagefindManifest, WebsiteManifest, SKIP_DIRS};
 
 pub(super) const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
@@ -244,14 +244,6 @@ fn copy_source_file(
         )
     })?;
     Ok(())
-}
-
-fn output_path_for_source_file(src_dir: &Path, out_dir: &Path, input_path: &Path) -> PathBuf {
-    out_dir.join(source_relative_path(src_dir, input_path))
-}
-
-fn source_relative_path<'a>(src_dir: &Path, input_path: &'a Path) -> &'a Path {
-    input_path.strip_prefix(src_dir).unwrap_or(input_path)
 }
 
 fn is_skip_directory(name: Option<&str>) -> bool {
