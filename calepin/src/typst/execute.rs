@@ -10,13 +10,14 @@ use crate::engines::{
 };
 use crate::typst::io::write_if_changed;
 use crate::typst::model::{
-    ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec, MimeData,
-    ResultItem, ResultItemName, ResultItemType, ResultsMode,
+    ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec,
+    ResultItem, ResultItemName, ResultItemType, ResultsMode, DEFAULT_FIG_DEVICE_ASPECT,
+    DEFAULT_FIG_DEVICE_DPI, DEFAULT_FIG_DEVICE_WIDTH,
 };
 
-const PRELUDE_FIG_WIDTH: f64 = 6.0;
-const PRELUDE_FIG_HEIGHT: f64 = 3.708;
-const PRELUDE_FIG_DPI: f64 = 150.0;
+const PRELUDE_FIG_WIDTH: f64 = DEFAULT_FIG_DEVICE_WIDTH;
+const PRELUDE_FIG_HEIGHT: f64 = DEFAULT_FIG_DEVICE_WIDTH * DEFAULT_FIG_DEVICE_ASPECT;
+const PRELUDE_FIG_DPI: f64 = DEFAULT_FIG_DEVICE_DPI as f64;
 
 #[derive(Debug, Clone)]
 pub struct ExecutionConfig {
@@ -311,13 +312,13 @@ where
                 EngineResult::Output(text) => self.push_output(text)?,
                 EngineResult::Warning(text) => {
                     self.items
-                        .push(diagnostic_item(DiagnosticLevel::Warning, text));
+                        .push(ResultItem::diagnostic(DiagnosticLevel::Warning, text));
                 }
                 EngineResult::Message(text) => {
                     self.items
-                        .push(diagnostic_item(DiagnosticLevel::Message, text));
+                        .push(ResultItem::diagnostic(DiagnosticLevel::Message, text));
                 }
-                EngineResult::Error(text) => self.items.push(error_item(text)),
+                EngineResult::Error(text) => self.items.push(ResultItem::error(text)),
                 EngineResult::Plot(path) => self.push_plot(path)?,
             }
         }
@@ -327,13 +328,14 @@ where
     fn push_output(&mut self, text: String) -> Result<()> {
         if matches!(self.chunk.display_options.results, ResultsMode::Typst) {
             let value = self.write_typst_result(text)?;
-            self.items.push(rich_text_item(
+            self.items.push(ResultItem::rich_data(
                 ResultItemType::Display,
                 "text/x-typst",
                 value,
             ));
         } else {
-            self.items.push(stream_item(ResultItemName::Stdout, text));
+            self.items
+                .push(ResultItem::stream(ResultItemName::Stdout, text));
         }
         Ok(())
     }
@@ -366,7 +368,7 @@ where
             )
         })?;
         self.plot_index += 1;
-        self.items.push(rich_text_item(
+        self.items.push(ResultItem::rich_data(
             ResultItemType::Display,
             self.figure.mime_type().to_string(),
             json!({ "path": (self.artifact_path)(&artifact) }),
@@ -457,43 +459,6 @@ fn plot_extensions_match(actual: &str, expected: &str) -> bool {
         return true;
     }
     matches!((actual, expected), ("jpeg", "jpg") | ("jpg", "jpeg"))
-}
-
-fn stream_item(name: ResultItemName, text: String) -> ResultItem {
-    ResultItem {
-        item_type: ResultItemType::Stream,
-        name: Some(name),
-        text: Some(text),
-        ..ResultItem::default()
-    }
-}
-
-fn diagnostic_item(level: DiagnosticLevel, text: String) -> ResultItem {
-    ResultItem {
-        item_type: ResultItemType::Diagnostic,
-        text: Some(text),
-        level: Some(level),
-        ..ResultItem::default()
-    }
-}
-
-fn error_item(message: String) -> ResultItem {
-    ResultItem {
-        item_type: ResultItemType::Error,
-        name: Some(ResultItemName::Error),
-        message: Some(message),
-        ..ResultItem::default()
-    }
-}
-
-fn rich_text_item(kind: ResultItemType, mime: impl Into<String>, value: Value) -> ResultItem {
-    let mut data = MimeData::new();
-    data.insert(mime.into(), value);
-    ResultItem {
-        item_type: kind,
-        data: Some(data),
-        ..ResultItem::default()
-    }
 }
 
 fn lines(code: &str) -> Vec<String> {

@@ -223,7 +223,7 @@ fn parse_chunk_raw_block(
     if is_typst_fence(lang) {
         return Ok(None);
     }
-    let engine = EngineName::from_name(lang);
+    let engine = EngineName::parse(lang)?;
     let raw_fence_label = raw_block_query_label(value)?;
     let raw_text = value.get("text").and_then(Value::as_str).unwrap_or("");
     let label_hint = format!("chunk-{}", *state.auto_label_index);
@@ -363,7 +363,7 @@ fn parse_engine(value: &Value) -> Result<EngineName> {
         .get("engine")
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow!("missing engine"))?;
-    Ok(EngineName::from_name(engine))
+    EngineName::parse(engine)
 }
 
 fn parse_crossref_labels(value: &Value) -> Result<Vec<CrossrefLabelDoc>> {
@@ -853,6 +853,22 @@ mod tests {
         );
         let err = parse_chunks(&json, None).unwrap_err().to_string();
         assert!(err.contains("chunk `bad-argument` has unsupported argument `not-a-real-argument`"));
+    }
+
+    #[test]
+    fn rejects_blank_engine_name() {
+        let json = metadata(
+            r#"{
+              "body":{"func":"raw","text":"print(1)","block":false},
+              "engine":" ",
+              "label":"bad-engine"
+            }"#,
+        );
+
+        let err = parse_chunks(&json, None).unwrap_err().to_string();
+
+        assert!(err.contains("engine name"), "{err}");
+        assert!(err.contains("empty"), "{err}");
     }
 
     #[test]

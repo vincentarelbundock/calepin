@@ -40,7 +40,7 @@ pub(crate) fn image_meta_relative_path(layout: &LayoutPaths) -> PathBuf {
 
 pub(super) fn write_image_meta(layout: &LayoutPaths) -> Result<ImageMetaDocument> {
     let document = collect_image_meta(layout)?;
-    let path = layout.sibling_path(IMAGE_META_FILE);
+    let path = layout.artifact_path(IMAGE_META_FILE);
     write_if_changed(&path, serde_json::to_string_pretty(&document)?)?;
     Ok(document)
 }

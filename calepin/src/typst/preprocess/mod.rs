@@ -356,7 +356,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
 }
 
 fn page_meta_path(layout: &LayoutPaths) -> PathBuf {
-    layout.sibling_path(PAGE_META_FILE)
+    layout.artifact_path(PAGE_META_FILE)
 }
 
 fn source_fingerprint(input: &Path) -> Result<String> {
@@ -487,7 +487,7 @@ fn publish_staged_file(source: &Path, target: &Path) -> Result<()> {
 /// Write `params.json` next to `results.json` when there are parameters, and
 /// return its path. Returns `None` (and removes any stale file) when empty.
 fn write_params_file(layout: &LayoutPaths, params: &serde_json::Value) -> Result<Option<PathBuf>> {
-    let path = layout.sibling_path("params.json");
+    let path = layout.artifact_path("params.json");
     let is_empty = params.as_object().is_none_or(|map| map.is_empty());
     if is_empty {
         let _ = fs::remove_file(&path);

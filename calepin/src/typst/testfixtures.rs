@@ -2,17 +2,19 @@ use std::path::{Path, PathBuf};
 
 use crate::typst::model::{
     ChunkSpec, DisplayOptions, EngineName, ExecOptions, LayoutPaths, ResultsMode,
+    DEFAULT_FIG_DEVICE_ASPECT, DEFAULT_FIG_DEVICE_DPI, DEFAULT_FIG_DEVICE_FORMAT,
+    DEFAULT_FIG_DEVICE_HEIGHT, DEFAULT_FIG_DEVICE_WIDTH,
 };
 
 pub fn exec_options() -> ExecOptions {
     ExecOptions {
         eval: true,
         error: false,
-        fig_device_format: "svg".to_string(),
-        fig_device_dpi: 150,
-        fig_device_width: 6.0,
-        fig_device_height: None,
-        fig_device_aspect: 0.618,
+        fig_device_format: DEFAULT_FIG_DEVICE_FORMAT.to_string(),
+        fig_device_dpi: DEFAULT_FIG_DEVICE_DPI,
+        fig_device_width: DEFAULT_FIG_DEVICE_WIDTH,
+        fig_device_height: DEFAULT_FIG_DEVICE_HEIGHT,
+        fig_device_aspect: DEFAULT_FIG_DEVICE_ASPECT,
     }
 }
 

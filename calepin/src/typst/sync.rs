@@ -27,7 +27,7 @@ struct PageSyncEntry {
 }
 
 pub fn page_sync_path(layout: &LayoutPaths) -> PathBuf {
-    layout.sibling_path("pages.json")
+    layout.artifact_path("pages.json")
 }
 
 pub fn write_page_sync(typst: &Path, layout: &LayoutPaths, chunks: &[ChunkSpec]) -> Result<()> {
