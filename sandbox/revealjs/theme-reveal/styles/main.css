@@ -168,3 +168,9 @@ body {
   width: 100%;
   max-height: 44vh;
 }
+
+/* Keep Reveal linear mode truly linear: hide vertical control arrows when requested. */
+.reveal[data-navigation-mode="linear"] .controls .navigate-up,
+.reveal[data-navigation-mode="linear"] .controls .navigate-down {
+  display: none !important;
+}
