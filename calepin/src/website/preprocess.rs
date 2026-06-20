@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -14,14 +15,48 @@ use crate::typst::preprocess::{
     preprocess_plan_cache_hit, preprocess_plan_chunk_count, PreprocessOptions, PreprocessOutput,
     PreprocessPlan,
 };
-use crate::utils::progress::ProgressManager;
+use crate::utils::progress::{Progress, ProgressManager};
+
+fn pluralize<'a>(count: usize, singular: &'a str, plural: &'a str) -> &'a str {
+    if count == 1 {
+        singular
+    } else {
+        plural
+    }
+}
+
+fn chunk_count_label(count: usize) -> String {
+    if count == 0 {
+        "no chunks".to_string()
+    } else {
+        format!("{count} {}", pluralize(count, "chunk", "chunks"))
+    }
+}
+
+fn no_chunk_pages_label(count: usize) -> String {
+    if count == 1 {
+        "1 page without chunks".to_string()
+    } else {
+        format!("{count} pages without chunks")
+    }
+}
+
+fn panic_payload_to_string(panic: &(dyn Any + Send)) -> String {
+    if let Some(message) = panic.downcast_ref::<&str>() {
+        message.to_string()
+    } else if let Some(message) = panic.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "<non-string panic payload>".to_string()
+    }
+}
 
 /// Runs `task` over `items` on a small worker pool, failing on the first
 /// error. Results are returned in completion order.
 pub(super) fn run_parallel<I: Send, T: Send>(
     items: Vec<I>,
     parallelism: Option<usize>,
-    progress: Option<&crate::utils::progress::Progress>,
+    progress: Option<&Progress>,
     task: impl Fn(I) -> Result<T> + Sync,
 ) -> Result<Vec<T>> {
     if items.is_empty() {
@@ -48,7 +83,13 @@ pub(super) fn run_parallel<I: Send, T: Send>(
                     if abort.load(Ordering::Relaxed) {
                         return Ok(());
                     }
-                    let Some(item) = queue.lock().unwrap().pop_front() else {
+                    let Some(item) = {
+                        let mut queue = queue.lock().unwrap();
+                        if abort.load(Ordering::Relaxed) {
+                            return Ok(());
+                        }
+                        queue.pop_front()
+                    } else {
                         return Ok(());
                     };
                     match task(item) {
@@ -60,6 +101,7 @@ pub(super) fn run_parallel<I: Send, T: Send>(
                         }
                         Err(error) => {
                             abort.store(true, Ordering::Relaxed);
+                            queue.lock().unwrap().clear();
                             return Err(error);
                         }
                     }
@@ -70,7 +112,12 @@ pub(super) fn run_parallel<I: Send, T: Send>(
         for handle in handles {
             match handle.join() {
                 Ok(result) => result?,
-                Err(_) => return Err(anyhow!("website build worker panicked")),
+                Err(error) => {
+                    return Err(anyhow!(
+                        "website build worker panicked: {}",
+                        panic_payload_to_string(&*error),
+                    ));
+                }
             }
         }
         Ok(())
@@ -132,12 +179,7 @@ pub(super) fn preprocess_documents(
                 WebsitePreprocessWork::Cached(preprocess_cached_output(plan))
             } else {
                 let chunk_count = preprocess_plan_chunk_count(&plan);
-                let chunk_label = if chunk_count == 0 {
-                    "no chunks".to_string()
-                } else {
-                    let chunk_word = if chunk_count == 1 { "chunk" } else { "chunks" };
-                    format!("{chunk_count} {chunk_word}")
-                };
+                let chunk_label = chunk_count_label(chunk_count);
                 page_progress.finish(format!("[ready] run {rel}: {chunk_label}"));
                 WebsitePreprocessWork::Pending(plan)
             };
@@ -149,31 +191,38 @@ pub(super) fn preprocess_documents(
     let mut outputs = BTreeMap::new();
     let mut pending = Vec::new();
     let mut run_chunk_count = 0usize;
+    let mut run_no_chunk_count = 0usize;
     for (input, work) in planned {
         match work {
             WebsitePreprocessWork::Cached(output) => {
                 outputs.insert(input, output);
             }
             WebsitePreprocessWork::Pending(plan) => {
-                run_chunk_count += preprocess_plan_chunk_count(&plan);
+                let chunk_count = preprocess_plan_chunk_count(&plan);
+                run_chunk_count += chunk_count;
+                if chunk_count == 0 {
+                    run_no_chunk_count += 1;
+                }
                 pending.push((input, plan));
             }
         }
     }
 
     if !pending.is_empty() {
-        let run_unit_count = run_chunk_count.max(pending.len());
+        let pending_count = pending.len();
+        let run_unit_count = (run_chunk_count + run_no_chunk_count) as u64;
         let run_label = if run_chunk_count == 0 {
-            format!("[run] {} pages without chunks", pending.len())
+            format!("[run] {}", no_chunk_pages_label(pending_count))
+        } else if run_no_chunk_count == 0 {
+            format!("[run] {}", chunk_count_label(run_chunk_count))
         } else {
-            let chunk_word = if run_chunk_count == 1 {
-                "chunk"
-            } else {
-                "chunks"
-            };
-            format!("[run] {run_chunk_count} {chunk_word}")
+            format!(
+                "[run] {} and {}",
+                chunk_count_label(run_chunk_count),
+                no_chunk_pages_label(run_no_chunk_count),
+            )
         };
-        let run_progress = options.progress.bar(run_label, run_unit_count as u64);
+        let run_progress = options.progress.bar(run_label, run_unit_count);
         let run_outputs = run_parallel(
             pending,
             options.parallelism,
@@ -181,28 +230,33 @@ pub(super) fn preprocess_documents(
             |(input, plan)| {
                 let rel = project_relative_path(&display_root, &input);
                 let page_progress = options.progress.spinner(format!("[run] {rel}"));
+                let chunk_count = preprocess_plan_chunk_count(&plan);
                 let output = execute_preprocess_plan_with_chunk_progress(
                     plan,
                     (run_chunk_count > 0).then_some(&run_progress),
                 )
                 .with_context(|| format!("failed to run chunks for {}", input.display()))?;
+                if run_chunk_count > 0 && chunk_count == 0 {
+                    run_progress.inc(1);
+                }
                 page_progress.finish(format!("[done] run {rel}"));
                 Ok((input, output))
             },
         )?;
         let finish_label = if run_chunk_count == 0 {
-            "[done] run pages without chunks".to_string()
+            format!("[done] {}", no_chunk_pages_label(pending_count))
+        } else if run_no_chunk_count == 0 {
+            format!("[done] {}", chunk_count_label(run_chunk_count))
         } else {
-            let chunk_word = if run_chunk_count == 1 {
-                "chunk"
-            } else {
-                "chunks"
-            };
-            format!("[done] run {run_chunk_count} {chunk_word}")
+            format!(
+                "[done] {} and {}",
+                chunk_count_label(run_chunk_count),
+                no_chunk_pages_label(run_no_chunk_count),
+            )
         };
         run_progress.finish(finish_label);
         outputs.extend(run_outputs);
     }
 
-    Ok(outputs.into_iter().collect())
+    Ok(outputs)
 }
