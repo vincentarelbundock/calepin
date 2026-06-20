@@ -8,6 +8,7 @@ use anyhow::{anyhow, Context, Result};
 use crate::utils::html::escape as html_escape;
 use crate::utils::http::timeout_agent;
 
+use super::paths::canonicalize_within_root;
 use super::svg::sanitize_icon_svg;
 
 const DEFAULT_ICON_PREFIX: &str = "lucide";
@@ -89,27 +90,17 @@ impl IconCache {
 
     fn resolve_local(&mut self, spec: &str) -> Result<Option<String>> {
         let requested = Path::new(spec.trim());
-        let absolute = if requested.is_absolute() {
-            requested.to_path_buf()
-        } else {
-            self.src_dir.join(requested)
-        };
-        let path = match absolute.canonicalize() {
+        let what = format!("local icon `{spec}` must stay inside the source directory");
+        let path = match canonicalize_within_root(&self.src_dir, requested, &what) {
             Ok(path) => path,
             Err(error) => {
+                if error.to_string() == what {
+                    return Err(error);
+                }
                 self.warn_unavailable(spec, format!("failed to read local icon `{spec}`: {error}"));
                 return Ok(None);
             }
         };
-        let src_dir = self.src_dir.canonicalize().with_context(|| {
-            format!(
-                "failed to resolve source directory {}",
-                self.src_dir.display()
-            )
-        })?;
-        path.strip_prefix(&src_dir).with_context(|| {
-            format!("local icon `{spec}` must stay inside the source directory")
-        })?;
         let svg = match fs::read_to_string(&path) {
             Ok(svg) => svg,
             Err(error) => {

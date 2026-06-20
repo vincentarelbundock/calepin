@@ -1,6 +1,6 @@
 use std::path::{Component, Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 
 pub(super) use crate::utils::path::{normalize_path, slash_path};
 
@@ -17,6 +17,24 @@ pub(super) fn source_relative_path<'a>(src_dir: &Path, input_path: &'a Path) -> 
 
 pub(super) fn relative_or_self<'a>(base: &Path, path: &'a Path) -> &'a Path {
     path.strip_prefix(base).unwrap_or(path)
+}
+
+pub(super) fn canonicalize_within_root(root: &Path, path: &Path, what: &str) -> Result<PathBuf> {
+    let normalized_root = root
+        .canonicalize()
+        .with_context(|| format!("failed to resolve source directory {}", root.display()))?;
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        normalized_root.join(path)
+    };
+    let resolved = absolute
+        .canonicalize()
+        .with_context(|| format!("failed to resolve local path {}", path.display()))?;
+    if !resolved.starts_with(&normalized_root) {
+        bail!("{what}");
+    }
+    Ok(resolved)
 }
 
 pub(super) fn join_normalized_under_root(root: &Path, value: &Path, what: &str) -> Result<PathBuf> {

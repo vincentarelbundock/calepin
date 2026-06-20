@@ -1,11 +1,13 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
 
+use crate::utils::path::{absolutize_from, normalize_path};
+
 pub(crate) fn scaffold_website(dir: &Path, theme: &str, force: bool) -> Result<()> {
     let (files, binary_files) = website_scaffold(theme)?;
-    let docs = absolutize_for_create(dir)?;
+    let docs = normalize_path(&absolutize_from(&std::env::current_dir()?, dir));
     fs::create_dir_all(&docs).with_context(|| format!("failed to create {}", docs.display()))?;
 
     for (path, contents) in files {
@@ -35,14 +37,6 @@ fn website_scaffold(theme: &str) -> Result<WebsiteScaffoldFiles> {
         _ => Err(anyhow!(
             "unknown website scaffold theme `{theme}`; use one of calepin, academic"
         )),
-    }
-}
-
-fn absolutize_for_create(path: &Path) -> Result<PathBuf> {
-    if path.is_absolute() {
-        Ok(path.to_path_buf())
-    } else {
-        Ok(std::env::current_dir()?.join(path))
     }
 }
 
