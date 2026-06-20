@@ -21,6 +21,7 @@
     const slideLevel = slideLevels.length > 0 ? Math.min(...slideLevels) : null;
     let currentHorizontal = null;
     let currentSlide = null;
+    let pendingSectionContent = [];
 
     function newFlatSlide(node) {
       currentHorizontal = document.createElement("section");
@@ -29,32 +30,35 @@
       currentSlide = currentHorizontal;
     }
 
-    function newSection(node) {
+    function newSection() {
       currentHorizontal = document.createElement("section");
       slides.appendChild(currentHorizontal);
-      currentSlide = document.createElement("section");
-      currentSlide.appendChild(node);
-      currentHorizontal.appendChild(currentSlide);
+      currentSlide = null;
+      pendingSectionContent = [];
     }
 
     function newSectionSlide(node) {
       if (!currentHorizontal) {
-        newSection(document.createElement("div"));
+        newSection();
       }
       currentSlide = document.createElement("section");
+      for (const pending of pendingSectionContent) {
+        currentSlide.appendChild(pending);
+      }
+      pendingSectionContent = [];
       currentSlide.appendChild(node);
       currentHorizontal.appendChild(currentSlide);
     }
 
     function appendToCurrent(node) {
-      if (!currentSlide) {
-        if (slideLevel === null) {
-          newFlatSlide(document.createDocumentFragment());
-        } else {
-          newSection(document.createElement("div"));
-        }
+      if (currentSlide) {
+        currentSlide.appendChild(node);
+      } else if (slideLevel === null) {
+        newFlatSlide(document.createDocumentFragment());
+        currentSlide.appendChild(node);
+      } else {
+        pendingSectionContent.push(node);
       }
-      currentSlide.appendChild(node);
     }
 
     slides.textContent = "";
@@ -63,7 +67,7 @@
       const isElement = node.nodeType === 1;
       const headingLevel = isElement ? Number(node.tagName.slice(1)) : NaN;
       if (slideLevel !== null && headingLevel === horizontalLevel) {
-        newSection(node);
+        newSection();
       } else if (slideLevel !== null && headingLevel === slideLevel) {
         newSectionSlide(node);
       } else if (slideLevel === null && headingLevel === horizontalLevel) {
