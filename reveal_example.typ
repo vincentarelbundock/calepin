@@ -1,7 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #calepin.setup(
-  theme: "revealjs",
+  theme: "themes/revealjs-pico",
   echo: true,
   results: "render",
 )
@@ -23,9 +23,8 @@ This deck mirrors the structure from `docs/slides/touying.typ`: horizontal slide
 
 == Left and right visuals
 
-#grid(
-  columns: (1fr, 1fr),
-  gutter: 1em,
+#calepin.elements.columns(
+  columns: 2,
   [
     #figure(
       image("/docs/assets/flowers_01.jpg", width: 100%),
