@@ -180,9 +180,7 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
             } else {
                 PathBuf::from(text)
             };
-            if path.exists() {
-                results.push(EngineResult::Plot(path));
-            }
+            results.push(EngineResult::Plot(path));
         } else if let Some(text) = part.strip_prefix(&preamble_prefix) {
             if !text.is_empty() {
                 results.push(EngineResult::Preamble(text.to_string()));
@@ -191,4 +189,22 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn process_results_preserves_missing_plot_paths_for_later_validation() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("missing-plot.svg");
+        let raw = format!("__TEST__\n__TEST___PLOT:{}", missing.display());
+        let mut results = Vec::new();
+
+        process_results(&raw, &dir.path().join("fallback.svg"), &mut results).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert!(matches!(&results[0], EngineResult::Plot(path) if path == &missing));
+    }
 }
