@@ -16,8 +16,9 @@ use anyhow::{Context, Result};
 use crate::cli::WatchArgs;
 use crate::html::SiteContextInput;
 use crate::typst::compile::{
-    postprocess_html_output, reject_reserved_typst_inputs, resolve_html_entry_with_styles,
-    resolve_output_format, resolve_output_path, typst_watch_args, ReservedInputs,
+    postprocess_html_output, resolve_html_entry_with_styles, resolve_output_format,
+    resolve_output_path, typst_watch_args, validate_forwarded_typst_args, OutputFormat,
+    ReservedInputs,
 };
 use crate::typst::preprocess::{
     prepare_preprocess_plan, preprocess_cached, preprocess_cached_plan, PreprocessOptions,
@@ -122,12 +123,9 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
 }
 
 pub fn run_watch(args: WatchArgs) -> Result<()> {
-    let format = resolve_output_format(
-        args.format.as_ref().map(|format| format.as_str()),
-        args.output.as_deref(),
-    );
-    let sync_pages = format.as_deref().unwrap_or("pdf") == "pdf";
-    reject_reserved_typst_inputs(&args.typst_args)?;
+    let format = resolve_output_format(args.format.map(OutputFormat::from), args.output.as_deref());
+    let sync_pages = format.unwrap_or(OutputFormat::Pdf) == OutputFormat::Pdf;
+    validate_forwarded_typst_args(&args.typst_args, format)?;
 
     let initial = preprocess_cached(preprocess_options(&args, sync_pages))?;
 
@@ -138,10 +136,9 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     })
     .context("failed to set Ctrl+C handler")?;
 
-    let resolved_output =
-        resolve_output_path(&initial.layout, args.output.as_deref(), format.as_deref());
+    let resolved_output = resolve_output_path(&initial.layout, args.output.as_deref(), format);
     let root = initial.layout.root.clone();
-    let is_html = format.as_deref() == Some("html");
+    let is_html = format == Some(OutputFormat::Html);
     let asset_server = if is_html {
         let server = assets::start(root.clone(), Arc::clone(&stop))?;
         if !args.common.quiet {
@@ -177,7 +174,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let watch_args = typst_watch_args(
         &initial.layout,
         args.output.as_deref(),
-        format.as_deref(),
+        format,
         &args.typst_args,
         ReservedInputs {
             asset_base: asset_server.as_ref().map(|server| server.base_url()),

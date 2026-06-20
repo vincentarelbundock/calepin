@@ -16,9 +16,54 @@ use crate::typst::run::{
 use crate::typst::version::assert_supported_typst;
 use crate::utils::progress::Progress;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputFormat {
+    Pdf,
+    Png,
+    Svg,
+    Html,
+}
+
+impl OutputFormat {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Pdf => "pdf",
+            Self::Png => "png",
+            Self::Svg => "svg",
+            Self::Html => "html",
+        }
+    }
+
+    fn extension(self) -> &'static str {
+        self.as_str()
+    }
+
+    fn target(self) -> CalepinTarget {
+        match self {
+            Self::Html => CalepinTarget::Html,
+            Self::Pdf | Self::Png | Self::Svg => CalepinTarget::Paged,
+        }
+    }
+
+    fn is_html(self) -> bool {
+        self == Self::Html
+    }
+}
+
+impl From<crate::cli::CompileFormat> for OutputFormat {
+    fn from(value: crate::cli::CompileFormat) -> Self {
+        match value {
+            crate::cli::CompileFormat::Pdf => Self::Pdf,
+            crate::cli::CompileFormat::Png => Self::Png,
+            crate::cli::CompileFormat::Svg => Self::Svg,
+            crate::cli::CompileFormat::Html => Self::Html,
+        }
+    }
+}
+
 pub struct CompileOptions<'a> {
     pub output: Option<PathBuf>,
-    pub format: Option<&'a str>,
+    pub format: Option<OutputFormat>,
     pub typst_args: &'a [String],
     pub theme: &'a crate::theme::ThemeSelection,
     /// Which HTML layout the theme provides for this render: a standalone
@@ -67,6 +112,33 @@ pub fn reject_reserved_typst_inputs(args: &[String]) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn validate_forwarded_typst_args(
+    args: &[String],
+    format: Option<OutputFormat>,
+) -> Result<()> {
+    reject_reserved_typst_inputs(args)?;
+    for arg in args {
+        if arg == "--format" || arg.starts_with("--format=") {
+            return Err(anyhow!(
+                "`--format` is managed by Calepin; use `calepin compile --format` or `calepin watch --format` instead"
+            ));
+        }
+        if arg == "--root" || arg.starts_with("--root=") {
+            return Err(anyhow!(
+                "`--root` is managed by Calepin and cannot be forwarded to Typst"
+            ));
+        }
+        if format == Some(OutputFormat::Html)
+            && (arg == "--features" || arg.starts_with("--features="))
+        {
+            return Err(anyhow!(
+                "`--features` is managed by Calepin for HTML output so the required `html` feature stays enabled"
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn reject_reserved_input_value(value: &str) -> Result<()> {
     if RESERVED_INPUT_KEYS
         .iter()
@@ -80,13 +152,13 @@ fn reject_reserved_input_value(value: &str) -> Result<()> {
     Ok(())
 }
 
-fn infer_output_format(output: &Path) -> Option<&'static str> {
+fn infer_output_format(output: &Path) -> Option<OutputFormat> {
     match output.extension().and_then(|ext| ext.to_str()) {
         Some(ext) => match ext.to_ascii_lowercase().as_str() {
-            "html" => Some("html"),
-            "pdf" => Some("pdf"),
-            "png" => Some("png"),
-            "svg" => Some("svg"),
+            "html" => Some(OutputFormat::Html),
+            "pdf" => Some(OutputFormat::Pdf),
+            "png" => Some(OutputFormat::Png),
+            "svg" => Some(OutputFormat::Svg),
             _ => None,
         },
         None => None,
@@ -94,33 +166,66 @@ fn infer_output_format(output: &Path) -> Option<&'static str> {
 }
 
 /// Explicit `--format` wins; otherwise infer from the output extension when possible.
-pub(crate) fn resolve_output_format(format: Option<&str>, output: Option<&Path>) -> Option<String> {
-    format
-        .map(ToString::to_string)
-        .or_else(|| output.and_then(|output| infer_output_format(output).map(ToString::to_string)))
+pub(crate) fn resolve_output_format(
+    format: Option<OutputFormat>,
+    output: Option<&Path>,
+) -> Option<OutputFormat> {
+    format.or_else(|| output.and_then(infer_output_format))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ResolvedOutput {
+    path: PathBuf,
+    arg_path: PathBuf,
+    format: Option<OutputFormat>,
+}
+
+impl ResolvedOutput {
+    fn target(&self) -> CalepinTarget {
+        self.format
+            .map(OutputFormat::target)
+            .unwrap_or(CalepinTarget::Paged)
+    }
+
+    fn is_html(&self) -> bool {
+        self.format.is_some_and(OutputFormat::is_html)
+    }
+}
+
+fn resolve_render_output(
+    layout: &LayoutPaths,
+    output: Option<&Path>,
+    format: Option<OutputFormat>,
+) -> ResolvedOutput {
+    let path = resolve_output_path(layout, output, format);
+    let format = resolve_output_format(format, Some(path.as_path()));
+    let arg_path = resolve_output_arg_path(layout, output, format);
+    ResolvedOutput {
+        path,
+        arg_path,
+        format,
+    }
 }
 
 fn typst_subcommand_args(
     subcommand: &str,
     layout: &LayoutPaths,
-    output: Option<&Path>,
-    format: Option<&str>,
+    output: &ResolvedOutput,
     typst_args: &[String],
     inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
-    let format = resolve_output_format(format, output);
     let results_input = artifact_reference(&layout.root, &layout.results_path);
-    let target = if format.as_deref() == Some("html") {
-        CalepinTarget::Html
-    } else {
-        CalepinTarget::Paged
-    };
     let mut args = vec![
         subcommand.into(),
         "--root".into(),
         layout.root.as_os_str().into(),
     ];
-    push_calepin_inputs(&mut args, CalepinMode::Render, &results_input, target);
+    push_calepin_inputs(
+        &mut args,
+        CalepinMode::Render,
+        &results_input,
+        output.target(),
+    );
     push_input(&mut args, INPUT_SOURCE_DIR, source_dir_input(layout));
     let image_meta = artifact_reference(
         &layout.root,
@@ -130,10 +235,10 @@ fn typst_subcommand_args(
     );
     push_input(&mut args, INPUT_IMAGE_META, image_meta);
 
-    if let Some(format) = format.as_deref() {
+    if let Some(format) = output.format {
         args.push("--format".into());
-        args.push(format.into());
-        if format == "html" {
+        args.push(format.as_str().into());
+        if format.is_html() {
             args.push("--features=html".into());
         }
     }
@@ -148,58 +253,44 @@ fn typst_subcommand_args(
     }
 
     args.push(layout.render_input.as_os_str().into());
-    if let Some(output) = output {
-        args.push(output.as_os_str().into());
-    } else {
-        let default_output = resolve_output_path(layout, output, format.as_deref());
-        args.push(default_output.as_os_str().into());
-    }
+    args.push(output.arg_path.as_os_str().into());
     args.extend(typst_args.iter().map(|arg| OsString::from(arg.as_str())));
     args
 }
 
+#[cfg(test)]
 pub(crate) fn typst_compile_args(
     layout: &LayoutPaths,
     output: Option<&Path>,
-    format: Option<&str>,
+    format: Option<OutputFormat>,
     typst_args: &[String],
     inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
-    typst_subcommand_args("compile", layout, output, format, typst_args, inputs)
+    let output = resolve_render_output(layout, output, format);
+    typst_subcommand_args("compile", layout, &output, typst_args, inputs)
 }
 
 pub(crate) fn typst_watch_args(
     layout: &LayoutPaths,
     output: Option<&Path>,
-    format: Option<&str>,
+    format: Option<OutputFormat>,
     typst_args: &[String],
     inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
-    typst_subcommand_args("watch", layout, output, format, typst_args, inputs)
+    let output = resolve_render_output(layout, output, format);
+    typst_subcommand_args("watch", layout, &output, typst_args, inputs)
 }
 
-fn html_output_path(
-    layout: &LayoutPaths,
-    output: Option<&Path>,
-    format: Option<&str>,
-) -> Option<PathBuf> {
-    if format != Some("html") {
-        return None;
-    }
-    Some(resolve_output_path(layout, output, format))
+fn output_extension(format: Option<OutputFormat>) -> &'static str {
+    format.unwrap_or(OutputFormat::Pdf).extension()
 }
 
 pub(crate) fn resolve_output_path(
     layout: &LayoutPaths,
     output: Option<&Path>,
-    format: Option<&str>,
+    format: Option<OutputFormat>,
 ) -> PathBuf {
-    let extension = match format {
-        Some("html") => "html",
-        Some("png") => "png",
-        Some("svg") => "svg",
-        _ => "pdf",
-    };
+    let extension = output_extension(format);
     match output {
         Some(path) if path.is_absolute() => {
             if path.extension().is_some() {
@@ -216,6 +307,22 @@ pub(crate) fn resolve_output_path(
                 with_root.with_extension(extension)
             }
         }
+        None => layout
+            .root
+            .join(&layout.input_rel)
+            .with_extension(extension),
+    }
+}
+
+fn resolve_output_arg_path(
+    layout: &LayoutPaths,
+    output: Option<&Path>,
+    format: Option<OutputFormat>,
+) -> PathBuf {
+    let extension = output_extension(format);
+    match output {
+        Some(path) if path.extension().is_some() => path.to_path_buf(),
+        Some(path) => path.with_extension(extension),
         None => layout
             .root
             .join(&layout.input_rel)
@@ -273,14 +380,38 @@ pub(crate) fn postprocess_html_output(
     Ok(())
 }
 
+pub(crate) fn postprocess_compiled_html_output(
+    output: &Path,
+    layout: &LayoutPaths,
+    html_entry: Option<&crate::theme::HtmlEntry>,
+    syntax_theme: &HtmlSyntaxTheme,
+    site_context: Option<&SiteContextInput>,
+    minify_html: bool,
+) -> Result<()> {
+    if !output.exists() {
+        return Err(anyhow!(
+            "missing HTML output after typst compile: {}",
+            output.display()
+        ));
+    }
+    postprocess_html_output(
+        output,
+        layout,
+        html_entry,
+        syntax_theme,
+        site_context,
+        minify_html,
+    )
+}
+
 pub fn compile_with_typst(
     typst: &Path,
     layout: &LayoutPaths,
     options: CompileOptions<'_>,
 ) -> Result<()> {
-    let output_path = resolve_output_path(layout, options.output.as_deref(), options.format);
-    let resolved_format = resolve_output_format(options.format, Some(output_path.as_path()));
-    let html_entry = if resolved_format.as_deref() == Some("html") {
+    let output = resolve_render_output(layout, options.output.as_deref(), options.format);
+    let output_path = &output.path;
+    let html_entry = if output.is_html() {
         if let Some(entry) = options.html_entry.cloned() {
             let mut owned_entry = entry.clone();
             if !options.config_styles.is_empty() {
@@ -298,16 +429,11 @@ pub fn compile_with_typst(
         None
     };
     let html_entry = html_entry.as_ref();
-    reject_reserved_typst_inputs(options.typst_args)?;
-    let html_output = html_output_path(
+    validate_forwarded_typst_args(options.typst_args, output.format)?;
+    let args = typst_subcommand_args(
+        "compile",
         layout,
-        Some(output_path.as_path()),
-        resolved_format.as_deref(),
-    );
-    let args = typst_compile_args(
-        layout,
-        Some(output_path.as_path()),
-        resolved_format.as_deref(),
+        &output,
         options.typst_args,
         ReservedInputs {
             asset_base: None,
@@ -322,7 +448,7 @@ pub fn compile_with_typst(
             layout.input_rel.display(),
             output_path
                 .strip_prefix(&layout.root)
-                .unwrap_or(output_path.as_path())
+                .unwrap_or(output_path)
                 .display()
         ),
         crate::cli::is_quiet() || !options.progress,
@@ -330,11 +456,12 @@ pub fn compile_with_typst(
     run_typst_status(typst, "run typst compile", &args, &layout.root, |stderr| {
         format!("typst compile failed:\n{stderr}")
     })?;
-    if let Some(path) = html_output {
+    if output.is_html() {
         progress.set_message(format!(
             "[html] {}",
-            path.strip_prefix(&layout.root)
-                .unwrap_or(path.as_path())
+            output_path
+                .strip_prefix(&layout.root)
+                .unwrap_or(output_path)
                 .display()
         ));
         let builtin_syntax_theme;
@@ -344,8 +471,8 @@ pub fn compile_with_typst(
             builtin_syntax_theme = HtmlSyntaxTheme::builtin();
             &builtin_syntax_theme
         };
-        postprocess_html_output(
-            &path,
+        postprocess_compiled_html_output(
+            output_path,
             layout,
             html_entry,
             syntax_theme,
@@ -357,7 +484,7 @@ pub fn compile_with_typst(
         "[done] {}",
         output_path
             .strip_prefix(&layout.root)
-            .unwrap_or(output_path.as_path())
+            .unwrap_or(output_path)
             .display()
     ));
     Ok(())
@@ -410,6 +537,68 @@ mod tests {
     }
 
     #[test]
+    fn resolve_output_format_returns_typed_format() {
+        assert_eq!(
+            resolve_output_format(None, Some(Path::new("paper.HTML"))),
+            Some(OutputFormat::Html)
+        );
+        assert_eq!(
+            resolve_output_format(Some(OutputFormat::Svg), Some(Path::new("paper.pdf"))),
+            Some(OutputFormat::Svg)
+        );
+    }
+
+    #[test]
+    fn rejects_forwarded_typst_owned_flags() {
+        for args in [
+            vec!["--format".to_string(), "html".to_string()],
+            vec!["--format=html".to_string()],
+            vec!["--root".to_string(), ".".to_string()],
+            vec!["--root=.".to_string()],
+        ] {
+            let err = validate_forwarded_typst_args(&args, None)
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains("managed by Calepin"), "{err}");
+        }
+    }
+
+    #[test]
+    fn rejects_forwarded_features_for_html_output() {
+        for args in [
+            vec!["--features".to_string(), "foo".to_string()],
+            vec!["--features=foo".to_string()],
+        ] {
+            let err = validate_forwarded_typst_args(&args, Some(OutputFormat::Html))
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains("features"), "{err}");
+            assert!(err.contains("HTML"), "{err}");
+        }
+
+        validate_forwarded_typst_args(&["--features=foo".to_string()], Some(OutputFormat::Pdf))
+            .unwrap();
+    }
+
+    #[test]
+    fn compiled_html_postprocess_errors_when_output_is_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "").unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
+        let missing = dir.path().join("paper.html");
+        let syntax_theme = HtmlSyntaxTheme::builtin();
+
+        postprocess_html_output(&missing, &layout, None, &syntax_theme, None, false).unwrap();
+        let err =
+            postprocess_compiled_html_output(&missing, &layout, None, &syntax_theme, None, false)
+                .unwrap_err()
+                .to_string();
+
+        assert!(err.contains("missing HTML output"), "{err}");
+    }
+
+    #[test]
     fn html_format_enables_typst_html_feature() {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
@@ -419,7 +608,7 @@ mod tests {
         let args = typst_compile_args(
             &layout,
             Some(&PathBuf::from("paper.html")),
-            Some("html"),
+            Some(OutputFormat::Html),
             &[],
             ReservedInputs::default(),
         );
@@ -471,7 +660,7 @@ mod tests {
         let args = typst_compile_args(
             &layout,
             Some(&PathBuf::from("paper.pdf")),
-            Some("pdf"),
+            Some(OutputFormat::Pdf),
             &[],
             ReservedInputs::default(),
         );
@@ -494,15 +683,19 @@ mod tests {
         let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         assert_eq!(
-            resolve_output_path(&layout, Some(Path::new("out/report.pdf")), Some("pdf")),
+            resolve_output_path(
+                &layout,
+                Some(Path::new("out/report.pdf")),
+                Some(OutputFormat::Pdf)
+            ),
             layout.root.join("out/report.pdf")
         );
         assert_eq!(
-            resolve_output_path(&layout, None, Some("pdf")),
+            resolve_output_path(&layout, None, Some(OutputFormat::Pdf)),
             layout.root.join("paper.pdf")
         );
         assert_eq!(
-            resolve_output_path(&layout, None, Some("html")),
+            resolve_output_path(&layout, None, Some(OutputFormat::Html)),
             layout.root.join("paper.html")
         );
         assert_eq!(
@@ -518,7 +711,13 @@ mod tests {
         std::fs::write(&input, "").unwrap();
         let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
-        let args = typst_compile_args(&layout, None, Some("pdf"), &[], ReservedInputs::default());
+        let args = typst_compile_args(
+            &layout,
+            None,
+            Some(OutputFormat::Pdf),
+            &[],
+            ReservedInputs::default(),
+        );
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
@@ -537,7 +736,7 @@ mod tests {
         let args = typst_watch_args(
             &layout,
             Some(&PathBuf::from("paper.pdf")),
-            Some("pdf"),
+            Some(OutputFormat::Pdf),
             &[],
             ReservedInputs::default(),
         );
@@ -590,7 +789,13 @@ mod tests {
         std::fs::write(&input, "").unwrap();
         let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
-        let args = typst_watch_args(&layout, None, Some("pdf"), &[], ReservedInputs::default());
+        let args = typst_watch_args(
+            &layout,
+            None,
+            Some(OutputFormat::Pdf),
+            &[],
+            ReservedInputs::default(),
+        );
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
@@ -609,7 +814,7 @@ mod tests {
         let args = typst_watch_args(
             &layout,
             Some(&PathBuf::from("paper.html")),
-            Some("html"),
+            Some(OutputFormat::Html),
             &[],
             ReservedInputs {
                 asset_base: Some("http://127.0.0.1:3002"),

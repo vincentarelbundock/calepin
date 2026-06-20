@@ -7,7 +7,9 @@ use anyhow::{Context, Result};
 
 use crate::cli::{is_quiet, set_quiet, CleanArgs, CompileArgs, NewArgs, WatchArgs};
 use crate::html::SiteContextInput;
-use crate::typst::compile::{compile_with_typst, resolve_output_format, CompileOptions};
+use crate::typst::compile::{
+    compile_with_typst, resolve_output_format, CompileOptions, OutputFormat,
+};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
 const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/notebook.typ");
@@ -82,11 +84,8 @@ pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
         return crate::website::watch_from_watch_args(args);
     }
 
-    let format = resolve_output_format(
-        args.format.as_ref().map(|format| format.as_str()),
-        args.output.as_deref(),
-    );
-    let is_html = format.as_deref() == Some("html");
+    let format = resolve_output_format(args.format.map(OutputFormat::from), args.output.as_deref());
+    let is_html = format == Some(OutputFormat::Html);
 
     validate_single_file_watch_flags(&args, is_html)?;
     apply_html_watch_typst_args(&mut args, is_html);
@@ -175,7 +174,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         return crate::website::build_from_compile_args(args);
     }
 
-    let format = args.format.map(|format| format.as_str().to_string());
+    let format = args.format.map(OutputFormat::from);
     let current_dir = std::env::current_dir()?;
     let calepin_config =
         crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
@@ -204,7 +203,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         &output.layout,
         CompileOptions {
             output: args.output,
-            format: format.as_deref(),
+            format,
             typst_args: &args.typst_args,
             theme: &output.theme,
             html_scope: crate::theme::HtmlScope::Document,

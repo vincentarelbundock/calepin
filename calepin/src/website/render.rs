@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use xxhash_rust::xxh3::xxh3_64;
 
 use crate::html::{html_theme_script, html_theme_stylesheet, minify_html_file, HtmlSyntaxTheme};
-use crate::typst::compile::{compile_with_typst, CompileOptions};
+use crate::typst::compile::{compile_with_typst, CompileOptions, OutputFormat};
 use crate::typst::paths::project_relative_path;
 use crate::typst::preprocess::PreprocessOutput;
 use crate::utils::html::escape as html_escape;
@@ -381,7 +381,7 @@ fn render_document(
         .collect();
 
     let compile = |output: PathBuf,
-                   format: &'static str,
+                   format: OutputFormat,
                    html_entry: Option<&crate::theme::HtmlEntry>,
                    html_syntax_theme: Option<&HtmlSyntaxTheme>,
                    site_context: Option<&crate::html::SiteContextInput>|
@@ -410,7 +410,7 @@ fn render_document(
 
     compile(
         html_output.clone(),
-        "html",
+        OutputFormat::Html,
         page_site_entry.as_ref(),
         Some(&context.syntax_theme),
         Some(&site_context),
@@ -428,7 +428,7 @@ fn render_document(
             .as_ref()
             .ok_or_else(|| anyhow!("PDF output was not planned: {}", input_path.display()))?;
         let pdf_output = context.out_dir.join(pdf_href);
-        compile(pdf_output, "pdf", None, None, None)?;
+        compile(pdf_output, OutputFormat::Pdf, None, None, None)?;
     }
 
     Ok(())
