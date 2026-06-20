@@ -2754,6 +2754,34 @@ fn should_rebuild_for_path_ignores_config_style_in_distinct_output_directory() {
 }
 
 #[test]
+fn should_rebuild_for_path_tracks_template_text_files() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("docs");
+    let template = src.join("templates").join("robots.txt");
+    fs::create_dir_all(template.parent().unwrap()).unwrap();
+    fs::write(&template, "User-agent: *").unwrap();
+
+    let mut current = test_build_result(&src, &[]);
+    current.out_dir = temp.path().join("site");
+
+    assert!(should_rebuild_for_path(&current, &template));
+}
+
+#[test]
+fn should_rebuild_for_path_tracks_static_files_with_arbitrary_extensions() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("docs");
+    let asset = src.join("assets").join("site.webmanifest");
+    fs::create_dir_all(asset.parent().unwrap()).unwrap();
+    fs::write(&asset, r#"{"name":"Calepin"}"#).unwrap();
+
+    let mut current = test_build_result(&src, &[]);
+    current.out_dir = temp.path().join("site");
+
+    assert!(should_rebuild_for_path(&current, &asset));
+}
+
+#[test]
 fn should_rebuild_for_path_ignores_generated_calepin_directory() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path().join("docs");

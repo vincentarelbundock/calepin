@@ -703,23 +703,7 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
             return false;
         }
     }
-    matches!(
-        path.extension().and_then(|extension| extension.to_str()),
-        Some(
-            "typ"
-                | "toml"
-                | "css"
-                | "js"
-                | "svg"
-                | "png"
-                | "jpg"
-                | "jpeg"
-                | "gif"
-                | "webp"
-                | "ico"
-                | "mp4"
-        )
-    )
+    true
 }
 
 fn rebuild_changed_pages(
