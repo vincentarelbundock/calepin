@@ -25,9 +25,7 @@ use crate::typst::preprocess::{
 use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
-use relay::{
-    join_relay, relay_typst_watch_output, relay_typst_watch_output_with_events,
-};
+use relay::{join_relay, relay_typst_watch_output, relay_typst_watch_output_with_events};
 
 fn start_html_output_postprocessor(
     stop: Arc<AtomicBool>,
@@ -124,7 +122,10 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
 }
 
 pub fn run_watch(args: WatchArgs) -> Result<()> {
-    let format = resolve_output_format(args.format.as_ref().map(|format| format.as_str()), args.output.as_deref());
+    let format = resolve_output_format(
+        args.format.as_ref().map(|format| format.as_str()),
+        args.output.as_deref(),
+    );
     let sync_pages = format.as_deref().unwrap_or("pdf") == "pdf";
     reject_reserved_typst_inputs(&args.typst_args)?;
 

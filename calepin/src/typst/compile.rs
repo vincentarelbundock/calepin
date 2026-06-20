@@ -93,10 +93,7 @@ fn infer_output_format(output: &Path) -> Option<&'static str> {
 }
 
 /// Explicit `--format` wins; otherwise infer from the output extension when possible.
-pub(crate) fn resolve_output_format(
-    format: Option<&str>,
-    output: Option<&Path>,
-) -> Option<String> {
+pub(crate) fn resolve_output_format(format: Option<&str>, output: Option<&Path>) -> Option<String> {
     format
         .map(ToString::to_string)
         .or_else(|| output.and_then(|output| infer_output_format(output).map(ToString::to_string)))
@@ -248,7 +245,9 @@ pub(crate) fn resolve_html_entry_with_styles(
     }
 
     if !config_styles.is_empty() {
-        Ok(Some(crate::theme::style_only_html_entry(config_styles.to_vec())))
+        Ok(Some(crate::theme::style_only_html_entry(
+            config_styles.to_vec(),
+        )))
     } else {
         Ok(None)
     }
@@ -266,7 +265,13 @@ pub(crate) fn postprocess_html_output(
         return Ok(());
     }
 
-    apply_html_theme_file_with_site_context(output, html_entry, syntax_theme, &layout.root, site_context)?;
+    apply_html_theme_file_with_site_context(
+        output,
+        html_entry,
+        syntax_theme,
+        &layout.root,
+        site_context,
+    )?;
     inline_html_images_file(output, &layout.root)?;
     if minify_html {
         minify_html_file(output)?;
@@ -290,14 +295,22 @@ pub fn compile_with_typst(
             }
             Some(owned_entry)
         } else {
-            resolve_html_entry_with_styles(options.theme, options.html_scope, options.config_styles)?
+            resolve_html_entry_with_styles(
+                options.theme,
+                options.html_scope,
+                options.config_styles,
+            )?
         }
     } else {
         None
     };
     let html_entry = html_entry.as_ref();
     reject_reserved_typst_inputs(options.typst_args)?;
-    let html_output = html_output_path(layout, Some(output_path.as_path()), resolved_format.as_deref());
+    let html_output = html_output_path(
+        layout,
+        Some(output_path.as_path()),
+        resolved_format.as_deref(),
+    );
     let args = typst_compile_args(
         layout,
         Some(output_path.as_path()),
