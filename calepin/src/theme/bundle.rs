@@ -37,12 +37,7 @@ static ACADEMIC: BundleDef = BundleDef {
     files: ACADEMIC_FILES,
 };
 
-static REVEALJS: BundleDef = BundleDef {
-    name: "revealjs",
-    files: REVEALJS_FILES,
-};
-
-static BUILTINS: [&BundleDef; 3] = [&CALEPIN, &ACADEMIC, &REVEALJS];
+static BUILTINS: [&BundleDef; 2] = [&CALEPIN, &ACADEMIC];
 
 pub(crate) fn shared_file(path: &str) -> Option<&'static str> {
     SHARED_FILES

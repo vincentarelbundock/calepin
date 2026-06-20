@@ -27,7 +27,6 @@ Select a different built-in or local theme with `theme` in a website's `calepin.
 ```toml
 theme = "calepin"            # the default documentation theme
 theme = "academic"           # a built-in essay/blog theme
-theme = "revealjs"           # a built-in slide theme
 theme = "themes/my-theme"    # a local theme directory
 
 theme = "typst"              # raw Typst output, no Calepin theme

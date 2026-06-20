@@ -18,7 +18,6 @@ that theme becomes the base for your local customizations.
 calepin new theme                          # eject the default `calepin` theme to themes/calepin/
 calepin new theme --theme calepin          # same, explicitly
 calepin new theme --theme academic          # eject the `academic` theme
-calepin new theme --theme revealjs          # eject the `revealjs` theme
 calepin new theme --theme calepin themes/my  # copy into a custom directory
 ```
 

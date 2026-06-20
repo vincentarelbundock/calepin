@@ -25,13 +25,6 @@ fn main() {
     source.push('\n');
     write_theme_files(
         &mut source,
-        "REVEALJS_FILES",
-        &manifest_dir,
-        "src/assets/themes/revealjs",
-    );
-    source.push('\n');
-    write_theme_files(
-        &mut source,
         "SHARED_FILES",
         &manifest_dir,
         "src/assets/themes/shared",
@@ -45,6 +38,11 @@ fn write_theme_files(source: &mut String, const_name: &str, manifest_dir: &Path,
     println!("cargo:rerun-if-changed={}", root.display());
 
     let mut files = Vec::new();
+    if !root.exists() {
+        source.push_str(&format!("static {const_name}: &[BundleFile] = &[];\n"));
+        return;
+    }
+
     collect_theme_files(&root, &root, &mut files);
     files.sort_by(|left, right| left.0.cmp(&right.0));
     files.dedup_by(|left, right| left.0 == right.0);

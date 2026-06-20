@@ -138,10 +138,6 @@ mod tests {
             ThemeSelection::parse("academic", base).unwrap(),
             ThemeSelection::Builtin("academic")
         );
-        assert_eq!(
-            ThemeSelection::parse("revealjs", base).unwrap(),
-            ThemeSelection::Builtin("revealjs")
-        );
     }
 
     #[test]
@@ -174,7 +170,6 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("calepin"), "{msg}");
         assert!(msg.contains("academic"), "{msg}");
-        assert!(msg.contains("revealjs"), "{msg}");
     }
 
     #[test]

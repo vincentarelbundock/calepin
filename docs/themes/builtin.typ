@@ -3,7 +3,7 @@
 
 #title()
 
-_Calepin_ ships with three built-in themes. Built-in themes are compiled into the
+_Calepin_ ships with two built-in themes. Built-in themes are compiled into the
 binary, so they are always available by name and can be selected without adding
 theme files to your project.
 
@@ -44,14 +44,6 @@ language controls.
   columns: 2,
   max-width: 42em,
 )
-
-= `revealjs`
-
-`revealjs` is a presentation-oriented theme built on [Reveal.js](https://revealjs.com/).
-
-It wraps notebook and website HTML in a fullscreen slide deck container, auto-detects
-heading hierarchy for slide structure, and enables Reveal.js controls, hash navigation,
-and syntax highlighting.
 
 = `typst`
 
