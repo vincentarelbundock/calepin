@@ -1,4 +1,5 @@
 use std::io::{self, BufRead, BufReader, Read, Write};
+use std::sync::mpsc::Sender;
 use std::thread;
 
 pub(super) fn relay_typst_watch_output<R, W>(reader: R, writer: W) -> io::Result<()>
@@ -79,14 +80,14 @@ impl<W: Write> TypstWatchOutputRelay<W> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TypstWatchLine {
+pub(super) enum TypstWatchLine {
     Watching,
     Writing,
     Status,
     Other,
 }
 
-fn typst_watch_line(line: &str) -> TypstWatchLine {
+pub(super) fn typst_watch_line(line: &str) -> TypstWatchLine {
     if line.starts_with("watching ") {
         TypstWatchLine::Watching
     } else if line.starts_with("writing to ") {
@@ -96,6 +97,35 @@ fn typst_watch_line(line: &str) -> TypstWatchLine {
     } else {
         TypstWatchLine::Other
     }
+}
+
+pub(super) fn relay_typst_watch_output_with_events<R, W>(
+    reader: R,
+    writer: W,
+    on_write: Sender<()>,
+) -> io::Result<()>
+where
+    R: Read,
+    W: Write,
+{
+    let mut reader = BufReader::new(reader);
+    let mut relay = TypstWatchOutputRelay::new(writer);
+    let mut line = String::new();
+
+    loop {
+        line.clear();
+        let bytes = reader.read_line(&mut line)?;
+        if bytes == 0 {
+            break;
+        }
+        let typst_line = line.trim_end_matches(['\r', '\n']);
+        if matches!(typst_watch_line(typst_line), TypstWatchLine::Writing) {
+            on_write.send(()).ok();
+        }
+        relay.write_line(&line)?;
+    }
+
+    relay.finish()
 }
 
 pub(super) fn join_relay(name: &str, handle: thread::JoinHandle<io::Result<()>>) {

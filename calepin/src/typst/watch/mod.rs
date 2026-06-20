@@ -6,6 +6,7 @@ use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -24,7 +25,9 @@ use crate::typst::preprocess::{
 use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
-use relay::{join_relay, relay_typst_watch_output};
+use relay::{
+    join_relay, relay_typst_watch_output, relay_typst_watch_output_with_events,
+};
 
 fn start_html_output_postprocessor(
     stop: Arc<AtomicBool>,
@@ -32,33 +35,37 @@ fn start_html_output_postprocessor(
     layout: crate::typst::model::LayoutPaths,
     html_entry: Option<crate::theme::HtmlEntry>,
     site_context: Option<SiteContextInput>,
+    mut writes: Receiver<()>,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
         let syntax_theme = crate::html::HtmlSyntaxTheme::builtin();
-        let mut last_modified = None;
-        while !stop.load(Ordering::Relaxed) {
-            thread::sleep(Duration::from_millis(250));
-            let modified = std::fs::metadata(&output)
-                .ok()
-                .and_then(|meta| meta.modified().ok());
+        if let Err(error) = postprocess_html_output(
+            &output,
+            &layout,
+            html_entry.as_ref(),
+            &syntax_theme,
+            site_context.as_ref(),
+            false,
+        ) {
+            cwarn!("failed to postprocess watched HTML output: {}", error);
+        }
 
-            let needs_refresh = match (last_modified, modified) {
-                (None, Some(_)) => true,
-                (Some(previous), Some(current)) => current > previous,
-                _ => false,
-            };
-            if needs_refresh {
-                last_modified = modified;
-                if let Err(error) = postprocess_html_output(
-                    &output,
-                    &layout,
-                    html_entry.as_ref(),
-                    &syntax_theme,
-                    site_context.as_ref(),
-                    false,
-                ) {
-                    cwarn!("failed to postprocess watched HTML output: {}", error);
+        while !stop.load(Ordering::Relaxed) {
+            match writes.recv_timeout(Duration::from_millis(250)) {
+                Ok(()) => {
+                    if let Err(error) = postprocess_html_output(
+                        &output,
+                        &layout,
+                        html_entry.as_ref(),
+                        &syntax_theme,
+                        site_context.as_ref(),
+                        false,
+                    ) {
+                        cwarn!("failed to postprocess watched HTML output: {}", error);
+                    }
                 }
+                Err(RecvTimeoutError::Timeout) => {}
+                Err(RecvTimeoutError::Disconnected) => break,
             }
         }
     })
@@ -109,7 +116,9 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     } else {
         None
     };
-    let mut html_postprocessor = if is_html {
+    let mut html_postprocessor = None;
+    let mut write_events = None;
+    if is_html {
         let config = crate::config::CalepinConfig::load(&root, args.common.config.as_deref())?;
         let mut site_context = SiteContextInput::default();
         site_context.revealjs = config.revealjs;
@@ -118,16 +127,17 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
             crate::theme::HtmlScope::Document,
             &config.styles,
         )?;
-        Some(start_html_output_postprocessor(
+        let (sender, receiver) = mpsc::channel();
+        write_events = Some(sender);
+        html_postprocessor = Some(start_html_output_postprocessor(
             Arc::clone(&stop),
             resolved_output.clone(),
             initial.layout.clone(),
             html_entry,
             Some(site_context),
-        ))
-    } else {
-        None
-    };
+            receiver,
+        ));
+    }
 
     let watch_args = typst_watch_args(
         &initial.layout,
@@ -182,7 +192,11 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         .stderr
         .take()
         .context("failed to capture typst watch stderr")?;
-    let stdout_relay = thread::spawn(move || relay_typst_watch_output(stdout, io::stdout()));
+    let stdout_relay = if let Some(sender) = write_events.take() {
+        thread::spawn(move || relay_typst_watch_output_with_events(stdout, io::stdout(), sender))
+    } else {
+        thread::spawn(move || relay_typst_watch_output(stdout, io::stdout()))
+    };
     let stderr_relay = thread::spawn(move || relay_typst_watch_output(stderr, io::stderr()));
 
     let watcher_stop = Arc::clone(&stop);
