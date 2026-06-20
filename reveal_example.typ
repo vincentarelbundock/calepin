@@ -13,15 +13,13 @@
 This deck mirrors the structure from `docs/slides/touying.typ`: horizontal slides are
 `h1` headings and vertical slides are `h2` headings.
 
-== What changed
+*What changed*
 
 - No Touying theme is used.
 - The built-in `revealjs` Calepin theme handles slide structure.
 - Slides can still mix Markdown-style content, code execution, and images.
 
 = Visual slide with images
-
-== Left and right visuals
 
 #calepin.elements.columns(
   columns: 2,
@@ -39,12 +37,9 @@ This deck mirrors the structure from `docs/slides/touying.typ`: horizontal slide
   ],
 )
 
-= Compute in one column and reuse output
+= Compute and show output
 
-== Keep output hidden, place it elsewhere
-
-A `results: "hidden"` chunk can be rendered with `#calepin.results(label)` later
-in the same slide, or in another slide.
+This slide runs a Python chunk and displays its output.
 
 #calepin.chunk("python", label: "summary2")[
 ```python
@@ -54,7 +49,7 @@ print(f"Total = {total}")
 ```
 ]
 
-== Output on a follow-up slide
+= Compute in one slide; show in another
 
 #calepin.chunk("python", label: "next-slide-claim", results: "hidden")[
 ```python
@@ -67,9 +62,7 @@ print(f"Change from baseline: {change:.0%}")
 
 The source stays on this slide, while the result is shown in the next one.
 
-= Follow-up slide
-
-== Final slide with a result image
+= Final slide with a result image
 
 #calepin.results("next-slide-claim")
 

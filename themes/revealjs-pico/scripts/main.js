@@ -17,8 +17,6 @@
       .filter((node) => node.nodeType === 1 && /^H[1-6]$/.test(node.tagName))
       .map((node) => Number(node.tagName.slice(1)));
     const horizontalLevel = headingLevels.length > 0 ? Math.min(...headingLevels) : 1;
-    const subslideLevel = Math.min(horizontalLevel + 1, 6);
-
     let currentHorizontal = null;
 
     function newHorizontal(node) {
@@ -39,7 +37,7 @@
     for (const node of nodes) {
       const isElement = node.nodeType === 1;
       const headingLevel = isElement ? Number(node.tagName.slice(1)) : NaN;
-      if (headingLevel === horizontalLevel || headingLevel === subslideLevel) {
+      if (headingLevel === horizontalLevel) {
         newHorizontal(node);
       } else {
         appendToCurrent(node);
