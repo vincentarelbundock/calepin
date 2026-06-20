@@ -32,6 +32,7 @@ pub(super) fn configured_languages(
         .collect::<Result<Vec<_>>>()?;
 
     reject_duplicate_url_prefixes(&languages)?;
+    reject_duplicate_content_dirs(&languages)?;
     sort_languages(&mut languages);
     Ok(Some(languages))
 }
@@ -115,6 +116,22 @@ fn reject_duplicate_url_prefixes(languages: &[LanguageInfo]) -> Result<()> {
                 "url_prefix for language `{}` duplicates language `{previous}` after cleaning: `{}`",
                 language.code,
                 language.url_prefix
+            );
+        }
+    }
+    Ok(())
+}
+
+fn reject_duplicate_content_dirs(languages: &[LanguageInfo]) -> Result<()> {
+    let mut content_dirs = BTreeMap::new();
+    for language in languages {
+        if let Some(previous) =
+            content_dirs.insert(language.content_dir.clone(), language.code.as_str())
+        {
+            bail!(
+                "content_dir for language `{}` duplicates language `{previous}`: {}",
+                language.code,
+                language.content_dir.display()
             );
         }
     }

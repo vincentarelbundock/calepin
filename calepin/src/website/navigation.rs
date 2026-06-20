@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
 
@@ -14,7 +14,7 @@ use super::icons::{accessible_nav_label, nav_label_html, IconCache};
 use super::language::LanguageInfo;
 use super::metadata::{PageMeta, PageMetaMap};
 use super::paths::{normalize_path, rel_posix, slash_path, wildcard_match};
-use super::url::{is_absolute_or_special_url, is_safe_output_route, page_relative_url};
+use super::url::{is_safe_output_route, page_relative_url};
 use super::util::clean_optional_string;
 use super::{PageInfo, PageInfoMap, FALLBACK_PAGE, INDEX_PAGE, PAGES_INDEX_FILE};
 
@@ -90,14 +90,40 @@ struct NavItemInput<'a> {
     weight: Option<i32>,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum NavSurface<'a> {
+    Sidebar,
+    Menu(&'a str),
+}
+
+impl NavSurface<'_> {
+    fn context(self) -> String {
+        match self {
+            NavSurface::Sidebar => "sidebar".to_string(),
+            NavSurface::Menu(name) => format!("menu `{name}`"),
+        }
+    }
+
+    fn allows_urls(self) -> bool {
+        matches!(self, NavSurface::Menu(_))
+    }
+
+    fn skip_duplicate_items(self) -> bool {
+        matches!(self, NavSurface::Sidebar)
+    }
+
+    fn uses_configured_labels(self) -> bool {
+        matches!(self, NavSurface::Menu(_))
+    }
+}
+
 struct NavItemResolution<'a> {
-    context: &'a str,
+    surface: NavSurface<'a>,
     src_dir: &'a Path,
     pages: Option<&'a PagesConfig>,
     all_typ_files: &'a [PathBuf],
     used: &'a mut BTreeSet<PathBuf>,
     build_files: &'a mut Vec<PathBuf>,
-    skip_duplicate_items: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -254,13 +280,12 @@ pub(super) fn discover_pages(
             })
             .collect::<Vec<_>>();
         let mut resolution = NavItemResolution {
-            context: "sidebar",
+            surface: NavSurface::Sidebar,
             src_dir,
             pages,
             all_typ_files: &all_typ_files,
             used: &mut used,
             build_files: &mut build_files,
-            skip_duplicate_items: true,
         };
         let items = resolve_nav_item_plans(&mut resolution, &inputs)?;
         sections.push(NavSectionPlan {
@@ -291,7 +316,6 @@ pub(super) fn discover_menus(
     let mut plan = MenusPlan::default();
 
     for (name, items) in menus {
-        let context = format!("menu `{name}`");
         let inputs = items
             .iter()
             .map(|item| NavItemInput {
@@ -302,13 +326,12 @@ pub(super) fn discover_menus(
             })
             .collect::<Vec<_>>();
         let mut resolution = NavItemResolution {
-            context: &context,
+            surface: NavSurface::Menu(name),
             src_dir,
             pages,
             all_typ_files: &all_typ_files,
             used: &mut used,
             build_files: &mut files,
-            skip_duplicate_items: false,
         };
         let mut resolved = resolve_nav_item_plans(&mut resolution, &inputs)?;
         sort_menu_items(&mut resolved);
@@ -367,11 +390,14 @@ fn resolve_nav_item_plans(
             .filter(|target| !target.is_empty())
         {
             if input.glob.is_some_and(|glob| !glob.trim().is_empty()) {
-                bail!("{} target items cannot also set glob", resolution.context);
+                bail!(
+                    "{} target items cannot also set glob",
+                    resolution.surface.context()
+                );
             }
-            match resolve_nav_target(resolution.context, resolution.src_dir, target) {
+            match resolve_nav_target(resolution.surface, resolution.src_dir, target)? {
                 Some(NavTarget::Url(url)) => {
-                    if resolution.context == "sidebar" {
+                    if !resolution.surface.allows_urls() {
                         bail!(
                             "sidebar target must point to a .typ source page, got literal URL: {url}"
                         );
@@ -384,11 +410,14 @@ fn resolve_nav_item_plans(
                     });
                 }
                 Some(NavTarget::Page(path)) => {
+                    if is_page_excluded(resolution.src_dir, &path, resolution.pages) {
+                        continue;
+                    }
                     let first_use = resolution.used.insert(path.clone());
                     if first_use {
                         resolution.build_files.push(path.clone());
                     }
-                    if first_use || !resolution.skip_duplicate_items {
+                    if first_use || !resolution.surface.skip_duplicate_items() {
                         items.push(NavItemPlan {
                             path: Some(path),
                             url: None,
@@ -402,21 +431,15 @@ fn resolve_nav_item_plans(
             continue;
         }
 
-        for path in resolve_file_list(
-            resolution.context,
-            resolution.src_dir,
-            None,
-            input.glob,
-            resolution.all_typ_files,
-        )?
-        .into_iter()
-        .filter(|path| !is_page_excluded(resolution.src_dir, path, resolution.pages))
+        for path in resolve_file_list(resolution.src_dir, input.glob, resolution.all_typ_files)?
+            .into_iter()
+            .filter(|path| !is_page_excluded(resolution.src_dir, path, resolution.pages))
         {
             let first_use = resolution.used.insert(path.clone());
             if first_use {
                 resolution.build_files.push(path.clone());
             }
-            if first_use || !resolution.skip_duplicate_items {
+            if first_use || !resolution.surface.skip_duplicate_items() {
                 items.push(NavItemPlan {
                     path: Some(path),
                     url: None,
@@ -498,18 +521,9 @@ pub(super) fn discover_build_pages(
                 .cloned()
                 .collect::<Vec<_>>()
         } else {
-            let candidate = src_dir.join(Path::new(&pattern));
-            if candidate.is_file()
-                && candidate.extension().and_then(|ext| ext.to_str()) == Some("typ")
-            {
-                vec![candidate]
-            } else {
-                cwarn!(
-                    "pages.include path does not exist or is not a .typ file: {}",
-                    pattern
-                );
-                Vec::new()
-            }
+            resolve_existing_source_page("website `pages.include`", src_dir, &pattern, "path")?
+                .into_iter()
+                .collect()
         };
         for path in matches {
             if !is_page_excluded(src_dir, &path, Some(pages)) {
@@ -749,7 +763,7 @@ pub(super) fn nav_from_plans(
                         page_meta,
                         page_info,
                         icon_cache,
-                        "sidebar",
+                        NavSurface::Sidebar,
                     )
                 })
                 .collect::<Result<Vec<_>>>()?;
@@ -770,18 +784,10 @@ pub(super) fn menus_from_plan(
 ) -> Result<MenusModel> {
     let mut menus = BTreeMap::new();
     for (name, items) in &plan.items {
+        let surface = NavSurface::Menu(name);
         let entries = items
             .iter()
-            .map(|item| {
-                nav_item_model(
-                    item,
-                    None,
-                    page_meta,
-                    page_info,
-                    icon_cache,
-                    &format!("menu `{name}`"),
-                )
-            })
+            .map(|item| nav_item_model(item, None, page_meta, page_info, icon_cache, surface))
             .collect::<Result<Vec<_>>>()?;
         menus.insert(name.clone(), entries);
     }
@@ -794,10 +800,10 @@ fn nav_item_model(
     page_meta: &PageMetaMap,
     page_info: &PageInfoMap,
     icon_cache: &mut IconCache,
-    context: &str,
+    surface: NavSurface<'_>,
 ) -> Result<NavItemModel> {
     if let Some(url) = item.url.as_ref() {
-        if context == "sidebar" {
+        if !surface.allows_urls() {
             bail!("sidebar items must point to .typ source pages");
         }
         let raw_label = item.configured_label.clone().unwrap_or_else(|| url.clone());
@@ -811,31 +817,40 @@ fn nav_item_model(
     }
 
     let Some(path) = item.path.as_ref() else {
-        return Err(anyhow!("{context} item must set path, glob, or url"));
+        return Err(anyhow!(
+            "{} item must set path, glob, or url",
+            surface.context()
+        ));
     };
-    let page_label = || {
-        page_meta
-            .get(path)
-            .and_then(|meta| meta.title.clone())
-            .unwrap_or_else(|| stem_label(path))
-    };
-    let raw_label = if context == "sidebar" {
-        page_label()
+    let fallback = page_display_label(path, page_meta);
+    let raw_label = if surface.uses_configured_labels() {
+        item.configured_label
+            .clone()
+            .unwrap_or_else(|| fallback.clone())
     } else {
-        item.configured_label.clone().unwrap_or_else(page_label)
+        fallback.clone()
     };
-    let fallback = page_meta
-        .get(path)
-        .and_then(|meta| meta.title.clone())
-        .unwrap_or_else(|| stem_label(path));
+    let info = page_info.get(path).ok_or_else(|| {
+        anyhow!(
+            "{} page output was not planned: {}",
+            surface.context(),
+            path.display()
+        )
+    })?;
     let label_html = nav_label_html(&raw_label, icon_cache)?;
-    let info = page_info.get(path);
     Ok(NavItemModel {
-        language: language_override.or_else(|| info.and_then(|info| info.language.clone())),
-        href: info.map(|info| info.href.clone()).unwrap_or_default(),
+        language: language_override.or_else(|| info.language.clone()),
+        href: info.href.clone(),
         label: accessible_nav_label(&raw_label, &fallback),
         label_html,
     })
+}
+
+fn page_display_label(path: &Path, page_meta: &PageMetaMap) -> String {
+    page_meta
+        .get(path)
+        .and_then(|meta| meta.title.clone())
+        .unwrap_or_else(|| stem_label(path))
 }
 
 /// Builds the site-wide pages index consumed by `calepin.pages()` in the
@@ -917,46 +932,35 @@ enum NavTarget {
     Url(String),
 }
 
-fn resolve_nav_target(context: &str, src_dir: &Path, target: &str) -> Option<NavTarget> {
+fn resolve_nav_target(
+    surface: NavSurface<'_>,
+    src_dir: &Path,
+    target: &str,
+) -> Result<Option<NavTarget>> {
     let target = target.trim();
-    if is_absolute_or_special_url(target) {
-        return Some(NavTarget::Url(target.to_string()));
+    if is_allowed_nav_absolute_or_special_url(target) {
+        return Ok(Some(NavTarget::Url(resolve_literal_nav_url(
+            surface, target,
+        )?)));
     }
     let path = Path::new(target);
     if path.extension().and_then(|ext| ext.to_str()) != Some("typ") {
-        return Some(NavTarget::Url(target.to_string()));
+        return Ok(Some(NavTarget::Url(resolve_literal_nav_url(
+            surface, target,
+        )?)));
     }
 
-    let candidate = src_dir.join(path);
-    if candidate.is_file() && candidate.extension().and_then(|ext| ext.to_str()) == Some("typ") {
-        return Some(NavTarget::Page(candidate));
-    }
-
-    cwarn!("{context} target does not exist or is not a .typ file: {target}");
-    None
+    Ok(
+        resolve_existing_source_page(&surface.context(), src_dir, target, "target")?
+            .map(NavTarget::Page),
+    )
 }
 
 fn resolve_file_list(
-    context: &str,
     src_dir: &Path,
-    item_path: Option<&str>,
     item_glob: Option<&str>,
     all_typ_files: &[PathBuf],
 ) -> Result<Vec<PathBuf>> {
-    if let Some(path) = item_path {
-        let path = Path::new(path);
-        let candidate = src_dir.join(path);
-        if candidate.is_file() && candidate.extension().and_then(|ext| ext.to_str()) == Some("typ")
-        {
-            return Ok(vec![candidate]);
-        }
-        cwarn!(
-            "{context} item path does not exist or is not a .typ file: {}",
-            path.display()
-        );
-        return Ok(Vec::new());
-    }
-
     if let Some(pattern) = item_glob {
         let pattern = slash_path(Path::new(pattern));
         return Ok(all_typ_files
@@ -967,6 +971,90 @@ fn resolve_file_list(
     }
 
     Ok(Vec::new())
+}
+
+fn resolve_existing_source_page(
+    context: &str,
+    src_dir: &Path,
+    value: &str,
+    field: &str,
+) -> Result<Option<PathBuf>> {
+    let candidate = resolve_source_relative_path(context, src_dir, value, field)?;
+    if candidate.is_file() && candidate.extension().and_then(|ext| ext.to_str()) == Some("typ") {
+        ensure_existing_path_under_source(context, src_dir, &candidate, value, field)?;
+        return Ok(Some(candidate));
+    }
+    cwarn!("{context} {field} does not exist or is not a .typ file: {value}");
+    Ok(None)
+}
+
+fn resolve_source_relative_path(
+    context: &str,
+    src_dir: &Path,
+    value: &str,
+    field: &str,
+) -> Result<PathBuf> {
+    let path = Path::new(value);
+    if path.as_os_str().is_empty()
+        || path.is_absolute()
+        || path
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_) | Component::CurDir))
+    {
+        bail!("{context} {field} must stay inside the source directory: {value}");
+    }
+    let root = normalize_path(src_dir);
+    let candidate = normalize_path(&src_dir.join(path));
+    if !candidate.starts_with(&root) {
+        bail!("{context} {field} must stay inside the source directory: {value}");
+    }
+    Ok(candidate)
+}
+
+fn ensure_existing_path_under_source(
+    context: &str,
+    src_dir: &Path,
+    path: &Path,
+    value: &str,
+    field: &str,
+) -> Result<()> {
+    let root = src_dir
+        .canonicalize()
+        .with_context(|| format!("failed to resolve {}", src_dir.display()))?;
+    let path = path
+        .canonicalize()
+        .with_context(|| format!("failed to resolve {}", path.display()))?;
+    if !path.starts_with(&root) {
+        bail!("{context} {field} must stay inside the source directory: {value}");
+    }
+    Ok(())
+}
+
+fn resolve_literal_nav_url(surface: NavSurface<'_>, target: &str) -> Result<String> {
+    if !surface.allows_urls() {
+        bail!("sidebar target must point to a .typ source page, got literal URL: {target}");
+    }
+    if is_allowed_nav_absolute_or_special_url(target) {
+        return Ok(target.to_string());
+    }
+    let route = target.trim_start_matches("./");
+    if target.contains(':') || !is_safe_output_route(route) {
+        bail!(
+            "{} target is an unsafe URL or output route: {target}",
+            surface.context()
+        );
+    }
+    Ok(target.to_string())
+}
+
+fn is_allowed_nav_absolute_or_special_url(value: &str) -> bool {
+    value.starts_with('/')
+        || value.starts_with('#')
+        || value.starts_with("http://")
+        || value.starts_with("https://")
+        || value.starts_with("//")
+        || value.starts_with("mailto:")
+        || value.starts_with("tel:")
 }
 
 pub(super) fn iter_typ_files(

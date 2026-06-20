@@ -927,6 +927,30 @@ fn configured_languages_rejects_duplicate_url_prefixes_after_cleaning() {
 }
 
 #[test]
+fn configured_languages_rejects_duplicate_content_dirs() {
+    let src = Path::new("/site/docs");
+    let config = WebsiteConfig {
+        default_language: Some("en".to_string()),
+        languages: BTreeMap::from([
+            ("en".to_string(), LanguageConfig::default()),
+            (
+                "fr".to_string(),
+                LanguageConfig {
+                    content_dir: Some(PathBuf::from(".")),
+                    ..LanguageConfig::default()
+                },
+            ),
+        ]),
+        ..WebsiteConfig::default()
+    };
+
+    let error = configured_languages(src, &config).unwrap_err();
+    let message = error.to_string();
+    assert!(message.contains("content_dir"));
+    assert!(message.contains("duplicates"));
+}
+
+#[test]
 fn configured_languages_validates_language_codes_and_trims_default_language() {
     let src = Path::new("/site/docs");
     let invalid = WebsiteConfig {
@@ -2246,6 +2270,54 @@ fn discover_pages_resolves_sidebar_page_targets() {
 }
 
 #[test]
+fn discover_pages_rejects_sidebar_targets_outside_source_directory() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("site");
+    fs::create_dir_all(&src).unwrap();
+    fs::write(temp.path().join("outside.typ"), "= Outside\n").unwrap();
+    let sidebar = SidebarConfig {
+        section: vec![SidebarSectionConfig {
+            item: vec![SidebarItemConfig {
+                target: Some("../outside.typ".to_string()),
+                ..SidebarItemConfig::default()
+            }],
+            ..SidebarSectionConfig::default()
+        }],
+        ..SidebarConfig::default()
+    };
+
+    let err = discover_pages(&src, Some(&sidebar), None, None).unwrap_err();
+
+    assert!(err.to_string().contains("source directory"));
+}
+
+#[test]
+fn discover_pages_applies_pages_exclude_to_explicit_sidebar_targets() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("about.typ"), "= About\n").unwrap();
+    let pages = PagesConfig {
+        exclude: vec!["about.typ".to_string()],
+        ..PagesConfig::default()
+    };
+    let sidebar = SidebarConfig {
+        section: vec![SidebarSectionConfig {
+            item: vec![SidebarItemConfig {
+                target: Some("about.typ".to_string()),
+                ..SidebarItemConfig::default()
+            }],
+            ..SidebarSectionConfig::default()
+        }],
+        ..SidebarConfig::default()
+    };
+
+    let (sections, files) = discover_pages(&src, Some(&sidebar), Some(&pages), None).unwrap();
+
+    assert!(files.is_empty());
+    assert!(sections[0].items.is_empty());
+}
+
+#[test]
 fn discover_pages_rejects_sidebar_external_targets() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path();
@@ -2324,6 +2396,81 @@ fn discover_menus_rejects_target_combined_with_glob() {
 }
 
 #[test]
+fn discover_menus_rejects_targets_outside_source_directory() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("site");
+    fs::create_dir_all(&src).unwrap();
+    fs::write(temp.path().join("outside.typ"), "= Outside\n").unwrap();
+    let menus = BTreeMap::from([(
+        "main".to_string(),
+        vec![MenuItemConfig {
+            target: Some("../outside.typ".to_string()),
+            ..MenuItemConfig::default()
+        }],
+    )]);
+
+    let err = discover_menus(&src, &menus, None).unwrap_err();
+
+    assert!(err.to_string().contains("source directory"));
+}
+
+#[test]
+fn discover_site_build_pages_rejects_include_paths_outside_source_directory() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("site");
+    fs::create_dir_all(&src).unwrap();
+    fs::write(temp.path().join("outside.typ"), "= Outside\n").unwrap();
+    let pages = PagesConfig {
+        include: vec!["../outside.typ".to_string()],
+        ..PagesConfig::default()
+    };
+
+    let err = discover_site_build_pages(&src, Some(&pages), &None).unwrap_err();
+
+    assert!(err.to_string().contains("source directory"));
+}
+
+#[test]
+fn discover_menus_rejects_unsafe_literal_url_targets() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    let menus = BTreeMap::from([(
+        "main".to_string(),
+        vec![MenuItemConfig {
+            target: Some("javascript:alert(1)".to_string()),
+            label: Some("Bad".to_string()),
+            ..MenuItemConfig::default()
+        }],
+    )]);
+
+    let err = discover_menus(src, &menus, None).unwrap_err();
+
+    assert!(err.to_string().contains("unsafe URL"));
+}
+
+#[test]
+fn discover_menus_keeps_absolute_url_targets_ending_in_typ_as_urls() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    let menus = BTreeMap::from([(
+        "main".to_string(),
+        vec![MenuItemConfig {
+            target: Some("https://example.com/template.typ".to_string()),
+            label: Some("Template".to_string()),
+            ..MenuItemConfig::default()
+        }],
+    )]);
+
+    let (plan, files) = discover_menus(src, &menus, None).unwrap();
+
+    assert!(files.is_empty());
+    assert_eq!(
+        plan.items["main"][0].url.as_deref(),
+        Some("https://example.com/template.typ")
+    );
+}
+
+#[test]
 fn menus_from_plan_uses_page_metadata_and_external_labels() {
     let src = Path::new("/site/docs");
     let home = PathBuf::from("/site/docs/index.typ");
@@ -2377,6 +2524,37 @@ fn menus_from_plan_uses_page_metadata_and_external_labels() {
     assert_eq!(menus.items["main"][1].label, "Usage Guide");
     assert_eq!(menus.items["social"][0].href, "https://example.com");
     assert_eq!(menus.items["social"][0].label, "External");
+}
+
+#[test]
+fn menus_from_plan_errors_when_page_info_is_missing() {
+    let src = Path::new("/site/docs");
+    let missing = PathBuf::from("/site/docs/missing.typ");
+    let plan = MenusPlan {
+        items: BTreeMap::from([(
+            "main".to_string(),
+            vec![MenuItemPlan {
+                path: Some(missing),
+                url: None,
+                configured_label: None,
+                weight: None,
+            }],
+        )]),
+    };
+    let icon_temp = tempfile::tempdir().unwrap();
+    let mut icon_cache = IconCache::new(icon_temp.path(), ICON_CACHE_DIR);
+
+    let err = menus_from_plan(
+        &plan,
+        &PageMetaMap::new(),
+        &PageInfoMap::new(),
+        &mut icon_cache,
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("page output was not planned"));
+    assert!(err.to_string().contains("menu `main`"));
+    assert!(err.to_string().contains(src.display().to_string().as_str()));
 }
 
 #[test]
