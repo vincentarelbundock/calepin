@@ -1,0 +1,25 @@
+theme = "./theme-reveal"
+
+# Reveal.js options passed through to window.Reveal.initialize() in the theme template.
+#
+# Allowed types:
+# - hash: bool
+# - controls: bool (show navigation arrows)
+# - progress: bool (show slide progress bar)
+# - controlsTutorial: bool (show one-time controls hint)
+# - slideNumber: false | "h.v" | "c" | "c/t" | "h/v" | "h/v/t" | "h/v/c" | "h/v/c/t"
+# - center: bool (center slides horizontally and vertically)
+# - transition: "none" | "fade" | "slide" | "convex" | "concave" | "zoom"
+# - plugins: array of plugin names, e.g. ["markdown", "highlight", "notes"]
+# - navigationMode: "default" | "linear" | "grid" | "rounded"
+#
+# Note: only "markdown", "highlight", and "notes" plugin names are wired in.
+[revealjs]
+hash = true
+controls = true
+progress = true
+center = false
+slideNumber = "c/t"
+transition = "slide"
+#navigationMode = "linear"
+#plugins = ["markdown", "highlight", "notes"]
