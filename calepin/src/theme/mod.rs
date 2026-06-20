@@ -338,6 +338,27 @@ scripts = ["copy-code.js"]
     }
 
     #[test]
+    fn shared_imports_reject_duplicate_entries() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme = dir.path().join("custom");
+        std::fs::create_dir_all(theme.join("styles")).unwrap();
+        std::fs::create_dir_all(theme.join("layouts")).unwrap();
+        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(
+            theme.join("theme.toml"),
+            r#"[shared]
+styles = ["site.css", "site.css"]
+"#,
+        )
+        .unwrap();
+        std::fs::write(theme.join("styles/site.css"), "/* local */").unwrap();
+
+        let err = resolve_html_entry(&ThemeSelection::Dir(theme), HtmlScope::Document).unwrap_err();
+
+        assert!(err.to_string().contains("listed more than once"));
+    }
+
+    #[test]
     fn html_entry_appends_config_styles_after_theme_styles() {
         let mut entry =
             resolve_html_entry(&ThemeSelection::Builtin("academic"), HtmlScope::Document)
