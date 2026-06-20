@@ -2580,6 +2580,49 @@ fn extract_document_title_ignores_title_inside_other_arguments() {
 }
 
 #[test]
+fn extract_document_title_skips_document_set_without_title() {
+    assert_eq!(
+        extract_document_title(
+            r#"
+#set document(author: "Calepin")
+#set document(title: [Real])
+"#
+        )
+        .as_deref(),
+        Some("Real")
+    );
+}
+
+#[test]
+fn extract_document_title_ignores_comments_and_raw_spans() {
+    assert_eq!(
+        extract_document_title(
+            r#"
+// #set document(title: [Comment])
+`#set document(title: [Inline raw])`
+```typ
+#set document(title: [Block raw])
+```
+#set document(title: [Real])
+"#
+        )
+        .as_deref(),
+        Some("Real")
+    );
+
+    assert_eq!(
+        extract_document_title(
+            r#"
+/* #set document(title: [Block comment]) */
+#set document(title: [Real])
+"#
+        )
+        .as_deref(),
+        Some("Real")
+    );
+}
+
+#[test]
 fn load_page_meta_falls_back_to_document_title() {
     let temp = tempfile::tempdir().unwrap();
     let page = temp.path().join("page.typ");
