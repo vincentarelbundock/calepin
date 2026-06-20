@@ -34,11 +34,7 @@ impl<'de> serde::Deserialize<'de> for EngineName {
 }
 
 impl EngineName {
-    pub fn parse(value: &str) -> anyhow::Result<Self> {
-        Ok(Self::from_name(value))
-    }
-
-    fn from_name(value: &str) -> Self {
+    pub fn from_name(value: &str) -> Self {
         match value {
             "r" => Self::R,
             "python" => Self::Python,
@@ -69,7 +65,7 @@ impl fmt::Display for EngineName {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ResultsMode {
     Verbatim,
@@ -114,7 +110,7 @@ pub struct SetupDefaults {
     pub echo: bool,
     pub eval: bool,
     pub output: bool,
-    pub results: String,
+    pub results: ResultsMode,
     pub warning: bool,
     pub message: bool,
     pub error: bool,
@@ -133,7 +129,7 @@ pub struct SetupDefaults {
     #[serde(default)]
     pub params: Value,
     /// Document-level theme from `calepin.setup(theme: ...)`: a builtin name, a
-    /// project-relative path, or `false` to disable.
+    /// project-relative path, or `"typst"` for raw Typst output.
     #[serde(default)]
     pub theme: Option<Value>,
 }
@@ -144,7 +140,7 @@ impl Default for SetupDefaults {
             echo: true,
             eval: true,
             output: true,
-            results: "render".to_string(),
+            results: ResultsMode::Render,
             warning: true,
             message: true,
             error: false,
@@ -231,30 +227,26 @@ pub struct FigureSpec {
 }
 
 impl FigureSpec {
-    pub fn from_exec_options(engine: EngineName, options: &ExecOptions) -> Self {
+    pub fn from_exec_options(engine: &EngineName, options: &ExecOptions) -> Result<Self> {
         let format = if engine.is_diagram() {
             "svg".to_string()
         } else {
             options.fig_device_format.clone()
         };
+        validate_figure_format(&format)?;
         let height = options
             .fig_device_height
             .unwrap_or(options.fig_device_width * options.fig_device_aspect);
-        Self {
+        Ok(Self {
             format,
             dpi: options.fig_device_dpi,
             width: options.fig_device_width,
             height,
-        }
+        })
     }
 
     pub fn extension(&self) -> &'static str {
-        match self.format.as_str() {
-            "png" => "png",
-            "jpeg" | "jpg" => "jpg",
-            "pdf" | "cairo_pdf" => "pdf",
-            _ => "svg",
-        }
+        figure_extension(&self.format).expect("FigureSpec format is validated")
     }
 
     pub fn mime_type(&self) -> &'static str {
@@ -280,6 +272,22 @@ impl FigureSpec {
 
     pub fn artifact_filename(&self, label: &str) -> String {
         format!("{}.{}", label, self.extension())
+    }
+}
+
+fn validate_figure_format(format: &str) -> Result<()> {
+    figure_extension(format)
+        .map(|_| ())
+        .ok_or_else(|| anyhow!("unsupported figure device format `{format}`"))
+}
+
+fn figure_extension(format: &str) -> Option<&'static str> {
+    match format {
+        "png" => Some("png"),
+        "jpeg" | "jpg" => Some("jpg"),
+        "pdf" | "cairo_pdf" => Some("pdf"),
+        "svg" => Some("svg"),
+        _ => None,
     }
 }
 
@@ -446,9 +454,14 @@ mod tests {
     #[test]
     fn parses_typed_diagram_engines() {
         for name in ["mermaid", "tikz", "dot", "d2"] {
-            let engine = EngineName::parse(name).unwrap();
+            let engine = EngineName::from_name(name);
             assert_eq!(engine.as_str(), name);
         }
+    }
+
+    #[test]
+    fn setup_defaults_store_typed_results_mode() {
+        assert_eq!(SetupDefaults::default().results, ResultsMode::Render);
     }
 
     #[test]
@@ -467,10 +480,27 @@ mod tests {
 
     #[test]
     fn unknown_engine_name_parses_as_jupyter() {
-        let engine = EngineName::parse("octave").unwrap();
+        let engine = EngineName::from_name("octave");
         assert_eq!(engine, EngineName::Jupyter("octave".to_string()));
         assert_eq!(engine.as_str(), "octave");
         assert!(!engine.is_diagram());
+    }
+
+    #[test]
+    fn figure_spec_rejects_unknown_formats() {
+        let options = ExecOptions {
+            fig_device_format: "bmp".to_string(),
+            fig_device_dpi: 150,
+            fig_device_width: 6.0,
+            fig_device_height: None,
+            fig_device_aspect: 0.618,
+            eval: true,
+            error: false,
+        };
+
+        let err = FigureSpec::from_exec_options(&EngineName::R, &options).unwrap_err();
+
+        assert!(err.to_string().contains("unsupported figure device format"));
     }
 
     #[test]

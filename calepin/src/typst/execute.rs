@@ -90,7 +90,8 @@ impl EnginePool {
 
         let engine = chunk.engine.clone();
         let source = lines(&chunk.code);
-        let figure = FigureSpec::from_exec_options(engine.clone(), &chunk.exec_options);
+        let figure = FigureSpec::from_exec_options(&engine, &chunk.exec_options)
+            .map_err(|err| anyhow!("{}: {err}", execution_context(chunk)))?;
         let engine_results = if engine.is_diagram() {
             let fig_path = figures_dir.join(format!("{}-1.svg", chunk.label));
             engines::diagram::execute_diagram(
@@ -441,7 +442,7 @@ mod tests {
     }
 
     fn figure_for(chunk: &ChunkSpec) -> FigureSpec {
-        FigureSpec::from_exec_options(chunk.engine.clone(), &chunk.exec_options)
+        FigureSpec::from_exec_options(&chunk.engine, &chunk.exec_options).unwrap()
     }
 
     #[test]
@@ -638,34 +639,37 @@ mod tests {
     fn diagram_engines_always_use_svg_figures() {
         assert_eq!(
             FigureSpec::from_exec_options(
-                EngineName::parse("mermaid").unwrap(),
+                &EngineName::from_name("mermaid"),
                 &ExecOptions {
                     fig_device_format: "png".to_string(),
                     ..chunk(ResultsMode::Verbatim).exec_options
                 }
             )
+            .unwrap()
             .extension(),
             "svg"
         );
         assert_eq!(
             FigureSpec::from_exec_options(
-                EngineName::parse("tikz").unwrap(),
+                &EngineName::from_name("tikz"),
                 &ExecOptions {
                     fig_device_format: "pdf".to_string(),
                     ..chunk(ResultsMode::Verbatim).exec_options
                 }
             )
+            .unwrap()
             .extension(),
             "svg"
         );
         assert_eq!(
             FigureSpec::from_exec_options(
-                EngineName::R,
+                &EngineName::R,
                 &ExecOptions {
                     fig_device_format: "png".to_string(),
                     ..chunk(ResultsMode::Verbatim).exec_options
                 }
             )
+            .unwrap()
             .extension(),
             "png"
         );

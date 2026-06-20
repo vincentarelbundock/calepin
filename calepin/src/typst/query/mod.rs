@@ -224,9 +224,7 @@ fn parse_chunk_raw_block(
     if is_typst_fence(lang) {
         return Ok(None);
     }
-    let Some(engine) = EngineName::parse(lang).ok() else {
-        return Ok(None);
-    };
+    let engine = EngineName::from_name(lang);
     let raw_fence_label = raw_block_query_label(value)?;
     let raw_text = value.get("text").and_then(Value::as_str).unwrap_or("");
     let label_hint = format!("chunk-{}", *state.auto_label_index);
@@ -376,7 +374,7 @@ fn parse_engine(value: &Value) -> Result<EngineName> {
         .get("engine")
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow!("missing engine"))?;
-    EngineName::parse(engine)
+    Ok(EngineName::from_name(engine))
 }
 
 fn parse_crossref_labels(value: &Value) -> Result<Vec<CrossrefLabelDoc>> {
@@ -902,7 +900,7 @@ mod tests {
             echo: false,
             eval: true,
             output: true,
-            results: "typst".to_string(),
+            results: ResultsMode::Typst,
             warning: false,
             message: false,
             error: true,
@@ -1146,6 +1144,15 @@ mod tests {
         ]"#;
         let err = parse_chunks(json, None).unwrap_err().to_string();
         assert!(err.contains("duplicate label `dup`"));
+    }
+
+    #[test]
+    fn setup_config_rejects_invalid_results_default() {
+        let json = r#"[
+          {"func":"metadata","value":{"results":"bogus"},"label":"<calepin-config>"}
+        ]"#;
+        let err = parse_setup_config(json).unwrap_err().to_string();
+        assert!(err.contains("unsupported results mode `bogus`"), "{err}");
     }
 
     #[test]

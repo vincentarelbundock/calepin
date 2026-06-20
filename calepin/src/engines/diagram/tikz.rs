@@ -155,7 +155,7 @@ printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$2"
         let source = vec!["\\begin{tikzpicture}".to_string()];
         let results = execute_diagram(
             "\\begin{tikzpicture}\n\\end{tikzpicture}",
-            EngineName::parse("tikz").unwrap(),
+            EngineName::from_name("tikz"),
             &fig_path,
             &source,
             &ExecutablePaths::defaults(),
