@@ -127,6 +127,12 @@
     }
 
     const shouldLinear = options.navigationMode === "linear";
+    const hasExplicitControls = Object.prototype.hasOwnProperty.call(config, "controls");
+
+    // Match Quarto's reveal.js baseline behavior: omit controls unless explicitly enabled.
+    if (shouldLinear && !hasExplicitControls) {
+      options.controls = false;
+    }
 
     const revealRoot = document.querySelector(".reveal");
     if (revealRoot && options.navigationMode) {

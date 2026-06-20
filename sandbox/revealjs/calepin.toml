@@ -19,11 +19,11 @@ theme = "./theme-reveal"
 # Note: only "markdown", "highlight", and "notes" plugin names are wired in.
 [revealjs]
 hash = true
-controls = true
+controls = false
 progress = true
 center = false
 slideNumber = "c/t"
 transition = "slide"
 controlsTutorial = false
-navigationMode = "default"
+navigationMode = "linear"
 #plugins = ["markdown", "highlight", "notes"]
