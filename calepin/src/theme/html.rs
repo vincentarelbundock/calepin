@@ -249,15 +249,15 @@ fn dir_manifest(dir: &Path) -> Result<ThemeManifest> {
     toml::from_str(&source).with_context(|| format!("failed to parse {}", path.display()))
 }
 
-fn bundle_assets(
-    bundle: &BundleDef,
+fn collect_shared_assets(
+    local_files: Vec<(String, String)>,
     imports: &[String],
-    prefix: &str,
     ext: &str,
+    mut resolve_import: impl FnMut(&str) -> Result<Option<String>>,
 ) -> Result<Vec<(String, String)>> {
-    let local_files = bundle_files(bundle, prefix, ext);
     let mut imported = std::collections::BTreeSet::new();
     let mut files = Vec::new();
+
     for name in imports {
         validate_shared_import(name, ext)?;
         if !imported.insert(name.clone()) {
@@ -265,19 +265,39 @@ fn bundle_assets(
                 "shared {ext} import `{name}` is listed more than once"
             ));
         }
-        let path = format!("{prefix}{name}");
-        let source = bundle
-            .file(&path)
-            .or_else(|| shared_file(&path))
+
+        if let Some((_, source)) = local_files.iter().find(|(file, _)| file == name) {
+            files.push((name.clone(), source.clone()));
+            continue;
+        }
+
+        let source = resolve_import(name)?
             .ok_or_else(|| anyhow!("shared {ext} import `{name}` was not found"))?;
-        files.push((name.clone(), source.to_string()));
+        files.push((name.clone(), source));
     }
+
     files.extend(
         local_files
             .into_iter()
             .filter(|(name, _)| !imported.contains(name)),
     );
     Ok(files)
+}
+
+fn bundle_assets(
+    bundle: &BundleDef,
+    imports: &[String],
+    prefix: &str,
+    ext: &str,
+) -> Result<Vec<(String, String)>> {
+    let local_files = bundle_files(bundle, prefix, ext);
+    collect_shared_assets(local_files, imports, ext, |name| {
+        let path = format!("{prefix}{name}");
+        Ok(bundle
+            .file(&path)
+            .or_else(|| shared_file(&path))
+            .map(str::to_string))
+    })
 }
 
 fn bundle_files(bundle: &BundleDef, prefix: &str, ext: &str) -> Vec<(String, String)> {
@@ -306,31 +326,10 @@ fn dir_assets(
     ext: &str,
 ) -> Result<Vec<(String, String)>> {
     let local_files = read_theme_files(&dir.join(subdir), ext)?;
-    let mut imported = std::collections::BTreeSet::new();
-    let mut files = Vec::new();
-    for name in imports {
-        validate_shared_import(name, ext)?;
-        if !imported.insert(name.clone()) {
-            return Err(anyhow!(
-                "shared {ext} import `{name}` is listed more than once"
-            ));
-        }
-        if let Some((_, source)) = local_files.iter().find(|(file, _)| file == name) {
-            files.push((name.clone(), source.clone()));
-            continue;
-        }
+    collect_shared_assets(local_files, imports, ext, |name| {
         let path = format!("{subdir}/{name}");
-        let source = dir_shared_file(dir, &path)?
-            .or_else(|| shared_file(&path).map(str::to_string))
-            .ok_or_else(|| anyhow!("shared {ext} import `{name}` was not found"))?;
-        files.push((name.clone(), source));
-    }
-    files.extend(
-        local_files
-            .into_iter()
-            .filter(|(name, _)| !imported.contains(name)),
-    );
-    Ok(files)
+        Ok(dir_shared_file(dir, &path)?.or_else(|| shared_file(&path).map(str::to_string)))
+    })
 }
 
 fn dir_shared_file(dir: &Path, relative: &str) -> Result<Option<String>> {
