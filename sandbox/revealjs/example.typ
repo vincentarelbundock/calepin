@@ -19,22 +19,11 @@ This deck uses Touying-style headings: `=` starts a section, and `==` starts a s
 
 = Visuals
 
-== Visual slide with columns
+== Visual slide with images
 
-#calepin.elements.columns(
-  columns: 2,
-  [
-    *Left column*
-
-    - Item 1
-    - Item 2
-  ],
-  [
-    *Right column*
-
-    1. Keep layouts lightweight.
-    2. Keep Reveal parsing predictable.
-  ],
+#figure(
+  image("../../images/flowers_01.jpg", width: 100%),
+  caption: [Local image from `sandbox/revealjs/images/`],
 )
 
 = Computation
