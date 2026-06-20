@@ -9,7 +9,7 @@ use crate::typst::chunk_options::{
     parse_chunk_body_with_qmd_header, parse_chunk_source_with_qmd_header, validate_chunk_arguments,
     ParsedChunkSource,
 };
-use crate::typst::crossref::{has_crossref_prefix, parse_label_names};
+use crate::typst::crossref::parse_prefixed_label_docs;
 use crate::typst::fence_label::{label_name, metadata_node_label};
 use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName, FencedChunks};
 
@@ -157,15 +157,12 @@ fn parse_chunk_metadata(
     let mut crossref_labels = parse_crossref_labels(&value)
         .map_err(|err| anyhow!("invalid cross-reference labels for chunk `{label}`: {err}"))?;
     if let Some(fence_label) = fence_label {
+        let names = vec![fence_label];
+        let routed_fence_labels = parse_prefixed_label_docs(&names)
+            .map_err(|err| anyhow!("invalid trailing fence label for chunk `{label}`: {err}"))?;
         // A non-prefixed trailing label is a plain id (already reflected in the
         // chunk's label); only prefixed labels route to cross-references.
-        if has_crossref_prefix(&fence_label) {
-            let names = vec![fence_label];
-            let routed_fence_labels = parse_label_names(&names)
-                .map_err(|err| anyhow!("invalid trailing fence label for chunk `{label}`: {err}"))?
-                .into_iter()
-                .map(|label| label.to_doc())
-                .collect::<Vec<_>>();
+        if !routed_fence_labels.is_empty() {
             if crossref_labels.is_empty() {
                 crossref_labels = routed_fence_labels;
             } else if crossref_labels != routed_fence_labels {
@@ -320,22 +317,8 @@ fn resolve_named_label(
         .first()
         .cloned()
         .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
-    // Prefixed names become cross-reference anchors; a plain name is just the
-    // chunk id (usable for `#calepin.results` relocation), not a cross-reference.
-    let prefixed: Vec<String> = names
-        .iter()
-        .filter(|name| has_crossref_prefix(name))
-        .cloned()
-        .collect();
-    let crossref_labels = if prefixed.is_empty() {
-        Vec::new()
-    } else {
-        parse_label_names(&prefixed)
-            .map_err(|err| anyhow!("{error_context}: {err}"))?
-            .into_iter()
-            .map(|label| label.to_doc())
-            .collect()
-    };
+    let crossref_labels =
+        parse_prefixed_label_docs(&names).map_err(|err| anyhow!("{error_context}: {err}"))?;
     if !seen.insert(label.clone()) {
         return Err(anyhow!("duplicate label `{}`", label));
     }
@@ -407,19 +390,7 @@ fn parse_crossref_labels(value: &Value) -> Result<Vec<CrossrefLabelDoc>> {
         return Ok(Vec::new());
     }
 
-    // Only prefixed names are cross-reference anchors. A plain label is a chunk
-    // id used for results lookup and `#calepin.results` relocation, not a
-    // cross-reference, so it is accepted and contributes no anchor.
-    let prefixed: Vec<String> = names
-        .into_iter()
-        .filter(|name| has_crossref_prefix(name))
-        .collect();
-    if prefixed.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    parse_label_names(&prefixed)
-        .map(|labels| labels.into_iter().map(|label| label.to_doc()).collect())
+    parse_prefixed_label_docs(&names)
 }
 
 fn label_names_from_value(value: &Value) -> Result<Vec<String>> {
@@ -620,6 +591,22 @@ mod tests {
         let chunks = parse_chunks(&json, None).unwrap();
         assert_eq!(chunks[0].label, "plot");
         assert!(chunks[0].crossref_labels.is_empty());
+    }
+
+    #[test]
+    fn rejects_empty_prefixed_crossref_label_from_metadata_chunks() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{"func":"raw","text":"plot(1)","block":false},
+                "engine":"r",
+                "label":"plot",
+                "crossref-labels":["fig-"]
+            })
+            .to_string(),
+        );
+        let err = parse_chunks(&json, None).unwrap_err().to_string();
+        assert!(err.contains("fig-"), "{err}");
+        assert!(err.contains("no label name"), "{err}");
     }
 
     #[test]
