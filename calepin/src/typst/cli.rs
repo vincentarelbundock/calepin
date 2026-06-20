@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, WatchArgs};
+use crate::cli::{is_quiet, set_quiet, CleanArgs, CompileArgs, NewArgs, WatchArgs};
 use crate::html::SiteContextInput;
 use crate::typst::compile::{compile_with_typst, resolve_output_format, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
@@ -19,7 +19,7 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
             Some(output) => crate::theme::eject_builtin_to(name, output, args.force)?,
             None => crate::theme::eject_builtin(name, Path::new("themes"), args.force)?,
         };
-        if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
+        if !is_quiet() {
             eprintln!("Created {}", dest.display());
             eprintln!(
                 "Select it with `theme = \"{}\"` in calepin.toml",
@@ -32,7 +32,7 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
         let dest = args.output.as_deref().unwrap_or(Path::new("docs"));
         let theme = crate::theme::DEFAULT_THEME_NAME;
         crate::website::scaffold_website(dest, theme, args.force)?;
-        if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
+        if !is_quiet() {
             eprintln!("Created {theme} website scaffold in {}", dest.display());
         }
         return Ok(());
@@ -44,34 +44,36 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
         ));
     }
 
-    if let Some(parent) = args
-        .path
+    write_notebook_scaffold(&args.path, args.force)?;
+
+    if !is_quiet() {
+        eprintln!("Created {}", args.path.display());
+    }
+
+    Ok(())
+}
+
+fn write_notebook_scaffold(path: &Path, force: bool) -> Result<()> {
+    if let Some(parent) = path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
     {
         fs::create_dir_all(parent)
             .with_context(|| format!("failed to create {}", parent.display()))?;
     }
-
     let mut options = OpenOptions::new();
     options.write(true);
-    if args.force {
+    if force {
         options.create(true).truncate(true);
     } else {
         options.create_new(true);
     }
 
     let mut file = options
-        .open(&args.path)
-        .with_context(|| format!("failed to create {}", args.path.display()))?;
+        .open(path)
+        .with_context(|| format!("failed to create {}", path.display()))?;
     file.write_all(NEW_FILE_TEMPLATE.as_bytes())
-        .with_context(|| format!("failed to write {}", args.path.display()))?;
-
-    if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
-        eprintln!("Created {}", args.path.display());
-    }
-
-    Ok(())
+        .with_context(|| format!("failed to write {}", path.display()))
 }
 
 pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
@@ -86,17 +88,35 @@ pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
     );
     let is_html = format.as_deref() == Some("html");
 
-    if args.serve && !is_html {
-        return Err(anyhow::anyhow!(
-            "`calepin watch --serve` can only be used when watching a website directory"
-        ));
-    }
-    if args.open && !is_html {
-        return Err(anyhow::anyhow!(
-            "`calepin watch --open` is only for website serving; pass Typst's flag after `--` as `calepin watch paper.typ -- --open`"
-        ));
-    }
+    validate_single_file_watch_flags(&args, is_html)?;
+    apply_html_watch_typst_args(&mut args, is_html);
 
+    crate::typst::watch::run_watch(args)
+}
+
+fn validate_single_file_watch_flags(args: &WatchArgs, is_html: bool) -> Result<()> {
+    if is_html {
+        return Ok(());
+    }
+    if args.serve {
+        return Err(anyhow::anyhow!(
+            "`calepin watch --serve` can only be used for HTML output"
+        ));
+    }
+    if args.open {
+        return Err(anyhow::anyhow!(
+            "`calepin watch --open` can only be used for HTML output"
+        ));
+    }
+    if args.port.is_some() {
+        return Err(anyhow::anyhow!(
+            "`calepin watch --port` can only be used for HTML output"
+        ));
+    }
+    Ok(())
+}
+
+fn apply_html_watch_typst_args(args: &mut WatchArgs, is_html: bool) {
     if is_html {
         if args.open && !has_typst_open_flag(&args.typst_args) {
             args.typst_args.push("--open".to_string());
@@ -108,7 +128,6 @@ pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
             }
         }
     }
-    crate::typst::watch::run_watch(args)
 }
 
 fn has_typst_open_flag(typst_args: &[String]) -> bool {
@@ -259,6 +278,7 @@ fn confirm_deletion() -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cli::{CommonArgs, CompileFormat};
 
     #[test]
     fn new_writes_example_file() {
@@ -425,5 +445,63 @@ mod tests {
         assert!(has_typst_port_flag(&["--port".to_string()]));
         assert!(has_typst_port_flag(&["--port=3001".to_string()]));
         assert!(!has_typst_port_flag(&["--open".to_string()]));
+    }
+
+    #[test]
+    fn watch_rejects_serve_for_non_html_notebooks() {
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Pdf));
+        args.serve = true;
+
+        let err = handle_watch(args).unwrap_err().to_string();
+
+        assert!(err.contains("--serve"), "{err}");
+        assert!(err.contains("HTML"), "{err}");
+    }
+
+    #[test]
+    fn watch_rejects_port_for_non_html_notebooks() {
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Pdf));
+        args.port = Some(3000);
+
+        let err = handle_watch(args).unwrap_err().to_string();
+
+        assert!(err.contains("--port"), "{err}");
+        assert!(err.contains("HTML"), "{err}");
+    }
+
+    #[test]
+    fn html_watch_allows_serve_and_forwards_open_and_port_to_typst() {
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Html));
+        args.serve = true;
+        args.open = true;
+        args.port = Some(3000);
+
+        validate_single_file_watch_flags(&args, true).unwrap();
+        apply_html_watch_typst_args(&mut args, true);
+
+        assert!(args.typst_args.contains(&"--open".to_string()));
+        assert!(args
+            .typst_args
+            .windows(2)
+            .any(|pair| pair == ["--port", "3000"]));
+    }
+
+    fn watch_args(input: PathBuf, format: Option<CompileFormat>) -> WatchArgs {
+        WatchArgs {
+            input,
+            output: None,
+            format,
+            serve: false,
+            open: false,
+            host: "127.0.0.1".to_string(),
+            port: None,
+            common: CommonArgs {
+                config: None,
+                quiet: true,
+                timeout: None,
+                params: Vec::new(),
+            },
+            typst_args: Vec::new(),
+        }
     }
 }
