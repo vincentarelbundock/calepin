@@ -167,7 +167,14 @@ where
 
         if path.is_dir() {
             if should_descend(rel, &path) {
-                collect_files_by_inner(root, &path, out, should_descend, include_file, visited_dirs)?;
+                collect_files_by_inner(
+                    root,
+                    &path,
+                    out,
+                    should_descend,
+                    include_file,
+                    visited_dirs,
+                )?;
             }
         } else {
             collect_included_file(rel, &path, out, include_file);

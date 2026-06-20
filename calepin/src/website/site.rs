@@ -57,9 +57,9 @@ fn source_asset_output_path(
     let root = normalize_path(src_dir);
     let what = format!("website `{key}` path must stay inside the source directory: {value}");
     let candidate = join_normalized_under_root(&root, path, &what)?;
-    let rel = candidate
-        .strip_prefix(&root)
-        .map_err(|_| anyhow!("website `{key}` path must stay inside the source directory: {value}"))?;
+    let rel = candidate.strip_prefix(&root).map_err(|_| {
+        anyhow!("website `{key}` path must stay inside the source directory: {value}")
+    })?;
     if rel.as_os_str().is_empty() {
         bail!("website `{key}` path must stay inside the source directory: {value}");
     }

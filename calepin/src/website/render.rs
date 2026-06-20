@@ -301,8 +301,9 @@ fn find_script_tag(source: &str) -> Option<usize> {
         return None;
     }
     for i in 0..=source.len() - 8 {
-        if source[i] == b'<' && source[i + 1] == b'/' &&
-            bytes_is_ascii_equal_ignore_case(&source[i + 2..i + 8], b"script")
+        if source[i] == b'<'
+            && source[i + 1] == b'/'
+            && bytes_is_ascii_equal_ignore_case(&source[i + 2..i + 8], b"script")
         {
             return Some(i);
         }
@@ -427,13 +428,7 @@ fn render_document(
             .as_ref()
             .ok_or_else(|| anyhow!("PDF output was not planned: {}", input_path.display()))?;
         let pdf_output = context.out_dir.join(pdf_href);
-        compile(
-            pdf_output,
-            "pdf",
-            None,
-            None,
-            None,
-        )?;
+        compile(pdf_output, "pdf", None, None, None)?;
     }
 
     Ok(())
@@ -485,7 +480,9 @@ impl ThemeGeneratedAssets {
     }
 
     pub(super) fn output_paths(&self, out_dir: &Path) -> BTreeSet<PathBuf> {
-        self.assets().map(|asset| out_dir.join(&asset.rel_path)).collect()
+        self.assets()
+            .map(|asset| out_dir.join(&asset.rel_path))
+            .collect()
     }
 
     pub(super) fn write(&self, out_dir: &Path) -> Result<()> {
@@ -540,12 +537,10 @@ mod tests {
         let entry = HtmlEntry {
             theme_name: "local".into(),
             layout: r#"{{ doc.head }}{%- include 'partials/styles.html' +%}"#.into(),
-            partials: vec![
-                (
-                    "partials/styles.html".to_string(),
-                    "{{ if x and site.stylesheet }}".into(),
-                ),
-            ],
+            partials: vec![(
+                "partials/styles.html".to_string(),
+                "{{ if x and site.stylesheet }}".into(),
+            )],
             styles: Vec::new(),
             scripts: Vec::new(),
             is_default: false,
@@ -570,7 +565,9 @@ mod tests {
 
     #[test]
     fn static_html_includes_parses_whitespace_control_markers() {
-        let includes = static_html_includes(r#"{%+ include 'partials/wrapper.html' +%}{%- include "partials/styles.html" -%}"#);
+        let includes = static_html_includes(
+            r#"{%+ include 'partials/wrapper.html' +%}{%- include "partials/styles.html" -%}"#,
+        );
 
         assert_eq!(
             includes,
@@ -582,7 +579,8 @@ mod tests {
     }
 
     #[test]
-    fn embed_source_blob_inserts_source_data_before_head_and_escapes_script_end_tag_case_insensitive() {
+    fn embed_source_blob_inserts_source_data_before_head_and_escapes_script_end_tag_case_insensitive(
+    ) {
         let dir = tempdir().unwrap();
         let source_path = dir.path().join("page.typ");
         let html_output = dir.path().join("page.html");
@@ -592,7 +590,11 @@ mod tests {
         embed_source_blob(&html_output, &source_path).unwrap();
         let output = std::fs::read_to_string(&html_output).unwrap();
 
-        let script_pos = output.find(&format!("<script id=\"{SOURCE_DATA_ID}\" type=\"application/json\">")).unwrap();
+        let script_pos = output
+            .find(&format!(
+                "<script id=\"{SOURCE_DATA_ID}\" type=\"application/json\">"
+            ))
+            .unwrap();
         let head_pos = find_case_insensitive(&output, "</head>").unwrap();
 
         assert!(script_pos < head_pos);

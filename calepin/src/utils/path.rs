@@ -44,9 +44,7 @@ pub(crate) fn strip_query_and_fragment(value: &str) -> &str {
 }
 
 pub(crate) fn strip_leading_url_prefix(value: &str) -> &str {
-    value
-        .trim_start_matches('/')
-        .trim_start_matches("./")
+    value.trim_start_matches('/').trim_start_matches("./")
 }
 
 pub(crate) fn canonical_root(path: &Path) -> Option<PathBuf> {
@@ -68,7 +66,7 @@ pub fn slash_path(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{absolutize_from, expand_home, strip_query_and_fragment, strip_leading_url_prefix};
+    use super::{absolutize_from, expand_home, strip_leading_url_prefix, strip_query_and_fragment};
     use crate::utils::testutil::{env_lock, EnvVarGuard};
     use std::path::{Path, PathBuf};
 
@@ -89,8 +87,14 @@ mod tests {
         let _env_lock = env_lock();
         let _home = EnvVarGuard::set("HOME", "/users/example");
 
-        assert_eq!(expand_home(PathBuf::from("~/docs")), PathBuf::from("/users/example/docs"));
-        assert_eq!(expand_home(PathBuf::from("~")), PathBuf::from("/users/example"));
+        assert_eq!(
+            expand_home(PathBuf::from("~/docs")),
+            PathBuf::from("/users/example/docs")
+        );
+        assert_eq!(
+            expand_home(PathBuf::from("~")),
+            PathBuf::from("/users/example")
+        );
         assert_eq!(
             expand_home(PathBuf::from("/absolute")),
             PathBuf::from("/absolute")
@@ -99,7 +103,10 @@ mod tests {
 
     #[test]
     fn strip_query_and_fragment_stops_at_first_query_or_fragment() {
-        assert_eq!(strip_query_and_fragment("index.html?cache=1#top"), "index.html");
+        assert_eq!(
+            strip_query_and_fragment("index.html?cache=1#top"),
+            "index.html"
+        );
         assert_eq!(strip_query_and_fragment("notes.html#section"), "notes.html");
         assert_eq!(strip_query_and_fragment("about.md"), "about.md");
     }
@@ -111,4 +118,3 @@ mod tests {
         assert_eq!(strip_leading_url_prefix("notes/main"), "notes/main");
     }
 }
-

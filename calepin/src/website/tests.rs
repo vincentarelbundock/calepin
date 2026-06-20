@@ -1913,7 +1913,10 @@ fn theme_context_includes_global_sidebar_sections_with_language_specific_current
 
     assert_eq!(context.sidebar_sections.len(), 2);
     assert_eq!(context.sidebar_sections[0].title.as_deref(), Some("Global"));
-    assert_eq!(context.sidebar_sections[1].title.as_deref(), Some("English"));
+    assert_eq!(
+        context.sidebar_sections[1].title.as_deref(),
+        Some("English")
+    );
     assert_eq!(context.sidebar.len(), 2);
     assert_eq!(context.sidebar[0].href, "../about.html");
     assert_eq!(context.sidebar[1].href, "guide/usage.html");
