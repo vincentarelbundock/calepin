@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use serde::Serialize;
 use std::collections::HashMap;
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 
 use crate::typst::introspect::page_anchors;
@@ -66,6 +67,7 @@ fn source_lines_for_chunks(
 ) -> Result<HashMap<String, usize>> {
     let source = std::fs::read_to_string(&layout.input)
         .with_context(|| format!("failed to read {}", layout.input.display()))?;
+    let code_ranges = source_code_ranges(&source);
     let mut lines = HashMap::new();
     let mut search_start = 0;
 
@@ -73,10 +75,7 @@ fn source_lines_for_chunks(
         if chunk.code.is_empty() {
             continue;
         }
-        let index = source[search_start..]
-            .find(&chunk.code)
-            .map(|offset| search_start + offset)
-            .or_else(|| source.find(&chunk.code));
+        let index = find_chunk_code_index(&source, &code_ranges, &chunk.code, search_start);
         let Some(index) = index else {
             continue;
         };
@@ -85,6 +84,101 @@ fn source_lines_for_chunks(
     }
 
     Ok(lines)
+}
+
+fn find_chunk_code_index(
+    source: &str,
+    code_ranges: &[Range<usize>],
+    code: &str,
+    search_start: usize,
+) -> Option<usize> {
+    for range in code_ranges {
+        if range.end <= search_start {
+            continue;
+        }
+        let start = range.start.max(search_start);
+        if start > range.end {
+            continue;
+        }
+        if let Some(offset) = source[start..range.end].find(code) {
+            return Some(start + offset);
+        }
+    }
+
+    source[search_start..]
+        .find(code)
+        .map(|offset| search_start + offset)
+        .or_else(|| source.find(code))
+}
+
+fn source_code_ranges(source: &str) -> Vec<Range<usize>> {
+    let mut ranges = Vec::new();
+    let mut open_fence: Option<(usize, usize)> = None;
+    let mut offset = 0;
+
+    for segment in source.split_inclusive('\n') {
+        let (line, newline) = segment
+            .strip_suffix('\n')
+            .map(|line| (line, 1))
+            .unwrap_or((segment, 0));
+        let line_start = offset;
+        let line_end = line_start + line.len();
+        let segment_end = line_end + newline;
+        let trimmed = line.trim_start();
+
+        if let Some((fence_len, code_start)) = open_fence {
+            if leading_backtick_count(trimmed) >= fence_len {
+                ranges.push(code_start..line_start);
+                open_fence = None;
+            }
+        } else {
+            let fence_len = leading_backtick_count(trimmed);
+            if fence_len >= 3 {
+                open_fence = Some((fence_len, segment_end));
+            } else {
+                collect_inline_code_ranges(line, line_start, &mut ranges);
+            }
+        }
+
+        offset = segment_end;
+    }
+
+    if let Some((_, code_start)) = open_fence {
+        ranges.push(code_start..source.len());
+    }
+
+    ranges
+}
+
+fn collect_inline_code_ranges(line: &str, line_start: usize, ranges: &mut Vec<Range<usize>>) {
+    let bytes = line.as_bytes();
+    let mut index = 0;
+    let mut open = None;
+
+    while index < bytes.len() {
+        if bytes[index] != b'`' {
+            index += 1;
+            continue;
+        }
+
+        let mut end = index;
+        while end < bytes.len() && bytes[end] == b'`' {
+            end += 1;
+        }
+        let tick_count = end - index;
+        if tick_count < 3 {
+            if let Some(start) = open.take() {
+                ranges.push(start..line_start + index);
+            } else {
+                open = Some(line_start + end);
+            }
+        }
+        index = end;
+    }
+}
+
+fn leading_backtick_count(value: &str) -> usize {
+    value.chars().take_while(|ch| *ch == '`').count()
 }
 
 fn byte_index_to_line(source: &str, index: usize) -> usize {
@@ -133,6 +227,31 @@ print(2)
         let lines = source_lines_for_chunks(&layout, &chunks).unwrap();
 
         assert_eq!(lines.get("inline-1"), Some(&1));
+        assert_eq!(lines.get("chunk-1"), Some(&5));
+    }
+
+    #[test]
+    fn maps_chunks_to_code_regions_before_matching_prose() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(
+            &input,
+            r#"The code text print(2) appears in prose first.
+
+#calepin.chunk("python")[
+```
+print(2)
+```
+]
+"#,
+        )
+        .unwrap();
+        let mut layout = testfixtures::layout(dir.path());
+        layout.input = input;
+        let chunks = vec![test_chunk("chunk-1", "print(2)")];
+
+        let lines = source_lines_for_chunks(&layout, &chunks).unwrap();
+
         assert_eq!(lines.get("chunk-1"), Some(&5));
     }
 

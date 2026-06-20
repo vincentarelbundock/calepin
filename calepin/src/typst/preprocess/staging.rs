@@ -109,8 +109,9 @@ fn typst_string(value: &str) -> String {
 }
 
 fn raw_show_rule(lang: &str) -> String {
+    let lang = typst_string(lang);
     format!(
-        "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ chunk_from_raw_plain(\"{lang}\", it) }}\n"
+        "#show raw.where(block: true, lang: {lang}, theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ chunk_from_raw_plain({lang}, it) }}\n"
     )
 }
 
@@ -141,4 +142,20 @@ pub(super) fn write_query_source(layout: &LayoutPaths, staged_input: &Path) -> R
         .with_context(|| format!("failed to read {}", staged_input_abs.display()))?;
     write_if_changed(&query_source, source)?;
     Ok(query_source_relative)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn raw_show_rule_escapes_kernel_names() {
+        let rule = raw_show_rule(r#"weird"kernel"#);
+
+        assert!(rule.contains(r#"lang: "weird\"kernel""#), "{rule}");
+        assert!(
+            rule.contains(r#"chunk_from_raw_plain("weird\"kernel""#),
+            "{rule}"
+        );
+    }
 }

@@ -132,12 +132,16 @@ fn fenced_chunks_option(value: &Value, base: &FencedChunks) -> Result<FencedChun
         Some(Value::Bool(false)) => Ok(FencedChunks::Off),
         Some(Value::Bool(true)) => Ok(FencedChunks::All),
         Some(Value::String(lang)) => Ok(FencedChunks::Only(vec![lang.clone()])),
-        Some(Value::Array(items)) => Ok(FencedChunks::Only(
-            items
-                .iter()
-                .filter_map(|item| item.as_str().map(str::to_string))
-                .collect(),
-        )),
+        Some(Value::Array(items)) => {
+            let mut langs = Vec::with_capacity(items.len());
+            for item in items {
+                let Some(lang) = item.as_str() else {
+                    return Err(anyhow!("`fenced-chunks` array entries must be strings"));
+                };
+                langs.push(lang.to_string());
+            }
+            Ok(FencedChunks::Only(langs))
+        }
         Some(other) => Err(anyhow!("invalid `fenced-chunks` value: {other}")),
     }
 }
@@ -173,7 +177,12 @@ fn u32_option(object: &Value, key: &str, default: u32) -> Result<u32> {
         object,
         key,
         default,
-        |value| value.as_u64().and_then(|n| u32::try_from(n).ok()),
+        |value| {
+            value
+                .as_u64()
+                .filter(|n| *n > 0)
+                .and_then(|n| u32::try_from(n).ok())
+        },
         "a positive integer",
     )
 }

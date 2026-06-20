@@ -46,17 +46,35 @@ fn parse_typst_version(output: &str) -> Result<String> {
 }
 
 pub fn version_is_too_old(version: &str) -> bool {
-    version_parts(version).is_some_and(|parts| parts < REQUIRED_TYPST_VERSION_PARTS)
+    parsed_version(version).is_some_and(|version| {
+        version.parts < REQUIRED_TYPST_VERSION_PARTS
+            || (version.parts == REQUIRED_TYPST_VERSION_PARTS && version.is_prerelease)
+    })
 }
 
 fn version_parts(token: &str) -> Option<(u64, u64, u64)> {
-    let version = token.trim_start_matches('v').split('-').next()?;
+    parsed_version(token).map(|version| version.parts)
+}
+
+struct ParsedVersion {
+    parts: (u64, u64, u64),
+    is_prerelease: bool,
+}
+
+fn parsed_version(token: &str) -> Option<ParsedVersion> {
+    let version = token.trim_start_matches('v');
+    let is_prerelease = version.contains('-');
+    let version = version.split('-').next()?;
     let mut parts = version.split('.');
-    Some((
+    let parts = (
         parts.next()?.parse().ok()?,
         parts.next()?.parse().ok()?,
         parts.next()?.parse().ok()?,
-    ))
+    );
+    Some(ParsedVersion {
+        parts,
+        is_prerelease,
+    })
 }
 
 #[cfg(test)]
@@ -87,7 +105,7 @@ mod tests {
     #[test]
     fn compares_versions() {
         assert!(version_is_too_old("0.14.2"));
-        assert!(!version_is_too_old("0.15.0-rc.1"));
+        assert!(version_is_too_old("0.15.0-rc.1"));
         assert!(!version_is_too_old("0.15.0"));
     }
 

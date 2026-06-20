@@ -266,16 +266,17 @@ fn normalize_plot_path(
     path: &Path,
 ) -> Result<PathBuf> {
     let target = figures_dir.join(normalized_plot_filename(label, figure, path));
+    if !path.exists() {
+        return Err(anyhow!("plot artifact `{}` does not exist", path.display()));
+    }
     if path == target {
         return Ok(target);
     }
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    if path.exists() {
-        std::fs::copy(path, &target)?;
-        let _ = std::fs::remove_file(path);
-    }
+    std::fs::copy(path, &target)?;
+    let _ = std::fs::remove_file(path);
     Ok(target)
 }
 
@@ -465,6 +466,26 @@ mod tests {
         );
         assert!(dir.path().join("fig-demo.svg").exists());
         assert!(dir.path().join("fig-demo-2.svg").exists());
+    }
+
+    #[test]
+    fn missing_plot_artifact_returns_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("fig-demo-1.svg");
+        let chunk = chunk(ResultsMode::Verbatim);
+        let figure = figure_for(&chunk);
+
+        let err = normalize_engine_results(
+            &chunk,
+            dir.path(),
+            &figure,
+            vec![EngineResult::Plot(missing)],
+            |_| "unused".to_string(),
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("plot artifact"), "{err}");
     }
 
     #[test]

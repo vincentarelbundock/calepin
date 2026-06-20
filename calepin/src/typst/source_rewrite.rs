@@ -69,7 +69,7 @@ fn preview_calepin_import_suggestion_in_line(line: &str) -> Option<String> {
 
     while let Some(index) = rest.find("#import") {
         let (before, candidate) = rest.split_at(index);
-        if before.contains("//") {
+        if has_line_comment(before) {
             return None;
         }
 
@@ -489,7 +489,7 @@ fn rewrite_calepin_imports_in_line(line: &str) -> String {
 
     while let Some(index) = rest.find("#import") {
         let (before, candidate) = rest.split_at(index);
-        if before.contains("//") {
+        if has_line_comment(before) {
             out.push_str(rest);
             return out;
         }
@@ -512,6 +512,35 @@ fn rewrite_calepin_imports_in_line(line: &str) -> String {
 
     out.push_str(rest);
     out
+}
+
+fn has_line_comment(input: &str) -> bool {
+    let mut chars = input.chars().peekable();
+    let mut in_string = false;
+    let mut escaped = false;
+
+    while let Some(ch) = chars.next() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+
+        if ch == '"' {
+            in_string = true;
+            continue;
+        }
+        if ch == '/' && chars.peek().is_some_and(|next| *next == '/') {
+            return true;
+        }
+    }
+
+    false
 }
 
 fn import_keyword_boundary(candidate: &str) -> bool {
@@ -599,6 +628,16 @@ mod tests {
         assert_eq!(
             rewrite_calepin_imports(r#"#import ".calepin/calepin.typ""#),
             r#"#import "/.calepin/calepin.typ""#
+        );
+    }
+
+    #[test]
+    fn rewrites_import_after_url_string_on_same_line() {
+        assert_eq!(
+            rewrite_calepin_imports(
+                r#"#metadata("https://example.com") #import ".calepin/calepin.typ""#
+            ),
+            r#"#metadata("https://example.com") #import "/.calepin/calepin.typ""#
         );
     }
 

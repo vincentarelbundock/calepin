@@ -1000,6 +1000,21 @@ mod tests {
     }
 
     #[test]
+    fn rejects_non_string_fenced_chunks_list_entries() {
+        let json = setup_metadata(r#"{"fenced-chunks":["python",1]}"#);
+        let err = parse_setup_config(&json).unwrap_err().to_string();
+        assert!(err.contains("fenced-chunks"), "{err}");
+    }
+
+    #[test]
+    fn rejects_zero_fig_device_dpi() {
+        let json = setup_metadata(r#"{"fig-device-dpi":0}"#);
+        let err = parse_setup_config(&json).unwrap_err().to_string();
+        assert!(err.contains("fig-device-dpi"), "{err}");
+        assert!(err.contains("positive integer"), "{err}");
+    }
+
+    #[test]
     fn rejects_setup_lang_option() {
         let json = r#"[
           {"func":"metadata","value":{"lang":"python","echo":true},"label":"<calepin-config>"}
