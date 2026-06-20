@@ -48,6 +48,10 @@ pub(super) fn page_relative_url(current_href: &str, target: &str) -> String {
     }
 
     let target = target.trim_start_matches("./");
+    if target == current_href || target == current_href.trim_start_matches('/') {
+        return target.to_string();
+    }
+
     let current_dir = current_href
         .split('/')
         .filter(|part| !part.is_empty())
