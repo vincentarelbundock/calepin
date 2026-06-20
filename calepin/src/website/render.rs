@@ -119,6 +119,7 @@ pub(super) fn page_asset_decision(
     } else {
         Vec::new()
     };
+
     PageAssetDecision {
         html_entry,
         stylesheet,
@@ -137,7 +138,7 @@ fn html_source_references_site_stylesheet(
     partials: &BTreeMap<String, String>,
     visited: &mut BTreeSet<String>,
 ) -> bool {
-    if source.contains("site.stylesheet") {
+    if html_source_references_site_stylesheet_token(source) {
         return true;
     }
     static_html_includes(source).into_iter().any(|name| {
@@ -148,21 +149,95 @@ fn html_source_references_site_stylesheet(
     })
 }
 
+fn html_source_references_site_stylesheet_token(source: &str) -> bool {
+    template_tag_references_site_stylesheet(source, "{{", "}}")
+        || template_tag_references_site_stylesheet(source, "{%", "%}")
+}
+
+fn template_tag_references_site_stylesheet(source: &str, open: &str, close: &str) -> bool {
+    let mut rest = source;
+    while let Some(start) = rest.find(open) {
+        let after_open = &rest[start + open.len()..];
+        let Some(end) = after_open.find(close) else {
+            break;
+        };
+        let block = &after_open[..end];
+        if template_tag_has_site_stylesheet(block) {
+            return true;
+        }
+        rest = &after_open[end + close.len()..];
+    }
+    false
+}
+
+fn template_tag_has_site_stylesheet(block: &str) -> bool {
+    let target = b"site.stylesheet";
+    let mut in_single = false;
+    let mut in_double = false;
+    let bytes = block.as_bytes();
+
+    let mut index = 0;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        match byte {
+            b'\'' => {
+                if !in_double {
+                    in_single = !in_single;
+                }
+            }
+            b'"' => {
+                if !in_single {
+                    in_double = !in_double;
+                }
+            }
+            _ if !in_single && !in_double => {
+                if bytes.len() >= index + target.len()
+                    && bytes_is_ascii_equal_ignore_case(
+                        &bytes[index..index + target.len()],
+                        target,
+                    )
+                    && (index == 0
+                        || is_template_token_separator_byte(bytes[index - 1]))
+                    && (index + target.len() == bytes.len()
+                        || is_template_token_separator_byte(bytes[index + target.len()]))
+                {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+        index += 1;
+    }
+    false
+}
+
+fn is_template_token_separator_byte(byte: u8) -> bool {
+    !byte.is_ascii_alphanumeric() && byte != b'.' && byte != b'_'
+}
+
 fn static_html_includes(source: &str) -> Vec<String> {
     let mut includes = Vec::new();
     let mut rest = source;
     while let Some(start) = rest.find("{%") {
-        rest = &rest[start + 2..];
-        let Some(end) = rest.find("%}") else {
+        let rest_after_start = &rest[start + 2..];
+        let Some(end) = rest_after_start.find("%}") else {
             break;
         };
-        let block = rest[..end].trim().trim_matches('-').trim();
+        let block = trim_template_tokens(&rest_after_start[..end]);
         if let Some(include) = static_include_name(block) {
             includes.push(include);
         }
-        rest = &rest[end + 2..];
+        rest = &rest_after_start[end + 2..];
     }
     includes
+}
+
+fn trim_template_tokens(block: &str) -> &str {
+    block
+        .trim()
+        .trim_start_matches(|char| char == '-' || char == '+')
+        .trim_end_matches(|char| char == '-' || char == '+')
+        .trim()
 }
 
 fn static_include_name(block: &str) -> Option<String> {
@@ -174,6 +249,63 @@ fn static_include_name(block: &str) -> Option<String> {
     let quoted = &rest[quote.len_utf8()..];
     let end = quoted.find(quote)?;
     Some(quoted[..end].to_string())
+}
+
+fn ensure_parent_directory(path: &Path) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    Ok(())
+}
+
+fn escape_script_payload(payload: &str) -> String {
+    let mut payload = payload;
+    let mut escaped = String::with_capacity(payload.len());
+    while let Some(offset) = find_script_tag(payload) {
+        escaped.push_str(&payload[..offset]);
+        escaped.push_str("<\\/");
+        payload = &payload[offset + 2..];
+    }
+    escaped.push_str(payload);
+    escaped
+}
+
+fn find_script_tag(source: &str) -> Option<usize> {
+    let source = source.as_bytes();
+    if source.len() < 8 {
+        return None;
+    }
+    for i in 0..=source.len() - 8 {
+        if source[i] == b'<' && source[i + 1] == b'/' &&
+            bytes_is_ascii_equal_ignore_case(&source[i + 2..i + 8], b"script")
+        {
+            return Some(i);
+        }
+    }
+    None
+}
+
+fn find_case_insensitive(source: &str, needle: &str) -> Option<usize> {
+    let source = source.as_bytes();
+    let needle = needle.as_bytes();
+    if source.len() < needle.len() {
+        return None;
+    }
+    for i in 0..=source.len() - needle.len() {
+        if bytes_is_ascii_equal_ignore_case(&source[i..i + needle.len()], needle) {
+            return Some(i);
+        }
+    }
+    None
+}
+
+fn bytes_is_ascii_equal_ignore_case(left: &[u8], right: &[u8]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .all(|(left, right)| left.to_ascii_lowercase() == right.to_ascii_lowercase())
 }
 
 fn render_document(
@@ -190,10 +322,6 @@ fn render_document(
         .get(input_path)
         .ok_or_else(|| anyhow!("page output was not planned: {}", input_path.display()))?;
     let html_output = context.out_dir.join(&page_info.href);
-    if let Some(parent) = html_output.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
 
     let current_href = page_info.href.clone();
     let page_meta = context.page_meta.get(input_path);
@@ -226,24 +354,41 @@ fn render_document(
         .iter()
         .map(|script| html_escape(&page_relative_url(&current_href, script)))
         .collect();
-    compile_with_typst(
-        &context.typst,
-        &preprocessed.layout,
-        CompileOptions {
-            output: Some(html_output.clone()),
-            format: Some("html"),
-            typst_args: &context.typst_args,
-            theme: &preprocessed.theme,
-            html_scope: crate::theme::HtmlScope::Site,
-            html_entry: page_site_entry.as_ref(),
-            config_styles: &[],
-            html_syntax_theme: Some(&context.syntax_theme),
-            site_context: Some(&site_context),
-            pages_input: Some(PAGES_INDEX_REF),
-            current_href_input: Some(&current_href),
-            minify_html: false,
-            progress: false,
-        },
+
+    let compile = |output: PathBuf,
+                   format: &'static str,
+                   html_entry: Option<&crate::theme::HtmlEntry>,
+                   html_syntax_theme: Option<&HtmlSyntaxTheme>,
+                   site_context: Option<&crate::html::SiteContextInput>|
+     -> Result<()> {
+        ensure_parent_directory(&output)?;
+        compile_with_typst(
+            &context.typst,
+            &preprocessed.layout,
+            CompileOptions {
+                output: Some(output),
+                format: Some(format),
+                typst_args: &context.typst_args,
+                theme: &preprocessed.theme,
+                html_scope: crate::theme::HtmlScope::Site,
+                html_entry,
+                config_styles: &[],
+                html_syntax_theme,
+                site_context,
+                pages_input: Some(PAGES_INDEX_REF),
+                current_href_input: Some(&current_href),
+                minify_html: false,
+                progress: false,
+            },
+        )
+    };
+
+    compile(
+        html_output.clone(),
+        "html",
+        page_site_entry.as_ref(),
+        Some(&context.syntax_theme),
+        Some(&site_context),
     )?;
     // Publishes the complete page source for the runtime view-source feature.
     // Authors should treat comments and code chunks in site pages as public.
@@ -258,24 +403,12 @@ fn render_document(
             .as_ref()
             .ok_or_else(|| anyhow!("PDF output was not planned: {}", input_path.display()))?;
         let pdf_output = context.out_dir.join(pdf_href);
-        compile_with_typst(
-            &context.typst,
-            &preprocessed.layout,
-            CompileOptions {
-                output: Some(pdf_output),
-                format: Some("pdf"),
-                typst_args: &context.typst_args,
-                theme: &preprocessed.theme,
-                html_scope: crate::theme::HtmlScope::Site,
-                html_entry: None,
-                config_styles: &[],
-                html_syntax_theme: None,
-                site_context: None,
-                pages_input: Some(PAGES_INDEX_REF),
-                current_href_input: Some(&current_href),
-                minify_html: false,
-                progress: false,
-            },
+        compile(
+            pdf_output,
+            "pdf",
+            None,
+            None,
+            None,
         )?;
     }
 
@@ -285,13 +418,13 @@ fn render_document(
 fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
     let source = fs::read_to_string(source_path)
         .with_context(|| format!("failed to read {}", source_path.display()))?;
-    let payload = serde_json::to_string(&source)?.replace("</", "<\\/");
+    let payload = escape_script_payload(&serde_json::to_string(&source)?);
     let mut html = fs::read_to_string(html_output)
         .with_context(|| format!("failed to read {}", html_output.display()))?;
     let script =
         format!("\n<script id=\"{SOURCE_DATA_ID}\" type=\"application/json\">{payload}</script>\n");
-    if html.contains("</head>") {
-        html = html.replacen("</head>", &(script + "</head>"), 1);
+    if let Some(pos) = find_case_insensitive(&html, "</head>") {
+        html.insert_str(pos, &script);
     } else {
         html.push_str(&script);
     }
@@ -323,19 +456,16 @@ impl ThemeGeneratedAssets {
         Ok(Self { stylesheet, script })
     }
 
+    fn assets(&self) -> impl Iterator<Item = &GeneratedThemeAsset> {
+        self.stylesheet.iter().chain(self.script.iter())
+    }
+
     pub(super) fn output_paths(&self, out_dir: &Path) -> BTreeSet<PathBuf> {
-        [&self.stylesheet, &self.script]
-            .into_iter()
-            .filter_map(|asset| asset.as_ref())
-            .map(|asset| out_dir.join(&asset.rel_path))
-            .collect()
+        self.assets().map(|asset| out_dir.join(&asset.rel_path)).collect()
     }
 
     pub(super) fn write(&self, out_dir: &Path) -> Result<()> {
-        for asset in [&self.stylesheet, &self.script]
-            .into_iter()
-            .filter_map(|asset| asset.as_ref())
-        {
+        for asset in self.assets() {
             asset.write(out_dir)?;
         }
         Ok(())
@@ -354,11 +484,80 @@ impl GeneratedThemeAsset {
 
     pub(super) fn write(&self, out_dir: &Path) -> Result<()> {
         let path = out_dir.join(&self.rel_path);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
+        ensure_parent_directory(&path)?;
         fs::write(&path, &self.content)
             .with_context(|| format!("failed to write {}", path.display()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    use crate::theme::HtmlEntry;
+
+    #[test]
+    fn html_entry_references_site_stylesheet_requires_template_token() {
+        let entry = HtmlEntry {
+            theme_name: "local".into(),
+            layout: r#"<script>var source = "site.stylesheet";</script>"#.into(),
+            partials: Vec::new(),
+            styles: Vec::new(),
+            scripts: Vec::new(),
+            is_default: false,
+        };
+
+        assert!(!html_entry_references_site_stylesheet(&entry));
+    }
+
+    #[test]
+    fn html_entry_references_site_stylesheet_follows_whitespace_control_includes() {
+        let entry = HtmlEntry {
+            theme_name: "local".into(),
+            layout: r#"{{ doc.head }}{%- include 'partials/styles.html' +%}"#.into(),
+            partials: vec![
+                (
+                    "partials/styles.html".to_string(),
+                    "{{ if x and site.stylesheet }}".into(),
+                ),
+            ],
+            styles: Vec::new(),
+            scripts: Vec::new(),
+            is_default: false,
+        };
+
+        assert!(html_entry_references_site_stylesheet(&entry));
+    }
+
+    #[test]
+    fn static_html_includes_parses_whitespace_control_markers() {
+        let includes = static_html_includes(r#"{%+ include 'partials/wrapper.html' +%}{%- include "partials/styles.html" -%}"#);
+
+        assert_eq!(
+            includes,
+            vec![
+                "partials/wrapper.html".to_string(),
+                "partials/styles.html".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn embed_source_blob_inserts_source_data_before_head_and_escapes_script_end_tag_case_insensitive() {
+        let dir = tempdir().unwrap();
+        let source_path = dir.path().join("page.typ");
+        let html_output = dir.path().join("page.html");
+        std::fs::write(&source_path, "x\n</SCRIPT>").unwrap();
+        std::fs::write(&html_output, "<html><HEAD></HEAD><body>x</body></html>").unwrap();
+
+        embed_source_blob(&html_output, &source_path).unwrap();
+        let output = std::fs::read_to_string(&html_output).unwrap();
+
+        let script_pos = output.find(&format!("<script id=\"{SOURCE_DATA_ID}\" type=\"application/json\">")).unwrap();
+        let head_pos = find_case_insensitive(&output, "</head>").unwrap();
+
+        assert!(script_pos < head_pos);
+        assert!(output.contains("<\\/SCRIPT>"));
     }
 }
