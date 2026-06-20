@@ -5196,7 +5196,7 @@ filenames = ["atom.xml", "rss.xml"]
 
         assert_eq!(pagefind.css, "../pagefind/pagefind-component-ui.css");
         assert_eq!(pagefind.js, "../pagefind/pagefind-component-ui.js");
-        assert_eq!(pagefind.bundle, "../pagefind/");
+        assert_eq!(pagefind.bundle, "../pagefind");
     }
 
     #[test]
