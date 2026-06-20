@@ -28,13 +28,13 @@ This deck mirrors the structure from `docs/slides/touying.typ`: horizontal slide
   gutter: 1em,
   [
     #figure(
-      image("docs/assets/flowers_01.jpg", width: 100%),
+      image("/docs/assets/flowers_01.jpg", width: 100%),
       caption: [Left image: rose field],
     )
   ],
   [
     #figure(
-      image("docs/assets/flowers_02.jpg", width: 100%),
+      image("/docs/assets/flowers_02.jpg", width: 100%),
       caption: [Right image: petals in daylight],
     )
   ],
@@ -86,6 +86,6 @@ The source stays on this slide, while the result is shown in the next one.
 #calepin.results("next-slide-claim")
 
 #figure(
-  image("docs/assets/flowers_03.jpg", width: 72%),
+  image("/docs/assets/flowers_03.jpg", width: 72%),
   caption: [A closing visual, still fully compatible with the Reveal.js layout],
 )
