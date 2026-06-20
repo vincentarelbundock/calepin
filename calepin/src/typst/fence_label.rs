@@ -1,8 +1,6 @@
 use anyhow::{anyhow, Result};
 use serde_json::Value;
 
-use crate::typst::crossref::has_crossref_prefix;
-
 pub(crate) const FENCE_LABEL_METADATA_LABEL: &str = "<calepin-fence-label>";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,16 +10,26 @@ pub(crate) struct TrailingFenceLabel<'a> {
 }
 
 pub(crate) fn label_name(value: &str) -> Result<String> {
-    if value.starts_with('<') && value.ends_with('>') && value.len() >= 2 {
-        let name = &value[1..value.len() - 1];
-        if name.is_empty() {
-            return Err(anyhow!("fence label must not be empty"));
-        }
-        Ok(name.to_string())
-    } else if value.is_empty() {
-        Err(anyhow!("fence label must not be empty"))
+    Ok(parse_label_name(value)?.to_string())
+}
+
+fn parse_label_name(value: &str) -> Result<&str> {
+    let name = if value.starts_with('<') && value.ends_with('>') && value.len() >= 2 {
+        &value[1..value.len() - 1]
+    } else if value.contains('<') || value.contains('>') {
+        return Err(anyhow!("malformed fence label `{value}`"));
     } else {
-        Ok(value.to_string())
+        value
+    };
+
+    if name.is_empty() {
+        Err(anyhow!("fence label must not be empty"))
+    } else if name.trim() != name {
+        Err(anyhow!(
+            "fence label must not contain leading or trailing whitespace"
+        ))
+    } else {
+        Ok(name)
     }
 }
 
@@ -61,14 +69,11 @@ pub(crate) fn trailing_fence_label(line: &str) -> Option<TrailingFenceLabel<'_>>
     if label.is_empty() {
         return None;
     }
+    let label = parse_label_name(label).ok()?;
     Some(TrailingFenceLabel {
         prefix: &line[..label_start],
         label,
     })
-}
-
-pub(crate) fn is_routed_crossref_label(label: &str) -> bool {
-    has_crossref_prefix(label)
 }
 
 #[cfg(test)]
@@ -84,11 +89,47 @@ mod tests {
     }
 
     #[test]
+    fn label_name_rejects_whitespace_labels() {
+        for value in [
+            "   ",
+            "<   >",
+            " fig-demo",
+            "fig-demo ",
+            "< fig-demo>",
+            "<fig-demo >",
+        ] {
+            assert!(label_name(value).is_err(), "{value:?} should be invalid");
+        }
+    }
+
+    #[test]
+    fn label_name_rejects_malformed_angle_labels() {
+        for value in [
+            "<fig-demo",
+            "fig-demo>",
+            "<fig-demo> extra",
+            "prefix <fig-demo>",
+        ] {
+            assert!(label_name(value).is_err(), "{value:?} should be invalid");
+        }
+    }
+
+    #[test]
     fn trailing_fence_label_parses_closing_fence_label() {
         let parsed = trailing_fence_label("``` <fig-demo>  ").unwrap();
         assert_eq!(parsed.prefix, "``` ");
         assert_eq!(parsed.label, "fig-demo");
         assert!(trailing_fence_label("``` <>").is_none());
         assert!(trailing_fence_label("`` <fig-demo>").is_none());
+    }
+
+    #[test]
+    fn trailing_fence_label_rejects_invalid_label_names() {
+        for line in ["``` <   >", "``` < fig-demo>", "``` <fig-demo >"] {
+            assert!(
+                trailing_fence_label(line).is_none(),
+                "{line:?} should be invalid"
+            );
+        }
     }
 }

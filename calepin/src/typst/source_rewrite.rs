@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
-use crate::typst::fence_label::{is_routed_crossref_label, trailing_fence_label};
+use crate::typst::crossref::has_crossref_prefix;
+use crate::typst::fence_label::trailing_fence_label;
 use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 const RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
@@ -432,7 +433,7 @@ fn rewrite_trailing_fence_label(block: &mut RawBlock, rewrite_plain_labels: bool
     };
     let prefix = parsed.prefix;
     let label = parsed.label;
-    if !rewrite_plain_labels && !is_routed_crossref_label(label) {
+    if !rewrite_plain_labels && !has_crossref_prefix(label) {
         return false;
     }
     let label = label.to_string();

@@ -10,7 +10,7 @@ use crate::typst::chunk_options::{
     parse_chunk_source_with_qmd_header, validate_chunk_arguments,
 };
 use crate::typst::crossref::{has_crossref_prefix, parse_label_names};
-use crate::typst::fence_label::label_name;
+use crate::typst::fence_label::{label_name, metadata_node_label};
 use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName, FencedChunks};
 
 use options::parse_chunk_options;
@@ -113,12 +113,8 @@ struct ChunkParseState<'a> {
 }
 
 fn parse_fence_label_metadata(value: &Value) -> Result<String> {
-    let label = value
-        .get("value")
-        .and_then(|value| value.get("label"))
-        .and_then(Value::as_str)
-        .ok_or_else(|| anyhow!("calepin fence label metadata is missing `label`"))?;
-    label_name(label)
+    metadata_node_label(value)?
+        .ok_or_else(|| anyhow!("calepin fence label metadata is missing `label`"))
 }
 
 fn raw_block_query_label(value: &Value) -> Result<Option<String>> {
