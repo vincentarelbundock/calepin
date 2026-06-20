@@ -17,19 +17,44 @@
       .filter((node) => node.nodeType === 1 && /^H[1-6]$/.test(node.tagName))
       .map((node) => Number(node.tagName.slice(1)));
     const horizontalLevel = headingLevels.length > 0 ? Math.min(...headingLevels) : 1;
+    const slideLevels = headingLevels.filter((level) => level > horizontalLevel);
+    const slideLevel = slideLevels.length > 0 ? Math.min(...slideLevels) : null;
     let currentHorizontal = null;
+    let currentSlide = null;
 
-    function newHorizontal(node) {
+    function newFlatSlide(node) {
       currentHorizontal = document.createElement("section");
       currentHorizontal.appendChild(node);
       slides.appendChild(currentHorizontal);
+      currentSlide = currentHorizontal;
+    }
+
+    function newSection(node) {
+      currentHorizontal = document.createElement("section");
+      slides.appendChild(currentHorizontal);
+      currentSlide = document.createElement("section");
+      currentSlide.appendChild(node);
+      currentHorizontal.appendChild(currentSlide);
+    }
+
+    function newSectionSlide(node) {
+      if (!currentHorizontal) {
+        newSection(document.createElement("div"));
+      }
+      currentSlide = document.createElement("section");
+      currentSlide.appendChild(node);
+      currentHorizontal.appendChild(currentSlide);
     }
 
     function appendToCurrent(node) {
-      if (!currentHorizontal) {
-        newHorizontal(document.createDocumentFragment());
+      if (!currentSlide) {
+        if (slideLevel === null) {
+          newFlatSlide(document.createDocumentFragment());
+        } else {
+          newSection(document.createElement("div"));
+        }
       }
-      currentHorizontal.appendChild(node);
+      currentSlide.appendChild(node);
     }
 
     slides.textContent = "";
@@ -37,8 +62,12 @@
     for (const node of nodes) {
       const isElement = node.nodeType === 1;
       const headingLevel = isElement ? Number(node.tagName.slice(1)) : NaN;
-      if (headingLevel === horizontalLevel) {
-        newHorizontal(node);
+      if (slideLevel !== null && headingLevel === horizontalLevel) {
+        newSection(node);
+      } else if (slideLevel !== null && headingLevel === slideLevel) {
+        newSectionSlide(node);
+      } else if (slideLevel === null && headingLevel === horizontalLevel) {
+        newFlatSlide(node);
       } else {
         appendToCurrent(node);
       }
