@@ -62,6 +62,8 @@ pub(crate) struct SiteContextInput {
     pub(crate) stylesheet: Option<String>,
     pub(crate) scripts: Vec<String>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
+    /// JSON config used by themes for runtime behavior (e.g., Reveal.js options).
+    pub(crate) revealjs: String,
 }
 
 /// The site context handed to the template: the caller-supplied input (or a
@@ -248,9 +250,12 @@ fn site_context(
     toc: Vec<TocEntry>,
     site_context_input: Option<&SiteContextInput>,
 ) -> SiteContext {
-    let input = site_context_input
+    let mut input = site_context_input
         .cloned()
         .unwrap_or_else(|| default_site_context(project_root, output_path));
+    if input.revealjs.is_empty() {
+        input.revealjs = "{}".to_string();
+    }
     SiteContext { input, toc }
 }
 

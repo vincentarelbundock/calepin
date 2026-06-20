@@ -6,7 +6,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, WatchArgs};
-use crate::typst::compile::{compile_with_typst, CompileOptions};
+use crate::html::SiteContextInput;
+use crate::typst::compile::{resolve_output_format, compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
 const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/notebook.typ");
@@ -73,22 +74,46 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
     Ok(())
 }
 
-pub fn handle_watch(args: WatchArgs) -> Result<()> {
+pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
     set_quiet(args.common.quiet);
     if args.input.is_dir() {
         return crate::website::watch_from_watch_args(args);
     }
-    if args.serve {
+
+    let format = resolve_output_format(args.format.as_ref().map(|format| format.as_str()), args.output.as_deref());
+    let is_html = format.as_deref() == Some("html");
+
+    if args.serve && !is_html {
         return Err(anyhow::anyhow!(
             "`calepin watch --serve` can only be used when watching a website directory"
         ));
     }
-    if args.open {
+    if args.open && !is_html {
         return Err(anyhow::anyhow!(
             "`calepin watch --open` is only for website serving; pass Typst's flag after `--` as `calepin watch paper.typ -- --open`"
         ));
     }
+
+    if is_html {
+        if args.open && !contains_typst_open_arg(&args.typst_args) {
+            args.typst_args.push("--open".to_string());
+        }
+        if let Some(port) = args.port {
+            if !contains_typst_port_arg(&args.typst_args) {
+                args.typst_args.push("--port".to_string());
+                args.typst_args.push(port.to_string());
+            }
+        }
+    }
     crate::typst::watch::run_watch(args)
+}
+
+fn contains_typst_open_arg(typst_args: &[String]) -> bool {
+    typst_args.iter().any(|arg| arg == "--open" || arg.starts_with("--open="))
+}
+
+fn contains_typst_port_arg(typst_args: &[String]) -> bool {
+    typst_args.iter().any(|arg| arg == "--port" || arg.starts_with("--port="))
 }
 
 pub fn handle_clean(args: CleanArgs) -> Result<()> {
@@ -129,6 +154,10 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     let calepin_config =
         crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
     let config_styles = calepin_config.styles.clone();
+    let site_context = SiteContextInput {
+        revealjs: calepin_config.revealjs.clone(),
+        ..Default::default()
+    };
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
         root: None,
@@ -156,7 +185,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             html_entry: None,
             config_styles: &config_styles,
             html_syntax_theme: None,
-            site_context: None,
+            site_context: Some(&site_context),
             pages_input: None,
             current_href_input: None,
             minify_html: args.minify,
@@ -375,5 +404,19 @@ mod tests {
 
         assert!(err.to_string().contains("output path"));
         assert!(err.to_string().contains("new theme"));
+    }
+
+    #[test]
+    fn contains_typst_open_arg_detects_typst_open_flags() {
+        assert!(contains_typst_open_arg(&["--open".to_string()]));
+        assert!(contains_typst_open_arg(&["--open=chromium".to_string()]));
+        assert!(!contains_typst_open_arg(&["--port".to_string()]));
+    }
+
+    #[test]
+    fn contains_typst_port_arg_detects_typst_port_flags() {
+        assert!(contains_typst_port_arg(&["--port".to_string()]));
+        assert!(contains_typst_port_arg(&["--port=3001".to_string()]));
+        assert!(!contains_typst_port_arg(&["--open".to_string()]));
     }
 }

@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Context, Result};
+use serde_json::Value as JsonValue;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -17,6 +18,8 @@ pub struct CalepinConfig {
     pub config_dir: PathBuf,
     pub theme: Option<String>,
     pub styles: Vec<CssOverride>,
+    /// JSON string injected into HTML templates as `site.revealjs`.
+    pub revealjs: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +58,7 @@ impl CalepinConfig {
             config_dir,
             theme: raw.theme,
             styles,
+            revealjs: parse_revealjs_config(raw.revealjs)?,
         })
     }
 
@@ -64,6 +68,7 @@ impl CalepinConfig {
             config_dir: root.to_path_buf(),
             theme: None,
             styles: Vec::new(),
+            revealjs: "{}".to_string(),
         }
     }
 
@@ -160,6 +165,7 @@ struct RawCalepinConfig {
     executables: RawExecutablePaths,
     theme: Option<String>,
     styles: Vec<PathBuf>,
+    revealjs: Option<toml::Value>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -202,6 +208,16 @@ fn resolve_css_overrides(config_dir: &Path, paths: Vec<PathBuf>) -> Result<Vec<C
         .into_iter()
         .map(|path| resolve_css_override(config_dir, path))
         .collect()
+}
+
+fn parse_revealjs_config(value: Option<toml::Value>) -> Result<String> {
+    let value = value.unwrap_or_else(|| toml::Value::Table(Default::default()));
+    if !value.is_table() {
+        return Err(anyhow!(
+            "`revealjs` must be a table, for example: [revealjs]\nnavigationMode = \"linear\""
+        ));
+    }
+    serde_json::to_string(&value).context("failed to serialize revealjs config as JSON")
 }
 
 fn resolve_css_override(config_dir: &Path, path: PathBuf) -> Result<CssOverride> {
@@ -440,6 +456,42 @@ styles = ["styles/site.css"]
 
         assert!(err.contains("config file must be a .toml file"), "{err}");
         assert!(err.contains("paper.typ"), "{err}");
+    }
+
+    #[test]
+    fn config_parses_revealjs_options() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("styles")).unwrap();
+        std::fs::write(dir.path().join("styles/site.css"), "body { color: red; }").unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            r#"[revealjs]
+hash = false
+center = false
+navigationMode = "linear"
+"#,
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        let options: JsonValue = serde_json::from_str(&config.revealjs).unwrap();
+        assert_eq!(options["hash"], serde_json::json!(false));
+        assert_eq!(options["center"], serde_json::json!(false));
+        assert_eq!(options["navigationMode"], serde_json::json!("linear"));
+    }
+
+    #[test]
+    fn config_rejects_non_table_revealjs_config() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "revealjs = false").unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("`revealjs` must be a table"), "{err}");
     }
 
     #[test]

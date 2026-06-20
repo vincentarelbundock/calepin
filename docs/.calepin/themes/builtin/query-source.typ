@@ -3,7 +3,7 @@
 
 #title()
 
-_Calepin_ ships with three built-in themes. Built-in themes are compiled into the
+_Calepin_ ships with two built-in themes. Built-in themes are compiled into the
 binary, so they are always available by name and can be selected without adding
 theme files to your project.
 

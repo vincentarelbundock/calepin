@@ -24,7 +24,7 @@ base_url = "https://example.com"
 
 # Theme: "calepin", "academic", a local theme directory, or false for raw output.
 # Default: "calepin".
-theme = "academic"
+theme = "calepin"
 
 # CSS files to append after the selected theme's CSS.
 # Default: [].

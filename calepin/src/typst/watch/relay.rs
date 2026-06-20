@@ -1,4 +1,6 @@
 use std::io::{self, BufRead, BufReader, Read, Write};
+use std::path::PathBuf;
+use std::sync::mpsc::Sender;
 use std::thread;
 
 pub(super) fn relay_typst_watch_output<R, W>(reader: R, writer: W) -> io::Result<()>
@@ -79,14 +81,39 @@ impl<W: Write> TypstWatchOutputRelay<W> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TypstWatchLine {
+pub(super) enum TypstWatchLine {
     Watching,
     Writing,
     Status,
     Other,
 }
 
-fn typst_watch_line(line: &str) -> TypstWatchLine {
+fn strip_ansi_codes(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' {
+            if matches!(chars.peek(), Some('[')) {
+                chars.next();
+                for next in chars.by_ref() {
+                    if next == 'm' {
+                        break;
+                    }
+                }
+                continue;
+            }
+        }
+        out.push(ch);
+    }
+
+    out
+}
+
+pub(super) fn typst_watch_line(line: &str) -> TypstWatchLine {
+    let line = strip_ansi_codes(line);
+    let line = line.trim();
+
     if line.starts_with("watching ") {
         TypstWatchLine::Watching
     } else if line.starts_with("writing to ") {
@@ -96,6 +123,46 @@ fn typst_watch_line(line: &str) -> TypstWatchLine {
     } else {
         TypstWatchLine::Other
     }
+}
+
+pub(super) fn typst_watch_output_path(line: &str) -> Option<PathBuf> {
+    let line = strip_ansi_codes(line);
+    let line = line.trim();
+    let marker = "writing to ";
+    let start = line.find(marker)? + marker.len();
+    let path = line[start..].trim();
+    if path.is_empty() {
+        return None;
+    }
+    Some(PathBuf::from(path))
+}
+
+pub(super) fn relay_typst_watch_output_with_events<R, W>(
+    reader: R,
+    writer: W,
+    on_write: Sender<PathBuf>,
+) -> io::Result<()>
+where
+    R: Read,
+    W: Write,
+{
+    let mut reader = BufReader::new(reader);
+    let mut relay = TypstWatchOutputRelay::new(writer);
+    let mut line = String::new();
+
+    loop {
+        line.clear();
+        let bytes = reader.read_line(&mut line)?;
+        if bytes == 0 {
+            break;
+        }
+        if let Some(path) = typst_watch_output_path(&line) {
+            on_write.send(path).ok();
+        }
+        relay.write_line(&line)?;
+    }
+
+    relay.finish()
 }
 
 pub(super) fn join_relay(name: &str, handle: thread::JoinHandle<io::Result<()>>) {

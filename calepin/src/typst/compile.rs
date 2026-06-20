@@ -79,6 +79,29 @@ fn reject_reserved_input_value(value: &str) -> Result<()> {
     Ok(())
 }
 
+fn infer_output_format(output: &Path) -> Option<&'static str> {
+    match output.extension().and_then(|ext| ext.to_str()) {
+        Some(ext) => match ext.to_ascii_lowercase().as_str() {
+            "html" => Some("html"),
+            "pdf" => Some("pdf"),
+            "png" => Some("png"),
+            "svg" => Some("svg"),
+            _ => None,
+        },
+        None => None,
+    }
+}
+
+/// Explicit `--format` wins; otherwise infer from the output extension when possible.
+pub(crate) fn resolve_output_format(
+    format: Option<&str>,
+    output: Option<&Path>,
+) -> Option<String> {
+    format
+        .map(ToString::to_string)
+        .or_else(|| output.and_then(|output| infer_output_format(output).map(ToString::to_string)))
+}
+
 fn typst_subcommand_args(
     subcommand: &str,
     layout: &LayoutPaths,
@@ -87,13 +110,13 @@ fn typst_subcommand_args(
     typst_args: &[String],
     inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
+    let format = resolve_output_format(format, output);
     let results_input = artifact_reference(&layout.root, &layout.results_path);
-    let target = if format == Some("html") {
+    let target = if format.as_deref() == Some("html") {
         CalepinTarget::Html
     } else {
         CalepinTarget::Paged
     };
-
     let mut args = vec![
         subcommand.into(),
         "--root".into(),
@@ -109,7 +132,7 @@ fn typst_subcommand_args(
     );
     push_input(&mut args, INPUT_IMAGE_META, image_meta);
 
-    if let Some(format) = format {
+    if let Some(format) = format.as_deref() {
         args.push("--format".into());
         args.push(format.into());
         if format == "html" {
@@ -130,7 +153,7 @@ fn typst_subcommand_args(
     if let Some(output) = output {
         args.push(output.as_os_str().into());
     } else {
-        let default_output = resolve_output_path(layout, output, format);
+        let default_output = resolve_output_path(layout, output, format.as_deref());
         args.push(default_output.as_os_str().into());
     }
     args.extend(typst_args.iter().map(|arg| OsString::from(arg.as_str())));
@@ -210,40 +233,75 @@ pub(crate) fn resolve_output_path(
     }
 }
 
+pub(crate) fn resolve_html_entry_with_styles(
+    theme: &crate::theme::ThemeSelection,
+    scope: crate::theme::HtmlScope,
+    config_styles: &[crate::config::CssOverride],
+) -> Result<Option<crate::theme::HtmlEntry>> {
+    let mut resolved_entry = crate::theme::resolve_html_entry(theme, scope)?;
+
+    if let Some(entry) = resolved_entry.as_mut() {
+        if !config_styles.is_empty() {
+            entry.append_styles(config_styles.to_vec());
+        }
+        return Ok(Some(entry.clone()));
+    }
+
+    if !config_styles.is_empty() {
+        Ok(Some(crate::theme::style_only_html_entry(config_styles.to_vec())))
+    } else {
+        Ok(None)
+    }
+}
+
+pub(crate) fn postprocess_html_output(
+    output: &Path,
+    layout: &LayoutPaths,
+    html_entry: Option<&crate::theme::HtmlEntry>,
+    syntax_theme: &HtmlSyntaxTheme,
+    site_context: Option<&SiteContextInput>,
+    minify_html: bool,
+) -> Result<()> {
+    if !output.exists() {
+        return Ok(());
+    }
+
+    apply_html_theme_file_with_site_context(output, html_entry, syntax_theme, &layout.root, site_context)?;
+    inline_html_images_file(output, &layout.root)?;
+    if minify_html {
+        minify_html_file(output)?;
+    }
+
+    Ok(())
+}
+
 pub fn compile_with_typst(
     typst: &Path,
     layout: &LayoutPaths,
     options: CompileOptions<'_>,
 ) -> Result<()> {
-    let resolved_html_entry = if options.format == Some("html") && options.html_entry.is_none() {
-        crate::theme::resolve_html_entry(options.theme, options.html_scope)?
-    } else {
-        None
-    };
-    let style_only_entry;
-    let mut owned_html_entry;
-    let html_entry = if options.format == Some("html") {
-        let base = options.html_entry.or(resolved_html_entry.as_ref());
-        if let Some(entry) = base {
-            owned_html_entry = entry.clone();
-            owned_html_entry.append_styles(options.config_styles.to_vec());
-            Some(&owned_html_entry)
-        } else if !options.config_styles.is_empty() {
-            style_only_entry = crate::theme::style_only_html_entry(options.config_styles.to_vec());
-            Some(&style_only_entry)
+    let output_path = resolve_output_path(layout, options.output.as_deref(), options.format);
+    let resolved_format = resolve_output_format(options.format, Some(output_path.as_path()));
+    let html_entry = if resolved_format.as_deref() == Some("html") {
+        if let Some(entry) = options.html_entry.cloned() {
+            let mut owned_entry = entry.clone();
+            if !options.config_styles.is_empty() {
+                owned_entry.append_styles(options.config_styles.to_vec());
+            }
+            Some(owned_entry)
         } else {
-            None
+            resolve_html_entry_with_styles(options.theme, options.html_scope, options.config_styles)?
         }
     } else {
         None
     };
+    let html_entry = html_entry.as_ref();
     reject_reserved_typst_inputs(options.typst_args)?;
-    let output_path = resolve_output_path(layout, options.output.as_deref(), options.format);
-    let html_output = html_output_path(layout, Some(output_path.as_path()), options.format);
+    let html_output = html_output_path(layout, Some(output_path.as_path()), resolved_format.as_deref());
     let args = typst_compile_args(
         layout,
         Some(output_path.as_path()),
-        options.format,
+        resolved_format.as_deref(),
         options.typst_args,
         ReservedInputs {
             asset_base: None,
@@ -280,17 +338,14 @@ pub fn compile_with_typst(
             builtin_syntax_theme = HtmlSyntaxTheme::builtin();
             &builtin_syntax_theme
         };
-        apply_html_theme_file_with_site_context(
+        postprocess_html_output(
             &path,
+            layout,
             html_entry,
             syntax_theme,
-            &layout.root,
             options.site_context,
+            options.minify_html,
         )?;
-        inline_html_images_file(&path, &layout.root)?;
-        if options.minify_html {
-            minify_html_file(&path)?;
-        }
     }
     progress.finish(format!(
         "[done] {}",
@@ -374,6 +429,32 @@ mod tests {
         assert!(args.contains(&"--features=html".to_string()));
     }
 
+    #[test]
+    fn compile_args_infers_format_from_output_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "").unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
+
+        let args = typst_compile_args(
+            &layout,
+            Some(&PathBuf::from("paper.html")),
+            None,
+            &[],
+            ReservedInputs::default(),
+        );
+        let args: Vec<_> = args
+            .into_iter()
+            .map(|arg| arg.to_string_lossy().to_string())
+            .collect();
+
+        assert!(args
+            .windows(2)
+            .any(|pair| pair == ["--input", "calepin-target=html"]));
+        assert!(args.windows(2).any(|pair| pair == ["--format", "html"]));
+        assert!(args.contains(&"--features=html".to_string()));
+    }
+
     fn non_html_formats_do_not_enable_typst_html_feature() {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");
@@ -398,7 +479,6 @@ mod tests {
         assert!(args.windows(2).any(|pair| pair == ["--format", "pdf"]));
         assert!(!args.contains(&"--features=html".to_string()));
     }
-
     #[test]
     fn resolve_output_path_uses_explicit_then_default_extension() {
         let dir = tempfile::tempdir().unwrap();
@@ -468,6 +548,32 @@ mod tests {
             .any(|pair| pair == ["--input", "calepin-target=paged"]));
         assert!(args.windows(2).any(|pair| pair == ["--format", "pdf"]));
         assert!(args.contains(&"paper.pdf".to_string()));
+    }
+
+    #[test]
+    fn watch_args_infers_format_from_output_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "").unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
+
+        let args = typst_watch_args(
+            &layout,
+            Some(&PathBuf::from("paper.html")),
+            None,
+            &[],
+            ReservedInputs::default(),
+        );
+        let args: Vec<_> = args
+            .into_iter()
+            .map(|arg| arg.to_string_lossy().to_string())
+            .collect();
+
+        assert!(args
+            .windows(2)
+            .any(|pair| pair == ["--input", "calepin-target=html"]));
+        assert!(args.windows(2).any(|pair| pair == ["--format", "html"]));
+        assert!(args.contains(&"--features=html".to_string()));
     }
 
     #[test]

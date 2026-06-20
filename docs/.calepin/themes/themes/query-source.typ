@@ -25,10 +25,11 @@ Themes control how _Calepin_ renders two types of content: websites and notebook
 Select a different built-in or local theme with `theme` in a website's `calepin.toml`:
 
 ```toml
-theme = "calepin"           # the default documentation theme
-theme = "academic"          # a built-in essay/blog theme
-theme = "themes/my-theme"   # a local theme directory
-theme = "typst"             # raw Typst output, no Calepin theme
+theme = "calepin"            # the default documentation theme
+theme = "academic"           # a built-in essay/blog theme
+theme = "themes/my-theme"    # a local theme directory
+
+theme = "typst"              # raw Typst output, no Calepin theme
 ```
 
 If the `calepin.toml` file is not located in the same directory as the document or website being compiled, you can specify the path to the config file with `--config`:
