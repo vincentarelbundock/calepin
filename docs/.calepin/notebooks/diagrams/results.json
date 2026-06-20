@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.20",
+  "calepin_version": "0.0.21",
   "input": "notebooks/diagrams.typ",
   "chunks": {
     "fig-mermaid": {
