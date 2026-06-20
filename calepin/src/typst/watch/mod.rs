@@ -3,6 +3,7 @@ mod relay;
 mod watcher;
 
 use std::io;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -12,9 +13,10 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 
 use crate::cli::WatchArgs;
+use crate::html::SiteContextInput;
 use crate::typst::compile::{
-    reject_reserved_typst_inputs, resolve_output_format, resolve_output_path, typst_watch_args,
-    ReservedInputs,
+    postprocess_html_output, reject_reserved_typst_inputs, resolve_html_entry_with_styles,
+    resolve_output_format, resolve_output_path, typst_watch_args, ReservedInputs,
 };
 use crate::typst::preprocess::{
     prepare_preprocess_plan, preprocess_cached, preprocess_cached_plan, PreprocessOptions,
@@ -23,6 +25,44 @@ use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
 use relay::{join_relay, relay_typst_watch_output};
+
+fn start_html_output_postprocessor(
+    stop: Arc<AtomicBool>,
+    output: PathBuf,
+    layout: crate::typst::model::LayoutPaths,
+    html_entry: Option<crate::theme::HtmlEntry>,
+    site_context: Option<SiteContextInput>,
+) -> thread::JoinHandle<()> {
+    thread::spawn(move || {
+        let syntax_theme = crate::html::HtmlSyntaxTheme::builtin();
+        let mut last_modified = None;
+        while !stop.load(Ordering::Relaxed) {
+            thread::sleep(Duration::from_millis(250));
+            let modified = std::fs::metadata(&output)
+                .ok()
+                .and_then(|meta| meta.modified().ok());
+
+            let needs_refresh = match (last_modified, modified) {
+                (None, Some(_)) => true,
+                (Some(previous), Some(current)) => current > previous,
+                _ => false,
+            };
+            if needs_refresh {
+                last_modified = modified;
+                if let Err(error) = postprocess_html_output(
+                    &output,
+                    &layout,
+                    html_entry.as_ref(),
+                    &syntax_theme,
+                    site_context.as_ref(),
+                    false,
+                ) {
+                    cwarn!("failed to postprocess watched HTML output: {}", error);
+                }
+            }
+        }
+    })
+}
 
 fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
     PreprocessOptions {
@@ -59,12 +99,32 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let resolved_output =
         resolve_output_path(&initial.layout, args.output.as_deref(), format.as_deref());
     let root = initial.layout.root.clone();
-    let asset_server = if format.as_deref() == Some("html") {
+    let is_html = format.as_deref() == Some("html");
+    let asset_server = if is_html {
         let server = assets::start(root.clone(), Arc::clone(&stop))?;
         if !args.common.quiet {
             eprintln!("serving Calepin assets at {}", server.base_url());
         }
         Some(server)
+    } else {
+        None
+    };
+    let mut html_postprocessor = if is_html {
+        let config = crate::config::CalepinConfig::load(&root, args.common.config.as_deref())?;
+        let mut site_context = SiteContextInput::default();
+        site_context.revealjs = config.revealjs;
+        let html_entry = resolve_html_entry_with_styles(
+            &initial.theme,
+            crate::theme::HtmlScope::Document,
+            &config.styles,
+        )?;
+        Some(start_html_output_postprocessor(
+            Arc::clone(&stop),
+            resolved_output.clone(),
+            initial.layout.clone(),
+            html_entry,
+            Some(site_context),
+        ))
     } else {
         None
     };
@@ -105,6 +165,9 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         Ok(child) => child,
         Err(error) => {
             stop.store(true, Ordering::Relaxed);
+            if let Some(postprocessor) = html_postprocessor.take() {
+                let _ = postprocessor.join();
+            }
             if let Some(server) = asset_server {
                 server.join();
             }
@@ -182,6 +245,9 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     join_relay("stdout", stdout_relay);
     join_relay("stderr", stderr_relay);
     let _ = watcher.join();
+    if let Some(postprocessor) = html_postprocessor.take() {
+        let _ = postprocessor.join();
+    }
     if let Some(server) = asset_server {
         server.join();
     }

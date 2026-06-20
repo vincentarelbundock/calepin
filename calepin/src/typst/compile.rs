@@ -233,6 +233,48 @@ pub(crate) fn resolve_output_path(
     }
 }
 
+pub(crate) fn resolve_html_entry_with_styles(
+    theme: &crate::theme::ThemeSelection,
+    scope: crate::theme::HtmlScope,
+    config_styles: &[crate::config::CssOverride],
+) -> Result<Option<crate::theme::HtmlEntry>> {
+    let mut resolved_entry = crate::theme::resolve_html_entry(theme, scope)?;
+
+    if let Some(entry) = resolved_entry.as_mut() {
+        if !config_styles.is_empty() {
+            entry.append_styles(config_styles.to_vec());
+        }
+        return Ok(Some(entry.clone()));
+    }
+
+    if !config_styles.is_empty() {
+        Ok(Some(crate::theme::style_only_html_entry(config_styles.to_vec())))
+    } else {
+        Ok(None)
+    }
+}
+
+pub(crate) fn postprocess_html_output(
+    output: &Path,
+    layout: &LayoutPaths,
+    html_entry: Option<&crate::theme::HtmlEntry>,
+    syntax_theme: &HtmlSyntaxTheme,
+    site_context: Option<&SiteContextInput>,
+    minify_html: bool,
+) -> Result<()> {
+    if !output.exists() {
+        return Ok(());
+    }
+
+    apply_html_theme_file_with_site_context(output, html_entry, syntax_theme, &layout.root, site_context)?;
+    inline_html_images_file(output, &layout.root)?;
+    if minify_html {
+        minify_html_file(output)?;
+    }
+
+    Ok(())
+}
+
 pub fn compile_with_typst(
     typst: &Path,
     layout: &LayoutPaths,
@@ -240,28 +282,20 @@ pub fn compile_with_typst(
 ) -> Result<()> {
     let output_path = resolve_output_path(layout, options.output.as_deref(), options.format);
     let resolved_format = resolve_output_format(options.format, Some(output_path.as_path()));
-    let resolved_html_entry = if resolved_format.as_deref() == Some("html") && options.html_entry.is_none() {
-        crate::theme::resolve_html_entry(options.theme, options.html_scope)?
-    } else {
-        None
-    };
-    let style_only_entry;
-    let mut owned_html_entry;
     let html_entry = if resolved_format.as_deref() == Some("html") {
-        let base = options.html_entry.or(resolved_html_entry.as_ref());
-        if let Some(entry) = base {
-            owned_html_entry = entry.clone();
-            owned_html_entry.append_styles(options.config_styles.to_vec());
-            Some(&owned_html_entry)
-        } else if !options.config_styles.is_empty() {
-            style_only_entry = crate::theme::style_only_html_entry(options.config_styles.to_vec());
-            Some(&style_only_entry)
+        if let Some(entry) = options.html_entry.cloned() {
+            let mut owned_entry = entry.clone();
+            if !options.config_styles.is_empty() {
+                owned_entry.append_styles(options.config_styles.to_vec());
+            }
+            Some(owned_entry)
         } else {
-            None
+            resolve_html_entry_with_styles(options.theme, options.html_scope, options.config_styles)?
         }
     } else {
         None
     };
+    let html_entry = html_entry.as_ref();
     reject_reserved_typst_inputs(options.typst_args)?;
     let html_output = html_output_path(layout, Some(output_path.as_path()), resolved_format.as_deref());
     let args = typst_compile_args(
@@ -304,17 +338,14 @@ pub fn compile_with_typst(
             builtin_syntax_theme = HtmlSyntaxTheme::builtin();
             &builtin_syntax_theme
         };
-        apply_html_theme_file_with_site_context(
+        postprocess_html_output(
             &path,
+            layout,
             html_entry,
             syntax_theme,
-            &layout.root,
             options.site_context,
+            options.minify_html,
         )?;
-        inline_html_images_file(&path, &layout.root)?;
-        if options.minify_html {
-            minify_html_file(&path)?;
-        }
     }
     progress.finish(format!(
         "[done] {}",
