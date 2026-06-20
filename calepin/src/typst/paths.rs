@@ -4,13 +4,12 @@ use std::path::{Path, PathBuf};
 use crate::typst::model::LayoutPaths;
 pub use crate::utils::path::slash_path;
 
+pub(crate) const CALEPIN_DIR: &str = ".calepin";
+
 pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> {
-    let input_abs =
-        absolutize(input).with_context(|| format!("failed to resolve {}", input.display()))?;
+    let input_abs = canonicalize_input_file(input)?;
     let root_abs = match root {
-        Some(root) => {
-            absolutize(root).with_context(|| format!("failed to resolve {}", root.display()))?
-        }
+        Some(root) => canonicalize_root_dir(root)?,
         None => input_abs
             .parent()
             .map(Path::to_path_buf)
@@ -28,7 +27,7 @@ pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> 
             )
         })?;
     let stem = input_stem(&input_rel)?;
-    let base = root_abs.join(".calepin").join(&stem);
+    let base = root_abs.join(CALEPIN_DIR).join(&stem);
     let results_path = base.join("results.json");
     let work_dir = input_abs
         .parent()
@@ -47,27 +46,50 @@ pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> 
     })
 }
 
-pub fn artifact_reference(root: &Path, path: &Path) -> String {
-    match path.strip_prefix(root) {
-        Ok(rel) => format!("/{}", slash_path(rel)),
-        Err(_) => slash_path(path),
-    }
+pub fn artifact_reference(root: &Path, path: &Path) -> Result<String> {
+    let rel = path.strip_prefix(root).map_err(|_| {
+        anyhow!(
+            "artifact `{}` is not under root `{}`",
+            path.display(),
+            root.display()
+        )
+    })?;
+    Ok(format!("/{}", slash_path(rel)))
 }
 
 pub fn project_relative_path(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
         .map(slash_path)
-        .unwrap_or_else(|_| path.display().to_string())
+        .unwrap_or_else(|_| display_path(path))
 }
 
-fn absolutize(path: &Path) -> Result<PathBuf> {
-    if path.exists() {
-        return std::fs::canonicalize(path).map_err(Into::into);
+fn canonicalize_input_file(path: &Path) -> Result<PathBuf> {
+    let path = canonicalize_existing_path(path, "input")?;
+    let metadata = std::fs::metadata(&path)
+        .with_context(|| format!("failed to inspect {}", path.display()))?;
+    if !metadata.is_file() {
+        return Err(anyhow!("input `{}` must be a file", path.display()));
     }
-    Ok(crate::utils::path::absolutize_from(
-        &std::env::current_dir()?,
-        path,
-    ))
+    Ok(path)
+}
+
+fn canonicalize_root_dir(path: &Path) -> Result<PathBuf> {
+    let path = canonicalize_existing_path(path, "root")?;
+    let metadata = std::fs::metadata(&path)
+        .with_context(|| format!("failed to inspect {}", path.display()))?;
+    if !metadata.is_dir() {
+        return Err(anyhow!("root `{}` must be a directory", path.display()));
+    }
+    Ok(path)
+}
+
+fn canonicalize_existing_path(path: &Path, label: &str) -> Result<PathBuf> {
+    std::fs::canonicalize(path)
+        .with_context(|| format!("failed to resolve {label} `{}`", path.display()))
+}
+
+fn display_path(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 fn input_stem(input_rel: &Path) -> Result<PathBuf> {
@@ -124,13 +146,94 @@ mod tests {
     }
 
     #[test]
+    fn rejects_missing_input() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("missing.typ");
+
+        let err = resolve_layout(&input, Some(dir.path()))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("failed to resolve input"), "{err}");
+        assert!(err.contains("missing.typ"), "{err}");
+    }
+
+    #[test]
+    fn rejects_directory_input() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::create_dir(&input).unwrap();
+
+        let err = resolve_layout(&input, Some(dir.path()))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("must be a file"), "{err}");
+        assert!(err.contains("paper.typ"), "{err}");
+    }
+
+    #[test]
+    fn rejects_missing_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        let root = dir.path().join("missing-root");
+        std::fs::write(&input, "").unwrap();
+
+        let err = resolve_layout(&input, Some(&root)).unwrap_err().to_string();
+
+        assert!(err.contains("failed to resolve root"), "{err}");
+        assert!(err.contains("missing-root"), "{err}");
+    }
+
+    #[test]
+    fn rejects_file_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        let root = dir.path().join("calepin.toml");
+        std::fs::write(&input, "").unwrap();
+        std::fs::write(&root, "").unwrap();
+
+        let err = resolve_layout(&input, Some(&root)).unwrap_err().to_string();
+
+        assert!(err.contains("must be a directory"), "{err}");
+        assert!(err.contains("calepin.toml"), "{err}");
+    }
+
+    #[test]
+    fn rejects_missing_parent_segment_input_before_layout() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("project");
+        std::fs::create_dir(&root).unwrap();
+        let input = root.join("../outside.typ");
+
+        let err = resolve_layout(&input, Some(&root)).unwrap_err().to_string();
+
+        assert!(err.contains("failed to resolve input"), "{err}");
+        assert!(err.contains("outside.typ"), "{err}");
+    }
+
+    #[test]
     fn artifact_refs_are_root_relative_with_slashes() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(".calepin/paper/figures/fig.svg");
         assert_eq!(
-            artifact_reference(dir.path(), &path),
+            artifact_reference(dir.path(), &path).unwrap(),
             "/.calepin/paper/figures/fig.svg"
         );
+    }
+
+    #[test]
+    fn artifact_reference_rejects_paths_outside_root() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let path = outside.path().join("fig.svg");
+
+        let err = artifact_reference(root.path(), &path)
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("is not under root"), "{err}");
+        assert!(err.contains("fig.svg"), "{err}");
     }
 
     #[test]
@@ -140,6 +243,22 @@ mod tests {
         assert_eq!(
             project_relative_path(dir.path(), &path),
             ".calepin/paper/results.json"
+        );
+    }
+
+    #[test]
+    fn project_relative_path_normalizes_outside_backslash_paths() {
+        assert_eq!(
+            project_relative_path(Path::new("/project"), Path::new(r"C:\project\paper.typ")),
+            "C:/project/paper.typ"
+        );
+    }
+
+    #[test]
+    fn project_relative_path_preserves_single_root_for_absolute_fallback() {
+        assert_eq!(
+            project_relative_path(Path::new("/project"), Path::new("/tmp/paper.typ")),
+            "/tmp/paper.typ"
         );
     }
 }

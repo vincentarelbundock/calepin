@@ -213,8 +213,8 @@ fn typst_subcommand_args(
     output: &ResolvedOutput,
     typst_args: &[String],
     inputs: ReservedInputs<'_>,
-) -> Vec<OsString> {
-    let results_input = artifact_reference(&layout.root, &layout.results_path);
+) -> Result<Vec<OsString>> {
+    let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let mut args = vec![
         subcommand.into(),
         "--root".into(),
@@ -232,7 +232,7 @@ fn typst_subcommand_args(
         &layout
             .root
             .join(crate::typst::preprocess::image_meta_relative_path(layout)),
-    );
+    )?;
     push_input(&mut args, INPUT_IMAGE_META, image_meta);
 
     if let Some(format) = output.format {
@@ -255,7 +255,7 @@ fn typst_subcommand_args(
     args.push(layout.render_input.as_os_str().into());
     args.push(output.arg_path.as_os_str().into());
     args.extend(typst_args.iter().map(|arg| OsString::from(arg.as_str())));
-    args
+    Ok(args)
 }
 
 #[cfg(test)]
@@ -267,7 +267,7 @@ pub(crate) fn typst_compile_args(
     inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
     let output = resolve_render_output(layout, output, format);
-    typst_subcommand_args("compile", layout, &output, typst_args, inputs)
+    typst_subcommand_args("compile", layout, &output, typst_args, inputs).unwrap()
 }
 
 pub(crate) fn typst_watch_args(
@@ -276,7 +276,7 @@ pub(crate) fn typst_watch_args(
     format: Option<OutputFormat>,
     typst_args: &[String],
     inputs: ReservedInputs<'_>,
-) -> Vec<OsString> {
+) -> Result<Vec<OsString>> {
     let output = resolve_render_output(layout, output, format);
     typst_subcommand_args("watch", layout, &output, typst_args, inputs)
 }
@@ -440,7 +440,7 @@ pub fn compile_with_typst(
             pages: options.pages_input,
             current_href: options.current_href_input,
         },
-    );
+    )?;
     assert_supported_typst(typst)?;
     let progress = Progress::spinner(
         format!(
@@ -739,7 +739,8 @@ mod tests {
             Some(OutputFormat::Pdf),
             &[],
             ReservedInputs::default(),
-        );
+        )
+        .unwrap();
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
@@ -769,7 +770,8 @@ mod tests {
             None,
             &[],
             ReservedInputs::default(),
-        );
+        )
+        .unwrap();
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
@@ -795,7 +797,8 @@ mod tests {
             Some(OutputFormat::Pdf),
             &[],
             ReservedInputs::default(),
-        );
+        )
+        .unwrap();
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
@@ -820,7 +823,8 @@ mod tests {
                 asset_base: Some("http://127.0.0.1:3002"),
                 ..ReservedInputs::default()
             },
-        );
+        )
+        .unwrap();
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())

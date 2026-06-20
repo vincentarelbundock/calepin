@@ -180,7 +180,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
             asset_base: asset_server.as_ref().map(|server| server.base_url()),
             ..ReservedInputs::default()
         },
-    );
+    )?;
 
     assert_supported_typst(&initial.executables.typst)?;
     process::validate_executable(

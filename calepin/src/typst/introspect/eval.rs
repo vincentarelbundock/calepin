@@ -87,7 +87,7 @@ fn preprocess_metadata_for_target(
 }
 
 pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String, usize>> {
-    let results_input = super::results_input(layout);
+    let results_input = super::results_input(layout)?;
     let output = commands::typst_eval(
         typst,
         layout,

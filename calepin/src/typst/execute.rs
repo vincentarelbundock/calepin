@@ -77,7 +77,7 @@ impl EnginePool {
         &mut self,
         chunk: &ChunkSpec,
         figures_dir: &Path,
-        artifact_path: impl Fn(&Path) -> String,
+        artifact_path: impl Fn(&Path) -> Result<String>,
     ) -> Result<ChunkResultDocument> {
         if !chunk.exec_options.eval {
             return Ok(chunk_result_document(
@@ -274,7 +274,7 @@ fn normalize_engine_results(
     figures_dir: &Path,
     figure: &FigureSpec,
     engine_results: Vec<EngineResult>,
-    artifact_path: impl Fn(&Path) -> String,
+    artifact_path: impl Fn(&Path) -> Result<String>,
 ) -> Result<Vec<ResultItem>> {
     ResultNormalizer {
         chunk,
@@ -290,7 +290,7 @@ fn normalize_engine_results(
 
 struct ResultNormalizer<'a, F>
 where
-    F: Fn(&Path) -> String,
+    F: Fn(&Path) -> Result<String>,
 {
     chunk: &'a ChunkSpec,
     figures_dir: &'a Path,
@@ -303,7 +303,7 @@ where
 
 impl<'a, F> ResultNormalizer<'a, F>
 where
-    F: Fn(&Path) -> String,
+    F: Fn(&Path) -> Result<String>,
 {
     fn normalize(mut self, engine_results: Vec<EngineResult>) -> Result<Vec<ResultItem>> {
         for result in engine_results {
@@ -350,7 +350,7 @@ where
         let artifact = self.figures_dir.join(filename);
         write_if_changed(&artifact, text)
             .with_context(|| format!("failed to write Typst result {}", artifact.display()))?;
-        Ok(json!({ "path": (self.artifact_path)(&artifact) }))
+        Ok(json!({ "path": (self.artifact_path)(&artifact)? }))
     }
 
     fn push_plot(&mut self, path: PathBuf) -> Result<()> {
@@ -371,7 +371,7 @@ where
         self.items.push(ResultItem::rich_data(
             ResultItemType::Display,
             self.figure.mime_type().to_string(),
-            json!({ "path": (self.artifact_path)(&artifact) }),
+            json!({ "path": (self.artifact_path)(&artifact)? }),
         ));
         Ok(())
     }
@@ -482,6 +482,14 @@ mod tests {
         FigureSpec::from_exec_options(&chunk.engine, &chunk.exec_options).unwrap()
     }
 
+    fn unused_artifact_path(_: &Path) -> Result<String> {
+        Ok("unused".to_string())
+    }
+
+    fn artifact_file_name(path: &Path) -> Result<String> {
+        Ok(path.file_name().unwrap().to_string_lossy().to_string())
+    }
+
     #[test]
     fn normalizes_verbatim_output_and_diagnostics() {
         let dir = tempfile::tempdir().unwrap();
@@ -497,7 +505,7 @@ mod tests {
                 EngineResult::Warning("careful".to_string()),
                 EngineResult::Message("note".to_string()),
             ],
-            |_| "unused".to_string(),
+            unused_artifact_path,
         )
         .unwrap();
         assert_eq!(items.len(), 3);
@@ -517,7 +525,7 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Output("#table()[x]".to_string())],
-            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+            artifact_file_name,
         )
         .unwrap();
 
@@ -539,7 +547,7 @@ mod tests {
                 EngineResult::Output("#table()[first]".to_string()),
                 EngineResult::Output("#table()[second]".to_string()),
             ],
-            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+            artifact_file_name,
         )
         .unwrap();
 
@@ -569,7 +577,7 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Output("visible to runtime".to_string())],
-            |_| "unused".to_string(),
+            unused_artifact_path,
         )
         .unwrap();
         assert_eq!(items[0].item_type, ResultItemType::Stream);
@@ -588,7 +596,7 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Plot(source)],
-            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+            artifact_file_name,
         )
         .unwrap();
         let data = items[0].data.as_ref().unwrap();
@@ -610,7 +618,7 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Plot(first), EngineResult::Plot(second)],
-            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+            artifact_file_name,
         )
         .unwrap();
 
@@ -642,7 +650,7 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Plot(first), EngineResult::Plot(second)],
-            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+            artifact_file_name,
         )
         .unwrap();
 
@@ -675,7 +683,7 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Plot(source)],
-            |_| "unused".to_string(),
+            unused_artifact_path,
         )
         .unwrap_err()
         .to_string();
@@ -697,7 +705,7 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Plot(source)],
-            |_| "unused".to_string(),
+            unused_artifact_path,
         )
         .unwrap_err()
         .to_string();
@@ -725,7 +733,7 @@ mod tests {
             &dir.path().join("."),
             &figure,
             vec![EngineResult::Plot(source)],
-            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+            artifact_file_name,
         )
         .unwrap();
 
@@ -751,7 +759,7 @@ mod tests {
             dir.path(),
             &figure,
             vec![EngineResult::Plot(missing)],
-            |_| "unused".to_string(),
+            unused_artifact_path,
         )
         .unwrap_err()
         .to_string();
@@ -818,7 +826,7 @@ mod tests {
         octave_chunk.engine = EngineName::Jupyter("octave".to_string());
         octave_chunk.label = "octave-test".to_string();
         octave_chunk.code = "disp(42)".to_string();
-        let result = pool.execute_chunk(&octave_chunk, dir.path(), |_| "unused".to_string());
+        let result = pool.execute_chunk(&octave_chunk, dir.path(), unused_artifact_path);
         let err = result.unwrap_err().to_string();
         assert!(
             err.contains("failed to start Jupyter bridge")
@@ -843,7 +851,7 @@ mod tests {
         chunk.label = "params-chunk".to_string();
         chunk.code = code.to_string();
         let result = pool
-            .execute_chunk(&chunk, dir, |_| "unused".to_string())
+            .execute_chunk(&chunk, dir, unused_artifact_path)
             .unwrap();
         result
             .items
@@ -921,7 +929,7 @@ mod tests {
         chunk.label = "no-params".to_string();
         chunk.code = "print(params)".to_string();
         let err = pool
-            .execute_chunk(&chunk, dir.path(), |_| "unused".to_string())
+            .execute_chunk(&chunk, dir.path(), unused_artifact_path)
             .unwrap_err()
             .to_string();
         assert!(err.contains("NameError") || err.contains("params"), "{err}");

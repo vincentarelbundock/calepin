@@ -5,6 +5,7 @@ use crate::typst::model::{
     DEFAULT_FIG_DEVICE_ASPECT, DEFAULT_FIG_DEVICE_DPI, DEFAULT_FIG_DEVICE_FORMAT,
     DEFAULT_FIG_DEVICE_HEIGHT, DEFAULT_FIG_DEVICE_WIDTH,
 };
+use crate::typst::paths::CALEPIN_DIR;
 
 pub fn exec_options() -> ExecOptions {
     ExecOptions {
@@ -54,14 +55,15 @@ pub fn chunk(label: &str, code: &str, results: ResultsMode) -> ChunkSpec {
 }
 
 pub fn layout(root: &Path) -> LayoutPaths {
+    let artifact_dir = root.join(CALEPIN_DIR).join("paper");
     LayoutPaths {
         root: root.to_path_buf(),
         input: root.join("paper.typ"),
         input_rel: PathBuf::from("paper.typ"),
         render_input: PathBuf::from("paper.typ"),
         work_dir: root.to_path_buf(),
-        artifact_dir: root.join(".calepin/paper"),
-        results_path: root.join(".calepin/paper/results.json"),
-        figures_dir: root.join(".calepin/paper/figures"),
+        results_path: artifact_dir.join("results.json"),
+        figures_dir: artifact_dir.join("figures"),
+        artifact_dir,
     }
 }

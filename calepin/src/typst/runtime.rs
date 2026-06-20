@@ -4,6 +4,7 @@ use std::path::{Component, Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 
 use crate::typst::io::write_if_changed;
+use crate::typst::paths::CALEPIN_DIR;
 
 const RUNTIME_DIR: &str = "runtime";
 const GENERATED_SYNTAX_THEME_FILE: &str = "00_syntax-theme.typ";
@@ -79,7 +80,7 @@ pub(crate) fn write_runtime_with_syntax_theme(
     root: &Path,
     syntax_theme: &crate::html::HtmlSyntaxTheme,
 ) -> Result<PathBuf> {
-    let calepin_dir = root.join(".calepin");
+    let calepin_dir = root.join(CALEPIN_DIR);
     let runtime_dir = calepin_dir.join(RUNTIME_DIR);
     fs::create_dir_all(&runtime_dir)
         .with_context(|| format!("failed to create {}", runtime_dir.display()))?;

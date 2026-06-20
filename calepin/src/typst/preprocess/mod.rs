@@ -130,7 +130,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     // checks so paged/query passes never evaluate `html.*` calls.
     let query_source = write_query_source(&layout, &staged_input)?;
     let query_input = write_render_wrapper(&layout, &query_source, &[], None)?;
-    let results_input = artifact_reference(&layout.root, &layout.results_path);
+    let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let metadata = preprocess_metadata(
         &config.executables.typst,
         &layout,
@@ -437,7 +437,7 @@ fn execution_artifact_reference(
     execution_figures_dir: &Path,
     final_figures_dir: &Path,
     path: &Path,
-) -> String {
+) -> Result<String> {
     let final_path = path
         .strip_prefix(execution_figures_dir)
         .map(|relative| final_figures_dir.join(relative))
@@ -845,7 +845,8 @@ mod tests {
                 staged.path(),
                 &final_figures_dir,
                 &staged_artifact,
-            ),
+            )
+            .unwrap(),
             "/.calepin/paper/figures/answer.svg"
         );
     }
