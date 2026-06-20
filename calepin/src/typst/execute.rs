@@ -8,10 +8,15 @@ use crate::engines::{
     self, jupyter::JupyterBridgeSession, python::PythonSession, r::RSession, EngineContext,
     EngineResult,
 };
+use crate::typst::io::write_if_changed;
 use crate::typst::model::{
     ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec, MimeData,
     ResultItem, ResultItemName, ResultItemType, ResultsMode,
 };
+
+const PRELUDE_FIG_WIDTH: f64 = 6.0;
+const PRELUDE_FIG_HEIGHT: f64 = 3.708;
+const PRELUDE_FIG_DPI: f64 = 150.0;
 
 #[derive(Debug, Clone)]
 pub struct ExecutionConfig {
@@ -28,6 +33,10 @@ pub struct ExecutionConfig {
 impl ExecutionConfig {
     fn params_object(&self) -> Option<&serde_json::Map<String, Value>> {
         self.params.as_object().filter(|map| !map.is_empty())
+    }
+
+    fn has_params(&self) -> bool {
+        self.params_object().is_some()
     }
 }
 
@@ -72,14 +81,11 @@ impl EnginePool {
         artifact_path: impl Fn(&Path) -> String,
     ) -> Result<ChunkResultDocument> {
         if !chunk.exec_options.eval {
-            return Ok(ChunkResultDocument {
-                label: chunk.label.clone(),
-                engine: chunk.engine.clone(),
-                status: ChunkStatus::Skipped,
-                display_options: chunk.display_options.clone(),
-                items: Vec::new(),
-                crossref_labels: chunk.crossref_labels.clone(),
-            });
+            return Ok(chunk_result_document(
+                chunk,
+                ChunkStatus::Skipped,
+                Vec::new(),
+            ));
         }
 
         let engine = chunk.engine.clone();
@@ -93,9 +99,12 @@ impl EnginePool {
                 &fig_path,
                 &source,
                 &self.config.executables,
-            )?
+            )
+            .map_err(|err| anyhow!("{}: {err}", execution_context(chunk)))?
         } else {
-            let mut ctx = self.context_for(engine.clone())?;
+            let mut ctx = self
+                .context_for(engine.clone())
+                .map_err(|err| anyhow!("{}: {err}", execution_context(chunk)))?;
             engines::execute_chunk(
                 &source,
                 engine.clone(),
@@ -103,10 +112,17 @@ impl EnginePool {
                 figures_dir,
                 &figure,
                 &mut ctx,
-            )?
+            )
+            .map_err(|err| anyhow!("{}: {err}", execution_context(chunk)))?
         };
         let items =
-            normalize_engine_results(chunk, figures_dir, &figure, engine_results, artifact_path)?;
+            normalize_engine_results(chunk, figures_dir, &figure, engine_results, artifact_path)
+                .map_err(|err| {
+                    anyhow!(
+                        "failed to normalize results for chunk `{}`: {err}",
+                        chunk.label
+                    )
+                })?;
         let has_error = items
             .iter()
             .any(|item| item.item_type == ResultItemType::Error);
@@ -118,18 +134,15 @@ impl EnginePool {
                 .unwrap_or("execution failed");
             return Err(anyhow!("chunk `{}` failed: {}", chunk.label, message));
         }
-        Ok(ChunkResultDocument {
-            label: chunk.label.clone(),
-            engine,
-            status: if has_error {
+        Ok(chunk_result_document(
+            chunk,
+            if has_error {
                 ChunkStatus::Error
             } else {
                 ChunkStatus::Ok
             },
-            display_options: chunk.display_options.clone(),
             items,
-            crossref_labels: chunk.crossref_labels.clone(),
-        })
+        ))
     }
 
     fn ensure_r_session(&mut self) -> Result<()> {
@@ -140,10 +153,8 @@ impl EnginePool {
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?;
-            if self.config.params_object().is_some() {
-                let code = engines::prelude::r_prelude("params", &self.config.params);
-                let raw = session.capture(&code, "", "svg", 6.0, 3.708, 150.0)?;
-                check_prelude_output(&raw, "R")?;
+            if self.config.has_params() {
+                inject_r_params(&mut session, &self.config.params)?;
             }
             self.r = Some(session);
         }
@@ -157,10 +168,8 @@ impl EnginePool {
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?;
-            if self.config.params_object().is_some() {
-                let code = engines::prelude::python_prelude("params", &self.config.params);
-                let raw = session.capture(&code, "", 6.0, 3.708, 150.0)?;
-                check_prelude_output(&raw, "Python")?;
+            if self.config.has_params() {
+                inject_python_params(&mut session, &self.config.params)?;
             }
             self.python = Some(session);
         }
@@ -200,6 +209,53 @@ impl EnginePool {
     }
 }
 
+fn execution_context(chunk: &ChunkSpec) -> String {
+    format!(
+        "failed to execute chunk `{}` with engine `{}`",
+        chunk.label, chunk.engine
+    )
+}
+
+fn inject_r_params(session: &mut RSession, params: &Value) -> Result<()> {
+    let code = engines::prelude::r_prelude("params", params);
+    let raw = session.capture(
+        &code,
+        "",
+        "svg",
+        PRELUDE_FIG_WIDTH,
+        PRELUDE_FIG_HEIGHT,
+        PRELUDE_FIG_DPI,
+    )?;
+    check_prelude_output(&raw, "R")
+}
+
+fn inject_python_params(session: &mut PythonSession, params: &Value) -> Result<()> {
+    let code = engines::prelude::python_prelude("params", params);
+    let raw = session.capture(
+        &code,
+        "",
+        PRELUDE_FIG_WIDTH,
+        PRELUDE_FIG_HEIGHT,
+        PRELUDE_FIG_DPI,
+    )?;
+    check_prelude_output(&raw, "Python")
+}
+
+fn chunk_result_document(
+    chunk: &ChunkSpec,
+    status: ChunkStatus,
+    items: Vec<ResultItem>,
+) -> ChunkResultDocument {
+    ChunkResultDocument {
+        label: chunk.label.clone(),
+        engine: chunk.engine.clone(),
+        status,
+        display_options: chunk.display_options.clone(),
+        items,
+        crossref_labels: chunk.crossref_labels.clone(),
+    }
+}
+
 pub fn normalize_engine_results(
     chunk: &ChunkSpec,
     figures_dir: &Path,
@@ -209,6 +265,7 @@ pub fn normalize_engine_results(
 ) -> Result<Vec<ResultItem>> {
     let mut items = Vec::new();
     let mut typst_result_index = 1usize;
+    let mut plot_index = 1usize;
     let mut write_typst_result = |text: String| -> Result<Value> {
         let filename = if typst_result_index == 1 {
             format!("{}.typ", chunk.label)
@@ -217,10 +274,8 @@ pub fn normalize_engine_results(
         };
         typst_result_index += 1;
         let artifact = figures_dir.join(filename);
-        if let Some(parent) = artifact.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        std::fs::write(&artifact, text)?;
+        write_if_changed(&artifact, text)
+            .with_context(|| format!("failed to write Typst result {}", artifact.display()))?;
         Ok(json!({ "path": artifact_path(&artifact) }))
     };
     for result in engine_results {
@@ -246,8 +301,15 @@ pub fn normalize_engine_results(
             }
             EngineResult::Error(text) => items.push(error_item(text)),
             EngineResult::Plot(path) => {
-                let artifact = normalize_plot_path(&chunk.label, figures_dir, figure, &path)
-                    .context("failed to normalize plot artifact path")?;
+                let artifact =
+                    normalize_plot_path(&chunk.label, figures_dir, figure, &path, plot_index)
+                        .map_err(|err| {
+                            anyhow!(
+                                "failed to normalize plot artifact path for chunk `{}`: {err}",
+                                chunk.label
+                            )
+                        })?;
+                plot_index += 1;
                 items.push(rich_text_item(
                     ResultItemType::Display,
                     figure.mime_type().to_string(),
@@ -264,38 +326,64 @@ fn normalize_plot_path(
     figures_dir: &Path,
     figure: &FigureSpec,
     path: &Path,
+    index: usize,
 ) -> Result<PathBuf> {
-    let target = figures_dir.join(normalized_plot_filename(label, figure, path));
+    let target = figures_dir.join(plot_artifact_filename(label, figure, index));
     if !path.exists() {
         return Err(anyhow!("plot artifact `{}` does not exist", path.display()));
     }
+    validate_plot_artifact_format(path, figure, label)?;
     if path == target {
         return Ok(target);
     }
     if let Some(parent) = target.parent() {
-        std::fs::create_dir_all(parent)?;
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
     }
-    std::fs::copy(path, &target)?;
-    let _ = std::fs::remove_file(path);
+    std::fs::copy(path, &target).with_context(|| {
+        format!(
+            "failed to copy plot artifact `{}` to `{}`",
+            path.display(),
+            target.display()
+        )
+    })?;
+    std::fs::remove_file(path)
+        .with_context(|| format!("failed to remove source plot artifact `{}`", path.display()))?;
     Ok(target)
 }
 
-fn normalized_plot_filename(label: &str, figure: &FigureSpec, path: &Path) -> String {
-    let extension = figure.extension();
-    let Some(stem) = path.file_stem().and_then(|value| value.to_str()) else {
-        return figure.artifact_filename(label);
-    };
-    let Some(suffix) = stem.strip_prefix(&format!("{label}-")) else {
-        return figure.artifact_filename(label);
-    };
-    let Ok(index) = suffix.parse::<usize>() else {
-        return figure.artifact_filename(label);
-    };
+fn plot_artifact_filename(label: &str, figure: &FigureSpec, index: usize) -> String {
     if index <= 1 {
         figure.artifact_filename(label)
     } else {
-        format!("{label}-{index}.{extension}")
+        format!("{label}-{index}.{}", figure.extension())
     }
+}
+
+fn validate_plot_artifact_format(path: &Path, figure: &FigureSpec, label: &str) -> Result<()> {
+    let Some(actual) = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.to_ascii_lowercase())
+    else {
+        return Ok(());
+    };
+    if plot_extensions_match(&actual, figure.extension()) {
+        return Ok(());
+    }
+    Err(anyhow!(
+        "plot artifact format mismatch for chunk `{label}`: expected .{}, got .{} from `{}`",
+        figure.extension(),
+        actual,
+        path.display()
+    ))
+}
+
+fn plot_extensions_match(actual: &str, expected: &str) -> bool {
+    if actual == expected {
+        return true;
+    }
+    matches!((actual, expected), ("jpeg", "jpg") | ("jpg", "jpeg"))
 }
 
 fn stream_item(name: ResultItemName, text: String) -> ResultItem {
@@ -469,6 +557,63 @@ mod tests {
     }
 
     #[test]
+    fn normalizes_arbitrary_plot_names_by_result_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let first = dir.path().join("plot-alpha.svg");
+        let second = dir.path().join("plot-beta.svg");
+        std::fs::write(&first, "<svg id=\"first\"></svg>").unwrap();
+        std::fs::write(&second, "<svg id=\"second\"></svg>").unwrap();
+        let chunk = chunk(ResultsMode::Verbatim);
+        let figure = figure_for(&chunk);
+
+        let items = normalize_engine_results(
+            &chunk,
+            dir.path(),
+            &figure,
+            vec![EngineResult::Plot(first), EngineResult::Plot(second)],
+            |path| path.file_name().unwrap().to_string_lossy().to_string(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            items[0].data.as_ref().unwrap()["image/svg+xml"]["path"],
+            "fig-demo.svg"
+        );
+        assert_eq!(
+            items[1].data.as_ref().unwrap()["image/svg+xml"]["path"],
+            "fig-demo-2.svg"
+        );
+        assert!(std::fs::read_to_string(dir.path().join("fig-demo.svg"))
+            .unwrap()
+            .contains("first"));
+        assert!(std::fs::read_to_string(dir.path().join("fig-demo-2.svg"))
+            .unwrap()
+            .contains("second"));
+    }
+
+    #[test]
+    fn rejects_plot_artifacts_with_mismatched_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("fig-demo-1.png");
+        std::fs::write(&source, "png bytes").unwrap();
+        let chunk = chunk(ResultsMode::Verbatim);
+        let figure = figure_for(&chunk);
+
+        let err = normalize_engine_results(
+            &chunk,
+            dir.path(),
+            &figure,
+            vec![EngineResult::Plot(source)],
+            |_| "unused".to_string(),
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("plot artifact format"), "{err}");
+        assert!(err.contains("fig-demo"), "{err}");
+    }
+
+    #[test]
     fn missing_plot_artifact_returns_error() {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("fig-demo-1.svg");
@@ -486,6 +631,7 @@ mod tests {
         .to_string();
 
         assert!(err.contains("plot artifact"), "{err}");
+        assert!(err.contains("fig-demo"), "{err}");
     }
 
     #[test]
