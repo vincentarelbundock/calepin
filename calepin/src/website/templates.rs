@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::utils::static_files::collect_files_by;
 use crate::utils::template::no_autoescape_env;
 
-use super::paths::slash_path;
+use super::paths::{relative_or_self, slash_path};
 use super::url::absolute_site_url;
 use super::util::xml_escape;
 use super::{
@@ -97,7 +97,7 @@ pub(super) fn read_template_files(dir: &Path) -> Result<Vec<(String, String)>> {
 
     let mut files = Vec::with_capacity(paths.len());
     for path in paths {
-        let rel = path.strip_prefix(dir).unwrap_or(&path);
+        let rel = relative_or_self(dir, &path);
         let name = slash_path(rel);
         let contents = fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;

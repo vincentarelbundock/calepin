@@ -7,7 +7,7 @@ use anyhow::{bail, Context, Result};
 use crate::typst::io::ensure_parent;
 
 use super::pagefind::PAGEFIND_DIR;
-use super::paths::{output_path_for_source_file, rel_posix};
+use super::paths::{output_path_for_source_file, rel_posix, relative_or_self};
 use super::{PageInfoMap, PagefindManifest, WebsiteManifest, SKIP_DIRS};
 
 pub(super) const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
@@ -98,7 +98,7 @@ fn remove_unexpected_rendered_outputs_in(
     for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
         let entry = entry?;
         let path = entry.path();
-        let rel = path.strip_prefix(root).unwrap_or(&path);
+        let rel = relative_or_self(root, &path);
         let Some(first) = rel.components().next() else {
             continue;
         };

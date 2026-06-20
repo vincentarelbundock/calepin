@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
 
@@ -13,7 +13,10 @@ use super::config::{MenuItemConfig, PagesConfig, SidebarConfig, StaticConfig};
 use super::icons::{accessible_nav_label, nav_label_html, IconCache};
 use super::language::LanguageInfo;
 use super::metadata::{PageMeta, PageMetaMap};
-use super::paths::{normalize_path, rel_posix, slash_path, wildcard_match};
+use super::paths::{
+    join_normalized_under_root, normalize_path, rel_posix, relative_or_self, slash_path,
+    wildcard_match,
+};
 use super::url::{is_safe_output_route, page_relative_url};
 use super::util::clean_optional_string;
 use super::{PageInfo, PageInfoMap, FALLBACK_PAGE, INDEX_PAGE, PAGES_INDEX_FILE};
@@ -711,7 +714,7 @@ fn page_relative_source_path(
     let root = language
         .map(|language| language.content_dir.as_path())
         .unwrap_or(src_dir);
-    path.strip_prefix(root).unwrap_or(path).to_path_buf()
+    relative_or_self(root, path).to_path_buf()
 }
 
 fn page_output_href(
@@ -995,19 +998,8 @@ fn resolve_source_relative_path(
     field: &str,
 ) -> Result<PathBuf> {
     let path = Path::new(value);
-    if path.as_os_str().is_empty()
-        || path.is_absolute()
-        || path
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_) | Component::CurDir))
-    {
-        bail!("{context} {field} must stay inside the source directory: {value}");
-    }
-    let root = normalize_path(src_dir);
-    let candidate = normalize_path(&src_dir.join(path));
-    if !candidate.starts_with(&root) {
-        bail!("{context} {field} must stay inside the source directory: {value}");
-    }
+    let what = format!("{context} {field} must stay inside the source directory: {value}");
+    let candidate = join_normalized_under_root(src_dir, path, &what)?;
     Ok(candidate)
 }
 

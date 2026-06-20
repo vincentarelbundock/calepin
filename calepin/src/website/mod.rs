@@ -78,7 +78,7 @@ use pagefind::{
 };
 #[cfg(test)]
 use paths::wildcard_match;
-use paths::{rel_posix, slash_path};
+use paths::{rel_posix, relative_or_self, slash_path};
 use preprocess::{preprocess_documents, WebsitePreprocessOptions};
 #[cfg(test)]
 use render::page_asset_decision;
@@ -692,7 +692,7 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     if !path.starts_with(&initial.src_dir) {
         return false;
     }
-    let rel = path.strip_prefix(&initial.src_dir).unwrap_or(path);
+    let rel = relative_or_self(&initial.src_dir, path);
     if rel.components().next().is_none() {
         return false;
     }

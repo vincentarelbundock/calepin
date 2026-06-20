@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Result};
 
 use super::config::{LanguageConfig, WebsiteConfig};
-use super::paths::normalize_path;
+use super::paths::join_normalized_under_root;
 use super::url::{clean_url_prefix, is_safe_output_route};
 use super::util::clean_optional_string;
 
@@ -161,21 +161,8 @@ fn language_content_dir(src_dir: &Path, code: &str, content_dir: PathBuf) -> Res
     if content_dir == Path::new(".") {
         return Ok(src_dir.to_path_buf());
     }
-    if content_dir.as_os_str().is_empty()
-        || content_dir.is_absolute()
-        || content_dir
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_) | Component::CurDir))
-    {
-        return Err(invalid_content_dir(code, &content_dir));
-    }
-
-    let src_dir = normalize_path(src_dir);
-    let content_dir = normalize_path(&src_dir.join(content_dir));
-    if !content_dir.starts_with(&src_dir) {
-        return Err(invalid_content_dir(code, &content_dir));
-    }
-    Ok(content_dir)
+    let what = invalid_content_dir(code, &content_dir).to_string();
+    join_normalized_under_root(src_dir, &content_dir, &what)
 }
 
 fn invalid_content_dir(code: &str, content_dir: &Path) -> anyhow::Error {

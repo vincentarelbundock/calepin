@@ -12,7 +12,28 @@ pub(super) fn rel_posix(src_dir: &Path, path: &Path) -> String {
 }
 
 pub(super) fn source_relative_path<'a>(src_dir: &Path, input_path: &'a Path) -> &'a Path {
-    input_path.strip_prefix(src_dir).unwrap_or(input_path)
+    relative_or_self(src_dir, input_path)
+}
+
+pub(super) fn relative_or_self<'a>(base: &Path, path: &'a Path) -> &'a Path {
+    path.strip_prefix(base).unwrap_or(path)
+}
+
+pub(super) fn join_normalized_under_root(root: &Path, value: &Path, what: &str) -> Result<PathBuf> {
+    let root = normalize_path(root);
+    if value.as_os_str().is_empty()
+        || value.is_absolute()
+        || value
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_) | Component::CurDir))
+    {
+        bail!("{what}: {}", value.display());
+    }
+    let candidate = normalize_path(&root.join(value));
+    if !candidate.starts_with(&root) {
+        bail!("{what}: {}", value.display());
+    }
+    Ok(candidate)
 }
 
 pub(super) fn output_path_for_source_file(

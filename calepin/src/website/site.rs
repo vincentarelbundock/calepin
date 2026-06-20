@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Result};
 
 use crate::html::{
     SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
@@ -11,7 +11,7 @@ use super::config::{SearchEngine, WebsiteConfig};
 use super::language::LanguageInfo;
 use super::navigation::{MenusModel, NavSectionModel};
 use super::pagefind::{PAGEFIND_CSS, PAGEFIND_DIR, PAGEFIND_JS};
-use super::paths::{normalize_path, slash_path};
+use super::paths::{join_normalized_under_root, normalize_path, slash_path};
 use super::url::{absolute_site_url, is_absolute_or_special_url, page_relative_url};
 use super::util::clean_optional_string;
 use super::{PageInfo, PageInfoMap, DEFAULT_FAVICON_PATH};
@@ -54,17 +54,12 @@ fn source_asset_output_path(
         return Ok(Some(value));
     }
     let path = Path::new(&value);
-    let absolute = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        src_dir.join(path)
-    };
-    let normalized = normalize_path(&absolute);
-    let src_dir = normalize_path(src_dir);
-    let rel = normalized.strip_prefix(&src_dir).with_context(|| {
-        format!("website `{key}` path must stay inside the source directory: {value}")
-    })?;
-    Ok(Some(slash_path(rel)))
+    let root = normalize_path(src_dir);
+    let what = format!("website `{key}` path must stay inside the source directory: {value}");
+    let candidate = join_normalized_under_root(&root, path, &what)?;
+    Ok(Some(slash_path(&candidate.strip_prefix(&root).map_err(
+        |_| anyhow!("website `{key}` path must stay inside the source directory: {value}"),
+    )?)))
 }
 
 #[derive(Debug)]
