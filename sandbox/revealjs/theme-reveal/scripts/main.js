@@ -115,7 +115,12 @@
       return false;
     }
 
-    const config = typeof window.__REVEALJS_OPTIONS === "object" ? window.__REVEALJS_OPTIONS : {};
+    const config =
+      typeof window.__REVEALJS_OPTIONS__ === "object"
+        ? window.__REVEALJS_OPTIONS__
+        : typeof window.__REVEALJS_OPTIONS === "object"
+          ? window.__REVEALJS_OPTIONS
+          : {};
     const options = {
       ...DEFAULT_REVEAL_OPTIONS,
       ...config,
