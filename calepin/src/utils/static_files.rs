@@ -350,6 +350,6 @@ mod tests {
         symlink(&actual_root, &link_root).unwrap();
         fs::write(actual_root.join("index.html"), "ok").unwrap();
 
-        assert!(resolve_existing_file(link_root, "/index.html", None).is_some());
+        assert!(resolve_existing_file(&link_root, "/index.html", None).is_some());
     }
 }
