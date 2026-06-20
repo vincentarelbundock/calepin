@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #calepin.setup(
+  theme: "./theme-reveal",
   echo: true,
   results: "render",
 )
@@ -21,9 +22,20 @@ This deck uses Touying-style headings: `=` starts a section, and `==` starts a s
 
 == Visual slide with images
 
-#figure(
-  image("../../images/flowers_01.jpg", width: 100%),
-  caption: [Local image from `sandbox/revealjs/images/`],
+#calepin.elements.columns(
+  columns: 2,
+  [
+    #figure(
+      image("../../images/flowers_01.jpg", width: 100%),
+      caption: [Left image: rose field],
+    )
+  ],
+  [
+    #figure(
+      image("../../images/flowers_02.jpg", width: 100%),
+      caption: [Right image: petals in daylight],
+    )
+  ],
 )
 
 = Computation
@@ -59,6 +71,9 @@ The source stays on this slide, while the result is shown in the next one.
 
 = Closing
 
-== Final slide
+== Oh yeah Final slide with a result image
 
-This slide confirms the local theme + config setup works in the sandbox folder.
+#figure(
+  image("../../images/flowers_03.jpg", width: 60%),
+  caption: [A closing visual, still fully compatible with the Reveal.js layout],
+)
