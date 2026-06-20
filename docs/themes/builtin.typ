@@ -45,6 +45,14 @@ language controls.
   max-width: 42em,
 )
 
+= `revealjs`
+
+`revealjs` is a presentation-oriented theme built on [Reveal.js](https://revealjs.com/).
+
+It wraps notebook and website HTML in a fullscreen slide deck container, auto-detects
+heading hierarchy for slide structure, and enables Reveal.js controls, hash navigation,
+and syntax highlighting.
+
 = `typst`
 
 `typst` disables the website and notebook themed wrappers and uses raw Typst

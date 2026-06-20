@@ -25,6 +25,13 @@ fn main() {
     source.push('\n');
     write_theme_files(
         &mut source,
+        "REVEALJS_FILES",
+        &manifest_dir,
+        "src/assets/themes/revealjs",
+    );
+    source.push('\n');
+    write_theme_files(
+        &mut source,
         "SHARED_FILES",
         &manifest_dir,
         "src/assets/themes/shared",

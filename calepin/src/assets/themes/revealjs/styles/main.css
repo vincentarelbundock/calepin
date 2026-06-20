@@ -1,0 +1,63 @@
+:root {
+  --revealjs-theme-background: #1c1c1c;
+  --revealjs-theme-text: #e8e8e8;
+  --revealjs-theme-accent: #4f9dff;
+}
+
+html,
+body,
+.revealjs-theme,
+.revealjs-theme .reveal {
+  width: 100%;
+  height: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--revealjs-theme-background);
+  color: var(--revealjs-theme-text);
+}
+
+.revealjs-theme .reveal {
+  font-size: 1.05rem;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slides > section {
+  padding: 1.2rem 1.4rem;
+  box-sizing: border-box;
+  min-height: 100%;
+}
+
+.reveal .slides section {
+  color: inherit;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.reveal a {
+  color: var(--revealjs-theme-accent);
+}
+
+.reveal pre,
+.reveal code {
+  text-wrap: pretty;
+}
+
+.reveal pre {
+  max-height: 78vh;
+  overflow: auto;
+  border-radius: 0.5rem;
+}

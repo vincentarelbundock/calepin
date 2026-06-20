@@ -1,0 +1,47 @@
+{{ doc.head }}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reset.css"
+/>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.css"
+/>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/theme/black.css"
+  id="theme"
+/>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/highlight/monokai.css"
+/>
+
+{{ doc.body_open }}
+  <div class="reveal revealjs-theme">
+    <div class="slides">
+      {{ doc.body }}
+    </div>
+  </div>
+
+  {% for style in styles %}
+  <style>
+{{ style.css }}
+  </style>
+  {% endfor %}
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/markdown/markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/highlight/highlight.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/notes/notes.js"></script>
+
+  {% for script in scripts %}
+  <script>
+{{ script.content }}
+  </script>
+  {% endfor %}
+{{ doc.body_close }}
