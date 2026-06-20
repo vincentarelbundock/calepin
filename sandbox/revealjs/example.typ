@@ -38,6 +38,18 @@ This deck uses Touying-style headings: `=` starts a section, and `==` starts a s
   ],
 )
 
+= Math
+
+== Typst math formulas
+
+A nice identity is Euler’s formula:
+
+$ e^(i*theta) = cos(theta) + i sin(theta) $
+
+And the quadratic formula:
+
+$ x = (-b \pm sqrt(b^2 - 4*a*c)) / (2*a) $
+
 = Computation
 
 == Compute and show output
