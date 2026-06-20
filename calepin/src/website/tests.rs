@@ -890,6 +890,96 @@ fn configured_languages_rejects_url_prefix_escaping_output_directory() {
 }
 
 #[test]
+fn configured_languages_rejects_content_dir_outside_source_directory() {
+    let src = Path::new("/site/docs");
+    for content_dir in [
+        PathBuf::from("../outside"),
+        std::env::current_dir().unwrap().join("outside"),
+    ] {
+        let config = WebsiteConfig {
+            default_language: Some("en".to_string()),
+            languages: BTreeMap::from([(
+                "en".to_string(),
+                LanguageConfig {
+                    content_dir: Some(content_dir),
+                    ..LanguageConfig::default()
+                },
+            )]),
+            ..WebsiteConfig::default()
+        };
+
+        let error = configured_languages(src, &config).unwrap_err();
+        let message = error.to_string();
+        assert!(message.contains("content_dir"));
+        assert!(message.contains("source directory"));
+    }
+}
+
+#[test]
+fn configured_languages_rejects_duplicate_url_prefixes_after_cleaning() {
+    let src = Path::new("/site/docs");
+    let config = WebsiteConfig {
+        default_language: Some("en".to_string()),
+        languages: BTreeMap::from([
+            ("en".to_string(), LanguageConfig::default()),
+            (
+                "fr".to_string(),
+                LanguageConfig {
+                    url_prefix: Some("/".to_string()),
+                    ..LanguageConfig::default()
+                },
+            ),
+        ]),
+        ..WebsiteConfig::default()
+    };
+
+    let error = configured_languages(src, &config).unwrap_err();
+    let message = error.to_string();
+    assert!(message.contains("url_prefix"));
+    assert!(message.contains("en"));
+    assert!(message.contains("fr"));
+}
+
+#[test]
+fn configured_languages_validates_language_codes_and_trims_default_language() {
+    let src = Path::new("/site/docs");
+    let invalid = WebsiteConfig {
+        default_language: Some(String::new()),
+        languages: BTreeMap::from([(String::new(), LanguageConfig::default())]),
+        ..WebsiteConfig::default()
+    };
+
+    let error = configured_languages(src, &invalid).unwrap_err();
+    assert!(error.to_string().contains("language code"));
+
+    let config = WebsiteConfig {
+        default_language: Some(" en ".to_string()),
+        languages: BTreeMap::from([
+            ("en".to_string(), LanguageConfig::default()),
+            ("fr".to_string(), LanguageConfig::default()),
+        ]),
+        ..WebsiteConfig::default()
+    };
+
+    let languages = configured_languages(src, &config).unwrap().unwrap();
+    assert!(languages[0].default);
+    assert_eq!(languages[0].code, "en");
+}
+
+#[test]
+fn language_config_rejects_unknown_fields() {
+    let error = try_website_config_from_toml(
+        r#"
+[languages.en]
+content-dir = "docs"
+"#,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("unknown field"));
+}
+
+#[test]
 fn discover_site_pages_does_not_treat_language_dirs_as_default_pages() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path();

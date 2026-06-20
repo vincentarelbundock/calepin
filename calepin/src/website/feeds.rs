@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::utils::template::no_autoescape_env;
 
 use super::site::SiteMetadata;
-use super::util::{absolute_site_url, clean_optional_string, is_safe_output_route, xml_escape};
+use super::url::{absolute_site_url, is_safe_output_route};
+use super::util::{clean_optional_string, xml_escape};
 use super::{templates::read_template_files, WebsiteConfig, ROBOTS_TEMPLATE_DIR};
 
 const DEFAULT_FEED_FILE: &str = "atom.xml";

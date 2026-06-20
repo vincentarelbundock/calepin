@@ -13,10 +13,8 @@ use crate::utils::html::escape as html_escape;
 
 use super::preprocess::run_parallel;
 use super::site::SiteModel;
-use super::{
-    page_relative_url, BuildContext, PAGES_INDEX_REF, SOURCE_DATA_ID, WEBSITE_ASSET_DIR,
-    WEBSITE_ASSET_STEM,
-};
+use super::url::page_relative_url;
+use super::{BuildContext, PAGES_INDEX_REF, SOURCE_DATA_ID, WEBSITE_ASSET_DIR, WEBSITE_ASSET_STEM};
 
 pub(super) fn render_documents(
     context: &BuildContext,

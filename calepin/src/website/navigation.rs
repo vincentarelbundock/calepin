@@ -13,10 +13,9 @@ use super::icons::{accessible_nav_label, nav_label_html, IconCache};
 use super::language::LanguageInfo;
 use super::metadata::{PageMeta, PageMetaMap};
 use super::paths::{normalize_path, rel_posix, slash_path, wildcard_match};
-use super::util::{clean_optional_string, is_absolute_or_special_url, is_safe_output_route};
-use super::{
-    page_relative_url, PageInfo, PageInfoMap, FALLBACK_PAGE, INDEX_PAGE, PAGES_INDEX_FILE,
-};
+use super::url::{is_absolute_or_special_url, is_safe_output_route, page_relative_url};
+use super::util::clean_optional_string;
+use super::{PageInfo, PageInfoMap, FALLBACK_PAGE, INDEX_PAGE, PAGES_INDEX_FILE};
 
 #[derive(Debug, Clone)]
 pub(super) struct NavSectionModel {

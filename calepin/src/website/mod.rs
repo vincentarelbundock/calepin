@@ -14,6 +14,7 @@ mod serve;
 mod site;
 mod svg;
 mod templates;
+mod url;
 mod util;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -90,7 +91,9 @@ use site::{SiteMetadata, SiteModel};
 #[cfg(test)]
 use svg::sanitize_icon_svg;
 use templates::{write_robots, write_sitemap};
-use util::{clean_optional_string, is_absolute_or_special_url};
+#[cfg(test)]
+use url::page_relative_url;
+use util::clean_optional_string;
 
 const DEFAULT_CONFIG: &str = "calepin.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
@@ -930,39 +933,6 @@ fn resolve_cli_path(current_dir: &Path, path: &Path) -> PathBuf {
         path.to_path_buf()
     } else {
         current_dir.join(path)
-    }
-}
-
-fn page_relative_url(current_href: &str, target: &str) -> String {
-    if is_absolute_or_special_url(target) {
-        return target.to_string();
-    }
-
-    let target = target.trim_start_matches("./");
-    let current_dir = current_href
-        .split('/')
-        .filter(|part| !part.is_empty())
-        .collect::<Vec<_>>();
-    let current_dir = current_dir
-        .get(..current_dir.len().saturating_sub(1))
-        .unwrap_or(&[]);
-    let target_parts = target
-        .split('/')
-        .filter(|part| !part.is_empty())
-        .collect::<Vec<_>>();
-    let common_len = current_dir
-        .iter()
-        .zip(target_parts.iter())
-        .take_while(|(left, right)| left == right)
-        .count();
-    let up_levels = current_dir.len().saturating_sub(common_len);
-    let remaining_target = target_parts.get(common_len..).unwrap_or(&[]).join("/");
-
-    match (up_levels, remaining_target.is_empty()) {
-        (0, false) => remaining_target,
-        (0, true) => target.to_string(),
-        (_, false) => format!("{}{}", "../".repeat(up_levels), remaining_target),
-        (_, true) => "../".repeat(up_levels).trim_end_matches('/').to_string(),
     }
 }
 

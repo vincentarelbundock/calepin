@@ -12,8 +12,9 @@ use super::language::LanguageInfo;
 use super::navigation::{MenusModel, NavSectionModel};
 use super::pagefind::{PAGEFIND_CSS, PAGEFIND_DIR, PAGEFIND_JS};
 use super::paths::{normalize_path, slash_path};
-use super::util::{absolute_site_url, clean_optional_string, is_absolute_or_special_url};
-use super::{page_relative_url, PageInfo, PageInfoMap, DEFAULT_FAVICON_PATH};
+use super::url::{absolute_site_url, is_absolute_or_special_url, page_relative_url};
+use super::util::clean_optional_string;
+use super::{PageInfo, PageInfoMap, DEFAULT_FAVICON_PATH};
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct SiteMetadata {

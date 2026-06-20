@@ -8,7 +8,8 @@ use serde::Serialize;
 use crate::utils::template::no_autoescape_env;
 
 use super::paths::slash_path;
-use super::util::{absolute_site_url, xml_escape};
+use super::url::absolute_site_url;
+use super::util::xml_escape;
 use super::{
     WebsiteConfig, DEFAULT_ROBOTS_TEMPLATE, ROBOTS_FILE, ROBOTS_TEMPLATE_DIR, ROBOTS_TEMPLATE_FILE,
 };
