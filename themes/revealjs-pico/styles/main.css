@@ -1,44 +1,40 @@
-/* Minimal, intentionally small styling for Reveal.js + calepin output */
+/* Quarto-inspired, low-opinion Reveal.js styling. */
 
 :root {
-  --revealjs-theme-background: #ffffff;
-  --revealjs-theme-text: #111827;
-  --revealjs-theme-text-muted: #4b5563;
-  --revealjs-theme-accent: #2563eb;
-}
-
-html,
-body,
-.revealjs-theme,
-.revealjs-theme .reveal {
-  width: 100%;
-  height: 100%;
+  --calepin-slide-bg: #ffffff;
+  --calepin-slide-text: #222222;
+  --calepin-slide-muted: #555555;
+  --calepin-slide-accent: #2a76dd;
+  --calepin-slide-border: #bbbbbb;
+  --calepin-slide-code-bg: #f8f9fa;
 }
 
 html,
 body {
   margin: 0;
-  background: var(--revealjs-theme-background);
-  color: var(--revealjs-theme-text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--calepin-slide-bg);
+  color: var(--calepin-slide-text);
 }
 
-.revealjs-theme .reveal {
-  font-size: 1rem;
+.reveal {
+  font-family: "Source Sans Pro", Helvetica, Arial, sans-serif;
+  font-size: 40px;
+  font-weight: 400;
+  color: var(--calepin-slide-text);
 }
 
 .reveal .slides {
   text-align: left;
 }
 
-.reveal .slides > section {
-  padding: 1rem 1.2rem;
-  box-sizing: border-box;
-  min-height: 100%;
+.reveal .slides section {
+  line-height: 1.3;
+  color: inherit;
 }
 
-.reveal .slides section {
-  color: inherit;
+.reveal .slides > section {
+  padding: 0 1.2rem;
+  box-sizing: border-box;
 }
 
 .reveal h1,
@@ -47,42 +43,107 @@ body {
 .reveal h4,
 .reveal h5,
 .reveal h6 {
-  margin: 0 0 0.5rem 0;
-  text-transform: none;
-  letter-spacing: normal;
-  color: var(--revealjs-theme-text);
+  margin: 0 0 12px 0;
+  color: var(--calepin-slide-text);
+  font-family: "Source Sans Pro", Helvetica, Arial, sans-serif;
   font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: normal;
+  text-transform: none;
+  text-shadow: none;
+}
+
+.reveal h1 { font-size: 2.5em; }
+.reveal h2 { font-size: 1.6em; }
+.reveal h3 { font-size: 1.3em; }
+.reveal h4 { font-size: 1em; }
+
+.reveal p,
+.reveal ul,
+.reveal ol,
+.reveal figure,
+.reveal pre,
+.reveal table {
+  margin: 12px 0;
 }
 
 .reveal p,
 .reveal li,
 .reveal td,
 .reveal figcaption {
-  color: var(--revealjs-theme-text-muted);
-  line-height: 1.45;
+  color: var(--calepin-slide-muted);
+}
+
+.reveal ul,
+.reveal ol {
+  display: block;
+  margin-left: 1.2em;
+}
+
+.reveal li {
+  margin: 0.2em 0 0.4em 0;
 }
 
 .reveal a {
-  color: var(--revealjs-theme-accent);
+  color: var(--calepin-slide-accent);
+  text-decoration: none;
 }
 
-.reveal pre,
+.reveal a:hover {
+  color: color-mix(in srgb, var(--calepin-slide-accent) 80%, white);
+}
+
 .reveal code {
-  text-wrap: pretty;
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.875em;
+  color: #4758ab;
 }
 
 .reveal pre {
-  max-height: 78vh;
+  display: block;
+  width: auto;
+  max-height: 500px;
   overflow: auto;
-  border-radius: 0.5rem;
-  background: #f9fafb;
-  color: #111827;
-  border: 1px solid #e5e7eb;
-  padding: 0.75rem;
+  border: 1px solid var(--calepin-slide-border);
+  border-radius: 4px;
+  background: var(--calepin-slide-code-bg);
+  box-shadow: none;
+  padding: 0.5em;
+}
+
+.reveal pre code {
+  display: block;
+  max-height: none;
+  padding: 0;
+  color: var(--calepin-slide-text);
+  font-size: 0.55em;
+  line-height: 1.3;
+  white-space: pre;
+}
+
+.reveal .cell-output pre {
+  background: #ffffff;
+}
+
+.reveal img,
+.reveal video,
+.reveal iframe {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.reveal figure img {
+  margin: 0 auto;
+}
+
+.reveal figcaption {
+  font-size: 0.45em;
+  text-align: center;
 }
 
 .reveal .slides .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 1em;
+  align-items: start;
 }
