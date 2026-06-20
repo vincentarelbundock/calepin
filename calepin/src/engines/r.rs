@@ -434,10 +434,6 @@ mod tests {
 
     use crate::utils::testutil::command_available;
 
-    fn has_rscript() -> bool {
-        command_available("Rscript")
-    }
-
     fn has_ggplot2() -> bool {
         Command::new("Rscript")
             .args(["-e", "suppressWarnings(library(ggplot2))"])
@@ -458,7 +454,7 @@ mod tests {
 
     #[test]
     fn r_session_reports_invalid_figure_device_without_exiting() {
-        if !has_rscript() {
+        if !command_available("Rscript") {
             return;
         }
 
@@ -488,7 +484,7 @@ mod tests {
 
     #[test]
     fn r_session_does_not_report_empty_pdf_as_plot() {
-        if !has_rscript() {
+        if !command_available("Rscript") {
             return;
         }
 
@@ -514,7 +510,7 @@ mod tests {
 
     #[test]
     fn r_session_uses_requested_raster_dpi() {
-        if !has_rscript() {
+        if !command_available("Rscript") {
             return;
         }
 
@@ -537,7 +533,7 @@ mod tests {
 
     #[test]
     fn r_session_reports_plot_before_later_text_output() {
-        if !has_rscript() {
+        if !command_available("Rscript") {
             return;
         }
 
@@ -565,7 +561,7 @@ summary(m)"#,
 
     #[test]
     fn r_session_captures_direct_stderr_as_message() {
-        if !has_rscript() {
+        if !command_available("Rscript") {
             return;
         }
 
@@ -590,7 +586,7 @@ summary(m)"#,
 
     #[test]
     fn r_session_accepts_equals_in_figure_path() {
-        if !has_rscript() {
+        if !command_available("Rscript") {
             return;
         }
 
@@ -609,7 +605,7 @@ summary(m)"#,
 
     #[test]
     fn r_session_captures_visible_ggplot_return_as_plot() {
-        if !has_rscript() || !has_ggplot2() {
+        if !command_available("Rscript") || !has_ggplot2() {
             return;
         }
 

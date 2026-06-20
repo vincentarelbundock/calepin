@@ -531,10 +531,6 @@ mod tests {
         );
     }
 
-    fn tool_available(cmd: &str) -> bool {
-        command_available(cmd)
-    }
-
     fn pool_with_params(dir: &Path, params: Value) -> EnginePool {
         EnginePool::new(ExecutionConfig {
             cwd: dir.to_path_buf(),
@@ -563,7 +559,7 @@ mod tests {
 
     #[test]
     fn r_engine_reads_injected_params() {
-        if !tool_available("Rscript") {
+        if !command_available("Rscript") {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
@@ -585,7 +581,7 @@ mod tests {
 
     #[test]
     fn r_params_with_quotes_do_not_break_injection() {
-        if !tool_available("Rscript") {
+        if !command_available("Rscript") {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
@@ -596,7 +592,7 @@ mod tests {
 
     #[test]
     fn python_engine_reads_injected_params() {
-        if !tool_available("python3") {
+        if !command_available("python3") {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
@@ -617,7 +613,7 @@ mod tests {
 
     #[test]
     fn empty_params_inject_nothing() {
-        if !tool_available("python3") {
+        if !command_available("python3") {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
