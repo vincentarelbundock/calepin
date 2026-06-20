@@ -18,7 +18,7 @@ body {
 
 .reveal {
   font-family: "Source Sans Pro", Helvetica, Arial, sans-serif;
-  font-size: 40px;
+  font-size: 28px;
   font-weight: 400;
   color: var(--calepin-slide-text);
 }
@@ -54,9 +54,9 @@ body {
   text-shadow: none;
 }
 
-.reveal h1 { font-size: 2.5em; }
-.reveal h2 { font-size: 1.6em; }
-.reveal h3 { font-size: 1.3em; }
+.reveal h1 { font-size: 2.1em; }
+.reveal h2 { font-size: 1.45em; }
+.reveal h3 { font-size: 1.15em; }
 .reveal h4 { font-size: 1em; }
 
 .reveal p,
