@@ -1,52 +1,21 @@
-use std::ffi::OsStr;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 
 use crate::typst::io::write_if_changed;
 
-const RUNTIME_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/assets/typst-runtime");
 const GENERATED_SYNTAX_THEME_FILE: &str = "runtime/00_syntax-theme.typ";
 
-fn runtime_source_files() -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    collect_runtime_files(Path::new(RUNTIME_DIR), &mut files)?;
-
-    files.sort_unstable_by_key(|path| {
-        path.strip_prefix(RUNTIME_DIR)
-            .unwrap_or(path)
-            .as_os_str()
-            .to_owned()
-    });
-
-    Ok(files)
+struct RuntimeFile {
+    path: &'static str,
+    source: &'static str,
 }
 
-fn collect_runtime_files(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let entry = entry.with_context(|| format!("failed to read {}", dir.display()))?;
-        let path = entry.path();
-        let file_type = entry
-            .file_type()
-            .with_context(|| format!("failed to stat {}", path.display()))?;
-        if file_type.is_dir() {
-            collect_runtime_files(&path, files)?;
-        } else if path.extension() == Some(OsStr::new("typ")) {
-            files.push(path);
-        }
-    }
-    Ok(())
-}
+include!(concat!(env!("OUT_DIR"), "/typst_runtime_assets.rs"));
 
-fn runtime_relative_path(path: &Path) -> PathBuf {
-    path.strip_prefix(RUNTIME_DIR)
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|_| {
-            path.file_name()
-                .map(PathBuf::from)
-                .unwrap_or_else(|| path.to_path_buf())
-        })
+fn runtime_source_files() -> &'static [RuntimeFile] {
+    RUNTIME_FILES
 }
 
 fn runtime_facade_source() -> Result<String> {
@@ -102,17 +71,43 @@ pub(crate) fn write_runtime_with_syntax_theme(
         syntax_theme.typst_runtime_source(),
     )?;
 
-    for source_path in runtime_source_files()? {
-        let rel = runtime_relative_path(&source_path);
-        let destination = runtime_dir.join(&rel);
-        let source = fs::read_to_string(&source_path)
-            .with_context(|| format!("failed to read {}", source_path.display()))?;
-        write_if_changed(&destination, source)?;
+    for source_file in runtime_source_files() {
+        let destination = runtime_dir.join(source_file.path);
+        write_if_changed(&destination, source_file.source)?;
     }
 
     let facade = calepin_dir.join("calepin.typ");
     write_if_changed(&facade, runtime_facade_source()?)?;
     Ok(facade)
+}
+
+#[cfg(test)]
+mod embedded_runtime_tests {
+    use super::*;
+
+    #[test]
+    fn runtime_source_files_are_embedded_relative_typ_files() {
+        let files = runtime_source_files();
+
+        assert!(!files.is_empty(), "expected embedded Typst runtime files");
+        for file in files {
+            let path = Path::new(file.path);
+            assert!(
+                path.is_relative(),
+                "runtime asset path should be relative: {}",
+                file.path
+            );
+            assert_eq!(
+                path.extension().and_then(|extension| extension.to_str()),
+                Some("typ")
+            );
+            assert!(
+                !file.source.is_empty(),
+                "runtime asset should have embedded source: {}",
+                file.path
+            );
+        }
+    }
 }
 
 #[cfg(test)]

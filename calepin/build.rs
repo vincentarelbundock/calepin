@@ -31,6 +31,16 @@ fn main() {
     );
 
     fs::write(output, source).unwrap();
+
+    let output = out_dir.join("typst_runtime_assets.rs");
+    let mut source = String::new();
+    write_typst_runtime_files(
+        &mut source,
+        "RUNTIME_FILES",
+        &manifest_dir,
+        "src/assets/typst-runtime",
+    );
+    fs::write(output, source).unwrap();
 }
 
 fn write_theme_files(source: &mut String, const_name: &str, manifest_dir: &Path, theme_dir: &str) {
@@ -103,4 +113,78 @@ fn is_theme_asset(path: &Path) -> bool {
             path.extension().and_then(|extension| extension.to_str()),
             Some("css" | "html" | "jinja" | "js" | "toml" | "typ")
         )
+}
+
+fn write_typst_runtime_files(
+    source: &mut String,
+    const_name: &str,
+    manifest_dir: &Path,
+    runtime_dir: &str,
+) {
+    let root = manifest_dir.join(runtime_dir);
+    println!("cargo:rerun-if-changed={}", root.display());
+
+    let mut files = Vec::new();
+    if !root.exists() {
+        source.push_str(&format!("static {const_name}: &[RuntimeFile] = &[];\n"));
+        return;
+    }
+
+    collect_typst_runtime_files(&root, &root, manifest_dir, &mut files);
+    files.sort_by(|left, right| left.0.cmp(&right.0));
+    files.dedup_by(|left, right| left.0 == right.0);
+
+    source.push_str(&format!("static {const_name}: &[RuntimeFile] = &[\n"));
+    for (path, source_path) in files {
+        let absolute_source_path = manifest_dir.join(&source_path);
+        println!("cargo:rerun-if-changed={}", absolute_source_path.display());
+        let content = fs::read_to_string(&absolute_source_path).unwrap();
+        let content_hash = {
+            let mut hasher = DefaultHasher::new();
+            content.hash(&mut hasher);
+            hasher.finish()
+        };
+        source.push_str("    RuntimeFile {\n");
+        source.push_str(&format!("        // content-hash: {content_hash:016x}\n"));
+        source.push_str(&format!("        path: {path:?},\n"));
+        source.push_str(&format!("        source: {content:?},\n"));
+        source.push_str("    },\n");
+    }
+    source.push_str("];\n");
+}
+
+fn collect_typst_runtime_files(
+    root: &Path,
+    dir: &Path,
+    manifest_dir: &Path,
+    files: &mut Vec<(String, String)>,
+) {
+    println!("cargo:rerun-if-changed={}", dir.display());
+
+    let mut entries = fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+    entries.sort();
+
+    for path in entries {
+        if path.is_dir() {
+            collect_typst_runtime_files(root, &path, manifest_dir, files);
+            continue;
+        }
+        if path.extension().and_then(|extension| extension.to_str()) != Some("typ") {
+            continue;
+        }
+        let relative = path
+            .strip_prefix(root)
+            .unwrap()
+            .to_string_lossy()
+            .replace('\\', "/");
+        let source_path = path
+            .strip_prefix(manifest_dir)
+            .unwrap()
+            .to_string_lossy()
+            .replace('\\', "/");
+        files.push((relative, source_path));
+    }
 }
