@@ -22,28 +22,20 @@ pub(super) fn pagefind_pages(
     typ_files: &[PathBuf],
     page_info: &PageInfoMap,
     fallback_files: &[PathBuf],
-    base_url: Option<&str>,
 ) -> Vec<(PathBuf, String)> {
     typ_files
         .iter()
         .filter(|path| !fallback_files.contains(path))
         .filter_map(|path| {
-            page_info.get(path).map(|info| {
-                (
-                    out_dir.join(&info.href),
-                    pagefind_page_url(base_url, &info.href),
-                )
-            })
+            // Pagefind prepends its runtime `baseUrl` to indexed URLs. That base URL is
+            // inferred from the loaded bundle path (for example `/calepin/pagefind/` on
+            // GitHub Pages), so storing a site `base_url` prefix here would duplicate it
+            // in search result links.
+            page_info
+                .get(path)
+                .map(|info| (out_dir.join(&info.href), info.href.clone()))
         })
         .collect()
-}
-
-pub(super) fn pagefind_page_url(_base_url: Option<&str>, href: &str) -> String {
-    // Pagefind prepends its runtime `baseUrl` to indexed URLs. That base URL is
-    // inferred from the loaded bundle path (for example `/calepin/pagefind/` on
-    // GitHub Pages), so storing a site `base_url` prefix here would duplicate it
-    // in search result links.
-    href.to_string()
 }
 
 pub(super) fn base_url_path_prefix(base_url: &str) -> Option<String> {

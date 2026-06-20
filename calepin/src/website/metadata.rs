@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use crate::typst::preprocess::read_page_meta_with_root;
 
+use super::util::clean_optional_string;
+
 /// Per-page metadata exposed through the `<website-metadata>` Typst label,
 /// extracted during preprocessing and persisted under `.calepin/`. `title`,
 /// `pdf`, and `layout` are the keys calepin interprets; `raw` carries the
@@ -254,11 +256,4 @@ pub(super) fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
             serde_json::json!({})
         },
     }
-}
-
-fn clean_optional_string(value: Option<&str>) -> Option<String> {
-    value
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
 }

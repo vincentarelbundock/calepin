@@ -8,9 +8,9 @@ use serde::Serialize;
 use crate::utils::template::no_autoescape_env;
 
 use super::paths::slash_path;
+use super::util::{absolute_site_url, xml_escape};
 use super::{
-    absolute_site_url, xml_escape, WebsiteConfig, DEFAULT_ROBOTS_TEMPLATE, ROBOTS_FILE,
-    ROBOTS_TEMPLATE_DIR, ROBOTS_TEMPLATE_FILE,
+    WebsiteConfig, DEFAULT_ROBOTS_TEMPLATE, ROBOTS_FILE, ROBOTS_TEMPLATE_DIR, ROBOTS_TEMPLATE_FILE,
 };
 
 /// Writes the sitemap from every built page except the 404 page.
