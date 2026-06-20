@@ -3,7 +3,7 @@ theme = "./theme-reveal"
 # Reveal.js options passed through to window.Reveal.initialize() in the theme template.
 #
 # Allowed types:
-# - hash: bool
+# - hash: bool (sync slide state into URL fragment / enable per-slide deep links)
 # - controls: bool (show navigation arrows)
 # - progress: bool (show slide progress bar)
 # - controlsTutorial: bool (show one-time controls hint)
