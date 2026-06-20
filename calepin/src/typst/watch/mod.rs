@@ -39,30 +39,16 @@ fn start_html_output_postprocessor(
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
         let mut output = output;
-        let mut last_written = None;
-        let syntax_theme = crate::html::HtmlSyntaxTheme::builtin();
-
-        if let Err(error) = postprocess_html_output(
-            &output,
-            &layout,
-            html_entry.as_ref(),
-            &syntax_theme,
-            site_context.as_ref(),
-            false,
-        ) {
-            cwarn!("failed to postprocess watched HTML output: {}", error);
-        }
-
-        let mut initial_state = std::fs::metadata(&output)
+        let mut last_written = std::fs::metadata(&output)
             .ok()
             .map(|meta| (meta.modified().ok(), meta.len()));
-        last_written = initial_state;
+        let syntax_theme = crate::html::HtmlSyntaxTheme::builtin();
+        let mut pending_update = false;
 
         loop {
             if stop.load(Ordering::Relaxed) {
                 break;
             }
-            let mut output_changed = false;
             match writes.recv_timeout(Duration::from_millis(250)) {
                 Ok(new_output) => {
                     let next_output = if new_output.is_absolute() {
@@ -72,17 +58,21 @@ fn start_html_output_postprocessor(
                     };
                     if next_output != output {
                         output = next_output;
-                        output_changed = true;
+                        last_written = std::fs::metadata(&output)
+                            .ok()
+                            .map(|meta| (meta.modified().ok(), meta.len()));
+                    }
+                    pending_update = true;
+                }
+                Err(RecvTimeoutError::Timeout) => {
+                    if !pending_update {
+                        continue;
                     }
                 }
-                Err(RecvTimeoutError::Timeout) => {}
                 Err(RecvTimeoutError::Disconnected) => break,
             }
             if stop.load(Ordering::Relaxed) {
                 break;
-            }
-            if output_changed {
-                last_written = None;
             }
 
             // `writing to` can arrive before file contents are fully flushed, and
@@ -108,6 +98,7 @@ fn start_html_output_postprocessor(
                     cwarn!("failed to postprocess watched HTML output: {}", error);
                 } else {
                     last_written = state;
+                    pending_update = false;
                 }
             }
         }
