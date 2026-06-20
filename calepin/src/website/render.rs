@@ -179,36 +179,60 @@ fn template_tag_has_site_stylesheet(block: &str) -> bool {
     let mut index = 0;
     while index < bytes.len() {
         let byte = bytes[index];
-        match byte {
-            b'\'' => {
-                if !in_double {
-                    in_single = !in_single;
-                }
+        if in_single {
+            if byte == b'\'' && !is_template_token_escaped(bytes, index) {
+                in_single = false;
+            } else if byte == b'\\' && index + 1 < bytes.len() {
+                index += 1;
             }
-            b'"' => {
-                if !in_single {
-                    in_double = !in_double;
-                }
+            index += 1;
+            continue;
+        }
+        if in_double {
+            if byte == b'"' && !is_template_token_escaped(bytes, index) {
+                in_double = false;
+            } else if byte == b'\\' && index + 1 < bytes.len() {
+                index += 1;
             }
-            _ if !in_single && !in_double => {
-                if bytes.len() >= index + target.len()
-                    && bytes_is_ascii_equal_ignore_case(
-                        &bytes[index..index + target.len()],
-                        target,
-                    )
-                    && (index == 0
-                        || is_template_token_separator_byte(bytes[index - 1]))
-                    && (index + target.len() == bytes.len()
-                        || is_template_token_separator_byte(bytes[index + target.len()]))
-                {
-                    return true;
-                }
-            }
-            _ => {}
+            index += 1;
+            continue;
+        }
+
+        if byte == b'\'' {
+            in_single = true;
+            index += 1;
+            continue;
+        }
+        if byte == b'"' {
+            in_double = true;
+            index += 1;
+            continue;
+        }
+        if bytes.len() >= index + target.len()
+            && bytes_is_ascii_equal_ignore_case(&bytes[index..index + target.len()], target)
+            && (index == 0 || is_template_token_separator_byte(bytes[index - 1]))
+            && (index + target.len() == bytes.len()
+                || is_template_token_separator_byte(bytes[index + target.len()]))
+        {
+            return true;
         }
         index += 1;
     }
     false
+}
+
+fn is_template_token_escaped(bytes: &[u8], index: usize) -> bool {
+    let mut i = index;
+    let mut backslashes = 0;
+    while i > 0 {
+        i -= 1;
+        if bytes[i] == b'\\' {
+            backslashes += 1;
+        } else {
+            break;
+        }
+    }
+    backslashes % 2 == 1
 }
 
 fn is_template_token_separator_byte(byte: u8) -> bool {
@@ -528,6 +552,20 @@ mod tests {
         };
 
         assert!(html_entry_references_site_stylesheet(&entry));
+    }
+
+    #[test]
+    fn html_entry_references_site_stylesheet_ignores_quoted_values() {
+        let entry = HtmlEntry {
+            theme_name: "local".into(),
+            layout: "{{ \"a \\\"site.stylesheet\\\" token\" }}".into(),
+            partials: Vec::new(),
+            styles: Vec::new(),
+            scripts: Vec::new(),
+            is_default: false,
+        };
+
+        assert!(!html_entry_references_site_stylesheet(&entry));
     }
 
     #[test]
