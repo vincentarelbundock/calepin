@@ -9,8 +9,9 @@ use crate::html::{
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
 use crate::typst::run::{
-    push_calepin_inputs, push_input, run_typst_status, CalepinMode, CalepinTarget, INPUT_ASSETS,
-    INPUT_CURRENT_HREF, INPUT_IMAGE_META, INPUT_PAGES, INPUT_SOURCE_DIR, RESERVED_INPUT_KEYS,
+    push_calepin_inputs, push_input, run_typst_status, source_dir_input, CalepinMode,
+    CalepinTarget, INPUT_ASSETS, INPUT_CURRENT_HREF, INPUT_IMAGE_META, INPUT_PAGES,
+    INPUT_SOURCE_DIR, RESERVED_INPUT_KEYS,
 };
 use crate::typst::version::assert_supported_typst;
 use crate::utils::progress::Progress;
@@ -155,14 +156,6 @@ fn typst_subcommand_args(
     }
     args.extend(typst_args.iter().map(|arg| OsString::from(arg.as_str())));
     args
-}
-
-fn source_dir_input(layout: &LayoutPaths) -> String {
-    layout
-        .input_rel
-        .parent()
-        .map(crate::typst::paths::slash_path)
-        .unwrap_or_default()
 }
 
 pub(crate) fn typst_compile_args(

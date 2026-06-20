@@ -4,13 +4,11 @@ use std::path::Path;
 use anyhow::{anyhow, Context, Result};
 
 use crate::typst::run::run_typst_capture;
-use crate::utils::{process, tools};
 
 pub const REQUIRED_TYPST_VERSION: &str = "0.15.0";
 const REQUIRED_TYPST_VERSION_PARTS: (u64, u64, u64) = (0, 15, 0);
 
 pub fn assert_supported_typst(typst: &Path) -> Result<()> {
-    process::validate_executable(typst, "check typst version", Some(&tools::TYPST))?;
     let version = typst_version(typst)?;
     if version_is_too_old(&version) {
         return Err(anyhow!(
