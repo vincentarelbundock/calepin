@@ -1250,9 +1250,13 @@ fn sanitize_icon_svg_accepts_plain_icons_and_rejects_scripting_vectors() {
 
     for bad in [
         r#"<svg><script>alert(1)</script></svg>"#,
+        r#"<svg/onload=alert(1)></svg>"#,
         r#"<svg onclick="alert(1)"></svg>"#,
         r#"<svg ONLOAD = "alert(1)"></svg>"#,
         r#"<svg><a href="javascript:alert(1)">x</a></svg>"#,
+        r#"<svg><use href="java&#x73;cript:alert(1)"></use></svg>"#,
+        r#"<svg><use href="https://example.com/icon.svg#x"></use></svg>"#,
+        r#"<svg><image href="https://example.com/icon.png"/></svg>"#,
         r#"<svg><foreignObject></foreignObject></svg>"#,
         "not svg at all",
     ] {
@@ -2104,10 +2108,33 @@ fn local_icon_paths_must_stay_inside_source_directory_and_be_safe() {
         .to_string();
     assert!(outside_err.contains("must stay inside the source directory"));
 
+    let missing_html = nav_label_html("{icon:missing.svg} Missing", &mut icon_cache).unwrap();
+    assert_eq!(missing_html, " Missing");
+
     let unsafe_path = src.join("unsafe.svg");
     fs::write(&unsafe_path, r#"<svg onload="alert(1)"></svg>"#).unwrap();
     let unsafe_html = nav_label_html("{icon:unsafe.svg} Unsafe", &mut icon_cache).unwrap();
     assert_eq!(unsafe_html, " Unsafe");
+}
+
+#[cfg(unix)]
+#[test]
+fn local_icon_symlinks_must_stay_inside_source_directory() {
+    use std::os::unix::fs::symlink;
+
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("site");
+    fs::create_dir_all(src.join("assets/icons")).unwrap();
+    let outside = temp.path().join("outside.svg");
+    fs::write(&outside, r#"<svg viewBox="0 0 1 1"></svg>"#).unwrap();
+    symlink(&outside, src.join("assets/icons/outside.svg")).unwrap();
+    let mut icon_cache = IconCache::new(&src, ICON_CACHE_DIR);
+
+    let error = nav_label_html("{icon:assets/icons/outside.svg} Escape", &mut icon_cache)
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("must stay inside the source directory"));
 }
 
 #[test]
