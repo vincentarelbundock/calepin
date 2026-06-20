@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 
 use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, WatchArgs};
 use crate::html::SiteContextInput;
-use crate::typst::compile::{resolve_output_format, compile_with_typst, CompileOptions};
+use crate::typst::compile::{compile_with_typst, resolve_output_format, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
 const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/notebook.typ");
@@ -80,7 +80,10 @@ pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
         return crate::website::watch_from_watch_args(args);
     }
 
-    let format = resolve_output_format(args.format.as_ref().map(|format| format.as_str()), args.output.as_deref());
+    let format = resolve_output_format(
+        args.format.as_ref().map(|format| format.as_str()),
+        args.output.as_deref(),
+    );
     let is_html = format.as_deref() == Some("html");
 
     if args.serve && !is_html {
@@ -95,11 +98,11 @@ pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
     }
 
     if is_html {
-        if args.open && !contains_typst_open_arg(&args.typst_args) {
+        if args.open && !has_typst_open_flag(&args.typst_args) {
             args.typst_args.push("--open".to_string());
         }
         if let Some(port) = args.port {
-            if !contains_typst_port_arg(&args.typst_args) {
+            if !has_typst_port_flag(&args.typst_args) {
                 args.typst_args.push("--port".to_string());
                 args.typst_args.push(port.to_string());
             }
@@ -108,12 +111,16 @@ pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
     crate::typst::watch::run_watch(args)
 }
 
-fn contains_typst_open_arg(typst_args: &[String]) -> bool {
-    typst_args.iter().any(|arg| arg == "--open" || arg.starts_with("--open="))
+fn has_typst_open_flag(typst_args: &[String]) -> bool {
+    typst_args
+        .iter()
+        .any(|arg| arg == "--open" || arg.starts_with("--open="))
 }
 
-fn contains_typst_port_arg(typst_args: &[String]) -> bool {
-    typst_args.iter().any(|arg| arg == "--port" || arg.starts_with("--port="))
+fn has_typst_port_flag(typst_args: &[String]) -> bool {
+    typst_args
+        .iter()
+        .any(|arg| arg == "--port" || arg.starts_with("--port="))
 }
 
 pub fn handle_clean(args: CleanArgs) -> Result<()> {
@@ -407,16 +414,16 @@ mod tests {
     }
 
     #[test]
-    fn contains_typst_open_arg_detects_typst_open_flags() {
-        assert!(contains_typst_open_arg(&["--open".to_string()]));
-        assert!(contains_typst_open_arg(&["--open=chromium".to_string()]));
-        assert!(!contains_typst_open_arg(&["--port".to_string()]));
+    fn has_typst_open_flag_detects_typst_open_flags() {
+        assert!(has_typst_open_flag(&["--open".to_string()]));
+        assert!(has_typst_open_flag(&["--open=chromium".to_string()]));
+        assert!(!has_typst_open_flag(&["--port".to_string()]));
     }
 
     #[test]
-    fn contains_typst_port_arg_detects_typst_port_flags() {
-        assert!(contains_typst_port_arg(&["--port".to_string()]));
-        assert!(contains_typst_port_arg(&["--port=3001".to_string()]));
-        assert!(!contains_typst_port_arg(&["--open".to_string()]));
+    fn has_typst_port_flag_detects_typst_port_flags() {
+        assert!(has_typst_port_flag(&["--port".to_string()]));
+        assert!(has_typst_port_flag(&["--port=3001".to_string()]));
+        assert!(!has_typst_port_flag(&["--open".to_string()]));
     }
 }

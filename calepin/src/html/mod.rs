@@ -971,8 +971,11 @@ mod tests {
             "academic document controls should stay aligned to the text column"
         );
         assert!(
-            css.contains("body:has(.academic-document-main .calepin-sidenote) .academic-document-main")
-                && css.contains("body:has(.academic-document-main .calepin-sidefigure) .academic-document-main"),
+            css.contains(
+                "body:has(.academic-document-main .calepin-sidenote) .academic-document-main"
+            ) && css.contains(
+                "body:has(.academic-document-main .calepin-sidefigure) .academic-document-main"
+            ),
             "academic side content should reserve a real margin column"
         );
         assert!(
@@ -1122,7 +1125,7 @@ mod tests {
         }
     }
 
-    fn details_is_open(themed: &str, title: &str) -> bool {
+    fn is_details_open(themed: &str, title: &str) -> bool {
         let summary = themed
             .find(&format!("<summary>{title}</summary>"))
             .unwrap_or_else(|| panic!("no foldable section titled {title}"));
@@ -1154,8 +1157,8 @@ mod tests {
         )
         .unwrap();
 
-        assert!(details_is_open(&themed, "Reference"));
-        assert!(!details_is_open(&themed, "Guide"));
+        assert!(is_details_open(&themed, "Reference"));
+        assert!(!is_details_open(&themed, "Guide"));
     }
 
     #[test]

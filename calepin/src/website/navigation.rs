@@ -209,7 +209,7 @@ pub(super) fn discover_pages(
 ) -> Result<(Vec<NavSectionPlan>, Vec<PathBuf>)> {
     let Some(sidebar) = sidebar else {
         let mut files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)])?;
-        files.retain(|path| !page_is_excluded(src_dir, path, pages));
+        files.retain(|path| !is_page_excluded(src_dir, path, pages));
         let items = files
             .iter()
             .map(|path| NavItemPlan {
@@ -236,7 +236,7 @@ pub(super) fn discover_pages(
     )?;
     let all_typ_files = all_typ_files
         .into_iter()
-        .filter(|path| !page_is_excluded(src_dir, path, pages))
+        .filter(|path| !is_page_excluded(src_dir, path, pages))
         .collect::<Vec<_>>();
     let mut used = BTreeSet::new();
     let mut sections = Vec::new();
@@ -284,7 +284,7 @@ pub(super) fn discover_menus(
     let all_typ_files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)])?;
     let all_typ_files = all_typ_files
         .into_iter()
-        .filter(|path| !page_is_excluded(src_dir, path, pages))
+        .filter(|path| !is_page_excluded(src_dir, path, pages))
         .collect::<Vec<_>>();
     let mut files = Vec::new();
     let mut used = BTreeSet::new();
@@ -410,7 +410,7 @@ fn resolve_nav_item_plans(
             resolution.all_typ_files,
         )?
         .into_iter()
-        .filter(|path| !page_is_excluded(resolution.src_dir, path, resolution.pages))
+        .filter(|path| !is_page_excluded(resolution.src_dir, path, resolution.pages))
         {
             let first_use = resolution.used.insert(path.clone());
             if first_use {
@@ -512,7 +512,7 @@ pub(super) fn discover_build_pages(
             }
         };
         for path in matches {
-            if !page_is_excluded(src_dir, &path, Some(pages)) {
+            if !is_page_excluded(src_dir, &path, Some(pages)) {
                 files.insert(path);
             }
         }
@@ -594,7 +594,7 @@ fn static_patterns(patterns: &[String], key: &str) -> Result<Vec<String>> {
         .collect()
 }
 
-fn page_is_excluded(src_dir: &Path, path: &Path, pages: Option<&PagesConfig>) -> bool {
+fn is_page_excluded(src_dir: &Path, path: &Path, pages: Option<&PagesConfig>) -> bool {
     let Some(pages) = pages else {
         return false;
     };

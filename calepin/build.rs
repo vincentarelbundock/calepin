@@ -53,7 +53,7 @@ fn write_theme_files(source: &mut String, const_name: &str, manifest_dir: &Path,
         return;
     }
 
-    collect_theme_files(&root, &root, &mut files);
+    collect_builtin_theme_files(&root, &root, &mut files);
     files.sort_by(|left, right| left.0.cmp(&right.0));
     files.dedup_by(|left, right| left.0 == right.0);
 
@@ -76,7 +76,7 @@ fn write_theme_files(source: &mut String, const_name: &str, manifest_dir: &Path,
     source.push_str("];\n");
 }
 
-fn collect_theme_files(root: &Path, dir: &Path, files: &mut Vec<(String, String)>) {
+fn collect_builtin_theme_files(root: &Path, dir: &Path, files: &mut Vec<(String, String)>) {
     println!("cargo:rerun-if-changed={}", dir.display());
 
     let mut entries = fs::read_dir(dir)
@@ -87,7 +87,7 @@ fn collect_theme_files(root: &Path, dir: &Path, files: &mut Vec<(String, String)
 
     for path in entries {
         if path.is_dir() {
-            collect_theme_files(root, &path, files);
+            collect_builtin_theme_files(root, &path, files);
             continue;
         }
         if !is_theme_asset(&path) {
@@ -130,7 +130,7 @@ fn write_typst_runtime_files(
         return;
     }
 
-    collect_typst_runtime_files(&root, &root, manifest_dir, &mut files);
+    collect_embedded_typst_runtime_files(&root, &root, manifest_dir, &mut files);
     files.sort_by(|left, right| left.0.cmp(&right.0));
     files.dedup_by(|left, right| left.0 == right.0);
 
@@ -153,7 +153,7 @@ fn write_typst_runtime_files(
     source.push_str("];\n");
 }
 
-fn collect_typst_runtime_files(
+fn collect_embedded_typst_runtime_files(
     root: &Path,
     dir: &Path,
     manifest_dir: &Path,
@@ -169,7 +169,7 @@ fn collect_typst_runtime_files(
 
     for path in entries {
         if path.is_dir() {
-            collect_typst_runtime_files(root, &path, manifest_dir, files);
+            collect_embedded_typst_runtime_files(root, &path, manifest_dir, files);
             continue;
         }
         if path.extension().and_then(|extension| extension.to_str()) != Some("typ") {
