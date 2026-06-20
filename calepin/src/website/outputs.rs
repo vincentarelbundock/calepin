@@ -75,7 +75,7 @@ pub(super) fn reconcile_manifest_outputs(
         if expected_outputs.contains(&path) || !path.exists() {
             continue;
         }
-        remove_stale_file(&path, "stale output")?;
+        remove_stale_output_file(&path, "stale output")?;
     }
     Ok(())
 }
@@ -112,7 +112,7 @@ fn remove_unexpected_rendered_outputs_in(
             Some("html" | "pdf")
         ) && !expected_outputs.contains(&path)
         {
-            remove_stale_file(&path, "stale rendered output")?;
+            remove_stale_output_file(&path, "stale rendered output")?;
         }
     }
     Ok(())
@@ -262,7 +262,7 @@ fn is_skippable_directory(name: Option<&str>, preserve_pagefind: bool) -> bool {
     is_skip_directory(name) || (preserve_pagefind && name == Some(PAGEFIND_DIR))
 }
 
-fn remove_stale_file(path: &Path, what: &str) -> Result<()> {
+pub(super) fn remove_stale_output_file(path: &Path, what: &str) -> Result<()> {
     if path.is_file() {
         fs::remove_file(path)
             .with_context(|| format!("failed to remove {what} {}", path.display()))?;

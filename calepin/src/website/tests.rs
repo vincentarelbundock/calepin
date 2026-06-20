@@ -1690,10 +1690,54 @@ fn cached_pagefind_outputs_require_matching_signature_and_files() {
         }),
     };
 
-    assert!(cached_pagefind_outputs(temp.path(), &manifest, 42).is_some());
-    assert!(cached_pagefind_outputs(temp.path(), &manifest, 7).is_none());
+    assert!(cached_pagefind_outputs(temp.path(), &manifest, 42)
+        .unwrap()
+        .is_some());
+    assert!(cached_pagefind_outputs(temp.path(), &manifest, 7)
+        .unwrap()
+        .is_none());
     fs::remove_file(output).unwrap();
-    assert!(cached_pagefind_outputs(temp.path(), &manifest, 42).is_none());
+    assert!(cached_pagefind_outputs(temp.path(), &manifest, 42)
+        .unwrap()
+        .is_none());
+}
+
+#[test]
+fn manifest_output_paths_rejects_unsafe_paths() {
+    let temp = tempfile::tempdir().unwrap();
+
+    let error =
+        manifest_output_paths(temp.path(), &["../evil/pagefind.js".to_string()]).unwrap_err();
+
+    assert!(error.to_string().contains("invalid Pagefind output path"));
+}
+
+#[test]
+fn pagefind_signature_rejects_paths_outside_output_directory() {
+    let temp = tempfile::tempdir().unwrap();
+    let out_dir = temp.path().join("out");
+    fs::create_dir_all(&out_dir).unwrap();
+    let outside_page = temp.path().join("outside.html");
+    fs::write(&outside_page, "<main data-pagefind-body>external</main>").unwrap();
+
+    let error =
+        pagefind_signature(&out_dir, &[(outside_page, "outside.html".to_string())]).unwrap_err();
+
+    assert!(error.to_string().contains("invalid pagefind input path"));
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn manifest_output_paths_rejects_windows_prefixed_paths() {
+    let temp = tempfile::tempdir().unwrap();
+
+    let error = manifest_output_paths(
+        temp.path(),
+        &["C:\\Program Files\\pagefind\\pagefind.js".to_string()],
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("invalid Pagefind output path"));
 }
 
 #[test]

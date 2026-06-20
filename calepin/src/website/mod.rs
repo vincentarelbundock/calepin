@@ -436,6 +436,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             .pagefind
             .as_ref()
             .map(|pagefind| manifest_output_paths(&out_dir, &pagefind.outputs))
+            .transpose()?
             .unwrap_or_default()
     } else {
         BTreeSet::new()
@@ -539,7 +540,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let pagefind_manifest = if config.search == Some(SearchEngine::Pagefind) {
         let pagefind_progress = progress.spinner("[pagefind] index");
         let signature = pagefind_signature(&out_dir, &pagefind_pages)?;
-        let cached_outputs = cached_pagefind_outputs(&out_dir, &previous_manifest, signature);
+        let cached_outputs = cached_pagefind_outputs(&out_dir, &previous_manifest, signature)?;
         let outputs = if let Some(outputs) = cached_outputs {
             pagefind_progress.finish(format!("[cache] {PAGEFIND_DIR}/"));
             outputs

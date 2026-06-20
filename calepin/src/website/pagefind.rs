@@ -1,11 +1,12 @@
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::OnceLock;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use xxhash_rust::xxh3::xxh3_64;
 
+use super::outputs::remove_stale_output_file;
 use super::paths::rel_posix;
 use super::{PageInfoMap, WebsiteManifest};
 
@@ -68,11 +69,12 @@ pub(super) fn pagefind_signature(out_dir: &Path, pages: &[(PathBuf, String)]) ->
             .then_with(|| left.1.cmp(&right.1))
     });
     for (path, url) in pages {
-        bytes.extend_from_slice(rel_posix(out_dir, &path).as_bytes());
+        let path = pagefind_input_path(out_dir, &path)?;
+        bytes.extend_from_slice(rel_posix(out_dir, path).as_bytes());
         bytes.push(0);
         bytes.extend_from_slice(url.as_bytes());
         bytes.push(0);
-        let html = fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+        let html = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
         bytes.extend_from_slice(&(html.len() as u64).to_le_bytes());
         bytes.extend_from_slice(&html);
         bytes.push(0xff);
@@ -80,24 +82,47 @@ pub(super) fn pagefind_signature(out_dir: &Path, pages: &[(PathBuf, String)]) ->
     Ok(xxh3_64(&bytes))
 }
 
-pub(super) fn manifest_output_paths(out_dir: &Path, outputs: &[String]) -> BTreeSet<PathBuf> {
-    outputs.iter().map(|rel| out_dir.join(rel)).collect()
+fn pagefind_input_path<'a>(out_dir: &Path, path: &'a Path) -> Result<&'a Path> {
+    if !path.starts_with(out_dir)
+        || path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+    {
+        bail!(
+            "invalid pagefind input path {} for output directory {}",
+            path.display(),
+            out_dir.display()
+        )
+    }
+    Ok(path)
+}
+
+pub(super) fn manifest_output_paths(
+    out_dir: &Path,
+    outputs: &[String],
+) -> Result<BTreeSet<PathBuf>> {
+    outputs
+        .iter()
+        .map(|path| pagefind_output_path(out_dir, path.as_str()))
+        .collect()
 }
 
 pub(super) fn cached_pagefind_outputs(
     out_dir: &Path,
     manifest: &WebsiteManifest,
     signature: u64,
-) -> Option<BTreeSet<PathBuf>> {
-    let pagefind = manifest.pagefind.as_ref()?;
+) -> Result<Option<BTreeSet<PathBuf>>> {
+    let Some(pagefind) = manifest.pagefind.as_ref() else {
+        return Ok(None);
+    };
     if pagefind.signature != signature {
-        return None;
+        return Ok(None);
     }
-    let outputs = manifest_output_paths(out_dir, &pagefind.outputs);
+    let outputs = manifest_output_paths(out_dir, &pagefind.outputs)?;
     if outputs.iter().all(|path| path.is_file()) {
-        Some(outputs)
+        Ok(Some(outputs))
     } else {
-        None
+        Ok(None)
     }
 }
 
@@ -109,14 +134,11 @@ pub(super) fn remove_stale_pagefind_outputs(
     let Some(pagefind) = manifest.pagefind.as_ref() else {
         return Ok(());
     };
-    for path in manifest_output_paths(out_dir, &pagefind.outputs) {
+    for path in manifest_output_paths(out_dir, &pagefind.outputs)? {
         if expected_outputs.contains(&path) || !path.exists() {
             continue;
         }
-        if path.is_file() {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
-        }
+        remove_stale_output_file(&path, "stale pagefind output")?;
     }
     Ok(())
 }
@@ -187,13 +209,22 @@ async fn write_pagefind_index_async(
     Ok(outputs)
 }
 
-fn pagefind_output_path(out_dir: &Path, rel: &Path) -> Result<PathBuf> {
+fn pagefind_output_path<P: AsRef<Path>>(out_dir: &Path, rel: P) -> Result<PathBuf> {
+    let rel = rel.as_ref();
+    if rel.as_os_str().is_empty() {
+        return Err(anyhow!("invalid Pagefind output path: empty"));
+    }
     if rel.is_absolute()
         || rel
             .components()
-            .any(|component| matches!(component, std::path::Component::ParentDir))
+            .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
     {
         return Err(anyhow!("invalid Pagefind output path: {}", rel.display()));
     }
-    Ok(out_dir.join(PAGEFIND_DIR).join(rel))
+    let is_scoped_to_pagefind = rel.starts_with(PAGEFIND_DIR);
+    Ok(if is_scoped_to_pagefind {
+        out_dir.join(rel)
+    } else {
+        out_dir.join(PAGEFIND_DIR).join(rel)
+    })
 }
