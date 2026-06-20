@@ -157,7 +157,7 @@ pub(super) fn discover_site_menus(
             discover_menus(&language.content_dir, menus, pages)?;
         language_files.retain(|path| !is_nested_language_page(path, language, languages));
         retain_menu_language_items(&mut language_plan, language, languages);
-        if !language.default {
+        if !language.is_default {
             retain_language_specific_menu_items(&mut language_plan);
         }
         for (name, mut items) in language_plan.items {

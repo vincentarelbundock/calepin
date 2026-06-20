@@ -841,7 +841,7 @@ fn configured_languages_defaults_to_directory_per_language() {
     assert_eq!(languages[0].code, "en");
     assert_eq!(languages[0].content_dir, src);
     assert_eq!(languages[0].url_prefix, "");
-    assert!(languages[0].default);
+    assert!(languages[0].is_default);
     assert_eq!(languages[1].code, "fr");
     assert_eq!(languages[1].content_dir, src.join("fr"));
     assert_eq!(languages[1].url_prefix, "fr");
@@ -867,7 +867,7 @@ fn configured_languages_requires_explicit_default_for_multiple_languages() {
         ..WebsiteConfig::default()
     };
     let languages = configured_languages(src, &single).unwrap().unwrap();
-    assert!(languages[0].default);
+    assert!(languages[0].is_default);
 }
 
 #[test]
@@ -962,7 +962,7 @@ fn configured_languages_validates_language_codes_and_trims_default_language() {
     };
 
     let languages = configured_languages(src, &config).unwrap().unwrap();
-    assert!(languages[0].default);
+    assert!(languages[0].is_default);
     assert_eq!(languages[0].code, "en");
 }
 
@@ -994,14 +994,14 @@ fn discover_site_pages_does_not_treat_language_dirs_as_default_pages() {
             label: "English".to_string(),
             content_dir: src.to_path_buf(),
             url_prefix: String::new(),
-            default: true,
+            is_default: true,
         },
         LanguageInfo {
             code: "fr".to_string(),
             label: "Français".to_string(),
             content_dir: src.join("fr"),
             url_prefix: "fr".to_string(),
-            default: false,
+            is_default: false,
         },
     ]);
 
@@ -1073,14 +1073,14 @@ fn implicit_build_pages_include_each_language_home_and_fallback() {
             label: "English".to_string(),
             content_dir: src.to_path_buf(),
             url_prefix: String::new(),
-            default: true,
+            is_default: true,
         },
         LanguageInfo {
             code: "fr".to_string(),
             label: "Français".to_string(),
             content_dir: src.join("fr"),
             url_prefix: "fr".to_string(),
-            default: false,
+            is_default: false,
         },
     ]);
 
@@ -1257,14 +1257,14 @@ fn build_page_info_uses_language_prefixes_slugs_and_translation_keys() {
             label: "English".to_string(),
             content_dir: src.to_path_buf(),
             url_prefix: String::new(),
-            default: true,
+            is_default: true,
         },
         LanguageInfo {
             code: "fr".to_string(),
             label: "Français".to_string(),
             content_dir: src.join("fr"),
             url_prefix: "fr".to_string(),
-            default: false,
+            is_default: false,
         },
     ]);
     let meta = PageMetaMap::from([(
@@ -1385,14 +1385,14 @@ fn translation_entries_are_relative_to_current_page() {
             label: "English".to_string(),
             content_dir: PathBuf::from("/site/docs"),
             url_prefix: String::new(),
-            default: true,
+            is_default: true,
         },
         LanguageInfo {
             code: "fr".to_string(),
             label: "Français".to_string(),
             content_dir: PathBuf::from("/site/docs/fr"),
             url_prefix: "fr".to_string(),
-            default: false,
+            is_default: false,
         },
     ];
 
@@ -1428,14 +1428,14 @@ fn language_entries_include_all_languages_with_home_fallbacks() {
             label: "English".to_string(),
             content_dir: PathBuf::from("/site/docs"),
             url_prefix: String::new(),
-            default: true,
+            is_default: true,
         },
         LanguageInfo {
             code: "fr".to_string(),
             label: "Français".to_string(),
             content_dir: PathBuf::from("/site/docs/fr"),
             url_prefix: "fr".to_string(),
-            default: false,
+            is_default: false,
         },
     ];
 

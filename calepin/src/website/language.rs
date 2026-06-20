@@ -3,7 +3,7 @@ use std::path::{Component, Path, PathBuf};
 
 use anyhow::{anyhow, bail, Result};
 
-use super::config::WebsiteConfig;
+use super::config::{LanguageConfig, WebsiteConfig};
 use super::paths::normalize_path;
 use super::url::{clean_url_prefix, is_safe_output_route};
 use super::util::clean_optional_string;
@@ -14,7 +14,7 @@ pub(super) struct LanguageInfo {
     pub(super) label: String,
     pub(super) content_dir: PathBuf,
     pub(super) url_prefix: String,
-    pub(super) default: bool,
+    pub(super) is_default: bool,
 }
 
 pub(super) fn configured_languages(
@@ -24,6 +24,19 @@ pub(super) fn configured_languages(
     if config.languages.is_empty() {
         return Ok(None);
     }
+    let default_language = default_language_code(config)?;
+    let mut languages = config
+        .languages
+        .iter()
+        .map(|(code, language)| language_info(src_dir, code, language, &default_language))
+        .collect::<Result<Vec<_>>>()?;
+
+    reject_duplicate_url_prefixes(&languages)?;
+    sort_languages(&mut languages);
+    Ok(Some(languages))
+}
+
+fn default_language_code(config: &WebsiteConfig) -> Result<String> {
     for code in config.languages.keys() {
         validate_language_code(code)?;
     }
@@ -35,50 +48,83 @@ pub(super) fn configured_languages(
         }
         None if config.languages.len() == 1 => config.languages.keys().next().cloned().unwrap(),
         None => {
-            return Err(anyhow!(
-                "set default_language when more than one language is configured in [languages]"
-            ))
+            bail!("set default_language when more than one language is configured in [languages]")
         }
     };
     if !config.languages.contains_key(&default_language) {
-        return Err(anyhow!(
-            "default_language `{default_language}` is not present in [languages]"
-        ));
+        bail!("default_language `{default_language}` is not present in [languages]");
     }
+    Ok(default_language)
+}
 
-    let mut languages = Vec::new();
-    let mut url_prefixes = BTreeMap::new();
-    for (code, language) in &config.languages {
-        let default = code == &default_language;
-        let content_dir = language.content_dir.clone().unwrap_or_else(|| {
-            if default {
-                PathBuf::from(".")
-            } else {
-                PathBuf::from(code)
-            }
-        });
-        let content_dir = language_content_dir(src_dir, code, content_dir)?;
-        let url_prefix = clean_optional_string(language.url_prefix.as_deref())
-            .unwrap_or_else(|| if default { String::new() } else { code.clone() });
-        let url_prefix = clean_url_prefix(&url_prefix);
-        if !is_safe_output_route(&url_prefix) {
-            bail!("url_prefix for language `{code}` must stay inside the output directory: `{url_prefix}`");
+fn language_info(
+    src_dir: &Path,
+    code: &str,
+    language: &LanguageConfig,
+    default_language: &str,
+) -> Result<LanguageInfo> {
+    let is_default = code == default_language;
+    let content_dir = language
+        .content_dir
+        .clone()
+        .unwrap_or_else(|| default_content_dir(code, is_default));
+    let content_dir = language_content_dir(src_dir, code, content_dir)?;
+    let url_prefix = language_url_prefix(code, language, is_default)?;
+
+    Ok(LanguageInfo {
+        code: code.to_string(),
+        label: clean_optional_string(language.label.as_deref()).unwrap_or_else(|| code.to_string()),
+        content_dir,
+        url_prefix,
+        is_default,
+    })
+}
+
+fn default_content_dir(code: &str, is_default: bool) -> PathBuf {
+    if is_default {
+        PathBuf::from(".")
+    } else {
+        PathBuf::from(code)
+    }
+}
+
+fn language_url_prefix(code: &str, language: &LanguageConfig, is_default: bool) -> Result<String> {
+    let url_prefix = clean_optional_string(language.url_prefix.as_deref()).unwrap_or_else(|| {
+        if is_default {
+            String::new()
+        } else {
+            code.to_string()
         }
-        if let Some(previous) = url_prefixes.insert(url_prefix.clone(), code.clone()) {
+    });
+    let url_prefix = clean_url_prefix(&url_prefix);
+    if !is_safe_output_route(&url_prefix) {
+        bail!(
+            "url_prefix for language `{code}` must stay inside the output directory: `{url_prefix}`"
+        );
+    }
+    Ok(url_prefix)
+}
+
+fn reject_duplicate_url_prefixes(languages: &[LanguageInfo]) -> Result<()> {
+    let mut url_prefixes = BTreeMap::new();
+    for language in languages {
+        if let Some(previous) =
+            url_prefixes.insert(language.url_prefix.as_str(), language.code.as_str())
+        {
             bail!(
-                "url_prefix for language `{code}` duplicates language `{previous}` after cleaning: `{url_prefix}`"
+                "url_prefix for language `{}` duplicates language `{previous}` after cleaning: `{}`",
+                language.code,
+                language.url_prefix
             );
         }
-        languages.push(LanguageInfo {
-            code: code.clone(),
-            label: clean_optional_string(language.label.as_deref()).unwrap_or_else(|| code.clone()),
-            content_dir,
-            url_prefix,
-            default,
-        });
     }
-    languages.sort_by_key(|language| (!language.default, language.code.clone()));
-    Ok(Some(languages))
+    Ok(())
+}
+
+fn sort_languages(languages: &mut [LanguageInfo]) {
+    languages.sort_by(|left, right| {
+        (!left.is_default, left.code.as_str()).cmp(&(!right.is_default, right.code.as_str()))
+    });
 }
 
 fn validate_language_code(code: &str) -> Result<()> {
@@ -104,19 +150,20 @@ fn language_content_dir(src_dir: &Path, code: &str, content_dir: PathBuf) -> Res
             .components()
             .any(|component| !matches!(component, Component::Normal(_) | Component::CurDir))
     {
-        bail!(
-            "content_dir for language `{code}` must stay inside the source directory: {}",
-            content_dir.display()
-        );
+        return Err(invalid_content_dir(code, &content_dir));
     }
 
     let src_dir = normalize_path(src_dir);
     let content_dir = normalize_path(&src_dir.join(content_dir));
     if !content_dir.starts_with(&src_dir) {
-        bail!(
-            "content_dir for language `{code}` must stay inside the source directory: {}",
-            content_dir.display()
-        );
+        return Err(invalid_content_dir(code, &content_dir));
     }
     Ok(content_dir)
+}
+
+fn invalid_content_dir(code: &str, content_dir: &Path) -> anyhow::Error {
+    anyhow!(
+        "content_dir for language `{code}` must stay inside the source directory: {}",
+        content_dir.display()
+    )
 }
