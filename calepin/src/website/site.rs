@@ -115,8 +115,13 @@ impl SiteModel {
                 if item.href == current_href {
                     page_title = Some(html_escape(&item.label));
                 }
+                let item_href = if item.href == current_href {
+                    item.href.clone()
+                } else {
+                    page_relative_url(current_href, &item.href)
+                };
                 let entry = SiteNavEntry {
-                    href: html_escape(&page_relative_url(current_href, &item.href)),
+                    href: html_escape(&item_href),
                     label: html_escape(&item.label),
                     label_html: item.label_html.clone(),
                     active: item.href == current_href,

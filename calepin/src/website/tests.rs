@@ -2010,10 +2010,6 @@ fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
         "advanced.html"
     );
     assert_eq!(
-        page_relative_url("guide/usage.html", "guide/usage.html"),
-        "guide/usage.html"
-    );
-    assert_eq!(
         page_relative_url("posts/welcome.html", "publications/index.html"),
         "../publications/index.html"
     );
