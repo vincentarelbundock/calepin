@@ -1,4 +1,5 @@
 use std::io::{self, BufRead, BufReader, Read, Write};
+use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::thread;
 
@@ -87,8 +88,31 @@ pub(super) enum TypstWatchLine {
     Other,
 }
 
+fn strip_ansi_codes(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' {
+            if matches!(chars.peek(), Some('[')) {
+                chars.next();
+                for next in chars.by_ref() {
+                    if next == 'm' {
+                        break;
+                    }
+                }
+                continue;
+            }
+        }
+        out.push(ch);
+    }
+
+    out
+}
+
 pub(super) fn typst_watch_line(line: &str) -> TypstWatchLine {
-    let line = line.trim_start();
+    let line = strip_ansi_codes(line);
+    let line = line.trim();
 
     if line.starts_with("watching ") {
         TypstWatchLine::Watching
@@ -101,10 +125,22 @@ pub(super) fn typst_watch_line(line: &str) -> TypstWatchLine {
     }
 }
 
+pub(super) fn typst_watch_output_path(line: &str) -> Option<PathBuf> {
+    let line = strip_ansi_codes(line);
+    let line = line.trim();
+    let marker = "writing to ";
+    let start = line.find(marker)? + marker.len();
+    let path = line[start..].trim();
+    if path.is_empty() {
+        return None;
+    }
+    Some(PathBuf::from(path))
+}
+
 pub(super) fn relay_typst_watch_output_with_events<R, W>(
     reader: R,
     writer: W,
-    on_write: Sender<()>,
+    on_write: Sender<PathBuf>,
 ) -> io::Result<()>
 where
     R: Read,
@@ -120,9 +156,8 @@ where
         if bytes == 0 {
             break;
         }
-        let typst_line = line.trim_end_matches(['\r', '\n']);
-        if matches!(typst_watch_line(typst_line), TypstWatchLine::Writing) {
-            on_write.send(()).ok();
+        if let Some(path) = typst_watch_output_path(&line) {
+            on_write.send(path).ok();
         }
         relay.write_line(&line)?;
     }

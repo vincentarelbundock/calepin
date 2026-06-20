@@ -35,11 +35,12 @@ fn start_html_output_postprocessor(
     layout: crate::typst::model::LayoutPaths,
     html_entry: Option<crate::theme::HtmlEntry>,
     site_context: Option<SiteContextInput>,
-    writes: Receiver<()>,
+    writes: Receiver<PathBuf>,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
-        let syntax_theme = crate::html::HtmlSyntaxTheme::builtin();
+        let mut output = output;
         let mut last_written = None;
+        let syntax_theme = crate::html::HtmlSyntaxTheme::builtin();
 
         if let Err(error) = postprocess_html_output(
             &output,
@@ -52,18 +53,38 @@ fn start_html_output_postprocessor(
             cwarn!("failed to postprocess watched HTML output: {}", error);
         }
 
+        let mut initial_state = std::fs::metadata(&output)
+            .ok()
+            .map(|meta| (meta.modified().ok(), meta.len()));
+        last_written = initial_state;
+
         loop {
             if stop.load(Ordering::Relaxed) {
                 break;
             }
+            let mut output_changed = false;
             match writes.recv_timeout(Duration::from_millis(250)) {
-                Ok(()) => {}
+                Ok(new_output) => {
+                    let next_output = if new_output.is_absolute() {
+                        new_output
+                    } else {
+                        layout.root.join(new_output)
+                    };
+                    if next_output != output {
+                        output = next_output;
+                        output_changed = true;
+                    }
+                }
                 Err(RecvTimeoutError::Timeout) => {}
                 Err(RecvTimeoutError::Disconnected) => break,
             }
             if stop.load(Ordering::Relaxed) {
                 break;
             }
+            if output_changed {
+                last_written = None;
+            }
+
             // `writing to` can arrive before file contents are fully flushed, and
             // some platforms may report unchanged timestamps for rapid updates. Track a
             // (modified_time, size) pair to avoid missing successful writes.
