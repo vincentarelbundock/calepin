@@ -12,6 +12,7 @@ mod render;
 mod scaffold;
 mod serve;
 mod site;
+mod svg;
 mod templates;
 mod util;
 
@@ -44,8 +45,6 @@ use feeds::{feed_items_from_pages, infer_feed_format, rss_feed_date, FeedFormat,
 use feeds::{feed_targets, write_feeds};
 #[cfg(test)]
 use icons::nav_label_html;
-#[cfg(test)]
-use icons::sanitize_icon_svg;
 use icons::IconCache;
 use language::{configured_languages, LanguageInfo};
 #[cfg(test)]
@@ -88,6 +87,8 @@ pub(crate) use scaffold::scaffold_website;
 #[cfg(test)]
 use site::{language_entries, translation_entries};
 use site::{SiteMetadata, SiteModel};
+#[cfg(test)]
+use svg::sanitize_icon_svg;
 use templates::{write_robots, write_sitemap};
 use util::{clean_optional_string, is_absolute_or_special_url};
 

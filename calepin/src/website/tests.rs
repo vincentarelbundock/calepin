@@ -1257,6 +1257,7 @@ fn sanitize_icon_svg_accepts_plain_icons_and_rejects_scripting_vectors() {
         r#"<svg><use href="java&#x73;cript:alert(1)"></use></svg>"#,
         r#"<svg><use href="https://example.com/icon.svg#x"></use></svg>"#,
         r#"<svg><image href="https://example.com/icon.png"/></svg>"#,
+        r#"<svg><path></svg>"#,
         r#"<svg><foreignObject></foreignObject></svg>"#,
         "not svg at all",
     ] {
