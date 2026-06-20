@@ -5,7 +5,9 @@ use crate::typst::fence_label::{is_routed_crossref_label, trailing_fence_label};
 use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 const RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
+const RUNTIME_ALIAS: &str = "calepin_runtime";
 const PREVIEW_IMPORT_PREFIX: &str = "@preview/calepin:";
+const SOURCE_REWRITTEN_CHUNK_LANGS: &[&str] = &["python", "r", "julia", "sh", "bash"];
 
 pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
     let staged_relative = layout.artifact_relative_path("source.typ");
@@ -13,11 +15,15 @@ pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
     let source = std::fs::read_to_string(&layout.input)
         .with_context(|| format!("failed to read {}", layout.input.display()))?;
     reject_preview_calepin_imports(&source)?;
-    let staged = rewrite_calepin_imports(&source);
-    let staged = if staged.contains("#calepin_runtime.chunk_from_raw_plain(") {
-        format!("#import \"{RUNTIME_IMPORT}\" as calepin_runtime\n{staged}")
+    let rewritten = rewrite_source(&source);
+    let staged = if rewritten.needs_runtime_alias {
+        format!(
+            "{}{staged}",
+            runtime_alias_import(),
+            staged = rewritten.source
+        )
     } else {
-        staged
+        rewritten.source
     };
     let staged_path = layout.root.join(&staged_relative);
 
@@ -36,12 +42,10 @@ fn reject_preview_calepin_imports(source: &str) -> Result<()> {
 
 fn preview_calepin_import_suggestion(source: &str) -> Option<String> {
     let mut raw_block: Option<usize> = None;
+    let mut lex = LexState::default();
 
     for segment in source.split_inclusive('\n') {
-        let (line, _) = segment
-            .strip_suffix('\n')
-            .map(|line| (line, "\n"))
-            .unwrap_or((segment, ""));
+        let (line, _) = split_segment(segment);
         let trimmed = line.trim_start();
 
         if let Some(fence_len) = raw_block {
@@ -51,12 +55,14 @@ fn preview_calepin_import_suggestion(source: &str) -> Option<String> {
             continue;
         }
 
-        if let Some((fence_len, _)) = opening_fence(trimmed) {
-            raw_block = Some(fence_len);
-            continue;
+        if !lex.in_block_comment() {
+            if let Some((fence_len, _)) = opening_fence(trimmed) {
+                raw_block = Some(fence_len);
+                continue;
+            }
         }
 
-        if let Some(suggestion) = preview_calepin_import_suggestion_in_line(line) {
+        if let Some(suggestion) = preview_calepin_import_suggestion_in_line(line, &mut lex) {
             return Some(suggestion);
         }
     }
@@ -64,67 +70,59 @@ fn preview_calepin_import_suggestion(source: &str) -> Option<String> {
     None
 }
 
-fn preview_calepin_import_suggestion_in_line(line: &str) -> Option<String> {
-    let mut rest = line;
-
-    while let Some(index) = rest.find("#import") {
-        let (before, candidate) = rest.split_at(index);
-        if has_line_comment(before) {
-            return None;
-        }
-
-        if !import_keyword_boundary(candidate) {
-            rest = &candidate["#import".len()..];
-            continue;
-        }
-
-        let Some((suggestion, _tail)) = preview_import_candidate_suggestion(candidate) else {
-            rest = &candidate["#import".len()..];
-            continue;
-        };
-        return Some(suggestion);
-    }
-
-    None
+fn preview_calepin_import_suggestion_in_line(line: &str, lex: &mut LexState) -> Option<String> {
+    scan_line_for_imports(line, lex, |candidate| {
+        preview_import_candidate_suggestion(candidate).map(|(suggestion, _)| suggestion)
+    })
 }
 
 fn preview_import_candidate_suggestion(candidate: &str) -> Option<(String, &str)> {
-    let after_keyword = &candidate["#import".len()..];
-    let whitespace_len = after_keyword
-        .char_indices()
-        .find_map(|(idx, ch)| if ch.is_whitespace() { None } else { Some(idx) })
-        .unwrap_or(after_keyword.len());
-    let whitespace = &after_keyword[..whitespace_len];
-    let after_whitespace = &after_keyword[whitespace_len..];
-    let literal = parse_string_literal(after_whitespace)?;
-    if !literal.value.starts_with(PREVIEW_IMPORT_PREFIX) {
+    let import = parse_import_candidate(candidate)?;
+    if !import.literal.value.starts_with(PREVIEW_IMPORT_PREFIX) {
         return None;
     }
 
-    let tail = &after_whitespace[literal.source_len..];
     Some((
-        format!("#import{}\"{}\"{}", whitespace, RUNTIME_IMPORT, tail),
-        tail,
+        format!(
+            "#import{}\"{}\"{}",
+            import.whitespace, RUNTIME_IMPORT, import.tail
+        ),
+        import.tail,
     ))
 }
 
+fn runtime_alias_import() -> String {
+    format!("#import \"{RUNTIME_IMPORT}\" as {RUNTIME_ALIAS}\n")
+}
+
+struct RewriteResult {
+    source: String,
+    needs_runtime_alias: bool,
+}
+
+#[cfg(test)]
 fn rewrite_calepin_imports(source: &str) -> String {
+    rewrite_source(source).source
+}
+
+fn rewrite_source(source: &str) -> RewriteResult {
     let mut out = String::with_capacity(source.len());
     let mut raw_block: Option<RawBlock> = None;
     let mut parse_state = TypstParseState::default();
+    let mut source_lex = LexState::default();
+    let mut needs_runtime_alias = false;
 
     for segment in source.split_inclusive('\n') {
-        let (line, newline) = segment
-            .strip_suffix('\n')
-            .map(|line| (line, "\n"))
-            .unwrap_or((segment, ""));
+        let (line, newline) = split_segment(segment);
         let trimmed = line.trim_start();
 
         if let Some(block) = raw_block.as_mut() {
             block.segments.push(segment.to_string());
             if is_closing_fence(trimmed, block.fence_len) {
                 let block = raw_block.take().expect("raw block exists");
-                out.push_str(&rewrite_raw_block(block));
+                let rewritten = rewrite_raw_block(block);
+                needs_runtime_alias |= rewritten.needs_runtime_alias;
+                out.push_str(&rewritten.source);
             }
             continue;
         }
@@ -135,25 +133,31 @@ fn rewrite_calepin_imports(source: &str) -> String {
             continue;
         }
 
-        if let Some((fence_len, lang)) = opening_fence(trimmed) {
-            raw_block = Some(RawBlock {
-                fence_len,
-                lang: lang.map(str::to_string),
-                segments: vec![segment.to_string()],
-                in_calepin_chunk: parse_state.in_calepin_chunk(),
-            });
-        } else {
-            let rewritten = rewrite_calepin_imports_in_line(line);
-            parse_state.scan_line(&rewritten);
-            out.push_str(&rewritten);
-            out.push_str(newline);
+        if !source_lex.in_block_comment() {
+            if let Some((fence_len, lang)) = opening_fence(trimmed) {
+                raw_block = Some(RawBlock {
+                    fence_len,
+                    lang: lang.map(str::to_string),
+                    segments: vec![segment.to_string()],
+                    in_calepin_chunk: parse_state.in_calepin_chunk(),
+                });
+                continue;
+            }
         }
+
+        let rewritten = rewrite_calepin_imports_in_line(line, &mut source_lex);
+        parse_state.scan_line(&rewritten);
+        out.push_str(&rewritten);
+        out.push_str(newline);
     }
 
     if let Some(block) = raw_block {
         out.push_str(&block.segments.concat());
     }
-    out
+    RewriteResult {
+        source: out,
+        needs_runtime_alias,
+    }
 }
 
 struct RawBlock {
@@ -164,11 +168,31 @@ struct RawBlock {
 }
 
 #[derive(Default)]
+struct LexState {
+    block_comment_depth: usize,
+}
+
+impl LexState {
+    fn in_block_comment(&self) -> bool {
+        self.block_comment_depth > 0
+    }
+
+    fn enter_block_comment(&mut self) {
+        self.block_comment_depth += 1;
+    }
+
+    fn exit_block_comment(&mut self) {
+        self.block_comment_depth = self.block_comment_depth.saturating_sub(1);
+    }
+}
+
+#[derive(Default)]
 struct TypstParseState {
     brackets: Vec<BracketContext>,
     paren_depth: usize,
     pending_chunk_call: Option<PendingChunkCall>,
     raw_fence_len: Option<usize>,
+    lex: LexState,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -211,11 +235,31 @@ impl TypstParseState {
             return;
         }
 
-        let mut chars = line.char_indices().peekable();
-        while let Some((idx, ch)) = chars.next() {
-            if ch == '/' && chars.peek().is_some_and(|(_, next)| *next == '/') {
+        let mut idx = 0;
+        while idx < line.len() {
+            if self.lex.in_block_comment() {
+                if line[idx..].starts_with("/*") {
+                    self.lex.enter_block_comment();
+                    idx += 2;
+                } else if line[idx..].starts_with("*/") {
+                    self.lex.exit_block_comment();
+                    idx += 2;
+                } else {
+                    idx += next_char_len(&line[idx..]);
+                }
+                continue;
+            }
+
+            if line[idx..].starts_with("//") {
                 break;
             }
+            if line[idx..].starts_with("/*") {
+                self.lex.enter_block_comment();
+                idx += 2;
+                continue;
+            }
+
+            let ch = line[idx..].chars().next().expect("valid char index");
 
             if ch == '`' {
                 let fence_len = leading_backtick_count(&line[idx..]);
@@ -226,16 +270,7 @@ impl TypstParseState {
             }
 
             if ch == '"' {
-                let mut escaped = false;
-                for (_, inner) in chars.by_ref() {
-                    if escaped {
-                        escaped = false;
-                    } else if inner == '\\' {
-                        escaped = true;
-                    } else if inner == '"' {
-                        break;
-                    }
-                }
+                idx += string_literal_source_len(&line[idx..]);
                 continue;
             }
 
@@ -291,6 +326,7 @@ impl TypstParseState {
                 }
                 _ => {}
             }
+            idx += ch.len_utf8();
         }
     }
 }
@@ -359,17 +395,31 @@ fn leading_backtick_count(value: &str) -> usize {
     value.chars().take_while(|ch| *ch == '`').count()
 }
 
-fn rewrite_raw_block(mut block: RawBlock) -> String {
+struct RewrittenRawBlock {
+    source: String,
+    needs_runtime_alias: bool,
+}
+
+fn rewrite_raw_block(mut block: RawBlock) -> RewrittenRawBlock {
     let should_rewrite_as_chunk =
         !block.in_calepin_chunk && is_source_rewritten_chunk_lang(block.lang.as_deref());
     if !should_rewrite_as_chunk && !is_executable_label_candidate_lang(block.lang.as_deref()) {
-        return block.segments.concat();
+        return RewrittenRawBlock {
+            source: block.segments.concat(),
+            needs_runtime_alias: false,
+        };
     }
     let had_trailing_label = rewrite_trailing_fence_label(&mut block, should_rewrite_as_chunk);
     if should_rewrite_as_chunk {
-        return rewrite_raw_block_as_chunk_from_raw_plain(&block, had_trailing_label);
+        return RewrittenRawBlock {
+            source: rewrite_raw_block_as_chunk_from_raw_plain(&block, had_trailing_label),
+            needs_runtime_alias: true,
+        };
     }
-    block.segments.concat()
+    RewrittenRawBlock {
+        source: block.segments.concat(),
+        needs_runtime_alias: false,
+    }
 }
 
 fn rewrite_trailing_fence_label(block: &mut RawBlock, rewrite_plain_labels: bool) -> bool {
@@ -424,7 +474,7 @@ fn rewrite_raw_block_as_chunk_from_raw_plain(block: &RawBlock, had_trailing_labe
             .unwrap_or_default()
     };
     format!(
-        "#calepin_runtime.chunk_from_raw_plain({}, raw({}, block: true, lang: {})){}\n",
+        "#{RUNTIME_ALIAS}.chunk_from_raw_plain({}, raw({}, block: true, lang: {})){}\n",
         qmd_string_literal(lang),
         qmd_string_literal(&code),
         qmd_string_literal(lang),
@@ -445,7 +495,8 @@ fn is_source_rewritten_chunk_lang(raw_lang: Option<&str>) -> bool {
     if matches!(lang, "typ" | "typst") {
         return false;
     }
-    matches!(lang, "python" | "r") || crate::engines::diagram::is_known_diagram_engine_name(lang)
+    SOURCE_REWRITTEN_CHUNK_LANGS.contains(&lang)
+        || crate::engines::diagram::is_known_diagram_engine_name(lang)
 }
 
 fn split_segment(segment: &str) -> (&str, &str) {
@@ -483,64 +534,131 @@ fn typst_string_escape(value: &str) -> String {
     out
 }
 
-fn rewrite_calepin_imports_in_line(line: &str) -> String {
+fn rewrite_calepin_imports_in_line(line: &str, lex: &mut LexState) -> String {
     let mut out = String::with_capacity(line.len());
-    let mut rest = line;
+    let mut idx = 0;
 
-    while let Some(index) = rest.find("#import") {
-        let (before, candidate) = rest.split_at(index);
-        if has_line_comment(before) {
-            out.push_str(rest);
-            return out;
-        }
-        out.push_str(before);
-
-        if !import_keyword_boundary(candidate) {
-            out.push_str("#import");
-            rest = &candidate["#import".len()..];
-            continue;
-        }
-
-        let Some((rewritten, tail)) = rewrite_import_candidate(candidate) else {
-            out.push_str("#import");
-            rest = &candidate["#import".len()..];
-            continue;
-        };
-        out.push_str(&rewritten);
-        rest = tail;
-    }
-
-    out.push_str(rest);
-    out
-}
-
-fn has_line_comment(input: &str) -> bool {
-    let mut chars = input.chars().peekable();
-    let mut in_string = false;
-    let mut escaped = false;
-
-    while let Some(ch) = chars.next() {
-        if in_string {
-            if escaped {
-                escaped = false;
-            } else if ch == '\\' {
-                escaped = true;
-            } else if ch == '"' {
-                in_string = false;
+    while idx < line.len() {
+        if lex.in_block_comment() {
+            if line[idx..].starts_with("/*") {
+                lex.enter_block_comment();
+                out.push_str("/*");
+                idx += 2;
+            } else if line[idx..].starts_with("*/") {
+                lex.exit_block_comment();
+                out.push_str("*/");
+                idx += 2;
+            } else {
+                let ch = line[idx..].chars().next().expect("valid char index");
+                out.push(ch);
+                idx += ch.len_utf8();
             }
             continue;
         }
 
-        if ch == '"' {
-            in_string = true;
+        if line[idx..].starts_with("//") {
+            out.push_str(&line[idx..]);
+            break;
+        }
+        if line[idx..].starts_with("/*") {
+            lex.enter_block_comment();
+            out.push_str("/*");
+            idx += 2;
             continue;
         }
-        if ch == '/' && chars.peek().is_some_and(|next| *next == '/') {
-            return true;
+        if line[idx..].starts_with('"') {
+            let len = string_literal_source_len(&line[idx..]);
+            out.push_str(&line[idx..idx + len]);
+            idx += len;
+            continue;
         }
+
+        let candidate = &line[idx..];
+        if candidate.starts_with("#import") {
+            if let Some((rewritten, tail)) = rewrite_import_candidate(candidate) {
+                let consumed = candidate.len() - tail.len();
+                out.push_str(&rewritten);
+                idx += consumed;
+                continue;
+            }
+            out.push_str("#import");
+            idx += "#import".len();
+            continue;
+        }
+
+        let ch = candidate.chars().next().expect("valid char index");
+        out.push(ch);
+        idx += ch.len_utf8();
     }
 
-    false
+    out
+}
+
+fn scan_line_for_imports<T>(
+    line: &str,
+    lex: &mut LexState,
+    mut handle_import: impl FnMut(&str) -> Option<T>,
+) -> Option<T> {
+    let mut idx = 0;
+    while idx < line.len() {
+        if lex.in_block_comment() {
+            if line[idx..].starts_with("/*") {
+                lex.enter_block_comment();
+                idx += 2;
+            } else if line[idx..].starts_with("*/") {
+                lex.exit_block_comment();
+                idx += 2;
+            } else {
+                idx += next_char_len(&line[idx..]);
+            }
+            continue;
+        }
+
+        if line[idx..].starts_with("//") {
+            break;
+        }
+        if line[idx..].starts_with("/*") {
+            lex.enter_block_comment();
+            idx += 2;
+            continue;
+        }
+        if line[idx..].starts_with('"') {
+            idx += string_literal_source_len(&line[idx..]);
+            continue;
+        }
+
+        let candidate = &line[idx..];
+        if candidate.starts_with("#import") {
+            if let Some(result) = handle_import(candidate) {
+                return Some(result);
+            }
+            idx += "#import".len();
+            continue;
+        }
+
+        idx += next_char_len(candidate);
+    }
+
+    None
+}
+
+fn next_char_len(input: &str) -> usize {
+    input.chars().next().map(char::len_utf8).unwrap_or(0)
+}
+
+fn string_literal_source_len(input: &str) -> usize {
+    debug_assert!(input.starts_with('"'));
+    let mut escaped = false;
+    for (idx, ch) in input[1..].char_indices() {
+        if escaped {
+            escaped = false;
+        } else if ch == '\\' {
+            escaped = true;
+        } else if ch == '"' {
+            return idx + 2;
+        }
+    }
+    input.len()
 }
 
 fn import_keyword_boundary(candidate: &str) -> bool {
@@ -551,6 +669,27 @@ fn import_keyword_boundary(candidate: &str) -> bool {
 }
 
 fn rewrite_import_candidate(candidate: &str) -> Option<(String, &str)> {
+    let import = parse_import_candidate(candidate)?;
+    if !is_calepin_runtime_import(&import.literal.value) {
+        return None;
+    }
+
+    Some((
+        format!("#import{}\"{}\"", import.whitespace, RUNTIME_IMPORT),
+        import.tail,
+    ))
+}
+
+struct ImportCandidate<'a> {
+    whitespace: &'a str,
+    literal: StringLiteral,
+    tail: &'a str,
+}
+
+fn parse_import_candidate(candidate: &str) -> Option<ImportCandidate<'_>> {
+    if !import_keyword_boundary(candidate) {
+        return None;
+    }
     let after_keyword = &candidate["#import".len()..];
     let whitespace_len = after_keyword
         .char_indices()
@@ -559,12 +698,13 @@ fn rewrite_import_candidate(candidate: &str) -> Option<(String, &str)> {
     let whitespace = &after_keyword[..whitespace_len];
     let after_whitespace = &after_keyword[whitespace_len..];
     let literal = parse_string_literal(after_whitespace)?;
-    if !is_calepin_runtime_import(&literal.value) {
-        return None;
-    }
 
     let tail = &after_whitespace[literal.source_len..];
-    Some((format!("#import{}\"{}\"", whitespace, RUNTIME_IMPORT), tail))
+    Some(ImportCandidate {
+        whitespace,
+        literal,
+        tail,
+    })
 }
 
 struct StringLiteral {
@@ -606,6 +746,7 @@ fn is_calepin_runtime_import(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::typst::testfixtures;
 
     #[test]
     fn leaves_preview_import_path_for_migration_diagnostic() {
@@ -658,6 +799,66 @@ mod tests {
 ```
 #import "@preview/calepin:0.0.1" as calepin
 "#
+        );
+    }
+
+    #[test]
+    fn ignores_imports_inside_block_comments() {
+        let source = r#"/*
+#import ".calepin/calepin.typ"
+#import "@preview/calepin:0.0.1"
+*/
+"#;
+
+        reject_preview_calepin_imports(source).unwrap();
+        assert_eq!(rewrite_calepin_imports(source), source);
+    }
+
+    #[test]
+    fn does_not_rewrite_raw_fences_inside_block_comments() {
+        let source = r#"/*
+```python
+print("comment")
+```
+*/
+"#;
+
+        assert_eq!(rewrite_calepin_imports(source), source);
+    }
+
+    #[test]
+    fn staged_source_only_imports_runtime_alias_for_actual_rewrites() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = testfixtures::layout(dir.path());
+        std::fs::write(
+            &layout.input,
+            r##"#let marker = "#calepin_runtime.chunk_from_raw_plain(\"python\")"
+"##,
+        )
+        .unwrap();
+
+        let staged_relative = write_staged_source(&layout).unwrap();
+        let staged = std::fs::read_to_string(layout.root.join(staged_relative)).unwrap();
+
+        assert!(!staged.contains("as calepin_runtime"), "{staged}");
+    }
+
+    #[test]
+    fn rewrites_first_class_jupyter_and_shell_fences() {
+        let source = "```julia\nprintln(1)\n```\n```bash\necho ok\n```\n```sh\necho sh\n```\n";
+        let rewritten = rewrite_calepin_imports(source);
+
+        assert!(
+            rewritten.contains("chunk_from_raw_plain(\"julia\""),
+            "{rewritten}"
+        );
+        assert!(
+            rewritten.contains("chunk_from_raw_plain(\"bash\""),
+            "{rewritten}"
+        );
+        assert!(
+            rewritten.contains("chunk_from_raw_plain(\"sh\""),
+            "{rewritten}"
         );
     }
 
