@@ -334,7 +334,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         .collect::<Result<Vec<_>>>()?;
 
     publish_staged_figures(&staged_figures_dir, &plan.layout.figures_dir)?;
-    let document = build_results_document(&plan.layout.input_rel, chunk_results);
+    let document = build_results_document(&plan.layout.input_rel, chunk_results)?;
     write_results(&plan.layout.results_path, &document)?;
     write_preprocess_fingerprint(&plan.layout, plan.fingerprint)?;
     if plan.sync_pages {
@@ -906,7 +906,8 @@ mod tests {
                 items: Vec::new(),
                 crossref_labels: chunk.crossref_labels.clone(),
             }],
-        );
+        )
+        .unwrap();
         write_results(&layout.results_path, &results).unwrap();
         write_preprocess_fingerprint(&layout, fingerprint).unwrap();
         let mut executables = ExecutablePaths::defaults();
