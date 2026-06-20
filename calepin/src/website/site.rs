@@ -115,7 +115,8 @@ impl SiteModel {
                 if item.href == current_href {
                     page_title = Some(html_escape(&item.label));
                 }
-                let item_href = if item.href == current_href {
+                let is_current_page = item.href == current_href;
+                let item_href = if is_current_page && section.language.is_some() {
                     item.href.clone()
                 } else {
                     page_relative_url(current_href, &item.href)
@@ -124,7 +125,7 @@ impl SiteModel {
                     href: html_escape(&item_href),
                     label: html_escape(&item.label),
                     label_html: item.label_html.clone(),
-                    active: item.href == current_href,
+                    active: is_current_page,
                 };
                 sidebar.push(entry.clone());
                 items.push(entry);
