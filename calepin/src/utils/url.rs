@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
-use crate::utils::path::slash_path;
+use crate::utils::path::{slash_path, strip_leading_url_prefix};
 
 pub(crate) fn output_href_with_extension(url: &str, extension: &str) -> String {
     let url = url.trim();
     if is_external_url(url) {
         return url.to_string();
     }
-    let url = url.trim_start_matches('/').trim_start_matches("./");
+    let url = strip_leading_url_prefix(url);
     if url.ends_with('/') {
         return format!("{url}index.{extension}");
     }

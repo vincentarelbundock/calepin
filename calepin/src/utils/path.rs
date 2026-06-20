@@ -39,6 +39,26 @@ pub fn absolutize_from(root: &Path, path: &Path) -> PathBuf {
     }
 }
 
+pub(crate) fn strip_query_and_fragment(value: &str) -> &str {
+    value.split(&['?', '#'][..]).next().unwrap_or(value)
+}
+
+pub(crate) fn strip_leading_url_prefix(value: &str) -> &str {
+    value
+        .trim_start_matches('/')
+        .trim_start_matches("./")
+}
+
+pub(crate) fn canonical_root(path: &Path) -> Option<PathBuf> {
+    path.canonicalize().ok()
+}
+
+pub(crate) fn is_within_root(root: &Path, path: &Path) -> bool {
+    canonical_root(root)
+        .and_then(|root| path.canonicalize().ok().map(|path| path.starts_with(root)))
+        .unwrap_or(false)
+}
+
 pub fn slash_path(path: &Path) -> String {
     path.components()
         .map(|component| component.as_os_str().to_string_lossy())
@@ -48,9 +68,9 @@ pub fn slash_path(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{absolutize_from, expand_home};
-    use std::path::{Path, PathBuf};
+    use super::{absolutize_from, expand_home, strip_query_and_fragment, strip_leading_url_prefix};
     use crate::utils::testutil::{env_lock, EnvVarGuard};
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn absolutize_from_joins_only_relative_paths() {
@@ -76,4 +96,19 @@ mod tests {
             PathBuf::from("/absolute")
         );
     }
+
+    #[test]
+    fn strip_query_and_fragment_stops_at_first_query_or_fragment() {
+        assert_eq!(strip_query_and_fragment("index.html?cache=1#top"), "index.html");
+        assert_eq!(strip_query_and_fragment("notes.html#section"), "notes.html");
+        assert_eq!(strip_query_and_fragment("about.md"), "about.md");
+    }
+
+    #[test]
+    fn strip_leading_url_prefix_removes_root_and_dot_prefixes() {
+        assert_eq!(strip_leading_url_prefix("/about.html"), "about.html");
+        assert_eq!(strip_leading_url_prefix("./notes/main"), "notes/main");
+        assert_eq!(strip_leading_url_prefix("notes/main"), "notes/main");
+    }
 }
+

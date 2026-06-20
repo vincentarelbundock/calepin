@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
+use crate::utils::path;
 use anyhow::{Context, Result};
 
 pub const COMMON_SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
@@ -37,14 +38,13 @@ pub fn request_relative_path(
     base_path_prefix: Option<&str>,
     allow_empty: bool,
 ) -> Option<PathBuf> {
-    let target = target.split('?').next().unwrap_or(target);
-    let target = target.split('#').next().unwrap_or(target);
+    let target = path::strip_query_and_fragment(target);
     let decoded = percent_decode(target)?;
     if decoded.contains('\\') {
         return None;
     }
     let decoded = strip_base_path_prefix(&decoded, base_path_prefix);
-    let trimmed = decoded.trim_start_matches('/');
+    let trimmed = path::strip_leading_url_prefix(&decoded);
 
     let mut relative = PathBuf::new();
     for component in Path::new(trimmed).components() {
@@ -82,18 +82,13 @@ pub fn resolve_existing_file(
 ) -> Option<PathBuf> {
     let canonical = resolve_request_path(root, target, base_path_prefix, false)
         .and_then(|path| path.canonicalize().ok())?;
-    path_stays_under_root(root, &canonical).then_some(canonical).filter(|path| path.is_file())
-}
-
-fn canonical_root(root: &Path) -> Option<PathBuf> {
-    root.canonicalize().ok()
+    path::is_within_root(root, &canonical)
+        .then_some(canonical)
+        .filter(|path| path.is_file())
 }
 
 pub fn path_stays_under_root(root: &Path, path: &Path) -> bool {
-    let Some(root) = canonical_root(root) else {
-        return false;
-    };
-    path.canonicalize().is_ok_and(|path| path.starts_with(root))
+    path::is_within_root(root, path)
 }
 
 pub fn content_type(path: &Path) -> &'static str {
@@ -156,7 +151,7 @@ where
     ShouldDescend: FnMut(&Path, &Path) -> bool,
     IncludeFile: FnMut(&Path, &Path) -> bool,
 {
-    let canonical = canonical_root(dir).unwrap_or_else(|| dir.to_path_buf());
+    let canonical = path::canonical_root(dir).unwrap_or_else(|| dir.to_path_buf());
     if !visited_dirs.insert(canonical) {
         return Ok(());
     }
@@ -165,14 +160,8 @@ where
         let path = entry?.path();
         let rel = path.strip_prefix(root).unwrap_or(&path);
 
-        if path
-            .symlink_metadata()
-            .map(|metadata| metadata.file_type().is_symlink())
-            .unwrap_or(false)
-        {
-            if path.is_file() && include_file(rel, &path) {
-                out.push(path);
-            }
+        if is_symlink(&path) {
+            collect_included_file(rel, &path, out, include_file);
             continue;
         }
 
@@ -180,11 +169,29 @@ where
             if should_descend(rel, &path) {
                 collect_files_by_inner(root, &path, out, should_descend, include_file, visited_dirs)?;
             }
-        } else if path.is_file() && include_file(rel, &path) {
-            out.push(path);
+        } else {
+            collect_included_file(rel, &path, out, include_file);
         }
     }
     Ok(())
+}
+
+fn collect_included_file<IncludeFile>(
+    rel: &Path,
+    path: &Path,
+    out: &mut Vec<PathBuf>,
+    include_file: &mut IncludeFile,
+) where
+    IncludeFile: FnMut(&Path, &Path) -> bool,
+{
+    if path.is_file() && include_file(rel, path) {
+        out.push(path.to_path_buf());
+    }
+}
+
+fn is_symlink(path: &Path) -> bool {
+    path.symlink_metadata()
+        .is_ok_and(|metadata| metadata.file_type().is_symlink())
 }
 
 fn strip_base_path_prefix<'a>(path: &'a str, base_path_prefix: Option<&str>) -> &'a str {
