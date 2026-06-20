@@ -12,7 +12,9 @@ theme = "./theme-reveal"
 # - transition: "none" | "fade" | "slide" | "convex" | "concave" | "zoom"
 # - plugins: array of plugin names, e.g. ["markdown", "highlight", "notes"]
 # - navigationMode: "default" | "linear" | "grid" | "rounded"
-#   (only affects some 2D navigation cases; with this heading-driven splitter, it may appear unchanged)
+#   "default": left/right for horizontal, up/down for vertical stacks
+#   "linear": no up/down navigation; left/right steps through all slides
+#   "grid": left/right from 1.3 -> 2.3 (preserves vertical index)
 #
 # Note: only "markdown", "highlight", and "notes" plugin names are wired in.
 [revealjs]
@@ -22,6 +24,6 @@ progress = true
 center = false
 slideNumber = "c/t"
 transition = "slide"
-controlstutorial = true
-navigationMode = "rounded"
+controlsTutorial = false
+navigationMode = "default"
 #plugins = ["markdown", "highlight", "notes"]
