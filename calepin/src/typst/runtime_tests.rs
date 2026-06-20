@@ -623,7 +623,7 @@ fn typst_compile_html_themed_raw_blocks_use_source_container() {
     );
     let html = std::fs::read_to_string(output).unwrap();
     assert!(html.contains("sourceCode"), "expected source wrapper: {html}");
-    assert!(html.contains("data-lang=Python") || html.contains(r#"data-lang="Python""#));
+    assert!(html.contains("data-lang=python") || html.contains(r#"data-lang="python""#));
 }
 
 #[test]
