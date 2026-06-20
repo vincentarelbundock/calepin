@@ -158,12 +158,15 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
     let current_dir = std::env::current_dir()?;
     let config_path =
         discover_website_config(&current_dir, &args.input, args.common.config.as_deref())?;
-    if args.format.is_some() {
-        return Err(anyhow!(
-            "website directory watch does not support `--format`; use `calepin compile` for one-shot format control"
-        ));
-    }
-
+    let render_pdf = match args.format {
+        None => None,
+        Some(CompileFormat::Html) => Some(false),
+        Some(_) => {
+            return Err(anyhow!(
+                "website directory watch does not support `--format`; only `--format html` is allowed and `--format` other values are for one-shot format control via `calepin compile`"
+            ));
+        }
+    };
     set_quiet(args.common.quiet);
     if args.open && !args.serve {
         return Err(anyhow!(
@@ -175,7 +178,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         src: Some(args.input.clone()),
         out: args.output.clone(),
         parallelism: None,
-        render_pdf: None,
+        render_pdf,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
         params: args.common.params.clone(),

@@ -13,7 +13,8 @@ use anyhow::{Context, Result};
 
 use crate::cli::WatchArgs;
 use crate::typst::compile::{
-    reject_reserved_typst_inputs, resolve_output_path, typst_watch_args, ReservedInputs,
+    reject_reserved_typst_inputs, resolve_output_format, resolve_output_path, typst_watch_args,
+    ReservedInputs,
 };
 use crate::typst::preprocess::{
     prepare_preprocess_plan, preprocess_cached, preprocess_cached_plan, PreprocessOptions,
@@ -42,7 +43,7 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
 }
 
 pub fn run_watch(args: WatchArgs) -> Result<()> {
-    let format = args.format.map(|format| format.as_str().to_string());
+    let format = resolve_output_format(args.format.as_ref().map(|format| format.as_str()), args.output.as_deref());
     let sync_pages = format.as_deref().unwrap_or("pdf") == "pdf";
     reject_reserved_typst_inputs(&args.typst_args)?;
 
