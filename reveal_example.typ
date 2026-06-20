@@ -1,7 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #calepin.setup(
-  theme: "themes/revealjs-pico",
+  theme: "sandbox/revealjs/theme-reveal",
   echo: true,
   results: "render",
 )
