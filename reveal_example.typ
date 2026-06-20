@@ -46,24 +46,13 @@ This deck mirrors the structure from `docs/slides/touying.typ`: horizontal slide
 A `results: "hidden"` chunk can be rendered with `#calepin.results(label)` later
 in the same slide, or in another slide.
 
-#grid(
-  columns: (1fr, 1fr),
-  gutter: .4em,
-  [
-    === Column 1: Code
-    #calepin.chunk("python", label: "summary2", results: "hidden")[
+#calepin.chunk("python", label: "summary2")[
 ```python
 values = [2, 3, 5, 8, 13]
 total = sum(values)
 print(f"Total = {total}")
 ```
-    ]
-  ],
-  [
-    === Column 2: Output
-    #calepin.results("summary2")
-  ],
-)
+]
 
 == Output on a follow-up slide
 
