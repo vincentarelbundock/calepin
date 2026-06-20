@@ -2,6 +2,9 @@ use std::path::{Path, PathBuf};
 
 pub fn expand_home(path: PathBuf) -> PathBuf {
     let text = path.to_string_lossy();
+    if text == "~" {
+        return std::env::var_os("HOME").map(PathBuf::from).unwrap_or(path);
+    }
     let Some(rest) = text.strip_prefix("~/") else {
         return path;
     };
@@ -45,8 +48,9 @@ pub fn slash_path(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::absolutize_from;
+    use super::{absolutize_from, expand_home};
     use std::path::{Path, PathBuf};
+    use crate::utils::testutil::{env_lock, EnvVarGuard};
 
     #[test]
     fn absolutize_from_joins_only_relative_paths() {
@@ -57,6 +61,19 @@ mod tests {
         assert_eq!(
             absolutize_from(Path::new("/project"), Path::new("/tmp/config.toml")),
             PathBuf::from("/tmp/config.toml")
+        );
+    }
+
+    #[test]
+    fn expand_home_expands_tilde_and_home_relative_paths() {
+        let _env_lock = env_lock();
+        let _home = EnvVarGuard::set("HOME", "/users/example");
+
+        assert_eq!(expand_home(PathBuf::from("~/docs")), PathBuf::from("/users/example/docs"));
+        assert_eq!(expand_home(PathBuf::from("~")), PathBuf::from("/users/example"));
+        assert_eq!(
+            expand_home(PathBuf::from("/absolute")),
+            PathBuf::from("/absolute")
         );
     }
 }

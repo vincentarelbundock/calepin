@@ -1,4 +1,4 @@
-/// Escape the five characters that are unsafe in HTML text and double-quoted
+/// Escape unsafe HTML characters commonly used in text and double-quoted
 /// attribute values.
 pub fn escape(value: &str) -> String {
     value

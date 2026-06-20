@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -81,15 +82,15 @@ pub fn resolve_existing_file(
 ) -> Option<PathBuf> {
     let canonical = resolve_request_path(root, target, base_path_prefix, false)
         .and_then(|path| path.canonicalize().ok())?;
-    if canonical.starts_with(root) && canonical.is_file() {
-        Some(canonical)
-    } else {
-        None
-    }
+    path_stays_under_root(root, &canonical).then_some(canonical).filter(|path| path.is_file())
+}
+
+fn canonical_root(root: &Path) -> Option<PathBuf> {
+    root.canonicalize().ok()
 }
 
 pub fn path_stays_under_root(root: &Path, path: &Path) -> bool {
-    let Ok(root) = root.canonicalize() else {
+    let Some(root) = canonical_root(root) else {
         return false;
     };
     path.canonicalize().is_ok_and(|path| path.starts_with(root))
@@ -133,7 +134,14 @@ where
     ShouldDescend: FnMut(&Path, &Path) -> bool,
     IncludeFile: FnMut(&Path, &Path) -> bool,
 {
-    collect_files_by_inner(root, dir, out, &mut should_descend, &mut include_file)
+    collect_files_by_inner(
+        root,
+        dir,
+        out,
+        &mut should_descend,
+        &mut include_file,
+        &mut HashSet::new(),
+    )
 }
 
 fn collect_files_by_inner<ShouldDescend, IncludeFile>(
@@ -142,17 +150,35 @@ fn collect_files_by_inner<ShouldDescend, IncludeFile>(
     out: &mut Vec<PathBuf>,
     should_descend: &mut ShouldDescend,
     include_file: &mut IncludeFile,
+    visited_dirs: &mut HashSet<PathBuf>,
 ) -> Result<()>
 where
     ShouldDescend: FnMut(&Path, &Path) -> bool,
     IncludeFile: FnMut(&Path, &Path) -> bool,
 {
+    let canonical = canonical_root(dir).unwrap_or_else(|| dir.to_path_buf());
+    if !visited_dirs.insert(canonical) {
+        return Ok(());
+    }
+
     for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
         let path = entry?.path();
         let rel = path.strip_prefix(root).unwrap_or(&path);
+
+        if path
+            .symlink_metadata()
+            .map(|metadata| metadata.file_type().is_symlink())
+            .unwrap_or(false)
+        {
+            if path.is_file() && include_file(rel, &path) {
+                out.push(path);
+            }
+            continue;
+        }
+
         if path.is_dir() {
             if should_descend(rel, &path) {
-                collect_files_by_inner(root, &path, out, should_descend, include_file)?;
+                collect_files_by_inner(root, &path, out, should_descend, include_file, visited_dirs)?;
             }
         } else if path.is_file() && include_file(rel, &path) {
             out.push(path);
@@ -279,5 +305,44 @@ mod tests {
         .unwrap();
 
         assert_eq!(files, vec![dir.path().join("keep").join("a.typ")]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collect_files_by_skips_symlink_directories_to_avoid_cycles() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().unwrap();
+        let keep = dir.path().join("keep");
+        fs::create_dir(&keep).unwrap();
+        fs::write(keep.join("a.typ"), "").unwrap();
+        symlink(dir.path(), dir.path().join("loop")).unwrap();
+
+        let mut files = Vec::new();
+        collect_files_by(
+            dir.path(),
+            dir.path(),
+            &mut files,
+            |_, _| true,
+            |_, path| path.extension().and_then(|ext| ext.to_str()) == Some("typ"),
+        )
+        .unwrap();
+
+        assert_eq!(files, vec![dir.path().join("keep").join("a.typ")]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_existing_file_accepts_paths_with_symlink_root() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().unwrap();
+        let actual_root = dir.path().join("actual");
+        let link_root = dir.path().join("link-root");
+        fs::create_dir(&actual_root).unwrap();
+        symlink(&actual_root, &link_root).unwrap();
+        fs::write(actual_root.join("index.html"), "ok").unwrap();
+
+        assert!(resolve_existing_file(link_root, "/index.html", None).is_some());
     }
 }
