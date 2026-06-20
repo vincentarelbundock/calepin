@@ -18,7 +18,7 @@ struct PageSyncDocument {
     entries: Vec<PageSyncEntry>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 struct PageSyncEntry {
     label: String,
     file: String,
@@ -34,6 +34,24 @@ pub fn write_page_sync(typst: &Path, layout: &LayoutPaths, chunks: &[ChunkSpec])
     let pages = page_anchors(typst, layout)?;
     let lines = source_lines_for_chunks(layout, chunks)?;
     let input = slash_path(&layout.input_rel);
+    let entries = page_sync_entries(chunks, &pages, &lines, &input);
+
+    write_page_sync_document(
+        &page_sync_path(layout),
+        &PageSyncDocument {
+            schema: PAGE_SYNC_SCHEMA_VERSION,
+            input,
+            entries,
+        },
+    )
+}
+
+fn page_sync_entries(
+    chunks: &[ChunkSpec],
+    pages: &HashMap<String, usize>,
+    lines: &HashMap<String, usize>,
+    file: &str,
+) -> Vec<PageSyncEntry> {
     let mut entries = Vec::new();
 
     for chunk in chunks {
@@ -45,20 +63,13 @@ pub fn write_page_sync(typst: &Path, layout: &LayoutPaths, chunks: &[ChunkSpec])
         };
         entries.push(PageSyncEntry {
             label: chunk.label.clone(),
-            file: input.clone(),
+            file: file.to_string(),
             line,
             page,
         });
     }
 
-    write_page_sync_document(
-        &page_sync_path(layout),
-        &PageSyncDocument {
-            schema: PAGE_SYNC_SCHEMA_VERSION,
-            input,
-            entries,
-        },
-    )
+    entries
 }
 
 fn source_lines_for_chunks(
@@ -105,10 +116,10 @@ fn find_chunk_code_index(
         }
     }
 
-    source[search_start..]
+    source
+        .get(search_start..)?
         .find(code)
         .map(|offset| search_start + offset)
-        .or_else(|| source.find(code))
 }
 
 fn source_code_ranges(source: &str) -> Vec<Range<usize>> {
@@ -127,7 +138,7 @@ fn source_code_ranges(source: &str) -> Vec<Range<usize>> {
         let trimmed = line.trim_start();
 
         if let Some((fence_len, code_start)) = open_fence {
-            if leading_backtick_count(trimmed) >= fence_len {
+            if is_closing_fence(trimmed, fence_len) {
                 ranges.push(code_start..line_start);
                 open_fence = None;
             }
@@ -150,6 +161,15 @@ fn source_code_ranges(source: &str) -> Vec<Range<usize>> {
     ranges
 }
 
+fn is_closing_fence(trimmed_line: &str, fence_len: usize) -> bool {
+    let closing_len = leading_backtick_count(trimmed_line);
+    if closing_len < fence_len {
+        return false;
+    }
+    let rest = trimmed_line[closing_len..].trim_start();
+    rest.is_empty() || rest.starts_with('<')
+}
+
 fn collect_inline_code_ranges(line: &str, line_start: usize, ranges: &mut Vec<Range<usize>>) {
     let bytes = line.as_bytes();
     let mut index = 0;
@@ -167,10 +187,15 @@ fn collect_inline_code_ranges(line: &str, line_start: usize, ranges: &mut Vec<Ra
         }
         let tick_count = end - index;
         if tick_count < 3 {
-            if let Some(start) = open.take() {
+            if let Some((open_tick_count, start)) = open {
+                if tick_count != open_tick_count {
+                    index = end;
+                    continue;
+                }
                 ranges.push(start..line_start + index);
+                open = None;
             } else {
-                open = Some(line_start + end);
+                open = Some((tick_count, line_start + end));
             }
         }
         index = end;
@@ -253,6 +278,118 @@ print(2)
         let lines = source_lines_for_chunks(&layout, &chunks).unwrap();
 
         assert_eq!(lines.get("chunk-1"), Some(&5));
+    }
+
+    #[test]
+    fn leaves_later_unmatched_duplicate_code_unmapped() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(
+            &input,
+            r#"#calepin.chunk("python")[
+```
+print(1)
+```
+]
+"#,
+        )
+        .unwrap();
+        let mut layout = testfixtures::layout(dir.path());
+        layout.input = input;
+        let chunks = vec![
+            test_chunk("chunk-1", "print(1)"),
+            test_chunk("generated-1", "print(1)"),
+        ];
+
+        let lines = source_lines_for_chunks(&layout, &chunks).unwrap();
+
+        assert_eq!(lines.get("chunk-1"), Some(&3));
+        assert_eq!(lines.get("generated-1"), None);
+    }
+
+    #[test]
+    fn maps_code_after_backtick_prefixed_raw_block_line() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(
+            &input,
+            r#"The code text print(1) appears in prose first.
+
+#calepin.chunk("python")[
+```
+```not a closing fence
+print(1)
+```
+]
+"#,
+        )
+        .unwrap();
+        let mut layout = testfixtures::layout(dir.path());
+        layout.input = input;
+        let chunks = vec![test_chunk("chunk-1", "print(1)")];
+
+        let lines = source_lines_for_chunks(&layout, &chunks).unwrap();
+
+        assert_eq!(lines.get("chunk-1"), Some(&6));
+    }
+
+    #[test]
+    fn ignores_mismatched_inline_raw_delimiters() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(
+            &input,
+            r#"The code text print(1) appears in prose first.
+Mismatched inline `print(1)`` should not count.
+#calepin.inline("python")[`print(1)`]
+"#,
+        )
+        .unwrap();
+        let mut layout = testfixtures::layout(dir.path());
+        layout.input = input;
+        let chunks = vec![test_chunk("inline-1", "print(1)")];
+
+        let lines = source_lines_for_chunks(&layout, &chunks).unwrap();
+
+        assert_eq!(lines.get("inline-1"), Some(&3));
+    }
+
+    #[test]
+    fn page_sync_entries_join_chunks_pages_and_lines_in_chunk_order() {
+        let chunks = vec![
+            test_chunk("chunk-1", "print(1)"),
+            test_chunk("chunk-2", "print(2)"),
+            test_chunk("chunk-3", "print(3)"),
+        ];
+        let pages = HashMap::from([
+            ("chunk-1".to_string(), 3usize),
+            ("chunk-2".to_string(), 4usize),
+            ("chunk-3".to_string(), 5usize),
+        ]);
+        let lines = HashMap::from([
+            ("chunk-1".to_string(), 10usize),
+            ("chunk-3".to_string(), 30usize),
+        ]);
+
+        let entries = page_sync_entries(&chunks, &pages, &lines, "paper.typ");
+
+        assert_eq!(
+            entries,
+            vec![
+                PageSyncEntry {
+                    label: "chunk-1".to_string(),
+                    file: "paper.typ".to_string(),
+                    line: 10,
+                    page: 3,
+                },
+                PageSyncEntry {
+                    label: "chunk-3".to_string(),
+                    file: "paper.typ".to_string(),
+                    line: 30,
+                    page: 5,
+                },
+            ]
+        );
     }
 
     fn test_chunk(label: &str, code: &str) -> ChunkSpec {
