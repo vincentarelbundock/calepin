@@ -6,7 +6,8 @@ use anyhow::{anyhow, bail, Context, Result};
 
 use crate::html::SiteNavEntry;
 use crate::utils::html::escape as html_escape;
-use crate::utils::static_files::path_has_common_skip_dir;
+use crate::utils::static_files::{collect_files_by, path_has_common_skip_dir};
+use crate::utils::url::output_href_with_extension;
 
 use super::config::{MenuItemConfig, PagesConfig, SidebarConfig, StaticConfig};
 use super::icons::{accessible_nav_label, nav_label_html, IconCache};
@@ -570,20 +571,13 @@ fn iter_static_files(src_dir: &Path) -> Result<Vec<PathBuf>> {
 }
 
 fn collect_static_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let entry = entry?;
-        let path = entry.path();
-        let rel = path.strip_prefix(root).unwrap_or(&path);
-        if path_has_common_skip_dir(rel) {
-            continue;
-        }
-        if path.is_dir() {
-            collect_static_files(root, &path, out)?;
-        } else if path.is_file() {
-            out.push(path);
-        }
-    }
-    Ok(())
+    collect_files_by(
+        root,
+        dir,
+        out,
+        |rel, _| !path_has_common_skip_dir(rel),
+        |rel, _| !path_has_common_skip_dir(rel),
+    )
 }
 
 fn static_patterns(patterns: &[String], key: &str) -> Result<Vec<String>> {
@@ -734,18 +728,6 @@ fn page_output_href(
         Some(prefix) => format!("{prefix}/{rel}"),
         None => rel,
     }
-}
-
-fn output_href_with_extension(url: &str, extension: &str) -> String {
-    let url = url.trim().trim_start_matches('/').trim_start_matches("./");
-    if url.ends_with('/') {
-        return format!("{url}index.{extension}");
-    }
-    // Replace any author-provided extension so the HTML and PDF outputs of the
-    // same page never collide on one path.
-    let mut path = PathBuf::from(url);
-    path.set_extension(extension);
-    slash_path(&path)
 }
 
 pub(super) fn nav_from_plans(
@@ -1006,26 +988,22 @@ fn collect_typ_files(
     exclude: &BTreeSet<&PathBuf>,
     out: &mut Vec<PathBuf>,
 ) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let entry = entry?;
-        let path = entry.path();
-        let rel = path.strip_prefix(root).unwrap_or(&path);
-        if !include_hidden
-            && rel
-                .components()
-                .any(|part| part.as_os_str().to_string_lossy().starts_with('.'))
-        {
-            continue;
-        }
-        if path.is_dir() {
-            collect_typ_files(root, &path, include_hidden, exclude, out)?;
-        } else if path.extension().and_then(|ext| ext.to_str()) == Some("typ")
-            && !exclude.contains(&rel.to_path_buf())
-        {
-            out.push(path);
-        }
-    }
-    Ok(())
+    collect_files_by(
+        root,
+        dir,
+        out,
+        |rel, _| include_hidden || !has_hidden_component(rel),
+        |rel, path| {
+            (include_hidden || !has_hidden_component(rel))
+                && path.extension().and_then(|ext| ext.to_str()) == Some("typ")
+                && !exclude.contains(&rel.to_path_buf())
+        },
+    )
+}
+
+fn has_hidden_component(path: &Path) -> bool {
+    path.components()
+        .any(|part| part.as_os_str().to_string_lossy().starts_with('.'))
 }
 
 fn stem_label(path: &Path) -> String {

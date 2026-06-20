@@ -432,12 +432,10 @@ mod tests {
     use std::process::Command;
     use std::time::Duration;
 
+    use crate::utils::testutil::command_available;
+
     fn has_rscript() -> bool {
-        Command::new("Rscript")
-            .arg("--version")
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
+        command_available("Rscript")
     }
 
     fn has_ggplot2() -> bool {

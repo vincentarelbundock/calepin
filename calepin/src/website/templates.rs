@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 use serde::Serialize;
 
+use crate::utils::static_files::collect_files_by;
 use crate::utils::template::no_autoescape_env;
 
 use super::paths::slash_path;
@@ -106,20 +107,16 @@ pub(super) fn read_template_files(dir: &Path) -> Result<Vec<(String, String)>> {
 }
 
 fn collect_template_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let path = entry?.path();
-        if path.is_dir() {
-            collect_template_files(root, &path, out)?;
-        } else if path.is_file() {
-            let rel = path.strip_prefix(root).unwrap_or(&path);
-            if rel
-                .components()
-                .any(|component| component.as_os_str().to_str() == Some(".calepin"))
-            {
-                continue;
-            }
-            out.push(path);
-        }
-    }
-    Ok(())
+    collect_files_by(
+        root,
+        dir,
+        out,
+        |rel, _| !has_calepin_component(rel),
+        |rel, _| !has_calepin_component(rel),
+    )
+}
+
+fn has_calepin_component(path: &Path) -> bool {
+    path.components()
+        .any(|component| component.as_os_str().to_str() == Some(".calepin"))
 }

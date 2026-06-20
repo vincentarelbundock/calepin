@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
 use serde_json::Value;
 
+use crate::typst::fence_label::{metadata_node_label, raw_node_label};
+
 pub type ParsedChunkSource = (String, Vec<(String, Value)>, Vec<String>);
 
 pub fn parse_chunk_body_with_qmd_header(body: &Value, label: &str) -> Result<ParsedChunkSource> {
@@ -136,39 +138,8 @@ fn extract_raw_node_and_fence_label<'a>(
     Ok((raw_children[0], fence_label))
 }
 
-fn raw_node_label(node: &Value) -> Result<Option<String>> {
-    node.get("label")
-        .and_then(Value::as_str)
-        .map(query_label_name)
-        .transpose()
-}
-
-pub(crate) fn query_label_name(value: &str) -> Result<String> {
-    if value.starts_with('<') && value.ends_with('>') && value.len() >= 2 {
-        let name = &value[1..value.len() - 1];
-        if name.is_empty() {
-            return Err(anyhow!("fence label must not be empty"));
-        }
-        Ok(name.to_string())
-    } else if value.is_empty() {
-        Err(anyhow!("fence label must not be empty"))
-    } else {
-        Ok(value.to_string())
-    }
-}
-
 fn calepin_fence_label_metadata(node: &Value) -> Result<Option<String>> {
-    if node.get("func").and_then(Value::as_str) != Some("metadata")
-        || node.get("label").and_then(Value::as_str) != Some("<calepin-fence-label>")
-    {
-        return Ok(None);
-    }
-    let value = node
-        .get("value")
-        .and_then(|value| value.get("label"))
-        .and_then(Value::as_str)
-        .ok_or_else(|| anyhow!("calepin fence label metadata is missing `label`"))?;
-    Ok(Some(query_label_name(value)?))
+    metadata_node_label(node)
 }
 
 fn set_fence_label(slot: &mut Option<String>, next: String, label: &str) -> Result<()> {

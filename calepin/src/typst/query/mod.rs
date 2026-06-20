@@ -7,9 +7,10 @@ use std::collections::HashSet;
 
 use crate::typst::chunk_options::{
     fence_label_from_chunk_body, parse_chunk_body_with_qmd_header,
-    parse_chunk_source_with_qmd_header, query_label_name, validate_chunk_arguments,
+    parse_chunk_source_with_qmd_header, validate_chunk_arguments,
 };
 use crate::typst::crossref::{has_crossref_prefix, parse_label_names};
+use crate::typst::fence_label::label_name;
 use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName, FencedChunks};
 
 use options::parse_chunk_options;
@@ -117,14 +118,14 @@ fn parse_fence_label_metadata(value: &Value) -> Result<String> {
         .and_then(|value| value.get("label"))
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow!("calepin fence label metadata is missing `label`"))?;
-    query_label_name(label)
+    label_name(label)
 }
 
 fn raw_block_query_label(value: &Value) -> Result<Option<String>> {
     value
         .get("label")
         .and_then(Value::as_str)
-        .map(query_label_name)
+        .map(label_name)
         .transpose()
 }
 

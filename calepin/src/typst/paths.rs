@@ -2,6 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use std::path::{Path, PathBuf};
 
 use crate::typst::model::LayoutPaths;
+pub use crate::utils::path::slash_path;
 
 pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> {
     let input_abs =
@@ -59,23 +60,14 @@ pub fn project_relative_path(root: &Path, path: &Path) -> String {
         .unwrap_or_else(|_| path.display().to_string())
 }
 
-pub fn slash_path(path: &Path) -> String {
-    path.components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/")
-}
-
 fn absolutize(path: &Path) -> Result<PathBuf> {
     if path.exists() {
         return std::fs::canonicalize(path).map_err(Into::into);
     }
-    let path = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        std::env::current_dir()?.join(path)
-    };
-    Ok(path)
+    Ok(crate::utils::path::absolutize_from(
+        &std::env::current_dir()?,
+        path,
+    ))
 }
 
 fn input_stem(input_rel: &Path) -> Result<PathBuf> {

@@ -343,6 +343,7 @@ mod tests {
     use super::*;
     use crate::typst::model::{ExecOptions, ResultsMode};
     use crate::typst::testfixtures;
+    use crate::utils::testutil::command_available;
 
     fn chunk(results: ResultsMode) -> ChunkSpec {
         let mut chunk = testfixtures::chunk("fig-demo", "x <- 1", results);
@@ -531,11 +532,7 @@ mod tests {
     }
 
     fn tool_available(cmd: &str) -> bool {
-        std::process::Command::new(cmd)
-            .arg("--version")
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
+        command_available(cmd)
     }
 
     fn pool_with_params(dir: &Path, params: Value) -> EnginePool {

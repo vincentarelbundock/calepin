@@ -1,5 +1,6 @@
 use super::*;
 use crate::utils::html::escape as html_escape;
+use crate::utils::testutil::{command_available, tempdir_in_manifest};
 
 fn test_build_result(root: &Path, pages: &[PathBuf]) -> WebsiteBuildResult {
     WebsiteBuildResult {
@@ -12,21 +13,6 @@ fn test_build_result(root: &Path, pages: &[PathBuf]) -> WebsiteBuildResult {
         nav_signature: 0,
         pages_signature: 0,
     }
-}
-
-fn has_command(command: &str) -> bool {
-    std::process::Command::new(command)
-        .arg("--version")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
-}
-
-fn typst_accessible_tempdir() -> tempfile::TempDir {
-    tempfile::Builder::new()
-        .prefix("calepin-website-test-")
-        .tempdir_in(env!("CARGO_MANIFEST_DIR"))
-        .unwrap()
 }
 
 fn test_page_info(src: &Path, files: &[PathBuf], pdf_files: &BTreeSet<PathBuf>) -> PageInfoMap {
@@ -97,11 +83,11 @@ styles = ["styles/site.css"]
 
 #[test]
 fn website_build_result_tracks_config_style_paths() {
-    if !has_command("typst") {
+    if !command_available("typst") {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-website-test-");
     let root = dir.path();
     std::fs::create_dir_all(root.join("styles")).unwrap();
     std::fs::write(root.join("styles/site.css"), "body { color: red; }").unwrap();
@@ -136,11 +122,11 @@ styles = ["styles/site.css"]
 
 #[test]
 fn website_build_result_canonicalizes_config_style_paths() {
-    if !has_command("typst") {
+    if !command_available("typst") {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-website-test-");
     let root = dir.path();
     let src = root.join("docs");
     std::fs::create_dir_all(&src).unwrap();
@@ -180,11 +166,11 @@ styles = ["../styles/site.css"]
 
 #[test]
 fn website_build_result_canonicalizes_config_theme_dir() {
-    if !has_command("typst") {
+    if !command_available("typst") {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-website-test-");
     let root = dir.path();
     let src = root.join("docs");
     let config = root.join("config");
@@ -220,11 +206,11 @@ fn website_build_result_canonicalizes_config_theme_dir() {
 
 #[test]
 fn website_build_result_normalizes_created_output_dir_inside_source() {
-    if !has_command("typst") {
+    if !command_available("typst") {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-website-test-");
     let root = dir.path();
     let src = root.join("docs");
     std::fs::create_dir_all(src.join("tmp")).unwrap();

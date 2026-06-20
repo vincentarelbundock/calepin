@@ -1,4 +1,7 @@
+use std::fs;
 use std::path::{Component, Path, PathBuf};
+
+use anyhow::{Context, Result};
 
 pub const COMMON_SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
 pub const TEXT_PLAIN_UTF8: &str = "text/plain; charset=utf-8";
@@ -119,6 +122,45 @@ pub fn path_has_common_skip_dir(path: &Path) -> bool {
     })
 }
 
+pub fn collect_files_by<ShouldDescend, IncludeFile>(
+    root: &Path,
+    dir: &Path,
+    out: &mut Vec<PathBuf>,
+    mut should_descend: ShouldDescend,
+    mut include_file: IncludeFile,
+) -> Result<()>
+where
+    ShouldDescend: FnMut(&Path, &Path) -> bool,
+    IncludeFile: FnMut(&Path, &Path) -> bool,
+{
+    collect_files_by_inner(root, dir, out, &mut should_descend, &mut include_file)
+}
+
+fn collect_files_by_inner<ShouldDescend, IncludeFile>(
+    root: &Path,
+    dir: &Path,
+    out: &mut Vec<PathBuf>,
+    should_descend: &mut ShouldDescend,
+    include_file: &mut IncludeFile,
+) -> Result<()>
+where
+    ShouldDescend: FnMut(&Path, &Path) -> bool,
+    IncludeFile: FnMut(&Path, &Path) -> bool,
+{
+    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
+        let path = entry?.path();
+        let rel = path.strip_prefix(root).unwrap_or(&path);
+        if path.is_dir() {
+            if should_descend(rel, &path) {
+                collect_files_by_inner(root, &path, out, should_descend, include_file)?;
+            }
+        } else if path.is_file() && include_file(rel, &path) {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
 fn strip_base_path_prefix<'a>(path: &'a str, base_path_prefix: Option<&str>) -> &'a str {
     let Some(prefix) = base_path_prefix else {
         return path;
@@ -167,6 +209,7 @@ fn hex_value(byte: u8) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn request_relative_path_accepts_root_relative_assets() {
@@ -214,5 +257,27 @@ mod tests {
                 .unwrap(),
             root.join("other").join("notebooks").join("guide.html")
         );
+    }
+
+    #[test]
+    fn collect_files_by_applies_directory_and_file_filters() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("keep")).unwrap();
+        fs::create_dir_all(dir.path().join("skip")).unwrap();
+        fs::write(dir.path().join("keep").join("a.typ"), "").unwrap();
+        fs::write(dir.path().join("keep").join("b.txt"), "").unwrap();
+        fs::write(dir.path().join("skip").join("c.typ"), "").unwrap();
+
+        let mut files = Vec::new();
+        collect_files_by(
+            dir.path(),
+            dir.path(),
+            &mut files,
+            |rel, _| rel != Path::new("skip"),
+            |_, path| path.extension().and_then(|ext| ext.to_str()) == Some("typ"),
+        )
+        .unwrap();
+
+        assert_eq!(files, vec![dir.path().join("keep").join("a.typ")]);
     }
 }

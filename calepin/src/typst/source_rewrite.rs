@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
-use crate::typst::crossref::has_crossref_prefix;
+use crate::typst::fence_label::{is_routed_crossref_label, trailing_fence_label};
 use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 const RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
@@ -377,9 +377,11 @@ fn rewrite_trailing_fence_label(block: &mut RawBlock, rewrite_plain_labels: bool
         return false;
     };
     let (line, newline) = split_segment(last);
-    let Some((prefix, label)) = trailing_fence_label(line) else {
+    let Some(parsed) = trailing_fence_label(line) else {
         return false;
     };
+    let prefix = parsed.prefix;
+    let label = parsed.label;
     if !rewrite_plain_labels && !is_routed_crossref_label(label) {
         return false;
     }
@@ -433,8 +435,7 @@ fn rewrite_raw_block_as_chunk_from_raw_plain(block: &RawBlock, had_trailing_labe
 fn trailing_label_metadata(segments: &[String]) -> Option<&str> {
     let last = segments.last()?;
     let (line, _) = split_segment(last);
-    let (_, label) = trailing_fence_label(line)?;
-    Some(label)
+    Some(trailing_fence_label(line)?.label)
 }
 
 fn is_source_rewritten_chunk_lang(raw_lang: Option<&str>) -> bool {
@@ -458,25 +459,6 @@ fn qmd_string_literal(value: &str) -> String {
     format!("\"{}\"", typst_string_escape(value))
 }
 
-fn trailing_fence_label(line: &str) -> Option<(&str, &str)> {
-    let trimmed_end = line.trim_end();
-    if !trimmed_end.ends_with('>') {
-        return None;
-    }
-    let label_start = trimmed_end.rfind('<')?;
-    let label = &trimmed_end[label_start + 1..trimmed_end.len() - 1];
-    let before_label = &trimmed_end[..label_start];
-    let fence = before_label.trim();
-    if fence.len() < 3 || !fence.chars().all(|ch| ch == '`') {
-        return None;
-    }
-    if label.is_empty() {
-        return None;
-    }
-    let prefix = &line[..label_start];
-    Some((prefix, label))
-}
-
 fn line_suffix_after_trimmed_end(line: &str) -> &str {
     let trimmed_len = line.trim_end().len();
     &line[trimmed_len..]
@@ -484,10 +466,6 @@ fn line_suffix_after_trimmed_end(line: &str) -> &str {
 
 fn is_executable_label_candidate_lang(raw_lang: Option<&str>) -> bool {
     !matches!(raw_lang, None | Some("typ" | "typst"))
-}
-
-fn is_routed_crossref_label(label: &str) -> bool {
-    has_crossref_prefix(label)
 }
 
 fn typst_string_escape(value: &str) -> String {
@@ -683,7 +661,8 @@ mod tests {
 
     #[test]
     fn recovers_after_inline_raw_fence_body_in_custom_chunk_wrapper() {
-        let source = "#python_figure()[```python\nplot()\n```]\n\n```python\nprint(\"after\")\n```\n";
+        let source =
+            "#python_figure()[```python\nplot()\n```]\n\n```python\nprint(\"after\")\n```\n";
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(
             rewritten,

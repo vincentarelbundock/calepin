@@ -522,11 +522,7 @@ mod tests {
     use crate::typst::model::ResultsMode;
     use crate::typst::paths::slash_path;
     use crate::typst::testfixtures;
-    use std::process::Command;
-
-    fn typst_available() -> bool {
-        Command::new("typst").arg("--version").output().is_ok()
-    }
+    use crate::utils::testutil::command_available;
 
     #[test]
     fn page_meta_roundtrips_and_detects_stale_source() {
@@ -575,7 +571,7 @@ mod tests {
 
     #[test]
     fn preprocess_theme_can_come_from_config() {
-        if !typst_available() {
+        if !command_available("typst") {
             return;
         }
 

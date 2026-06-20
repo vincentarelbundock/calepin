@@ -5,11 +5,10 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 
 use crate::utils::http::timeout_agent;
-use crate::utils::path::normalize_path;
 
 use super::source::{
-    collect_typst_files, display_rel, is_external_or_special_target, is_identifier_char,
-    line_number, mask_raw_spans, parse_string_literal, skip_ws,
+    collect_typst_files, display_rel, is_identifier_char, line_number, mask_raw_spans,
+    parse_string_literal, resolve_local_reference_target, skip_ws,
 };
 use super::{HealthCheck, HealthStatus};
 
@@ -164,33 +163,20 @@ fn extract_literal_links(source_path: &Path, source: &str) -> Vec<LinkOccurrence
 }
 
 fn validate_local_link(root: &Path, link: &LinkOccurrence) -> Option<String> {
-    let target = link.target.trim();
-    if target.is_empty() || is_external_or_special_target(target) {
+    let Some(candidate) = resolve_local_reference_target(root, &link.source, &link.target) else {
         return None;
-    }
-    let path_part = target
-        .split_once(['#', '?'])
-        .map(|(path, _)| path)
-        .unwrap_or(target)
-        .trim();
-    if path_part.is_empty() {
-        return None;
-    }
-
-    let base = if path_part.starts_with('/') {
-        root.to_path_buf()
-    } else {
-        link.source.parent().unwrap_or(root).to_path_buf()
     };
-    let candidate = normalize_path(&base.join(path_part.trim_start_matches('/')));
-    if !candidate.starts_with(root) {
-        return Some(format!(
-            "{}:{} `{}` escapes the project root",
-            display_rel(root, &link.source),
-            link.line,
-            link.target
-        ));
-    }
+    let candidate = match candidate {
+        Ok(candidate) => candidate,
+        Err(_) => {
+            return Some(format!(
+                "{}:{} `{}` escapes the project root",
+                display_rel(root, &link.source),
+                link.line,
+                link.target
+            ));
+        }
+    };
     if link_target_exists(&candidate) {
         return None;
     }

@@ -314,15 +314,12 @@ impl PythonSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::process::Command;
     use std::time::Duration;
 
+    use crate::utils::testutil::command_available;
+
     fn has_python3() -> bool {
-        Command::new("python3")
-            .arg("--version")
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
+        command_available("python3")
     }
 
     fn session() -> PythonSession {

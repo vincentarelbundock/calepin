@@ -32,6 +32,7 @@ use xxhash_rust::xxh3::xxh3_64;
 use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
 use crate::config::CalepinConfig;
 use crate::html::HtmlSyntaxTheme;
+use crate::utils::path::absolutize_from;
 use crate::utils::progress::ProgressManager;
 use crate::utils::static_files::path_has_common_skip_dir;
 pub(crate) use crate::utils::static_files::COMMON_SKIP_DIRS as SKIP_DIRS;
@@ -910,7 +911,7 @@ fn discover_website_config(
     explicit: Option<&Path>,
 ) -> Result<PathBuf> {
     if let Some(config) = explicit {
-        return absolutize_from(current_dir, config);
+        return Ok(absolutize_from(current_dir, config));
     }
     let input_dir = resolve_cli_path(current_dir, input);
     let preferred = input_dir.join(DEFAULT_CONFIG);
@@ -925,23 +926,11 @@ fn discover_website_config(
 
 fn resolve_config_path(current_dir: &Path, value: Option<&Path>) -> Result<PathBuf> {
     let path = value.unwrap_or_else(|| Path::new(DEFAULT_CONFIG));
-    absolutize_from(current_dir, path)
+    Ok(absolutize_from(current_dir, path))
 }
 
 fn resolve_cli_path(current_dir: &Path, path: &Path) -> PathBuf {
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        current_dir.join(path)
-    }
-}
-
-fn absolutize_from(root: &Path, path: &Path) -> Result<PathBuf> {
-    if path.is_absolute() {
-        Ok(path.to_path_buf())
-    } else {
-        Ok(root.join(path))
-    }
+    absolutize_from(current_dir, path)
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@ pub mod cli;
 pub mod compile;
 pub mod crossref;
 pub mod execute;
+pub mod fence_label;
 pub mod introspect;
 pub mod io;
 pub mod model;

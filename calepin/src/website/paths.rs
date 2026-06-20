@@ -1,19 +1,12 @@
 use std::path::Path;
 
-pub(super) use crate::utils::path::normalize_path;
+pub(super) use crate::utils::path::{normalize_path, slash_path};
 
 pub(super) fn rel_posix(src_dir: &Path, path: &Path) -> String {
     path.strip_prefix(src_dir)
         .unwrap_or(path)
         .to_string_lossy()
         .replace('\\', "/")
-}
-
-pub(super) fn slash_path(path: &Path) -> String {
-    path.components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/")
 }
 
 pub(super) fn wildcard_match(pattern: &str, value: &str) -> bool {
