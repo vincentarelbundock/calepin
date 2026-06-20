@@ -25,7 +25,7 @@ impl HtmlScope {
 
 /// An HTML entry resolved to render-ready sources. The asset lists come from
 /// the same bundle that provided the layout (the spec's "asset closure").
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct HtmlEntry {
     pub theme_name: String,
     pub layout: String,
