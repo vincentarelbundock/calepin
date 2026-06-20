@@ -121,6 +121,11 @@
       ...config,
     };
 
+    // Backward compatibility: tolerate older/typo config key name.
+    if (options.navigationMode == null && typeof options.navigationModel === "string") {
+      options.navigationMode = options.navigationModel;
+    }
+
     if (config && config.plugins) {
       options.plugins = resolvePlugins(config.plugins);
     } else {
