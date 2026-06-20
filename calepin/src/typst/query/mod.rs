@@ -6,8 +6,8 @@ use serde_json::Value;
 use std::collections::HashSet;
 
 use crate::typst::chunk_options::{
-    fence_label_from_chunk_body, parse_chunk_body_with_qmd_header,
-    parse_chunk_source_with_qmd_header, validate_chunk_arguments,
+    parse_chunk_body_with_qmd_header, parse_chunk_source_with_qmd_header, validate_chunk_arguments,
+    ParsedChunkSource,
 };
 use crate::typst::crossref::{has_crossref_prefix, parse_label_names};
 use crate::typst::fence_label::{label_name, metadata_node_label};
@@ -135,10 +135,12 @@ fn parse_chunk_metadata(
 ) -> Result<()> {
     validate_chunk_arguments(value, label)?;
 
-    let (code, chunk_options, mut header_warnings) =
-        parse_chunk_body_with_qmd_header(value.get("body").unwrap_or(&Value::Null), label)?;
-    let fence_label =
-        fence_label_from_chunk_body(value.get("body").unwrap_or(&Value::Null), label)?;
+    let ParsedChunkSource {
+        code,
+        overrides: chunk_options,
+        warnings: mut header_warnings,
+        fence_label,
+    } = parse_chunk_body_with_qmd_header(value.get("body").unwrap_or(&Value::Null), label)?;
     warnings.append(&mut header_warnings);
     let mut value_with_options = value
         .as_object()
@@ -228,8 +230,12 @@ fn parse_chunk_raw_block(
     let raw_fence_label = raw_block_query_label(value)?;
     let raw_text = value.get("text").and_then(Value::as_str).unwrap_or("");
     let label_hint = format!("chunk-{}", *state.auto_label_index);
-    let (raw_code, chunk_options, mut header_warnings) =
-        parse_chunk_source_with_qmd_header(raw_text, &label_hint)?;
+    let ParsedChunkSource {
+        code: raw_code,
+        overrides: chunk_options,
+        warnings: mut header_warnings,
+        fence_label: _,
+    } = parse_chunk_source_with_qmd_header(raw_text, &label_hint)?;
     state.warnings.append(&mut header_warnings);
     let mut value_with_options = value
         .as_object()

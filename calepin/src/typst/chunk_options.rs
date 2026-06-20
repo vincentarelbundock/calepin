@@ -3,16 +3,24 @@ use serde_json::Value;
 
 use crate::typst::fence_label::{metadata_node_label, raw_node_label};
 
-pub type ParsedChunkSource = (String, Vec<(String, Value)>, Vec<String>);
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParsedChunkSource {
+    pub code: String,
+    pub overrides: Vec<(String, Value)>,
+    pub warnings: Vec<String>,
+    pub fence_label: Option<String>,
+}
 
 pub fn parse_chunk_body_with_qmd_header(body: &Value, label: &str) -> Result<ParsedChunkSource> {
-    let (raw, _) = extract_raw_node_and_fence_label(body, label)?;
-    parse_chunk_source_with_qmd_header(
+    let (raw, fence_label) = extract_raw_node_and_fence_label(body, label)?;
+    let mut parsed = parse_chunk_source_with_qmd_header(
         raw.get("text")
             .and_then(Value::as_str)
             .ok_or_else(|| anyhow!("chunk `{}` raw element is missing text", label))?,
         label,
-    )
+    )?;
+    parsed.fence_label = fence_label;
+    Ok(parsed)
 }
 
 pub fn parse_chunk_source_with_qmd_header(source: &str, label: &str) -> Result<ParsedChunkSource> {
@@ -62,7 +70,12 @@ pub fn parse_chunk_source_with_qmd_header(source: &str, label: &str) -> Result<P
         overrides.push((key, value));
     }
 
-    Ok((code, overrides, warnings))
+    Ok(ParsedChunkSource {
+        code,
+        overrides,
+        warnings,
+        fence_label: None,
+    })
 }
 
 pub fn validate_chunk_arguments(value: &Value, label: &str) -> Result<()> {
@@ -84,16 +97,11 @@ pub fn validate_chunk_arguments(value: &Value, label: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn fence_label_from_chunk_body(body: &Value, label: &str) -> Result<Option<String>> {
-    let (_, fence_label) = extract_raw_node_and_fence_label(body, label)?;
-    Ok(fence_label)
-}
-
 fn extract_raw_node_and_fence_label<'a>(
     node: &'a Value,
     label: &str,
 ) -> Result<(&'a Value, Option<String>)> {
-    if node.get("func").and_then(Value::as_str) == Some("raw") {
+    if is_raw_node(node) {
         return Ok((node, raw_node_label(node)?));
     }
 
@@ -104,26 +112,22 @@ fn extract_raw_node_and_fence_label<'a>(
         ));
     };
 
-    let raw_children: Vec<&Value> = children
-        .iter()
-        .filter(|child| child.get("func").and_then(Value::as_str) == Some("raw"))
-        .collect();
-    if raw_children.len() != 1 {
-        return Err(anyhow!(
-            "chunk `{}` body must contain exactly one raw element",
-            label
-        ));
-    }
-
+    let mut raw_child = None;
     let mut fence_label = None;
     for child in children {
-        if child.get("func").and_then(Value::as_str) == Some("raw") {
+        if is_raw_node(child) {
+            if raw_child.replace(child).is_some() {
+                return Err(anyhow!(
+                    "chunk `{}` body must contain exactly one raw element",
+                    label
+                ));
+            }
             if let Some(raw_label) = raw_node_label(child)? {
                 set_fence_label(&mut fence_label, raw_label, label)?;
             }
             continue;
         }
-        if let Some(metadata_label) = calepin_fence_label_metadata(child)? {
+        if let Some(metadata_label) = metadata_node_label(child)? {
             set_fence_label(&mut fence_label, metadata_label, label)?;
             continue;
         }
@@ -135,11 +139,18 @@ fn extract_raw_node_and_fence_label<'a>(
         }
     }
 
-    Ok((raw_children[0], fence_label))
+    let Some(raw_child) = raw_child else {
+        return Err(anyhow!(
+            "chunk `{}` body must contain exactly one raw element",
+            label
+        ));
+    };
+
+    Ok((raw_child, fence_label))
 }
 
-fn calepin_fence_label_metadata(node: &Value) -> Result<Option<String>> {
-    metadata_node_label(node)
+fn is_raw_node(node: &Value) -> bool {
+    node.get("func").and_then(Value::as_str) == Some("raw")
 }
 
 fn set_fence_label(slot: &mut Option<String>, next: String, label: &str) -> Result<()> {
@@ -254,6 +265,7 @@ fn native_chunk_option_names() -> &'static [&'static str] {
         "fig-subcaptions",
         "fig-layout-columns",
         "fig-layout-rows",
+        "kind",
     ]
 }
 
@@ -285,7 +297,7 @@ pub(crate) fn parse_qmd_value(value: &str) -> Result<Value> {
         return Ok(Value::from(float));
     }
     if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 {
-        return Ok(Value::String(value[1..value.len() - 1].to_string()));
+        return Ok(Value::String(decode_double_quoted_string(value)));
     }
     if value.starts_with('\'') && value.ends_with('\'') && value.len() >= 2 {
         return Ok(Value::String(value[1..value.len() - 1].to_string()));
@@ -296,8 +308,8 @@ pub(crate) fn parse_qmd_value(value: &str) -> Result<Value> {
             return Ok(Value::Array(vec![]));
         }
 
-        let items = inner
-            .split(',')
+        let items = split_qmd_array_items(inner)?
+            .into_iter()
             .map(|item| parse_qmd_value(item.trim()))
             .collect::<Result<Vec<_>>>()?;
         return Ok(Value::Array(items));
@@ -313,4 +325,166 @@ fn translate_chunk_option_name(name: &str) -> Option<&'static str> {
 
 fn is_native_chunk_option(name: &str) -> bool {
     native_chunk_option_names().contains(&name)
+}
+
+fn split_qmd_array_items(inner: &str) -> Result<Vec<&str>> {
+    let mut items = Vec::new();
+    let mut item_start = 0usize;
+    let mut bracket_depth = 0usize;
+    let mut quote = None;
+    let mut escaped = false;
+
+    for (idx, ch) in inner.char_indices() {
+        if let Some(quote_char) = quote {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            if quote_char == '"' && ch == '\\' {
+                escaped = true;
+                continue;
+            }
+            if ch == quote_char {
+                quote = None;
+            }
+            continue;
+        }
+
+        match ch {
+            '"' | '\'' => quote = Some(ch),
+            '[' => bracket_depth += 1,
+            ']' => {
+                if bracket_depth == 0 {
+                    return Err(anyhow!("unmatched `]` in array value `{inner}`"));
+                }
+                bracket_depth -= 1;
+            }
+            ',' if bracket_depth == 0 => {
+                items.push(inner[item_start..idx].trim());
+                item_start = idx + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+
+    if let Some(quote_char) = quote {
+        return Err(anyhow!(
+            "unterminated `{quote_char}` string in array value `{inner}`"
+        ));
+    }
+    if bracket_depth != 0 {
+        return Err(anyhow!(
+            "unterminated nested array in array value `{inner}`"
+        ));
+    }
+
+    items.push(inner[item_start..].trim());
+    Ok(items)
+}
+
+fn decode_double_quoted_string(value: &str) -> String {
+    let inner = &value[1..value.len() - 1];
+    let mut decoded = String::with_capacity(inner.len());
+    let mut chars = inner.chars();
+    while let Some(ch) = chars.next() {
+        if ch != '\\' {
+            decoded.push(ch);
+            continue;
+        }
+
+        let Some(escaped) = chars.next() else {
+            decoded.push('\\');
+            break;
+        };
+        match escaped {
+            '"' => decoded.push('"'),
+            '\\' => decoded.push('\\'),
+            'n' => decoded.push('\n'),
+            'r' => decoded.push('\r'),
+            't' => decoded.push('\t'),
+            other => {
+                decoded.push('\\');
+                decoded.push(other);
+            }
+        }
+    }
+    decoded
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn override_value<'a>(parsed: &'a ParsedChunkSource, key: &str) -> &'a Value {
+        parsed
+            .overrides
+            .iter()
+            .find_map(|(name, value)| (name == key).then_some(value))
+            .unwrap_or_else(|| panic!("missing override `{key}`"))
+    }
+
+    #[test]
+    fn parsed_source_exposes_named_fields() {
+        let parsed =
+            parse_chunk_source_with_qmd_header("#| echo: false\nprint(1)", "chunk-1").unwrap();
+
+        assert_eq!(parsed.code, "print(1)");
+        assert_eq!(override_value(&parsed, "echo"), &Value::Bool(false));
+        assert!(parsed.warnings.is_empty());
+        assert_eq!(parsed.fence_label, None);
+    }
+
+    #[test]
+    fn parsed_body_carries_trailing_fence_label() {
+        let body = json!({
+            "func": "sequence",
+            "children": [
+                {"func": "raw", "text": "#| echo: false\nplot(1)", "block": true},
+                {"func": "space"},
+                {
+                    "func": "metadata",
+                    "label": "<calepin-fence-label>",
+                    "value": {"label": "fig-trailing"}
+                }
+            ]
+        });
+
+        let parsed = parse_chunk_body_with_qmd_header(&body, "fig-trailing").unwrap();
+
+        assert_eq!(parsed.code, "plot(1)");
+        assert_eq!(override_value(&parsed, "echo"), &Value::Bool(false));
+        assert_eq!(parsed.fence_label.as_deref(), Some("fig-trailing"));
+    }
+
+    #[test]
+    fn qmd_arrays_split_only_top_level_commas() {
+        let parsed = parse_qmd_value(r#"["A, with comma", ["B, nested", C], "D"]"#).unwrap();
+
+        assert_eq!(parsed, json!(["A, with comma", ["B, nested", "C"], "D"]));
+    }
+
+    #[test]
+    fn qmd_double_quoted_strings_decode_escapes() {
+        let parsed = parse_qmd_value(r#""A \"quoted\" label""#).unwrap();
+
+        assert_eq!(parsed, Value::String("A \"quoted\" label".to_string()));
+    }
+
+    #[test]
+    fn qmd_double_quoted_strings_preserve_unknown_escapes() {
+        let parsed = parse_qmd_value(r#""C:\path\figure.svg""#).unwrap();
+
+        assert_eq!(parsed, Value::String(r#"C:\path\figure.svg"#.to_string()));
+    }
+
+    #[test]
+    fn qmd_header_accepts_kind_option() {
+        let parsed = parse_chunk_source_with_qmd_header("#| kind: fig\nplot(1)", "fig-1").unwrap();
+
+        assert_eq!(
+            override_value(&parsed, "kind"),
+            &Value::String("fig".to_string())
+        );
+    }
 }
