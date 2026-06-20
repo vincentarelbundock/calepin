@@ -13,6 +13,12 @@
       return true;
     }
 
+    const headingLevels = nodes
+      .filter((node) => node.nodeType === 1 && /^H[1-6]$/.test(node.tagName))
+      .map((node) => Number(node.tagName.slice(1)));
+    const horizontalLevel = headingLevels.length > 0 ? Math.min(...headingLevels) : 1;
+    const verticalLevel = Math.min(horizontalLevel + 1, 6);
+
     let currentHorizontal = null;
     let currentVertical = null;
 
@@ -26,6 +32,17 @@
     function newVertical(node) {
       if (!currentHorizontal) {
         newHorizontal(document.createElement("div"));
+      }
+      const horizontalChildren = Array.from(currentHorizontal.childNodes);
+      const hasHorizontalContent = horizontalChildren.some(
+        (child) => !(child.nodeType === 1 && child.tagName.toLowerCase() === "section"),
+      );
+      if (hasHorizontalContent) {
+        const titleSlide = document.createElement("section");
+        for (const child of horizontalChildren) {
+          titleSlide.appendChild(child);
+        }
+        currentHorizontal.appendChild(titleSlide);
       }
       currentVertical = document.createElement("section");
       currentVertical.appendChild(node);
@@ -43,9 +60,9 @@
 
     for (const node of nodes) {
       const isElement = node.nodeType === 1;
-      if (isElement && node.tagName.toLowerCase() === "h1") {
+      if (isElement && Number(node.tagName.slice(1)) === horizontalLevel) {
         newHorizontal(node);
-      } else if (isElement && node.tagName.toLowerCase() === "h2") {
+      } else if (isElement && Number(node.tagName.slice(1)) === verticalLevel) {
         newVertical(node);
       } else {
         appendToCurrent(node);
