@@ -2,51 +2,90 @@
 
 #calepin.setup(
   theme: "revealjs",
-  eval: false,
+  echo: true,
+  results: "render",
 )
 
 #show raw.where(block: true): set text(size: .8em)
 
-#heading(level: 1)[Reveal.js Theme Demo]
+= Reveal.js + Calepin
 
-#lorem(12)
+This deck mirrors the structure from `docs/slides/touying.typ`: horizontal slides are
+`h1` headings and vertical slides are `h2` headings.
 
-= Slide 2: A horizontal slide
+== What changed
 
-`h1` headings become horizontal slides in the `revealjs` theme.
+- No Touying theme is used.
+- The built-in `revealjs` Calepin theme handles slide structure.
+- Slides can still mix Markdown-style content, code execution, and images.
 
-- Use normal markdown-style lists.
-- Include code blocks for syntax highlighting.
+= Visual slide with images
 
+== Left and right visuals
+
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 1em,
+  [
+    #figure(
+      image("docs/assets/flowers_01.jpg", width: 100%),
+      caption: [Left image: rose field],
+    )
+  ],
+  [
+    #figure(
+      image("docs/assets/flowers_02.jpg", width: 100%),
+      caption: [Right image: petals in daylight],
+    )
+  ],
+)
+
+= Compute in one column and reuse output
+
+== Keep output hidden, place it elsewhere
+
+A `results: "hidden"` chunk can be rendered with `#calepin.results(label)` later
+in the same slide, or in another slide.
+
+#grid(
+  columns: (1fr, 1fr),
+  gutter: .4em,
+  [
+    === Column 1: Code
+    #calepin.chunk("python", label: "summary2", results: "hidden")[
 ```python
-for i in range(1, 4):
-    print(f"slide point {i}")
+values = [2, 3, 5, 8, 13]
+total = sum(values)
+print(f"Total = {total}")
 ```
+    ]
+  ],
+  [
+    === Column 2: Output
+    #calepin.results("summary2")
+  ],
+)
 
-== Slide 2.1: A vertical slide
+== Output on a follow-up slide
 
-`h2` headings become vertical fragments within the previous `h1` slide.
-
-```rust
-fn main() {
-    println!("Hello, reveal.js!");
-}
-```
-
-== Slide 2.2: Another vertical slide
-
-Use this to present a sequence of related ideas.
-
-- Point one
-- Point two
-- Point three
-
-= Slide 3: Code execution style
-
+#calepin.chunk("python", label: "next-slide-claim", results: "hidden")[
 ```python
-value = 41
-value + 1
+baseline = 120
+current = 156
+change = (current - baseline) / baseline
+print(f"Change from baseline: {change:.0%}")
 ```
+]
 
-`calepin.setup` is set to the `revealjs` built-in theme, so the output
-fits a fullscreen slide deck by default.
+The source stays on this slide, while the result is shown in the next one.
+
+= Follow-up slide
+
+== Final slide with a result image
+
+#calepin.results("next-slide-claim")
+
+#figure(
+  image("docs/assets/flowers_03.jpg", width: 72%),
+  caption: [A closing visual, still fully compatible with the Reveal.js layout],
+)
