@@ -455,6 +455,7 @@ mod tests {
         assert!(args.contains(&"--features=html".to_string()));
     }
 
+    #[test]
     fn non_html_formats_do_not_enable_typst_html_feature() {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("paper.typ");

@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context, Result};
-use serde_json::Value as JsonValue;
 use serde::Deserialize;
+#[cfg(test)]
+use serde_json::Value as JsonValue;
 use std::path::{Path, PathBuf};
 
 use crate::utils::path::{expand_home, is_path_like};

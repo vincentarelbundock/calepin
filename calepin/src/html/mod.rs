@@ -46,22 +46,6 @@ fn join_blocks(chunks: impl IntoIterator<Item = String>) -> Option<String> {
     (!out.is_empty()).then_some(out)
 }
 
-#[cfg(test)]
-pub(crate) fn apply_html_theme_file(
-    path: &Path,
-    entry: Option<&crate::theme::HtmlEntry>,
-    root: &Path,
-    site_context: Option<&SiteContextInput>,
-) -> Result<()> {
-    apply_html_theme_file_with_site_context(
-        path,
-        entry,
-        &HtmlSyntaxTheme::builtin(),
-        root,
-        site_context,
-    )
-}
-
 pub(crate) fn apply_html_theme_file_with_site_context(
     path: &Path,
     entry: Option<&crate::theme::HtmlEntry>,
