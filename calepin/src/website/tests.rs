@@ -795,6 +795,10 @@ favicon = "assets/favicon.ico"
     let config = website_config_from_toml(r#"logo = "../logo.svg""#);
     let err = SiteMetadata::from_config(&config, src).unwrap_err();
     assert!(err.to_string().contains("source directory"));
+
+    let config = website_config_from_toml(r#"logo = ".""#);
+    let err = SiteMetadata::from_config(&config, src).unwrap_err();
+    assert!(err.to_string().contains("source directory"));
 }
 
 #[test]
@@ -1847,6 +1851,72 @@ fn theme_context_rewrites_brand_urls_relative_to_current_page() {
     assert_eq!(context.favicon.as_deref(), Some("../assets/favicon.ico"));
     assert_eq!(context.logo_alt.as_deref(), Some("Example"));
     assert_eq!(context.stylesheet, None);
+}
+
+#[test]
+fn theme_context_includes_global_sidebar_sections_with_language_specific_current_page() {
+    let en = PathBuf::from("/site/docs/en.typ");
+    let site = SiteModel::new(
+        vec![
+            NavSectionModel {
+                language: None,
+                title: Some("Global".to_string()),
+                items: vec![NavItemModel {
+                    language: None,
+                    href: "about.html".to_string(),
+                    label: "About".to_string(),
+                    label_html: html_escape("About"),
+                }],
+            },
+            NavSectionModel {
+                language: Some("en".to_string()),
+                title: Some("English".to_string()),
+                items: vec![NavItemModel {
+                    language: Some("en".to_string()),
+                    href: "guide/usage.html".to_string(),
+                    label: "Usage".to_string(),
+                    label_html: html_escape("Usage"),
+                }],
+            },
+            NavSectionModel {
+                language: Some("fr".to_string()),
+                title: Some("Français".to_string()),
+                items: vec![NavItemModel {
+                    language: Some("fr".to_string()),
+                    href: "fr/guide/usage.html".to_string(),
+                    label: "Utilisation".to_string(),
+                    label_html: html_escape("Utilisation"),
+                }],
+            },
+        ],
+        MenusModel::default(),
+        SiteMetadata::default(),
+        true,
+    );
+    let page_info = PageInfoMap::from([(
+        en.clone(),
+        PageInfo {
+            language: Some("en".to_string()),
+            translation_key: "guide-usage".to_string(),
+            href: "guide/usage.html".to_string(),
+            pdf_href: None,
+        },
+    )]);
+
+    let context = site.theme_context(
+        "guide/usage.html",
+        page_info.get(&en),
+        &page_info,
+        None,
+        None,
+    );
+
+    assert_eq!(context.sidebar_sections.len(), 2);
+    assert_eq!(context.sidebar_sections[0].title.as_deref(), Some("Global"));
+    assert_eq!(context.sidebar_sections[1].title.as_deref(), Some("English"));
+    assert_eq!(context.sidebar.len(), 2);
+    assert_eq!(context.sidebar[0].href, "../about.html");
+    assert_eq!(context.sidebar[1].href, "guide/usage.html");
 }
 
 #[test]

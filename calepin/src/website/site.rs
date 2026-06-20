@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 
 use crate::html::{
     SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
@@ -57,9 +57,13 @@ fn source_asset_output_path(
     let root = normalize_path(src_dir);
     let what = format!("website `{key}` path must stay inside the source directory: {value}");
     let candidate = join_normalized_under_root(&root, path, &what)?;
-    Ok(Some(slash_path(&candidate.strip_prefix(&root).map_err(
-        |_| anyhow!("website `{key}` path must stay inside the source directory: {value}"),
-    )?)))
+    let rel = candidate
+        .strip_prefix(&root)
+        .map_err(|_| anyhow!("website `{key}` path must stay inside the source directory: {value}"))?;
+    if rel.as_os_str().is_empty() {
+        bail!("website `{key}` path must stay inside the source directory: {value}");
+    }
+    Ok(Some(slash_path(rel))))
 }
 
 #[derive(Debug)]
@@ -99,7 +103,11 @@ impl SiteModel {
         let current_language = page_info.and_then(|info| info.language.as_deref());
 
         for section in &self.sections {
-            if section.language.as_deref() != current_language {
+            if section
+                .language
+                .as_deref()
+                .is_some_and(|section_language| Some(section_language) != current_language)
+            {
                 continue;
             }
             let mut items = Vec::new();
