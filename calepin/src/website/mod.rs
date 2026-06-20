@@ -526,6 +526,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             generated_theme_entry: theme_asset_entry,
             config_styles: calepin_config.styles.clone(),
             syntax_theme: html_syntax_theme,
+            revealjs_options: calepin_config.revealjs,
             parallelism: args.parallelism,
             typst_args: args.typst_args,
             minify_html,
@@ -1159,6 +1160,7 @@ impl SiteModel {
                 js: html_escape(&page_relative_url(current_href, PAGEFIND_JS)),
                 bundle: html_escape(&page_relative_url(current_href, &format!("{PAGEFIND_DIR}/"))),
             }),
+            revealjs: String::new(),
         }
     }
 }
@@ -1253,6 +1255,7 @@ struct BuildContext {
     generated_theme_entry: Option<crate::theme::HtmlEntry>,
     config_styles: Vec<crate::config::CssOverride>,
     syntax_theme: HtmlSyntaxTheme,
+    revealjs_options: String,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
     minify_html: bool,
@@ -2882,6 +2885,7 @@ fn render_document(
         context.languages.as_deref(),
         context.search,
     );
+    site_context.revealjs = context.revealjs_options.clone();
     let page_site_entry = if let Some(layout) = page_meta.and_then(|meta| meta.layout.as_deref()) {
         crate::theme::resolve_explicit_site_html_entry(&preprocessed.theme, layout)?
     } else {

@@ -81,27 +81,53 @@
     return true;
   }
 
+  const DEFAULT_REVEAL_OPTIONS = {
+    hash: true,
+    controls: true,
+    progress: true,
+    controlsTutorial: false,
+    slideNumber: "c/t",
+    center: false,
+    transition: "slide",
+    plugins: ["markdown", "highlight", "notes"],
+  };
+
+  function resolvePlugins(raw) {
+    const pluginMap = {
+      markdown: window.RevealMarkdown,
+      highlight: window.RevealHighlight,
+      notes: window.RevealNotes,
+    };
+
+    const names = Array.isArray(raw) ? raw : DEFAULT_REVEAL_OPTIONS.plugins;
+    const plugins = [];
+    for (const name of names) {
+      const plugin = pluginMap[name];
+      if (plugin) {
+        plugins.push(plugin);
+      }
+    }
+    return plugins;
+  }
+
   function initializeReveal() {
     if (!window.Reveal || typeof window.Reveal.initialize !== "function") {
       return false;
     }
 
-    const plugins = [];
-    if (window.RevealMarkdown) plugins.push(window.RevealMarkdown);
-    if (window.RevealHighlight) plugins.push(window.RevealHighlight);
-    if (window.RevealNotes) plugins.push(window.RevealNotes);
+    const config = typeof window.__REVEALJS_OPTIONS === "object" ? window.__REVEALJS_OPTIONS : {};
+    const options = {
+      ...DEFAULT_REVEAL_OPTIONS,
+      ...config,
+    };
 
-    window.Reveal.initialize({
-      hash: true,
-      controls: true,
-      progress: true,
-      controlsTutorial: false,
-      slideNumber: "c/t",
-      center: false,
-      transition: "slide",
-      plugins,
-    });
+    if (config && config.plugins) {
+      options.plugins = resolvePlugins(config.plugins);
+    } else {
+      options.plugins = resolvePlugins(DEFAULT_REVEAL_OPTIONS.plugins);
+    }
 
+    window.Reveal.initialize(options);
     return true;
   }
 

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, WatchArgs};
+use crate::html::SiteContextInput;
 use crate::typst::compile::{compile_with_typst, CompileOptions};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
@@ -129,6 +130,10 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     let calepin_config =
         crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
     let config_styles = calepin_config.styles.clone();
+    let site_context = SiteContextInput {
+        revealjs: calepin_config.revealjs.clone(),
+        ..Default::default()
+    };
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
         root: None,
@@ -156,7 +161,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             html_entry: None,
             config_styles: &config_styles,
             html_syntax_theme: None,
-            site_context: None,
+            site_context: Some(&site_context),
             pages_input: None,
             current_href_input: None,
             minify_html: args.minify,

@@ -34,6 +34,10 @@
   <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/highlight/highlight.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/notes/notes.js"></script>
 
+  <script>
+    window.__REVEALJS_OPTIONS__ = {{ site.revealjs }};
+  </script>
+
   {% for script in scripts %}
   <script>
 {{ script.content }}
