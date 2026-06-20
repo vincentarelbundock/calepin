@@ -30,7 +30,6 @@ body {
 .reveal .slides section {
   line-height: 1.3;
   color: inherit;
-  overflow: hidden;
 }
 
 .reveal .slides > section {
