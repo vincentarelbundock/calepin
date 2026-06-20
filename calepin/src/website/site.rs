@@ -63,7 +63,7 @@ fn source_asset_output_path(
     if rel.as_os_str().is_empty() {
         bail!("website `{key}` path must stay inside the source directory: {value}");
     }
-    Ok(Some(slash_path(rel))))
+    Ok(Some(slash_path(rel)))
 }
 
 #[derive(Debug)]
