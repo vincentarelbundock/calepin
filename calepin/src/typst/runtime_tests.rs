@@ -1865,9 +1865,16 @@ Text#calepin.elements.sidenote[A margin remark.] continues.
         "expected a doc-noteref marker:\n{html}"
     );
     assert!(
-        html.contains("class=calepin-sidenote")
-            || html.contains(r#"class="calepin-sidenote""#),
-        "expected a calepin-sidenote container:\n{html}"
+        html.contains("calepin-sidenote"),
+        "expected a calepin-sidenote class token:\n{html}"
+    );
+    assert!(
+        html.contains("calepin-sidenote-numbered"),
+        "expected numbered sidenote styling:\n{html}"
+    );
+    assert!(
+        html.contains("data-sidenote-number"),
+        "expected numbered sidenote metadata:\n{html}"
     );
     // Marker and note are associated by a shared id.
     assert!(
@@ -1906,9 +1913,12 @@ Text#calepin.elements.sidenote(numbering: none)[An unnumbered aside.] ends.
         "expected the note body in HTML output:\n{html}"
     );
     assert!(
-        html.contains("class=calepin-sidenote")
-            || html.contains(r#"class="calepin-sidenote""#),
-        "expected a calepin-sidenote container:\n{html}"
+        html.contains("calepin-sidenote"),
+        "expected a calepin-sidenote class token:\n{html}"
+    );
+    assert!(
+        html.contains("calepin-sidenote-unnumbered"),
+        "expected unnumbered sidenote styling:\n{html}"
     );
     assert!(
         !html.contains("doc-noteref"),
