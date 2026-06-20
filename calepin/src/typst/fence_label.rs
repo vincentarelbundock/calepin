@@ -9,6 +9,12 @@ pub(crate) struct TrailingFenceLabel<'a> {
     pub(crate) label: &'a str,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TrailingFenceLabelCandidate<'a> {
+    pub(crate) prefix: &'a str,
+    pub(crate) label: &'a str,
+}
+
 pub(crate) fn label_name(value: &str) -> Result<String> {
     Ok(parse_label_name(value)?.to_string())
 }
@@ -22,6 +28,10 @@ fn parse_label_name(value: &str) -> Result<&str> {
         value
     };
 
+    validate_label_body(name)
+}
+
+fn validate_label_body(name: &str) -> Result<&str> {
     if name.is_empty() {
         Err(anyhow!("fence label must not be empty"))
     } else if name.trim() != name {
@@ -34,10 +44,13 @@ fn parse_label_name(value: &str) -> Result<&str> {
 }
 
 pub(crate) fn raw_node_label(node: &Value) -> Result<Option<String>> {
-    node.get("label")
-        .and_then(Value::as_str)
-        .map(label_name)
-        .transpose()
+    let Some(value) = node.get("label") else {
+        return Ok(None);
+    };
+    let label = value
+        .as_str()
+        .ok_or_else(|| anyhow!("raw block label must be a string"))?;
+    Ok(Some(label_name(label)?))
 }
 
 pub(crate) fn metadata_node_label(node: &Value) -> Result<Option<String>> {
@@ -46,15 +59,30 @@ pub(crate) fn metadata_node_label(node: &Value) -> Result<Option<String>> {
     {
         return Ok(None);
     }
-    let value = node
+    let label = node
         .get("value")
         .and_then(|value| value.get("label"))
-        .and_then(Value::as_str)
         .ok_or_else(|| anyhow!("calepin fence label metadata is missing `label`"))?;
-    Ok(Some(label_name(value)?))
+    let label = label
+        .as_str()
+        .ok_or_else(|| anyhow!("calepin fence label metadata `label` must be a string"))?;
+    Ok(Some(label_name(label)?))
 }
 
-pub(crate) fn trailing_fence_label(line: &str) -> Option<TrailingFenceLabel<'_>> {
+pub(crate) fn trailing_fence_label(line: &str) -> Result<Option<TrailingFenceLabel<'_>>> {
+    let Some(candidate) = trailing_fence_label_candidate(line) else {
+        return Ok(None);
+    };
+    let label = validate_label_body(candidate.label)?;
+    Ok(Some(TrailingFenceLabel {
+        prefix: candidate.prefix,
+        label,
+    }))
+}
+
+pub(crate) fn trailing_fence_label_candidate(
+    line: &str,
+) -> Option<TrailingFenceLabelCandidate<'_>> {
     let trimmed_end = line.trim_end();
     if !trimmed_end.ends_with('>') {
         return None;
@@ -66,11 +94,7 @@ pub(crate) fn trailing_fence_label(line: &str) -> Option<TrailingFenceLabel<'_>>
     if fence.len() < 3 || !fence.chars().all(|ch| ch == '`') {
         return None;
     }
-    if label.is_empty() {
-        return None;
-    }
-    let label = parse_label_name(label).ok()?;
-    Some(TrailingFenceLabel {
+    Some(TrailingFenceLabelCandidate {
         prefix: &line[..label_start],
         label,
     })
@@ -78,7 +102,11 @@ pub(crate) fn trailing_fence_label(line: &str) -> Option<TrailingFenceLabel<'_>>
 
 #[cfg(test)]
 mod tests {
-    use super::{label_name, trailing_fence_label};
+    use super::{
+        label_name, metadata_node_label, raw_node_label, trailing_fence_label,
+        FENCE_LABEL_METADATA_LABEL,
+    };
+    use serde_json::json;
 
     #[test]
     fn label_name_accepts_query_and_plain_labels() {
@@ -116,20 +144,64 @@ mod tests {
 
     #[test]
     fn trailing_fence_label_parses_closing_fence_label() {
-        let parsed = trailing_fence_label("``` <fig-demo>  ").unwrap();
+        let parsed = trailing_fence_label("``` <fig-demo>  ").unwrap().unwrap();
         assert_eq!(parsed.prefix, "``` ");
         assert_eq!(parsed.label, "fig-demo");
-        assert!(trailing_fence_label("``` <>").is_none());
-        assert!(trailing_fence_label("`` <fig-demo>").is_none());
+        assert!(trailing_fence_label("`` <fig-demo>").unwrap().is_none());
     }
 
     #[test]
-    fn trailing_fence_label_rejects_invalid_label_names() {
-        for line in ["``` <   >", "``` < fig-demo>", "``` <fig-demo >"] {
-            assert!(
-                trailing_fence_label(line).is_none(),
-                "{line:?} should be invalid"
-            );
+    fn trailing_fence_label_reports_invalid_label_names() {
+        for line in ["``` <>", "``` <   >", "``` < fig-demo>", "``` <fig-demo >"] {
+            let err = trailing_fence_label(line).unwrap_err().to_string();
+            assert!(err.contains("fence label"), "{err}");
         }
+    }
+
+    #[test]
+    fn raw_node_label_rejects_present_non_string_label() {
+        let err = raw_node_label(&json!({"func": "raw", "label": 7}))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("raw block label"), "{err}");
+        assert!(err.contains("string"), "{err}");
+    }
+
+    #[test]
+    fn metadata_node_label_parses_fence_label_metadata() {
+        let node = json!({
+            "func": "metadata",
+            "label": FENCE_LABEL_METADATA_LABEL,
+            "value": {"label": "fig-trailing"}
+        });
+
+        assert_eq!(
+            metadata_node_label(&node).unwrap().as_deref(),
+            Some("fig-trailing")
+        );
+    }
+
+    #[test]
+    fn metadata_node_label_ignores_unrelated_metadata() {
+        let node = json!({
+            "func": "metadata",
+            "label": "<other>",
+            "value": {"label": 7}
+        });
+
+        assert!(metadata_node_label(&node).unwrap().is_none());
+    }
+
+    #[test]
+    fn metadata_node_label_rejects_present_non_string_label() {
+        let node = json!({
+            "func": "metadata",
+            "label": FENCE_LABEL_METADATA_LABEL,
+            "value": {"label": 7}
+        });
+
+        let err = metadata_node_label(&node).unwrap_err().to_string();
+        assert!(err.contains("calepin fence label metadata"), "{err}");
+        assert!(err.contains("string"), "{err}");
     }
 }

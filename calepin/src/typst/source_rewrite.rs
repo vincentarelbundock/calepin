@@ -2,7 +2,9 @@ use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 use crate::typst::crossref::has_crossref_prefix;
-use crate::typst::fence_label::trailing_fence_label;
+use crate::typst::fence_label::{
+    trailing_fence_label, trailing_fence_label_candidate, FENCE_LABEL_METADATA_LABEL,
+};
 use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 const RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
@@ -428,8 +430,9 @@ fn rewrite_trailing_fence_label(block: &mut RawBlock, rewrite_plain_labels: bool
         return false;
     };
     let (line, newline) = split_segment(last);
-    let Some(parsed) = trailing_fence_label(line) else {
-        return false;
+    let parsed = match trailing_fence_label(line) {
+        Ok(Some(parsed)) => parsed,
+        Ok(None) | Err(_) => return false,
     };
     let prefix = parsed.prefix;
     let label = parsed.label;
@@ -468,8 +471,9 @@ fn rewrite_raw_block_as_chunk_from_raw_plain(block: &RawBlock, had_trailing_labe
         trailing_label_metadata(&block.segments)
             .map(|label| {
                 format!(
-                    " #metadata((label: {})) <calepin-fence-label>",
-                    qmd_string_literal(label)
+                    " #metadata((label: {})) {}",
+                    qmd_string_literal(label),
+                    FENCE_LABEL_METADATA_LABEL
                 )
             })
             .unwrap_or_default()
@@ -486,7 +490,7 @@ fn rewrite_raw_block_as_chunk_from_raw_plain(block: &RawBlock, had_trailing_labe
 fn trailing_label_metadata(segments: &[String]) -> Option<&str> {
     let last = segments.last()?;
     let (line, _) = split_segment(last);
-    Some(trailing_fence_label(line)?.label)
+    Some(trailing_fence_label_candidate(line)?.label)
 }
 
 fn is_source_rewritten_chunk_lang(raw_lang: Option<&str>) -> bool {
@@ -881,6 +885,19 @@ print("comment")
             rewritten,
             "#calepin_runtime.chunk_from_raw_plain(\"r\", raw(\"#| label: \\\"plot\\\"\\nplot(1)\\n\", block: true, lang: \"r\"))\n```typ\n#strong[x]\n```<fig-typ>\n"
         );
+    }
+
+    #[test]
+    fn preserves_malformed_executable_fence_label_for_strict_query_validation() {
+        let source = "```r\nplot(1)\n```< fig-plot>\n";
+        let rewritten = rewrite_calepin_imports(source);
+
+        assert!(rewritten.contains("chunk_from_raw_plain"), "{rewritten}");
+        assert!(
+            rewritten.contains(r#"#metadata((label: " fig-plot")) <calepin-fence-label>"#),
+            "{rewritten}"
+        );
+        assert!(!rewritten.contains("#| label"), "{rewritten}");
     }
 
     #[test]
