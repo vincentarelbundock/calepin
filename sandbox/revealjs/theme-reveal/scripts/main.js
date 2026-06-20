@@ -126,10 +126,27 @@
       options.navigationMode = options.navigationModel;
     }
 
+    const shouldLinear = options.navigationMode === "linear";
+
     if (config && config.plugins) {
       options.plugins = resolvePlugins(config.plugins);
     } else {
       options.plugins = resolvePlugins(DEFAULT_REVEAL_OPTIONS.plugins);
+    }
+
+    if (shouldLinear) {
+      const revealEl = document.querySelector('.reveal');
+      if (revealEl) {
+        revealEl.dataset.navigationMode = 'linear';
+      }
+      if (!document.getElementById('revealjs-linear-fix')) {
+        const style = document.createElement('style');
+        style.id = 'revealjs-linear-fix';
+        style.textContent =
+          '.reveal[data-navigation-mode="linear"] .controls .navigate-up, ' +
+          '.reveal[data-navigation-mode="linear"] .controls .navigate-down { display: none !important; }';
+        document.head.appendChild(style);
+      }
     }
 
     window.Reveal.initialize(options);
