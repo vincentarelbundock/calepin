@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 
+use crate::typst::io::ensure_parent;
+
 use super::pagefind::PAGEFIND_DIR;
 use super::paths::rel_posix;
 use super::{PageInfoMap, PagefindManifest, WebsiteManifest, SKIP_DIRS};
@@ -48,10 +50,7 @@ pub(super) fn expected_generated_outputs(inputs: GeneratedOutputInputs<'_>) -> B
 
 pub(super) fn write_default_favicon(out_dir: &Path, path: &Path) -> Result<()> {
     let path = out_dir.join(path);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
+    ensure_parent(&path)?;
     fs::write(&path, DEFAULT_FAVICON_SVG)
         .with_context(|| format!("failed to write {}", path.display()))
 }
@@ -76,10 +75,7 @@ pub(super) fn reconcile_manifest_outputs(
         if expected_outputs.contains(&path) || !path.exists() {
             continue;
         }
-        if path.is_file() {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
-        }
+        remove_stale_file(&path, "stale output")?;
     }
     Ok(())
 }
@@ -106,11 +102,7 @@ fn remove_unexpected_rendered_outputs_in(
         let Some(first) = rel.components().next() else {
             continue;
         };
-        if first
-            .as_os_str()
-            .to_str()
-            .is_some_and(|name| SKIP_DIRS.contains(&name))
-        {
+        if is_skip_directory(first.as_os_str().to_str()) {
             continue;
         }
         if path.is_dir() {
@@ -120,8 +112,7 @@ fn remove_unexpected_rendered_outputs_in(
             Some("html" | "pdf")
         ) && !expected_outputs.contains(&path)
         {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
+            remove_stale_file(&path, "stale rendered output")?;
         }
     }
     Ok(())
@@ -133,10 +124,7 @@ pub(super) fn write_manifest(
     pagefind: Option<PagefindManifest>,
 ) -> Result<()> {
     let path = out_dir.join(MANIFEST_PATH);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
+    ensure_parent(&path)?;
     let manifest = WebsiteManifest {
         outputs: expected_outputs
             .iter()
@@ -163,9 +151,7 @@ pub(super) fn clear_previous_outputs(
             let path = entry?.path();
             let name = path.file_name().and_then(|name| name.to_str());
             if path.is_dir() {
-                if name.is_some_and(|name| {
-                    SKIP_DIRS.contains(&name) || (preserve_pagefind && name == PAGEFIND_DIR)
-                }) {
+                if is_skippable_directory(name, preserve_pagefind) {
                     continue;
                 }
                 fs::remove_dir_all(&path)
@@ -196,9 +182,7 @@ fn output_dir_is_effectively_empty(out_dir: &Path) -> Result<bool> {
     {
         let path = entry?.path();
         let name = path.file_name().and_then(|name| name.to_str());
-        if name == Some(".gitkeep")
-            || path.is_dir() && name.is_some_and(|name| SKIP_DIRS.contains(&name))
-        {
+        if name == Some(".gitkeep") || path.is_dir() && is_skip_directory(name) {
             continue;
         }
         return Ok(false);
@@ -212,19 +196,7 @@ pub(super) fn copy_typ_sources(
     typ_files: &[PathBuf],
 ) -> Result<()> {
     for input_path in typ_files {
-        let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
-        let target = out_dir.join(rel);
-        if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        fs::copy(input_path, &target).with_context(|| {
-            format!(
-                "failed to copy {} to {}",
-                input_path.display(),
-                target.display()
-            )
-        })?;
+        copy_source_file(src_dir, out_dir, input_path, false, "source file")?;
     }
     Ok(())
 }
@@ -236,10 +208,7 @@ pub(super) fn static_output_paths(
 ) -> BTreeSet<PathBuf> {
     static_files
         .iter()
-        .map(|path| {
-            let rel = path.strip_prefix(src_dir).unwrap_or(path);
-            out_dir.join(rel)
-        })
+        .map(|path| output_path_for_source_file(src_dir, out_dir, path))
         .collect()
 }
 
@@ -249,23 +218,54 @@ pub(super) fn copy_static_files(
     static_files: &[PathBuf],
 ) -> Result<()> {
     for input_path in static_files {
-        let rel = input_path.strip_prefix(src_dir).unwrap_or(input_path);
-        let target = out_dir.join(rel);
-        if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        if target.is_dir() {
-            fs::remove_dir_all(&target)
-                .with_context(|| format!("failed to remove {}", target.display()))?;
-        }
-        fs::copy(input_path, &target).with_context(|| {
-            format!(
-                "failed to copy static file {} to {}",
-                input_path.display(),
-                target.display()
-            )
-        })?;
+        copy_source_file(src_dir, out_dir, input_path, true, "static file")?;
+    }
+    Ok(())
+}
+
+fn copy_source_file(
+    src_dir: &Path,
+    out_dir: &Path,
+    input_path: &Path,
+    remove_target_dir_if_present: bool,
+    kind: &str,
+) -> Result<()> {
+    let target = output_path_for_source_file(src_dir, out_dir, input_path);
+    ensure_parent(&target)?;
+    if remove_target_dir_if_present && target.is_dir() {
+        fs::remove_dir_all(&target)
+            .with_context(|| format!("failed to remove {}", target.display()))?;
+    }
+    fs::copy(input_path, &target).with_context(|| {
+        format!(
+            "failed to copy {kind} {} to {}",
+            input_path.display(),
+            target.display()
+        )
+    })?;
+    Ok(())
+}
+
+fn output_path_for_source_file(src_dir: &Path, out_dir: &Path, input_path: &Path) -> PathBuf {
+    out_dir.join(source_relative_path(src_dir, input_path))
+}
+
+fn source_relative_path<'a>(src_dir: &Path, input_path: &'a Path) -> &'a Path {
+    input_path.strip_prefix(src_dir).unwrap_or(input_path)
+}
+
+fn is_skip_directory(name: Option<&str>) -> bool {
+    name.is_some_and(|name| SKIP_DIRS.contains(&name))
+}
+
+fn is_skippable_directory(name: Option<&str>, preserve_pagefind: bool) -> bool {
+    is_skip_directory(name) || (preserve_pagefind && name == Some(PAGEFIND_DIR))
+}
+
+fn remove_stale_file(path: &Path, what: &str) -> Result<()> {
+    if path.is_file() {
+        fs::remove_file(path)
+            .with_context(|| format!("failed to remove {what} {}", path.display()))?;
     }
     Ok(())
 }
