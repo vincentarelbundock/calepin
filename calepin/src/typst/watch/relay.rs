@@ -88,6 +88,8 @@ pub(super) enum TypstWatchLine {
 }
 
 pub(super) fn typst_watch_line(line: &str) -> TypstWatchLine {
+    let line = line.trim_start();
+
     if line.starts_with("watching ") {
         TypstWatchLine::Watching
     } else if line.starts_with("writing to ") {

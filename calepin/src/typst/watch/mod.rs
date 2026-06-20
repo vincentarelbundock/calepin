@@ -35,10 +35,12 @@ fn start_html_output_postprocessor(
     layout: crate::typst::model::LayoutPaths,
     html_entry: Option<crate::theme::HtmlEntry>,
     site_context: Option<SiteContextInput>,
-    mut writes: Receiver<()>,
+    writes: Receiver<()>,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
         let syntax_theme = crate::html::HtmlSyntaxTheme::builtin();
+        let mut last_written = None;
+
         if let Err(error) = postprocess_html_output(
             &output,
             &layout,
@@ -50,22 +52,42 @@ fn start_html_output_postprocessor(
             cwarn!("failed to postprocess watched HTML output: {}", error);
         }
 
-        while !stop.load(Ordering::Relaxed) {
+        loop {
+            if stop.load(Ordering::Relaxed) {
+                break;
+            }
             match writes.recv_timeout(Duration::from_millis(250)) {
-                Ok(()) => {
-                    if let Err(error) = postprocess_html_output(
-                        &output,
-                        &layout,
-                        html_entry.as_ref(),
-                        &syntax_theme,
-                        site_context.as_ref(),
-                        false,
-                    ) {
-                        cwarn!("failed to postprocess watched HTML output: {}", error);
-                    }
-                }
+                Ok(()) => {}
                 Err(RecvTimeoutError::Timeout) => {}
                 Err(RecvTimeoutError::Disconnected) => break,
+            }
+            if stop.load(Ordering::Relaxed) {
+                break;
+            }
+            // `writing to` can arrive before file contents are fully flushed, and
+            // some platforms may report unchanged timestamps for rapid updates. Track a
+            // (modified_time, size) pair to avoid missing successful writes.
+            let state = std::fs::metadata(&output)
+                .ok()
+                .map(|meta| (meta.modified().ok(), meta.len()));
+            let should_refresh = match (last_written, state) {
+                (None, Some(_)) => true,
+                (Some(previous), Some(current)) => previous != current,
+                _ => false,
+            };
+            if should_refresh {
+                if let Err(error) = postprocess_html_output(
+                    &output,
+                    &layout,
+                    html_entry.as_ref(),
+                    &syntax_theme,
+                    site_context.as_ref(),
+                    false,
+                ) {
+                    cwarn!("failed to postprocess watched HTML output: {}", error);
+                } else {
+                    last_written = state;
+                }
             }
         }
     })
@@ -192,12 +214,16 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         .stderr
         .take()
         .context("failed to capture typst watch stderr")?;
-    let stdout_relay = if let Some(sender) = write_events.take() {
+    let stdout_relay = if let Some(sender) = write_events.clone() {
         thread::spawn(move || relay_typst_watch_output_with_events(stdout, io::stdout(), sender))
     } else {
         thread::spawn(move || relay_typst_watch_output(stdout, io::stdout()))
     };
-    let stderr_relay = thread::spawn(move || relay_typst_watch_output(stderr, io::stderr()));
+    let stderr_relay = if let Some(sender) = write_events {
+        thread::spawn(move || relay_typst_watch_output_with_events(stderr, io::stderr(), sender))
+    } else {
+        thread::spawn(move || relay_typst_watch_output(stderr, io::stderr()))
+    };
 
     let watcher_stop = Arc::clone(&stop);
     let watcher_args = args.clone();
