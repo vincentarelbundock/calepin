@@ -86,14 +86,20 @@ styles = ["styles/site.css"]
 fn website_config_defaults_asset_dir_to_dot_calepin() {
     let config = website_config_from_toml("");
 
-    assert_eq!(resolve_website_asset_dir(&config).unwrap(), PathBuf::from(".calepin"));
+    assert_eq!(
+        resolve_website_asset_dir(&config).unwrap(),
+        PathBuf::from(".calepin")
+    );
 }
 
 #[test]
 fn website_config_allows_custom_asset_dir() {
     let config = website_config_from_toml(r#"asset-dir = "_calepin""#);
 
-    assert_eq!(resolve_website_asset_dir(&config).unwrap(), PathBuf::from("_calepin"));
+    assert_eq!(
+        resolve_website_asset_dir(&config).unwrap(),
+        PathBuf::from("_calepin")
+    );
 }
 
 #[test]
@@ -101,8 +107,10 @@ fn website_config_rejects_invalid_asset_dir() {
     let parent = website_config_from_toml(r#"asset-dir = "../_calepin""#);
     assert!(resolve_website_asset_dir(&parent).is_err());
 
-    let absolute =
-        website_config_from_toml(&format!("asset-dir = \"{}\"", Path::new("/tmp/assets").display()));
+    let absolute = website_config_from_toml(&format!(
+        "asset-dir = \"{}\"",
+        Path::new("/tmp/assets").display()
+    ));
     assert!(resolve_website_asset_dir(&absolute).is_err());
 }
 
@@ -265,10 +273,17 @@ theme = "calepin"
     .unwrap();
 
     let runtime = root.join("_runtime/calepin.typ");
-    let wrapper = root.join("_runtime").join("index").join("calepin-wrapper.typ");
+    let wrapper = root
+        .join("_runtime")
+        .join("index")
+        .join("calepin-wrapper.typ");
 
     assert_eq!(result.asset_dir, PathBuf::from("_runtime"));
-    assert!(runtime.exists(), "runtime should be written to asset-dir: {}", runtime.display());
+    assert!(
+        runtime.exists(),
+        "runtime should be written to asset-dir: {}",
+        runtime.display()
+    );
     assert!(
         wrapper.exists(),
         "render wrapper should be generated: {}",
@@ -368,7 +383,12 @@ fn theme_generated_assets_use_fingerprinted_calepin_paths() {
     .unwrap()
     .unwrap();
 
-    let assets = ThemeGeneratedAssets::from_entry(&entry, &HtmlSyntaxTheme::builtin(), Path::new(".calepin")).unwrap();
+    let assets = ThemeGeneratedAssets::from_entry(
+        &entry,
+        &HtmlSyntaxTheme::builtin(),
+        Path::new(".calepin"),
+    )
+    .unwrap();
     let stylesheet = assets.stylesheet.as_ref().unwrap();
     let script = assets.script.as_ref().unwrap();
 
@@ -422,14 +442,10 @@ fn theme_generated_assets_use_custom_asset_dir() {
     )
     .unwrap();
 
-    assert!(
-        slash_path(&assets.stylesheet.as_ref().unwrap().rel_path)
-            .starts_with("_calepin/calepin-website."),
-    );
-    assert!(
-        slash_path(&assets.script.as_ref().unwrap().rel_path)
-            .starts_with("_calepin/calepin-website."),
-    );
+    assert!(slash_path(&assets.stylesheet.as_ref().unwrap().rel_path)
+        .starts_with("_calepin/calepin-website."),);
+    assert!(slash_path(&assets.script.as_ref().unwrap().rel_path)
+        .starts_with("_calepin/calepin-website."),);
 }
 
 #[test]
@@ -446,7 +462,12 @@ fn theme_generated_assets_include_config_styles_last() {
         css: "/* config style */\n:root { --site: yes; }".to_string(),
     }]);
 
-    let assets = ThemeGeneratedAssets::from_entry(&entry, &HtmlSyntaxTheme::builtin(), Path::new(".calepin")).unwrap();
+    let assets = ThemeGeneratedAssets::from_entry(
+        &entry,
+        &HtmlSyntaxTheme::builtin(),
+        Path::new(".calepin"),
+    )
+    .unwrap();
     let stylesheet = assets.stylesheet.as_ref().unwrap();
 
     let theme_pos = stylesheet.content.find(".calepin-website-shell").unwrap();

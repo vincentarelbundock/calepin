@@ -423,7 +423,10 @@ mod tests {
         layout.artifact_dir = layout.root.join("_calepin/paper");
 
         assert!(should_skip_dir(&layout, &layout.root.join("_calepin")));
-        assert!(should_skip_dir(&layout, &layout.root.join("_calepin/paper")));
+        assert!(should_skip_dir(
+            &layout,
+            &layout.root.join("_calepin/paper")
+        ));
         assert!(!should_skip_dir(&layout, &layout.root.join("assets")));
     }
 

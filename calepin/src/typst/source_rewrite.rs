@@ -89,7 +89,11 @@ fn preview_import_candidate_suggestion(candidate: &str) -> Option<(String, &str)
 pub(crate) fn rewrite_runtime_imports(source: &str, runtime_import: &str) -> String {
     let rewritten = rewrite_source(source, runtime_import);
     if rewritten.needs_runtime_alias {
-        format!("{}{}", runtime_alias_import(runtime_import), rewritten.source)
+        format!(
+            "{}{}",
+            runtime_alias_import(runtime_import),
+            rewritten.source
+        )
     } else {
         rewritten.source
     }
@@ -674,7 +678,10 @@ fn import_keyword_boundary(candidate: &str) -> bool {
         .is_none_or(|ch| ch.is_whitespace() || ch == '"')
 }
 
-fn rewrite_import_candidate<'a>(candidate: &'a str, runtime_import: &str) -> Option<(String, &'a str)> {
+fn rewrite_import_candidate<'a>(
+    candidate: &'a str,
+    runtime_import: &str,
+) -> Option<(String, &'a str)> {
     let import = parse_import_candidate(candidate)?;
     if !is_calepin_runtime_import(&import.literal.value, runtime_import) {
         return None;
@@ -748,7 +755,10 @@ fn parse_string_literal(input: &str) -> Option<StringLiteral> {
 fn is_calepin_runtime_import(value: &str, runtime_import: &str) -> bool {
     matches!(
         value,
-        ".calepin/calepin.typ" | RUNTIME_IMPORT_LEGACY | "/.calepin/calepin.typ" | "/_calepin/calepin.typ"
+        ".calepin/calepin.typ"
+            | RUNTIME_IMPORT_LEGACY
+            | "/.calepin/calepin.typ"
+            | "/_calepin/calepin.typ"
     ) || value == runtime_import
 }
 

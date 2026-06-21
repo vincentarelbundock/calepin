@@ -314,7 +314,10 @@ mod tests {
             Path::new("assets/logo.svg"),
             &[Path::new("_calepin")]
         ));
-        assert!(path_has_skip_dir(Path::new(".calepin/paper/source.typ"), &[]));
+        assert!(path_has_skip_dir(
+            Path::new(".calepin/paper/source.typ"),
+            &[]
+        ));
     }
 
     #[test]

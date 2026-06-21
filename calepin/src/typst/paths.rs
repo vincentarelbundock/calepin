@@ -163,7 +163,10 @@ mod tests {
         let layout = resolve_layout_in_dir(&input, None, Path::new("_calepin")).unwrap();
 
         assert_eq!(layout.artifact_dir, root.join("_calepin/paper"));
-        assert_eq!(layout.results_path, root.join("_calepin/paper/results.json"));
+        assert_eq!(
+            layout.results_path,
+            root.join("_calepin/paper/results.json")
+        );
         assert_eq!(layout.figures_dir, root.join("_calepin/paper/figures"));
     }
 
