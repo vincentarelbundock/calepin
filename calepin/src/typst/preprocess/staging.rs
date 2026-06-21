@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::slash_path;
+use crate::typst::source_rewrite::rewrite_runtime_imports;
 
 const BUILTIN_RAW_CHUNK_LANGS: &[&str] = &["python", "r", "mermaid", "dot", "tikz", "d2"];
 
@@ -37,6 +38,7 @@ pub(super) fn notebook_template_context(
 
 pub(super) fn write_render_wrapper(
     layout: &LayoutPaths,
+    runtime_import: &str,
     include_input: &Path,
     jupyter_kernels: &[&str],
     notebook_theme: Option<&crate::theme::NotebookSource>,
@@ -44,7 +46,7 @@ pub(super) fn write_render_wrapper(
     let wrapper_relative = layout.artifact_relative_path("calepin-wrapper.typ");
     let wrapper = layout.root.join(&wrapper_relative);
 
-    let mut lines = String::from("#import \"/.calepin/calepin.typ\": *\n\n");
+    let mut lines = format!("#import \"{runtime_import}\": *\n\n");
 
     lines.push('\n');
     lines.push('\n');
@@ -76,8 +78,9 @@ pub(super) fn write_render_wrapper(
 
     if let Some(notebook_theme) = notebook_theme {
         lines.push_str("\n// Notebook theme\n");
-        lines.push_str(&notebook_theme.source);
-        if !notebook_theme.source.ends_with('\n') {
+        let theme_source = rewrite_runtime_imports(&notebook_theme.source, runtime_import);
+        lines.push_str(&theme_source);
+        if !theme_source.ends_with('\n') {
             lines.push('\n');
         }
     }

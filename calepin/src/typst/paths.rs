@@ -7,6 +7,14 @@ pub use crate::utils::path::slash_path;
 pub(crate) const CALEPIN_DIR: &str = ".calepin";
 
 pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> {
+    resolve_layout_in_dir(input, root, Path::new(CALEPIN_DIR))
+}
+
+pub fn resolve_layout_in_dir(
+    input: &Path,
+    root: Option<&Path>,
+    artifact_dir: &Path,
+) -> Result<LayoutPaths> {
     let input_abs = canonicalize_input_file(input)?;
     let root_abs = match root {
         Some(root) => canonicalize_root_dir(root)?,
@@ -27,7 +35,7 @@ pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> 
             )
         })?;
     let stem = input_stem(&input_rel)?;
-    let base = root_abs.join(CALEPIN_DIR).join(&stem);
+    let base = root_abs.join(artifact_dir).join(&stem);
     let results_path = base.join("results.json");
     let work_dir = input_abs
         .parent()
@@ -143,6 +151,20 @@ mod tests {
             layout.results_path,
             root.join(".calepin/paper/results.json")
         );
+    }
+
+    #[test]
+    fn custom_artifact_dir_changes_generated_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "").unwrap();
+        let root = std::fs::canonicalize(dir.path()).unwrap();
+
+        let layout = resolve_layout_in_dir(&input, None, Path::new("_calepin")).unwrap();
+
+        assert_eq!(layout.artifact_dir, root.join("_calepin/paper"));
+        assert_eq!(layout.results_path, root.join("_calepin/paper/results.json"));
+        assert_eq!(layout.figures_dir, root.join("_calepin/paper/figures"));
     }
 
     #[test]

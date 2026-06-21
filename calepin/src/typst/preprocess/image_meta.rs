@@ -92,7 +92,7 @@ fn collect_project_image_keys(layout: &LayoutPaths) -> Result<BTreeMap<PathBuf, 
                 .file_type()
                 .with_context(|| format!("failed to stat {}", path.display()))?;
             if file_type.is_dir() {
-                if should_skip_dir(&path) {
+                if should_skip_dir(layout, &path) {
                     continue;
                 }
                 queue.push_back(path);
@@ -131,7 +131,14 @@ fn collect_literal_image_keys(
     Ok(())
 }
 
-fn should_skip_dir(path: &Path) -> bool {
+fn should_skip_dir(layout: &LayoutPaths, path: &Path) -> bool {
+    if layout
+        .artifact_dir
+        .parent()
+        .is_some_and(|generated_root| path.starts_with(generated_root))
+    {
+        return true;
+    }
     path.file_name()
         .and_then(|name| name.to_str())
         .is_some_and(|name| name == ".git" || name == ".calepin")
@@ -407,6 +414,18 @@ fn svg_quoted_attr_value(tag: &str, start: usize) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::typst::testfixtures;
+
+    #[test]
+    fn skips_generated_artifact_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut layout = testfixtures::layout(dir.path());
+        layout.artifact_dir = layout.root.join("_calepin/paper");
+
+        assert!(should_skip_dir(&layout, &layout.root.join("_calepin")));
+        assert!(should_skip_dir(&layout, &layout.root.join("_calepin/paper")));
+        assert!(!should_skip_dir(&layout, &layout.root.join("assets")));
+    }
 
     #[test]
     fn svg_dimensions_do_not_match_suffix_attributes() {

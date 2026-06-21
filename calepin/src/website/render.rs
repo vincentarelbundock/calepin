@@ -14,7 +14,7 @@ use crate::utils::html::escape as html_escape;
 use super::preprocess::run_parallel;
 use super::site::SiteModel;
 use super::url::page_relative_url;
-use super::{BuildContext, PAGES_INDEX_REF, SOURCE_DATA_ID, WEBSITE_ASSET_DIR, WEBSITE_ASSET_STEM};
+use super::{BuildContext, SOURCE_DATA_ID, WEBSITE_ASSET_STEM};
 
 pub(super) fn render_documents(
     context: &BuildContext,
@@ -400,7 +400,7 @@ fn render_document(
                 config_styles: &[],
                 html_syntax_theme,
                 site_context,
-                pages_input: Some(PAGES_INDEX_REF),
+                pages_input: Some(&context.pages_index_ref),
                 current_href_input: Some(&current_href),
                 minify_html: false,
                 progress: false,
@@ -467,11 +467,12 @@ impl ThemeGeneratedAssets {
     pub(super) fn from_entry(
         entry: &crate::theme::HtmlEntry,
         syntax_theme: &HtmlSyntaxTheme,
+        asset_dir: &Path,
     ) -> Result<Self> {
         let stylesheet = html_theme_stylesheet(entry, syntax_theme)?
-            .map(|content| GeneratedThemeAsset::new(WEBSITE_ASSET_STEM, "css", content));
+            .map(|content| GeneratedThemeAsset::new(asset_dir, "css", content));
         let script = html_theme_script(entry)
-            .map(|content| GeneratedThemeAsset::new(WEBSITE_ASSET_STEM, "js", content));
+            .map(|content| GeneratedThemeAsset::new(asset_dir, "js", content));
         Ok(Self { stylesheet, script })
     }
 
@@ -494,11 +495,10 @@ impl ThemeGeneratedAssets {
 }
 
 impl GeneratedThemeAsset {
-    fn new(stem: &str, extension: &str, content: String) -> Self {
+    fn new(asset_dir: &Path, extension: &str, content: String) -> Self {
         let hash = xxh3_64(content.as_bytes());
         Self {
-            rel_path: PathBuf::from(WEBSITE_ASSET_DIR)
-                .join(format!("{stem}.{hash:016x}.{extension}")),
+            rel_path: asset_dir.join(format!("{WEBSITE_ASSET_STEM}.{hash:016x}.{extension}")),
             content,
         }
     }

@@ -1,10 +1,11 @@
 use std::process::Command;
 
 use super::*;
-use crate::utils::testutil::{command_available, tempdir_in_manifest};
+use crate::utils::testutil::{command_available, env_lock, tempdir_in_manifest};
 
 macro_rules! skip_if_no_typst {
     () => {
+        let _env_lock = env_lock();
         if !command_available("typst") {
             return;
         }

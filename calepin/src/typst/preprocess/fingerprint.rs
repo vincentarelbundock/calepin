@@ -20,6 +20,7 @@ pub(super) fn preprocess_fingerprint(
     timeout: Option<Duration>,
     params: &serde_json::Value,
     theme: &crate::theme::ThemeSelection,
+    runtime_dir: &Path,
     image_meta_signature: u64,
 ) -> Result<u64> {
     let payload = PreprocessFingerprint {
@@ -36,6 +37,7 @@ pub(super) fn preprocess_fingerprint(
             .collect::<Vec<_>>(),
         params: params.clone(),
         theme: theme_fingerprint(theme),
+        runtime_dir: path_fingerprint(runtime_dir),
         image_meta: format!("{image_meta_signature:016x}"),
     };
     let bytes = serde_json::to_vec(&payload)?;
@@ -87,6 +89,7 @@ struct PreprocessFingerprint {
     chunks: Vec<ChunkFingerprint>,
     params: serde_json::Value,
     theme: String,
+    runtime_dir: String,
     image_meta: String,
 }
 

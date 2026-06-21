@@ -110,12 +110,17 @@ pub fn content_type(path: &Path) -> &'static str {
 }
 
 pub fn path_has_common_skip_dir(path: &Path) -> bool {
-    path.components().any(|component| {
-        component
-            .as_os_str()
-            .to_str()
-            .is_some_and(|name| COMMON_SKIP_DIRS.contains(&name))
-    })
+    path_has_skip_dir(path, &[])
+}
+
+pub fn path_has_skip_dir(path: &Path, extra_skip_dirs: &[&Path]) -> bool {
+    extra_skip_dirs.iter().any(|skip| path.starts_with(skip))
+        || path.components().any(|component| {
+            component
+                .as_os_str()
+                .to_str()
+                .is_some_and(|name| COMMON_SKIP_DIRS.contains(&name))
+        })
 }
 
 pub fn collect_files_by<ShouldDescend, IncludeFile>(
@@ -297,6 +302,19 @@ mod tests {
                 .unwrap(),
             root.join("other").join("notebooks").join("guide.html")
         );
+    }
+
+    #[test]
+    fn path_has_skip_dir_accepts_custom_generated_dirs() {
+        assert!(path_has_skip_dir(
+            Path::new("_calepin/paper/source.typ"),
+            &[Path::new("_calepin")]
+        ));
+        assert!(!path_has_skip_dir(
+            Path::new("assets/logo.svg"),
+            &[Path::new("_calepin")]
+        ));
+        assert!(path_has_skip_dir(Path::new(".calepin/paper/source.typ"), &[]));
     }
 
     #[test]

@@ -910,17 +910,17 @@ fn page_translations_json(path: &Path, page_info: &PageInfoMap) -> serde_json::V
     serde_json::Value::Object(translations)
 }
 
-/// Writes the pages index into every source page directory's `.calepin`, so
-/// the constant root-relative `PAGES_INDEX_REF` resolves for each page's typst
-/// root (the page's own directory). This intentionally mutates the source tree
-/// even for out-of-place builds.
-pub(super) fn write_pages_index(typ_files: &[PathBuf], index_json: &str) -> Result<()> {
+pub(super) fn write_pages_index(
+    typ_files: &[PathBuf],
+    index_json: &str,
+    asset_dir: &Path,
+) -> Result<()> {
     let dirs = typ_files
         .iter()
         .filter_map(|path| path.parent())
         .collect::<BTreeSet<_>>();
     for dir in dirs {
-        let target_dir = dir.join(".calepin");
+        let target_dir = dir.join(asset_dir);
         fs::create_dir_all(&target_dir)
             .with_context(|| format!("failed to create {}", target_dir.display()))?;
         let target = target_dir.join(PAGES_INDEX_FILE);

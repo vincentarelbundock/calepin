@@ -6,6 +6,7 @@ fn test_build_result(root: &Path, pages: &[PathBuf]) -> WebsiteBuildResult {
     WebsiteBuildResult {
         src_dir: root.to_path_buf(),
         out_dir: root.to_path_buf(),
+        asset_dir: PathBuf::from(".calepin"),
         config_path: root.join("calepin.toml"),
         theme_dir: None,
         style_paths: Vec::new(),
@@ -79,6 +80,30 @@ styles = ["styles/site.css"]
     );
 
     assert_eq!(config.title, None);
+}
+
+#[test]
+fn website_config_defaults_asset_dir_to_dot_calepin() {
+    let config = website_config_from_toml("");
+
+    assert_eq!(resolve_website_asset_dir(&config).unwrap(), PathBuf::from(".calepin"));
+}
+
+#[test]
+fn website_config_allows_custom_asset_dir() {
+    let config = website_config_from_toml(r#"asset-dir = "_calepin""#);
+
+    assert_eq!(resolve_website_asset_dir(&config).unwrap(), PathBuf::from("_calepin"));
+}
+
+#[test]
+fn website_config_rejects_invalid_asset_dir() {
+    let parent = website_config_from_toml(r#"asset-dir = "../_calepin""#);
+    assert!(resolve_website_asset_dir(&parent).is_err());
+
+    let absolute =
+        website_config_from_toml(&format!("asset-dir = \"{}\"", Path::new("/tmp/assets").display()));
+    assert!(resolve_website_asset_dir(&absolute).is_err());
 }
 
 #[test]
@@ -205,6 +230,56 @@ fn website_build_result_canonicalizes_config_theme_dir() {
 }
 
 #[test]
+fn website_build_writes_runtime_to_custom_asset_dir() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-website-test-");
+    let root = dir.path();
+    std::fs::create_dir_all(root).unwrap();
+    std::fs::write(
+        root.join("calepin.toml"),
+        r#"
+asset-dir = "_runtime"
+theme = "calepin"
+"#,
+    )
+    .unwrap();
+    std::fs::write(root.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
+
+    let result = build_site(WebsiteBuildOptions {
+        config: root.join("calepin.toml"),
+        src: Some(root.to_path_buf()),
+        out: Some(root.join("out")),
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        params: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        clean: true,
+        minify_html: false,
+    })
+    .unwrap();
+
+    let runtime = root.join("_runtime/calepin.typ");
+    let wrapper = root.join("_runtime").join("index").join("calepin-wrapper.typ");
+
+    assert_eq!(result.asset_dir, PathBuf::from("_runtime"));
+    assert!(runtime.exists(), "runtime should be written to asset-dir: {}", runtime.display());
+    assert!(
+        wrapper.exists(),
+        "render wrapper should be generated: {}",
+        wrapper.display()
+    );
+
+    let wrapper_source = std::fs::read_to_string(wrapper).unwrap();
+    assert!(wrapper_source.contains("#import \"/_runtime/calepin.typ\""));
+}
+
+#[test]
 fn website_build_result_normalizes_created_output_dir_inside_source() {
     if !command_available("typst") {
         return;
@@ -293,7 +368,7 @@ fn theme_generated_assets_use_fingerprinted_calepin_paths() {
     .unwrap()
     .unwrap();
 
-    let assets = ThemeGeneratedAssets::from_entry(&entry, &HtmlSyntaxTheme::builtin()).unwrap();
+    let assets = ThemeGeneratedAssets::from_entry(&entry, &HtmlSyntaxTheme::builtin(), Path::new(".calepin")).unwrap();
     let stylesheet = assets.stylesheet.as_ref().unwrap();
     let script = assets.script.as_ref().unwrap();
 
@@ -332,6 +407,32 @@ fn theme_generated_assets_use_fingerprinted_calepin_paths() {
 }
 
 #[test]
+fn theme_generated_assets_use_custom_asset_dir() {
+    let entry = crate::theme::resolve_html_entry(
+        &crate::theme::ThemeSelection::Default,
+        crate::theme::HtmlScope::Site,
+    )
+    .unwrap()
+    .unwrap();
+
+    let assets = ThemeGeneratedAssets::from_entry(
+        &entry,
+        &HtmlSyntaxTheme::builtin(),
+        Path::new("_calepin"),
+    )
+    .unwrap();
+
+    assert!(
+        slash_path(&assets.stylesheet.as_ref().unwrap().rel_path)
+            .starts_with("_calepin/calepin-website."),
+    );
+    assert!(
+        slash_path(&assets.script.as_ref().unwrap().rel_path)
+            .starts_with("_calepin/calepin-website."),
+    );
+}
+
+#[test]
 fn theme_generated_assets_include_config_styles_last() {
     let mut entry = crate::theme::resolve_html_entry(
         &crate::theme::ThemeSelection::Default,
@@ -345,7 +446,7 @@ fn theme_generated_assets_include_config_styles_last() {
         css: "/* config style */\n:root { --site: yes; }".to_string(),
     }]);
 
-    let assets = ThemeGeneratedAssets::from_entry(&entry, &HtmlSyntaxTheme::builtin()).unwrap();
+    let assets = ThemeGeneratedAssets::from_entry(&entry, &HtmlSyntaxTheme::builtin(), Path::new(".calepin")).unwrap();
     let stylesheet = assets.stylesheet.as_ref().unwrap();
 
     let theme_pos = stylesheet.content.find(".calepin-website-shell").unwrap();
@@ -769,12 +870,29 @@ fn rss_feed_date_rejects_impossible_iso_dates() {
 fn favicon_config_parses_and_defaults_to_generated_asset() {
     let src = Path::new("/site/docs");
     let config = website_config_from_toml(r#"favicon = "assets/favicon.ico""#);
-    let metadata = SiteMetadata::from_config(&config, src).unwrap();
+    let metadata = SiteMetadata::from_config(&config, src, ".calepin/favicon.svg").unwrap();
     assert_eq!(metadata.favicon.as_deref(), Some("assets/favicon.ico"));
 
     let config = website_config_from_toml("");
-    let metadata = SiteMetadata::from_config(&config, src).unwrap();
-    assert_eq!(metadata.favicon.as_deref(), Some(DEFAULT_FAVICON_PATH));
+    let metadata = SiteMetadata::from_config(&config, src, ".calepin/favicon.svg").unwrap();
+    assert_eq!(metadata.favicon.as_deref(), Some(".calepin/favicon.svg"));
+}
+
+#[test]
+fn favicon_default_respects_custom_asset_dir() {
+    let src = Path::new("/site/docs");
+    let config = website_config_from_toml(r#"asset-dir = "_calepin""#);
+    let metadata = SiteMetadata::from_config(&config, src, "_calepin/favicon.svg").unwrap();
+
+    assert_eq!(metadata.favicon.as_deref(), Some("_calepin/favicon.svg"));
+}
+
+#[test]
+fn icon_cache_respects_custom_asset_dir() {
+    assert_eq!(
+        website_icon_cache_dir(Path::new("_calepin")),
+        PathBuf::from("_calepin/icons")
+    );
 }
 
 #[test]
@@ -787,17 +905,17 @@ favicon = "assets/favicon.ico"
 "#,
     );
 
-    let metadata = SiteMetadata::from_config(&config, src).unwrap();
+    let metadata = SiteMetadata::from_config(&config, src, ".calepin/favicon.svg").unwrap();
 
     assert_eq!(metadata.logo.as_deref(), Some("assets/logo.svg"));
     assert_eq!(metadata.favicon.as_deref(), Some("assets/favicon.ico"));
 
     let config = website_config_from_toml(r#"logo = "../logo.svg""#);
-    let err = SiteMetadata::from_config(&config, src).unwrap_err();
+    let err = SiteMetadata::from_config(&config, src, ".calepin/favicon.svg").unwrap_err();
     assert!(err.to_string().contains("source directory"));
 
     let config = website_config_from_toml(r#"logo = ".""#);
-    let err = SiteMetadata::from_config(&config, src).unwrap_err();
+    let err = SiteMetadata::from_config(&config, src, ".calepin/favicon.svg").unwrap_err();
     assert!(err.to_string().contains("source directory"));
 }
 
@@ -1593,7 +1711,7 @@ generate_feeds = true
 filenames = ["atom.xml", "rss.xml"]
 "#,
     );
-    let metadata = SiteMetadata::from_config(&config, temp.path()).unwrap();
+    let metadata = SiteMetadata::from_config(&config, temp.path(), ".calepin/favicon.svg").unwrap();
     let pages = serde_json::json!([
         {
             "href": "posts/first.html",
@@ -2155,7 +2273,7 @@ fn nav_from_plans_uses_metadata_title_then_stem() {
     let files = vec![titled.clone(), bare.clone()];
     let page_info = test_page_info(src, &files, &BTreeSet::new());
     let icon_temp = tempfile::tempdir().unwrap();
-    let mut icon_cache = IconCache::new(icon_temp.path(), ICON_CACHE_DIR);
+    let mut icon_cache = IconCache::new(icon_temp.path(), Path::new(ICON_CACHE_DIR));
     let nav = nav_from_plans(&sections, &meta, &page_info, &mut icon_cache).unwrap();
 
     let labels = nav[0]
@@ -2299,7 +2417,7 @@ fn menus_from_plan_expands_label_icon_tokens_and_local_svg_paths() {
     };
     let meta = PageMetaMap::new();
     let page_info = test_page_info(src, std::slice::from_ref(&home), &BTreeSet::new());
-    let mut icon_cache = IconCache::new(src, ICON_CACHE_DIR);
+    let mut icon_cache = IconCache::new(src, Path::new(ICON_CACHE_DIR));
 
     let menus = menus_from_plan(&plan, &meta, &page_info, &mut icon_cache).unwrap();
 
@@ -2319,7 +2437,7 @@ fn local_icon_paths_must_stay_inside_source_directory_and_be_safe() {
     let src = temp.path();
     let outside = temp.path().parent().unwrap().join("outside-icon.svg");
     fs::write(&outside, r#"<svg viewBox="0 0 1 1"></svg>"#).unwrap();
-    let mut icon_cache = IconCache::new(src, ICON_CACHE_DIR);
+    let mut icon_cache = IconCache::new(src, Path::new(ICON_CACHE_DIR));
 
     let outside_err = nav_label_html("{icon:../outside-icon.svg}", &mut icon_cache)
         .unwrap_err()
@@ -2346,7 +2464,7 @@ fn local_icon_symlinks_must_stay_inside_source_directory() {
     let outside = temp.path().join("outside.svg");
     fs::write(&outside, r#"<svg viewBox="0 0 1 1"></svg>"#).unwrap();
     symlink(&outside, src.join("assets/icons/outside.svg")).unwrap();
-    let mut icon_cache = IconCache::new(&src, ICON_CACHE_DIR);
+    let mut icon_cache = IconCache::new(&src, Path::new(ICON_CACHE_DIR));
 
     let error = nav_label_html("{icon:assets/icons/outside.svg} Escape", &mut icon_cache)
         .unwrap_err()
@@ -2632,7 +2750,7 @@ fn menus_from_plan_uses_page_metadata_and_external_labels() {
     let page_info = test_page_info(src, &[home, usage], &BTreeSet::new());
 
     let icon_temp = tempfile::tempdir().unwrap();
-    let mut icon_cache = IconCache::new(icon_temp.path(), ICON_CACHE_DIR);
+    let mut icon_cache = IconCache::new(icon_temp.path(), Path::new(ICON_CACHE_DIR));
     let menus = menus_from_plan(&plan, &meta, &page_info, &mut icon_cache).unwrap();
 
     assert_eq!(menus.items["main"][0].href, "index.html");
@@ -2659,7 +2777,7 @@ fn menus_from_plan_errors_when_page_info_is_missing() {
         )]),
     };
     let icon_temp = tempfile::tempdir().unwrap();
-    let mut icon_cache = IconCache::new(icon_temp.path(), ICON_CACHE_DIR);
+    let mut icon_cache = IconCache::new(icon_temp.path(), Path::new(ICON_CACHE_DIR));
 
     let err = menus_from_plan(
         &plan,
@@ -3093,6 +3211,19 @@ fn should_rebuild_for_path_ignores_generated_calepin_directory() {
     for wrapper in wrappers {
         assert!(!should_rebuild_for_path(&current, &wrapper));
     }
+}
+
+#[test]
+fn should_rebuild_for_path_ignores_custom_asset_dir() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("docs");
+    let asset = src.join("_calepin").join("calepin-website.css");
+    fs::create_dir_all(asset.parent().unwrap()).unwrap();
+    fs::write(&asset, "/* generated */").unwrap();
+    let mut current = test_build_result(&src, &[]);
+    current.asset_dir = PathBuf::from("_calepin");
+
+    assert!(!should_rebuild_for_path(&current, &asset));
 }
 
 #[test]

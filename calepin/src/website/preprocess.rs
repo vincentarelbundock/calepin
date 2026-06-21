@@ -134,6 +134,7 @@ pub(super) struct WebsitePreprocessOptions<'a> {
     pub(super) params: &'a [String],
     pub(super) fallback_theme: crate::theme::ThemeSelection,
     pub(super) html_syntax_theme: HtmlSyntaxTheme,
+    pub(super) runtime_dir: &'a Path,
     pub(super) parallelism: Option<usize>,
     pub(super) progress: ProgressManager,
 }
@@ -171,6 +172,7 @@ pub(super) fn preprocess_documents(
                 theme: None,
                 fallback_theme: options.fallback_theme.clone(),
                 html_syntax_theme: Some(options.html_syntax_theme.clone()),
+                runtime_dir: Some(options.runtime_dir.to_path_buf()),
                 param_overrides: options.params.to_vec(),
             })
             .with_context(|| format!("failed to scan {}", input.display()))?;

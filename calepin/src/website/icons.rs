@@ -24,7 +24,7 @@ pub(super) struct IconCache {
 }
 
 impl IconCache {
-    pub(super) fn new(src_dir: &Path, cache_subdir: &str) -> Self {
+    pub(super) fn new(src_dir: &Path, cache_subdir: &Path) -> Self {
         let agent = timeout_agent(Duration::from_secs(ICON_DOWNLOAD_TIMEOUT_SECS));
         Self {
             src_dir: src_dir.to_path_buf(),

@@ -14,7 +14,7 @@ use super::pagefind::{PAGEFIND_CSS, PAGEFIND_DIR, PAGEFIND_JS};
 use super::paths::{join_normalized_under_root, normalize_path, slash_path};
 use super::url::{absolute_site_url, is_absolute_or_special_url, page_relative_url};
 use super::util::clean_optional_string;
-use super::{PageInfo, PageInfoMap, DEFAULT_FAVICON_PATH};
+use super::{PageInfo, PageInfoMap};
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct SiteMetadata {
@@ -27,7 +27,11 @@ pub(super) struct SiteMetadata {
 }
 
 impl SiteMetadata {
-    pub(super) fn from_config(config: &WebsiteConfig, src_dir: &Path) -> Result<Self> {
+    pub(super) fn from_config(
+        config: &WebsiteConfig,
+        src_dir: &Path,
+        default_favicon_path: &str,
+    ) -> Result<Self> {
         Ok(Self {
             title: clean_optional_string(config.title.as_deref()),
             description: clean_optional_string(config.description.as_deref()),
@@ -37,7 +41,7 @@ impl SiteMetadata {
             logo_alt: clean_optional_string(config.logo_alt.as_deref())
                 .or_else(|| clean_optional_string(config.title.as_deref())),
             favicon: source_asset_output_path(src_dir, config.favicon.as_deref(), "favicon")?
-                .or_else(|| Some(DEFAULT_FAVICON_PATH.to_string())),
+                .or_else(|| Some(default_favicon_path.to_string())),
         })
     }
 }

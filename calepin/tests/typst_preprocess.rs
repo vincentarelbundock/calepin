@@ -38,6 +38,47 @@ fn typst_accessible_tempdir() -> tempfile::TempDir {
 }
 
 #[test]
+fn compile_config_runtime_dir_writes_no_dot_calepin_directory() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("tmp.typ"),
+        r#"#import "/.calepin/calepin.typ" as calepin
+
+= Runtime dir test
+"#,
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("tmp.toml"), r#"runtime-dir = "_calepin"
+"#)
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "tmp.typ", "--config", "tmp.toml", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(dir.path().join("_calepin/calepin.typ").exists());
+    assert!(dir.path().join("_calepin/tmp/calepin-wrapper.typ").exists());
+    assert!(dir.path().join("_calepin/tmp/source.typ").exists());
+    assert!(!dir.path().join(".calepin").exists());
+
+    let wrapper = std::fs::read_to_string(dir.path().join("_calepin/tmp/calepin-wrapper.typ"))
+        .unwrap();
+    assert!(wrapper.contains("#import \"/_calepin/calepin.typ\""));
+    assert!(!wrapper.contains("/.calepin/calepin.typ"));
+}
+
+#[test]
 fn preprocess_writes_runtime_and_results() {
     if !has_command("typst") || !has_command("python3") {
         return;

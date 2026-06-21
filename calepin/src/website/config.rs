@@ -20,6 +20,8 @@ pub(super) struct WebsiteConfig {
     pub(super) logo: Option<String>,
     pub(super) logo_alt: Option<String>,
     pub(super) favicon: Option<String>,
+    #[serde(rename = "asset-dir")]
+    pub(super) asset_dir: Option<PathBuf>,
     #[serde(rename = "highlight-light")]
     pub(super) highlight_light: Option<PathBuf>,
     #[serde(rename = "highlight-dark")]

@@ -50,8 +50,13 @@ logo = "assets/logo.svg"
 # Default: none.
 logo_alt = "My Site"
 
+# Output directory for browser-facing generated assets.
+# Also controls where the Calepin runtime is written.
+# Default: ".calepin".
+asset-dir = "_calepin"
+
 # Browser favicon path. Omit this to use Calepin's generated default.
-# Default: ".calepin/favicon.svg".
+# Default: `asset-dir`/favicon.svg.
 favicon = "assets/favicon.ico"
 
 # HTML syntax highlighting themes. Paths are relative to calepin.toml.
@@ -82,7 +87,7 @@ fonts, spacing, or small component rules without ejecting a full theme.
 See #link("../themes/customize.html")[Customize themes] for the stable
 `--calepin-*` CSS tokens exposed by bundled themes.
 
-Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image("assets/diagram.svg")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `.calepin/favicon.svg`; if no logo is set, bundled themes use `title` as the site name.
+Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image("assets/diagram.svg")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `asset-dir`/favicon.svg; if no logo is set, bundled themes use `title` as the site name.
 
 = Syntax highlighting
 

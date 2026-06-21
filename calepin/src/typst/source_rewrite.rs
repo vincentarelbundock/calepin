@@ -7,27 +7,19 @@ use crate::typst::fence_label::{
 };
 use crate::typst::io::write_if_changed;
 use crate::typst::model::LayoutPaths;
-const RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
+const DEFAULT_RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
+const RUNTIME_IMPORT_LEGACY: &str = "_calepin/calepin.typ";
 const RUNTIME_ALIAS: &str = "calepin_runtime";
 const PREVIEW_IMPORT_PREFIX: &str = "@preview/calepin:";
 const SOURCE_REWRITTEN_CHUNK_LANGS: &[&str] = &["python", "r", "julia", "sh", "bash"];
 
-pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
+pub fn write_staged_source(layout: &LayoutPaths, runtime_import: &str) -> Result<PathBuf> {
     let staged_relative = layout.artifact_relative_path("source.typ");
 
     let source = std::fs::read_to_string(&layout.input)
         .with_context(|| format!("failed to read {}", layout.input.display()))?;
     reject_preview_calepin_imports(&source)?;
-    let rewritten = rewrite_source(&source);
-    let staged = if rewritten.needs_runtime_alias {
-        format!(
-            "{}{staged}",
-            runtime_alias_import(),
-            staged = rewritten.source
-        )
-    } else {
-        rewritten.source
-    };
+    let staged = rewrite_runtime_imports(&source, runtime_import);
     let staged_path = layout.root.join(&staged_relative);
 
     write_if_changed(&staged_path, staged)?;
@@ -37,7 +29,7 @@ pub fn write_staged_source(layout: &LayoutPaths) -> Result<PathBuf> {
 fn reject_preview_calepin_imports(source: &str) -> Result<()> {
     if let Some(suggestion) = preview_calepin_import_suggestion(source) {
         return Err(anyhow::anyhow!(
-            "unsupported Calepin Typst package import. Calepin documents must import the binary-written local runtime instead:\n{suggestion}\nRun `calepin compile` or `calepin watch` so Calepin writes .calepin/calepin.typ before Typst renders the document."
+            "unsupported Calepin Typst package import. Calepin documents must import the binary-written local runtime instead:\n{suggestion}\nRun `calepin compile` or `calepin watch` so Calepin writes its local runtime before Typst renders the document."
         ));
     }
     Ok(())
@@ -88,14 +80,23 @@ fn preview_import_candidate_suggestion(candidate: &str) -> Option<(String, &str)
     Some((
         format!(
             "#import{}\"{}\"{}",
-            import.whitespace, RUNTIME_IMPORT, import.tail
+            import.whitespace, DEFAULT_RUNTIME_IMPORT, import.tail
         ),
         import.tail,
     ))
 }
 
-fn runtime_alias_import() -> String {
-    format!("#import \"{RUNTIME_IMPORT}\" as {RUNTIME_ALIAS}\n")
+pub(crate) fn rewrite_runtime_imports(source: &str, runtime_import: &str) -> String {
+    let rewritten = rewrite_source(source, runtime_import);
+    if rewritten.needs_runtime_alias {
+        format!("{}{}", runtime_alias_import(runtime_import), rewritten.source)
+    } else {
+        rewritten.source
+    }
+}
+
+fn runtime_alias_import(runtime_import: &str) -> String {
+    format!("#import \"{runtime_import}\" as {RUNTIME_ALIAS}\n")
 }
 
 struct RewriteResult {
@@ -105,10 +106,10 @@ struct RewriteResult {
 
 #[cfg(test)]
 fn rewrite_calepin_imports(source: &str) -> String {
-    rewrite_source(source).source
+    rewrite_source(source, DEFAULT_RUNTIME_IMPORT).source
 }
 
-fn rewrite_source(source: &str) -> RewriteResult {
+fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
     let mut out = String::with_capacity(source.len());
     let mut raw_block: Option<RawBlock> = None;
     let mut parse_state = TypstParseState::default();
@@ -148,7 +149,7 @@ fn rewrite_source(source: &str) -> RewriteResult {
             }
         }
 
-        let rewritten = rewrite_calepin_imports_in_line(line, &mut source_lex);
+        let rewritten = rewrite_calepin_imports_in_line(line, &mut source_lex, runtime_import);
         parse_state.scan_line(&rewritten);
         out.push_str(&rewritten);
         out.push_str(newline);
@@ -539,7 +540,7 @@ fn typst_string_escape(value: &str) -> String {
     out
 }
 
-fn rewrite_calepin_imports_in_line(line: &str, lex: &mut LexState) -> String {
+fn rewrite_calepin_imports_in_line(line: &str, lex: &mut LexState, runtime_import: &str) -> String {
     let mut out = String::with_capacity(line.len());
     let mut idx = 0;
 
@@ -580,7 +581,7 @@ fn rewrite_calepin_imports_in_line(line: &str, lex: &mut LexState) -> String {
 
         let candidate = &line[idx..];
         if candidate.starts_with("#import") {
-            if let Some((rewritten, tail)) = rewrite_import_candidate(candidate) {
+            if let Some((rewritten, tail)) = rewrite_import_candidate(candidate, runtime_import) {
                 let consumed = candidate.len() - tail.len();
                 out.push_str(&rewritten);
                 idx += consumed;
@@ -673,14 +674,14 @@ fn import_keyword_boundary(candidate: &str) -> bool {
         .is_none_or(|ch| ch.is_whitespace() || ch == '"')
 }
 
-fn rewrite_import_candidate(candidate: &str) -> Option<(String, &str)> {
+fn rewrite_import_candidate<'a>(candidate: &'a str, runtime_import: &str) -> Option<(String, &'a str)> {
     let import = parse_import_candidate(candidate)?;
-    if !is_calepin_runtime_import(&import.literal.value) {
+    if !is_calepin_runtime_import(&import.literal.value, runtime_import) {
         return None;
     }
 
     Some((
-        format!("#import{}\"{}\"", import.whitespace, RUNTIME_IMPORT),
+        format!("#import{}\"{}\"", import.whitespace, runtime_import),
         import.tail,
     ))
 }
@@ -744,8 +745,11 @@ fn parse_string_literal(input: &str) -> Option<StringLiteral> {
     None
 }
 
-fn is_calepin_runtime_import(value: &str) -> bool {
-    value == ".calepin/calepin.typ" || value == RUNTIME_IMPORT
+fn is_calepin_runtime_import(value: &str, runtime_import: &str) -> bool {
+    matches!(
+        value,
+        ".calepin/calepin.typ" | RUNTIME_IMPORT_LEGACY | "/.calepin/calepin.typ" | "/_calepin/calepin.typ"
+    ) || value == runtime_import
 }
 
 #[cfg(test)]
@@ -774,6 +778,23 @@ mod tests {
         assert_eq!(
             rewrite_calepin_imports(r#"#import ".calepin/calepin.typ""#),
             r#"#import "/.calepin/calepin.typ""#
+        );
+    }
+
+    #[test]
+    fn rewrites_legacy_asset_dir_import() {
+        assert_eq!(
+            rewrite_calepin_imports(r#"#import "/_calepin/calepin.typ""#),
+            r#"#import "/.calepin/calepin.typ""#
+        );
+    }
+
+    #[test]
+    fn rewrites_to_custom_runtime_import() {
+        let source = r#"#import "/.calepin/calepin.typ" as calepin"#;
+        assert_eq!(
+            rewrite_source(source, "/_calepin/calepin.typ").source,
+            r#"#import "/_calepin/calepin.typ" as calepin"#,
         );
     }
 
@@ -842,7 +863,7 @@ print("comment")
         )
         .unwrap();
 
-        let staged_relative = write_staged_source(&layout).unwrap();
+        let staged_relative = write_staged_source(&layout, "/.calepin/calepin.typ").unwrap();
         let staged = std::fs::read_to_string(layout.root.join(staged_relative)).unwrap();
 
         assert!(!staged.contains("as calepin_runtime"), "{staged}");

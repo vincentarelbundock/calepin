@@ -73,14 +73,26 @@ fn runtime_asset_path(path: &str) -> Result<&Path> {
 
 #[cfg(test)]
 pub fn write_runtime(root: &Path) -> Result<PathBuf> {
-    write_runtime_with_syntax_theme(root, &crate::html::HtmlSyntaxTheme::builtin())
+    write_runtime_with_syntax_theme_in_dir(
+        root,
+        Path::new(CALEPIN_DIR),
+        &crate::html::HtmlSyntaxTheme::builtin(),
+    )
 }
 
 pub(crate) fn write_runtime_with_syntax_theme(
     root: &Path,
     syntax_theme: &crate::html::HtmlSyntaxTheme,
 ) -> Result<PathBuf> {
-    let calepin_dir = root.join(CALEPIN_DIR);
+    write_runtime_with_syntax_theme_in_dir(root, Path::new(CALEPIN_DIR), syntax_theme)
+}
+
+pub(crate) fn write_runtime_with_syntax_theme_in_dir(
+    root: &Path,
+    runtime_dir: &Path,
+    syntax_theme: &crate::html::HtmlSyntaxTheme,
+) -> Result<PathBuf> {
+    let calepin_dir = root.join(runtime_dir);
     let runtime_dir = calepin_dir.join(RUNTIME_DIR);
     fs::create_dir_all(&runtime_dir)
         .with_context(|| format!("failed to create {}", runtime_dir.display()))?;

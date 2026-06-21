@@ -212,6 +212,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         theme: None,
         fallback_theme: crate::theme::ThemeSelection::Default,
         html_syntax_theme: None,
+        runtime_dir: None,
         param_overrides: args.common.params,
     })?;
     compile_with_typst(

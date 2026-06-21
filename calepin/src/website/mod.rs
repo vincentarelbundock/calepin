@@ -19,12 +19,12 @@ mod util;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use notify::RecursiveMode;
 use serde::{Deserialize, Serialize};
 use xxhash_rust::xxh3::xxh3_64;
@@ -34,7 +34,7 @@ use crate::config::CalepinConfig;
 use crate::html::HtmlSyntaxTheme;
 use crate::utils::path::absolutize_from;
 use crate::utils::progress::ProgressManager;
-use crate::utils::static_files::path_has_common_skip_dir;
+use crate::utils::static_files::path_has_skip_dir;
 pub(crate) use crate::utils::static_files::COMMON_SKIP_DIRS as SKIP_DIRS;
 use crate::utils::watch::{is_rebuild_event, run_debounced_watch_until};
 #[cfg(test)]
@@ -78,7 +78,7 @@ use pagefind::{
 };
 #[cfg(test)]
 use paths::wildcard_match;
-use paths::{rel_posix, relative_or_self, slash_path};
+use paths::{normalize_path, rel_posix, relative_or_self, slash_path};
 use preprocess::{preprocess_documents, WebsitePreprocessOptions};
 #[cfg(test)]
 use render::page_asset_decision;
@@ -98,23 +98,58 @@ use util::clean_optional_string;
 
 const DEFAULT_CONFIG: &str = "calepin.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
-const WEBSITE_ASSET_DIR: &str = ".calepin";
+const DEFAULT_WEBSITE_ASSET_DIR: &str = ".calepin";
 const WEBSITE_ASSET_STEM: &str = "calepin-website";
-const DEFAULT_FAVICON_PATH: &str = ".calepin/favicon.svg";
+const DEFAULT_FAVICON_NAME: &str = "favicon.svg";
 const FALLBACK_PAGE: &str = "404.typ";
 const INDEX_PAGE: &str = "index.typ";
 const SOURCE_DATA_ID: &str = "calepin-website-source-data";
+#[cfg(test)]
 const ICON_CACHE_DIR: &str = ".calepin/icons";
+const ICON_CACHE_SUBDIR: &str = "icons";
 const PAGES_INDEX_FILE: &str = "website-pages.json";
 const ROBOTS_FILE: &str = "robots.txt";
 const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
     "User-agent: *\nAllow: /\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}\n{% endif %}";
-/// Root-relative reference to the pages index. Each page renders with
-/// `--root` at its own directory, so the index is written into every page
-/// directory's `.calepin` and this reference resolves for all of them.
-const PAGES_INDEX_REF: &str = "/.calepin/website-pages.json";
+fn resolve_website_asset_dir(config: &WebsiteConfig) -> Result<PathBuf> {
+    let raw = match config.asset_dir.as_ref() {
+        Some(value) if value.as_os_str().is_empty() => {
+            bail!("website `asset-dir` must not be empty")
+        }
+        Some(value) => value,
+        None => Path::new(DEFAULT_WEBSITE_ASSET_DIR),
+    };
+    let raw = raw.to_path_buf();
+    if raw.is_absolute() {
+        bail!("website `asset-dir` must be a relative path: {}", raw.display());
+    }
+    if raw.to_string_lossy().contains('\\') {
+        bail!("website `asset-dir` path must not contain '\\': {}", raw.display());
+    }
+    if raw
+        .components()
+        .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
+    {
+        bail!("website `asset-dir` path must not escape the source directory: {}", raw.display());
+    }
+    let normalized = normalize_path(&raw);
+    if normalized.as_os_str().is_empty() {
+        bail!("website `asset-dir` must include at least one path segment");
+    }
+
+    Ok(normalized)
+}
+
+fn website_asset_default_favicon_path(asset_dir: &Path) -> PathBuf {
+    asset_dir.join(DEFAULT_FAVICON_NAME)
+}
+
+fn website_icon_cache_dir(asset_dir: &Path) -> PathBuf {
+    asset_dir.join(ICON_CACHE_SUBDIR)
+}
+
 pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
     let current_dir = std::env::current_dir()?;
     let config_path =
@@ -234,6 +269,7 @@ type PageInfoMap = BTreeMap<PathBuf, PageInfo>;
 struct WebsiteBuildResult {
     src_dir: PathBuf,
     out_dir: PathBuf,
+    asset_dir: PathBuf,
     config_path: PathBuf,
     theme_dir: Option<PathBuf>,
     style_paths: Vec<PathBuf>,
@@ -274,6 +310,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let calepin_config = CalepinConfig::load(&src_dir, Some(&config_path))?;
     let config_theme = calepin_config.theme_selection()?.unwrap_or_default();
     let site_theme = config_theme.clone();
+    let asset_dir = resolve_website_asset_dir(&config)?;
     let theme_dir = match &site_theme {
         crate::theme::ThemeSelection::Dir(dir) => Some(
             dir.canonicalize()
@@ -349,6 +386,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         params: &args.params,
         fallback_theme: config_theme.clone(),
         html_syntax_theme: html_syntax_theme.clone(),
+        runtime_dir: &asset_dir,
         parallelism: args.parallelism,
         progress: progress.clone(),
     })?;
@@ -372,15 +410,19 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         None
     };
     let theme_assets = if let Some(entry) = theme_asset_entry.as_ref() {
-        ThemeGeneratedAssets::from_entry(entry, &html_syntax_theme)?
+        ThemeGeneratedAssets::from_entry(entry, &html_syntax_theme, &asset_dir)?
     } else {
         ThemeGeneratedAssets::default()
     };
 
     let page_meta = load_page_meta(&src_dir, &typ_files);
-    let metadata = SiteMetadata::from_config(&config, &src_dir)?;
+    let metadata = SiteMetadata::from_config(
+        &config,
+        &src_dir,
+        &slash_path(&website_asset_default_favicon_path(&asset_dir)),
+    )?;
     let default_favicon_path = if clean_optional_string(config.favicon.as_deref()).is_none() {
-        Some(PathBuf::from(DEFAULT_FAVICON_PATH))
+        Some(website_asset_default_favicon_path(&asset_dir))
     } else {
         None
     };
@@ -402,7 +444,9 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
     let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
     let pagefind_pages = pagefind_pages(&out_dir, &typ_files, &page_info, &fallback_files);
-    let mut icon_cache = IconCache::new(&src_dir, ICON_CACHE_DIR);
+    let icon_cache_dir = website_icon_cache_dir(&asset_dir);
+    let mut icon_cache = IconCache::new(&src_dir, &icon_cache_dir);
+    let pages_index_ref = format!("/{}/{}", slash_path(&asset_dir), PAGES_INDEX_FILE);
     let sidebar_sections = nav_from_plans(&section_plans, &page_meta, &page_info, &mut icon_cache)?;
     let menus = menus_from_plan(&menus_plan, &page_meta, &page_info, &mut icon_cache)?;
     let nav_signature = navigation_signature(&sidebar_sections) ^ menus_signature(&menus);
@@ -410,7 +454,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         build_pages_index(&src_dir, &typ_files, &section_plans, &page_meta, &page_info);
     let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
     let pages_signature = xxh3_64(pages_index_json.as_bytes());
-    write_pages_index(&typ_files, &pages_index_json)?;
+    write_pages_index(&typ_files, &pages_index_json, &asset_dir)?;
     let theme_asset_paths = theme_assets.output_paths(&out_dir);
     let expected_outputs = expected_generated_outputs(GeneratedOutputInputs {
         out_dir: &out_dir,
@@ -513,6 +557,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             typst_args: args.typst_args,
             minify_html,
             search: config.search,
+            pages_index_ref: pages_index_ref.clone(),
             progress: progress.clone(),
         },
         build_set,
@@ -572,6 +617,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     Ok(WebsiteBuildResult {
         src_dir,
         out_dir,
+        asset_dir,
         config_path,
         theme_dir,
         style_paths,
@@ -696,7 +742,7 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     if rel.components().next().is_none() {
         return false;
     }
-    if path_has_common_skip_dir(rel) {
+    if path_has_skip_dir(rel, &[initial.asset_dir.as_path()]) {
         return false;
     }
     if path.starts_with(&initial.out_dir) {
@@ -873,6 +919,7 @@ struct BuildContext {
     typst_args: Vec<String>,
     minify_html: bool,
     search: Option<SearchEngine>,
+    pages_index_ref: String,
     progress: ProgressManager,
 }
 

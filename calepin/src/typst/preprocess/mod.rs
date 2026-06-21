@@ -13,12 +13,19 @@ use crate::typst::execute::{EnginePool, ExecutionConfig};
 use crate::typst::introspect::preprocess_metadata;
 use crate::typst::io::{ensure_parent, write_if_changed};
 use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, LayoutPaths};
-use crate::typst::paths::{artifact_reference, project_relative_path, resolve_layout};
+use crate::typst::paths::{
+    artifact_reference,
+    project_relative_path,
+    resolve_layout,
+    resolve_layout_in_dir,
+    slash_path,
+    CALEPIN_DIR,
+};
 use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
 use crate::typst::results::{
     build_results_document, refresh_cached_results_metadata, write_results,
 };
-use crate::typst::runtime::write_runtime_with_syntax_theme;
+use crate::typst::runtime::{write_runtime_with_syntax_theme, write_runtime_with_syntax_theme_in_dir};
 use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
 use crate::typst::version::assert_supported_typst;
@@ -48,6 +55,8 @@ pub struct PreprocessOptions {
     pub theme: Option<crate::theme::ThemeSelection>,
     pub fallback_theme: crate::theme::ThemeSelection,
     pub html_syntax_theme: Option<crate::html::HtmlSyntaxTheme>,
+    /// Optional custom runtime directory relative to the input root.
+    pub runtime_dir: Option<PathBuf>,
     /// `key=value` document-parameter overrides from the CLI (`-P`).
     pub param_overrides: Vec<String>,
 }
@@ -113,8 +122,8 @@ pub fn refresh_cached_preprocess_output(plan: PreprocessPlan) -> Result<Preproce
 }
 
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
-    let mut layout = resolve_layout(&options.input, options.root.as_deref())?;
-    let config = CalepinConfig::load(&layout.root, options.config.as_deref())?;
+    let initial_layout = resolve_layout(&options.input, options.root.as_deref())?;
+    let config = CalepinConfig::load(&initial_layout.root, options.config.as_deref())?;
     let config_theme = config.theme_selection()?;
     assert_supported_typst(&config.executables.typst)?;
 
@@ -122,14 +131,35 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .html_syntax_theme
         .clone()
         .unwrap_or_else(crate::html::HtmlSyntaxTheme::builtin);
-    write_runtime_with_syntax_theme(&layout.root, &html_syntax_theme)?;
-    let staged_input = write_staged_source(&layout)?;
+    let runtime_dir = options
+        .runtime_dir
+        .as_deref()
+        .or(config.runtime_dir.as_deref())
+        .unwrap_or_else(|| Path::new(CALEPIN_DIR));
+    let mut layout = if runtime_dir == Path::new(CALEPIN_DIR) {
+        initial_layout
+    } else {
+        resolve_layout_in_dir(&options.input, options.root.as_deref(), runtime_dir)?
+    };
+    if runtime_dir == Path::new(CALEPIN_DIR) {
+        write_runtime_with_syntax_theme(&layout.root, &html_syntax_theme)?;
+    } else {
+        write_runtime_with_syntax_theme_in_dir(&layout.root, runtime_dir, &html_syntax_theme)?;
+    }
+    let runtime_import = format!("/{}/calepin.typ", slash_path(runtime_dir));
+    let staged_input = write_staged_source(&layout, &runtime_import)?;
     let image_meta = write_image_meta(&layout)?;
     // Metadata collection runs before the final target is known. Use the
     // staged source directly; document-level HTML must be guarded by target
     // checks so paged/query passes never evaluate `html.*` calls.
     let query_source = write_query_source(&layout, &staged_input)?;
-    let query_input = write_render_wrapper(&layout, &query_source, &[], None)?;
+    let query_input = write_render_wrapper(
+        &layout,
+        &runtime_import,
+        &query_source,
+        &[],
+        None,
+    )?;
     let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let metadata = preprocess_metadata(
         &config.executables.typst,
@@ -183,10 +213,22 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     if !jupyter_kernels.is_empty() {
         let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
         layout.render_input =
-            write_render_wrapper(&layout, &staged_input, &kernels, notebook_theme.as_ref())?;
+            write_render_wrapper(
+                &layout,
+                &runtime_import,
+                &staged_input,
+                &kernels,
+                notebook_theme.as_ref(),
+            )?;
     } else {
         layout.render_input =
-            write_render_wrapper(&layout, &staged_input, &[], notebook_theme.as_ref())?;
+            write_render_wrapper(
+                &layout,
+                &runtime_import,
+                &staged_input,
+                &[],
+                notebook_theme.as_ref(),
+            )?;
     }
 
     let cwd = layout.work_dir.clone();
@@ -199,6 +241,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         timeout,
         &params,
         &effective_theme,
+        runtime_dir,
         image_meta.signature()?,
     )?;
 
@@ -593,6 +636,7 @@ mod tests {
             theme: None,
             fallback_theme: crate::theme::ThemeSelection::Default,
             html_syntax_theme: None,
+            runtime_dir: None,
             param_overrides: Vec::new(),
         })
         .unwrap();
@@ -601,6 +645,54 @@ mod tests {
             plan.theme,
             crate::theme::ThemeSelection::Builtin("academic")
         );
+    }
+
+    #[test]
+    fn preprocess_uses_runtime_dir_from_config() {
+        if !command_available("typst") {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(
+            &input,
+            "#import \".calepin/calepin.typ\" as calepin\nHello",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            r#"runtime-dir = "_runtime""#,
+        )
+        .unwrap();
+
+        let plan = prepare_preprocess_plan(PreprocessOptions {
+            input,
+            root: Some(dir.path().to_path_buf()),
+            config: Some(dir.path().join("calepin.toml")),
+            display_root: None,
+            quiet: true,
+            status: false,
+            progress: false,
+            timeout: None,
+            sync_pages: false,
+            theme: None,
+            fallback_theme: crate::theme::ThemeSelection::Default,
+            html_syntax_theme: None,
+            runtime_dir: None,
+            param_overrides: Vec::new(),
+        })
+        .unwrap();
+
+        let staged_source =
+            std::fs::read_to_string(plan.layout.root.join("_runtime/paper/source.typ")).unwrap();
+        assert!(staged_source.contains("#import \"/_runtime/calepin.typ\" as calepin"));
+        assert_eq!(plan.layout.artifact_dir, plan.layout.root.join("_runtime/paper"));
+        let wrapper = std::fs::read_to_string(plan.layout.artifact_path("calepin-wrapper.typ"))
+            .unwrap();
+        assert!(wrapper.contains("#import \"/_runtime/calepin.typ\""));
+        assert!(!wrapper.contains("#import \"/.calepin/calepin.typ\""));
+        assert!(plan.layout.root.join("_runtime/calepin.typ").is_file());
     }
 
     #[test]
@@ -656,6 +748,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -673,6 +766,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -694,6 +788,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({"region": "NY"}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -705,6 +800,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({"region": "CA"}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -725,6 +821,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -737,6 +834,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -752,6 +850,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -767,6 +866,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -787,6 +887,7 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
@@ -798,10 +899,44 @@ mod tests {
             Some(Duration::from_secs(5)),
             &serde_json::json!({}),
             &crate::theme::ThemeSelection::Typst,
+            Path::new(CALEPIN_DIR),
             0,
         )
         .unwrap();
         assert_ne!(baseline, changed);
+    }
+
+    #[test]
+    fn preprocess_fingerprint_tracks_runtime_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+        let executables = ExecutablePaths::defaults();
+        let chunk = test_chunk("print(1)");
+        let default_runtime = preprocess_fingerprint(
+            &layout,
+            &executables,
+            std::slice::from_ref(&chunk),
+            dir.path(),
+            Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
+            Path::new(CALEPIN_DIR),
+            0,
+        )
+        .unwrap();
+        let custom_runtime = preprocess_fingerprint(
+            &layout,
+            &executables,
+            &[chunk],
+            dir.path(),
+            Some(Duration::from_secs(5)),
+            &serde_json::json!({}),
+            &crate::theme::ThemeSelection::Default,
+            Path::new("_runtime"),
+            0,
+        )
+        .unwrap();
+        assert_ne!(default_runtime, custom_runtime);
     }
 
     #[test]
@@ -934,6 +1069,30 @@ mod tests {
     }
 
     #[test]
+    fn render_wrapper_rewrites_notebook_theme_runtime_import() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = test_layout(dir.path());
+        let staged_input = PathBuf::from(".calepin/paper/source.typ");
+        let notebook_theme = crate::theme::NotebookSource {
+            source: "#import \"/.calepin/calepin.typ\": _html-themed-raw-block\n".to_string(),
+            owns_body: false,
+        };
+
+        let wrapper = write_render_wrapper(
+            &layout,
+            "/_runtime/calepin.typ",
+            &staged_input,
+            &[],
+            Some(&notebook_theme),
+        )
+        .unwrap();
+        let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
+
+        assert!(contents.contains("#import \"/_runtime/calepin.typ\": _html-themed-raw-block"));
+        assert!(!contents.contains("#import \"/.calepin/calepin.typ\": _html-themed-raw-block"));
+    }
+
+    #[test]
     fn render_wrapper_includes_notebook_theme_before_source() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
@@ -943,8 +1102,14 @@ mod tests {
             owns_body: false,
         };
 
-        let wrapper =
-            write_render_wrapper(&layout, &staged_input, &[], Some(&notebook_theme)).unwrap();
+        let wrapper = write_render_wrapper(
+            &layout,
+            "/.calepin/calepin.typ",
+            &staged_input,
+            &[],
+            Some(&notebook_theme),
+        )
+        .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
         let theme_marker = contents.find("#let notebook-theme-marker = true").unwrap();
@@ -964,8 +1129,14 @@ mod tests {
             owns_body: true,
         };
 
-        let wrapper =
-            write_render_wrapper(&layout, &staged_input, &[], Some(&notebook_theme)).unwrap();
+        let wrapper = write_render_wrapper(
+            &layout,
+            "/.calepin/calepin.typ",
+            &staged_input,
+            &[],
+            Some(&notebook_theme),
+        )
+        .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
         assert_eq!(
@@ -983,7 +1154,14 @@ mod tests {
         let layout = test_layout(dir.path());
         let staged_input = PathBuf::from(".calepin/paper/source.typ");
 
-        let wrapper = write_render_wrapper(&layout, &staged_input, &["bash"], None).unwrap();
+        let wrapper = write_render_wrapper(
+            &layout,
+            "/.calepin/calepin.typ",
+            &staged_input,
+            &["bash"],
+            None,
+        )
+        .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
         assert!(
