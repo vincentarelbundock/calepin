@@ -10,19 +10,23 @@ _Calepin_ can turn a directory of Typst documents into a website. In fact, the w
 Use this command to scaffold an example site:
 
 ```sh
-calepin new website my_site/
+calepin new website
 ```
 
 This creates a website source directory with enough structure to exercise the bundled themes:
 
-- `my_site/calepin.toml`: the site configuration file, where you set the title, base URL, navigation, theme, and output options.
-- `my_site/index.typ`: the home page source file, which builds to `index.html`.
-- `my_site/404.typ`: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.
-- `my_site/about.typ`, `my_site/guide/*.typ`, and `my_site/fr/*.typ`: regular pages in two languages, with site menu and sidebar entries.
-- `my_site/blog.typ` and `my_site/posts/*.typ`: a small blog index and post source files using `calepin.pages()`.
+- `calepin_website/calepin.toml`: the site configuration file, where you set the title, base URL, navigation, theme, and output options.
+- `calepin_website/index.typ`: the home page source file, which builds to `index.html`.
+- `calepin_website/404.typ`: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.
+- `calepin_website/about.typ`, `calepin_website/guide/*.typ`, and `calepin_website/fr/*.typ`: regular pages in two languages, with site menu and sidebar entries.
+- `calepin_website/blog.typ` and `calepin_website/posts/*.typ`: a small blog index and post source files using `calepin.pages()`.
 
-The scaffold uses the `calepin` theme by default. Edit `my_site/calepin.toml`
-to switch to another theme after creation.
+The scaffold uses the `calepin` theme by default. Use `--theme` to start from
+another built-in theme:
+
+```sh
+calepin new website --theme academic
+```
 
 = Build
 

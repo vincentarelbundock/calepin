@@ -75,15 +75,34 @@ impl CompileFormat {
     }
 }
 
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NewTheme {
+    Calepin,
+    Academic,
+}
+
+impl NewTheme {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Calepin => "calepin",
+            Self::Academic => "academic",
+        }
+    }
+}
+
 #[derive(clap::Args, Debug, Clone)]
 #[command(
     arg_required_else_help = true,
-    after_help = "Examples:\n  calepin new paper.typ\n  calepin new website my_site/\n  calepin new theme\n  calepin new theme themes/my-theme"
+    after_help = "Examples:\n  calepin new paper.typ\n  calepin new website\n  calepin new website --theme academic\n  calepin new theme\n  calepin new theme --theme academic\n  calepin new theme themes/my-theme"
 )]
 pub struct NewArgs {
     /// What to create: a .typ notebook path, `website`, or `theme`
     #[arg(value_name = "PATH|website|theme")]
     pub path: PathBuf,
+
+    /// Built-in theme to use when creating a website scaffold or ejected theme
+    #[arg(long, value_enum)]
+    pub theme: Option<NewTheme>,
 
     /// Destination directory when creating a website scaffold or ejected theme
     #[arg(value_name = "DIR")]
@@ -526,6 +545,35 @@ mod tests {
                 assert_eq!(args.path, PathBuf::from("website"));
                 assert_eq!(args.output, Some(PathBuf::from("site")));
                 assert!(args.force);
+            }
+            other => panic!("expected new command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_new_website_theme_arg() {
+        let cli = Cli::try_parse_from(["calepin", "new", "website", "site", "--theme", "academic"])
+            .unwrap();
+
+        match cli.command {
+            Command::New(args) => {
+                assert_eq!(args.path, PathBuf::from("website"));
+                assert_eq!(args.output, Some(PathBuf::from("site")));
+                assert_eq!(args.theme, Some(NewTheme::Academic));
+            }
+            other => panic!("expected new command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_new_theme_theme_arg() {
+        let cli = Cli::try_parse_from(["calepin", "new", "theme", "--theme", "academic"]).unwrap();
+
+        match cli.command {
+            Command::New(args) => {
+                assert_eq!(args.path, PathBuf::from("theme"));
+                assert_eq!(args.output, None);
+                assert_eq!(args.theme, Some(NewTheme::Academic));
             }
             other => panic!("expected new command, got {other:?}"),
         }
