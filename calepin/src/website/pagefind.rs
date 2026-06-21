@@ -6,7 +6,8 @@ use std::sync::OnceLock;
 use anyhow::{anyhow, Context, Result};
 use xxhash_rust::xxh3::xxh3_64;
 
-use super::paths::rel_posix;
+use super::outputs::remove_stale_output_file;
+use super::paths::{ensure_path_within_root, ensure_relative_path, rel_posix};
 use super::{PageInfoMap, WebsiteManifest};
 
 pub(super) const PAGEFIND_DIR: &str = "pagefind";
@@ -22,28 +23,20 @@ pub(super) fn pagefind_pages(
     typ_files: &[PathBuf],
     page_info: &PageInfoMap,
     fallback_files: &[PathBuf],
-    base_url: Option<&str>,
 ) -> Vec<(PathBuf, String)> {
     typ_files
         .iter()
         .filter(|path| !fallback_files.contains(path))
         .filter_map(|path| {
-            page_info.get(path).map(|info| {
-                (
-                    out_dir.join(&info.href),
-                    pagefind_page_url(base_url, &info.href),
-                )
-            })
+            // Pagefind prepends its runtime `baseUrl` to indexed URLs. That base URL is
+            // inferred from the loaded bundle path (for example `/calepin/pagefind/` on
+            // GitHub Pages), so storing a site `base_url` prefix here would duplicate it
+            // in search result links.
+            page_info
+                .get(path)
+                .map(|info| (out_dir.join(&info.href), info.href.clone()))
         })
         .collect()
-}
-
-pub(super) fn pagefind_page_url(_base_url: Option<&str>, href: &str) -> String {
-    // Pagefind prepends its runtime `baseUrl` to indexed URLs. That base URL is
-    // inferred from the loaded bundle path (for example `/calepin/pagefind/` on
-    // GitHub Pages), so storing a site `base_url` prefix here would duplicate it
-    // in search result links.
-    href.to_string()
 }
 
 pub(super) fn base_url_path_prefix(base_url: &str) -> Option<String> {
@@ -76,11 +69,12 @@ pub(super) fn pagefind_signature(out_dir: &Path, pages: &[(PathBuf, String)]) ->
             .then_with(|| left.1.cmp(&right.1))
     });
     for (path, url) in pages {
-        bytes.extend_from_slice(rel_posix(out_dir, &path).as_bytes());
+        let path = ensure_path_within_root(out_dir, &path, "pagefind input path")?;
+        bytes.extend_from_slice(rel_posix(out_dir, path).as_bytes());
         bytes.push(0);
         bytes.extend_from_slice(url.as_bytes());
         bytes.push(0);
-        let html = fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+        let html = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
         bytes.extend_from_slice(&(html.len() as u64).to_le_bytes());
         bytes.extend_from_slice(&html);
         bytes.push(0xff);
@@ -88,24 +82,32 @@ pub(super) fn pagefind_signature(out_dir: &Path, pages: &[(PathBuf, String)]) ->
     Ok(xxh3_64(&bytes))
 }
 
-pub(super) fn manifest_output_paths(out_dir: &Path, outputs: &[String]) -> BTreeSet<PathBuf> {
-    outputs.iter().map(|rel| out_dir.join(rel)).collect()
+pub(super) fn manifest_output_paths(
+    out_dir: &Path,
+    outputs: &[String],
+) -> Result<BTreeSet<PathBuf>> {
+    outputs
+        .iter()
+        .map(|path| pagefind_output_path(out_dir, path.as_str()))
+        .collect()
 }
 
 pub(super) fn cached_pagefind_outputs(
     out_dir: &Path,
     manifest: &WebsiteManifest,
     signature: u64,
-) -> Option<BTreeSet<PathBuf>> {
-    let pagefind = manifest.pagefind.as_ref()?;
+) -> Result<Option<BTreeSet<PathBuf>>> {
+    let Some(pagefind) = manifest.pagefind.as_ref() else {
+        return Ok(None);
+    };
     if pagefind.signature != signature {
-        return None;
+        return Ok(None);
     }
-    let outputs = manifest_output_paths(out_dir, &pagefind.outputs);
+    let outputs = manifest_output_paths(out_dir, &pagefind.outputs)?;
     if outputs.iter().all(|path| path.is_file()) {
-        Some(outputs)
+        Ok(Some(outputs))
     } else {
-        None
+        Ok(None)
     }
 }
 
@@ -117,14 +119,11 @@ pub(super) fn remove_stale_pagefind_outputs(
     let Some(pagefind) = manifest.pagefind.as_ref() else {
         return Ok(());
     };
-    for path in manifest_output_paths(out_dir, &pagefind.outputs) {
+    for path in manifest_output_paths(out_dir, &pagefind.outputs)? {
         if expected_outputs.contains(&path) || !path.exists() {
             continue;
         }
-        if path.is_file() {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove stale output {}", path.display()))?;
-        }
+        remove_stale_output_file(&path, "stale pagefind output")?;
     }
     Ok(())
 }
@@ -195,13 +194,13 @@ async fn write_pagefind_index_async(
     Ok(outputs)
 }
 
-fn pagefind_output_path(out_dir: &Path, rel: &Path) -> Result<PathBuf> {
-    if rel.is_absolute()
-        || rel
-            .components()
-            .any(|component| matches!(component, std::path::Component::ParentDir))
-    {
-        return Err(anyhow!("invalid Pagefind output path: {}", rel.display()));
-    }
-    Ok(out_dir.join(PAGEFIND_DIR).join(rel))
+fn pagefind_output_path<P: AsRef<Path>>(out_dir: &Path, rel: P) -> Result<PathBuf> {
+    let rel = rel.as_ref();
+    let rel = ensure_relative_path(rel, "Pagefind output path")?;
+    let is_scoped_to_pagefind = rel.starts_with(PAGEFIND_DIR);
+    Ok(if is_scoped_to_pagefind {
+        out_dir.join(rel)
+    } else {
+        out_dir.join(PAGEFIND_DIR).join(rel)
+    })
 }

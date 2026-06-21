@@ -4,6 +4,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use crate::syntax_theme::{self, TextMateRule, TextMateTheme};
+use crate::utils::path::absolutize_from;
 
 #[derive(Debug, Clone)]
 pub(crate) struct HtmlSyntaxTheme {
@@ -370,11 +371,7 @@ fn css_font_style(font_style: &str) -> Vec<(&'static str, &'static str)> {
 }
 
 fn resolve_config_path(config_dir: &Path, path: &Path) -> std::path::PathBuf {
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        config_dir.join(path)
-    }
+    absolutize_from(config_dir, path)
 }
 
 fn html_color_variants(color: &str) -> Vec<String> {

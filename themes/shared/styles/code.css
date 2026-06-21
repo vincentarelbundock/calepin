@@ -1,0 +1,118 @@
+:root {
+__CALEPIN_SYNTAX_LIGHT__
+}
+
+div.sourceCode,
+pre.sourceCode,
+.cell-output,
+.cell-output-stdout,
+.cell-output-stderr {
+  position: relative;
+  display: flow-root;
+}
+
+pre {
+  background: var(--calepin-surface-code);
+  border-radius: var(--calepin-radius-sm);
+  color: var(--calepin-color-text);
+  overflow: auto;
+  padding: var(--calepin-space-md);
+}
+
+pre > code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+__CALEPIN_SYNTAX_CLASSES__
+
+pre.numberSource code > span > a:first-child::before {
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
+:is(.cell-output, .cell-output-stdout, .cell-output-stderr) pre {
+  border-left: var(--calepin-border-width) solid var(--calepin-color-border);
+}
+
+.calepin-copy-code {
+  appearance: none;
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--calepin-radius-sm);
+  background: rgba(31, 41, 51, 0.07);
+  color: rgba(31, 41, 51, 0.58);
+  box-shadow: none;
+  opacity: 0.62;
+  cursor: pointer;
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+div.sourceCode:hover .calepin-copy-code,
+.cell-output:hover .calepin-copy-code,
+.cell-output-stdout:hover .calepin-copy-code,
+.cell-output-stderr:hover .calepin-copy-code,
+.calepin-copy-code:focus-visible {
+  background: rgba(31, 41, 51, 0.12);
+  color: rgba(31, 41, 51, 0.82);
+  opacity: 1;
+}
+
+.calepin-copy-code svg {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+.calepin-copy-code.copied {
+  background: rgba(31, 122, 77, 0.12);
+  color: #1f7a4d;
+  opacity: 1;
+}
+
+html[data-theme="dark"] {
+__CALEPIN_SYNTAX_DARK__
+}
+
+html[data-theme="dark"] .calepin-copy-code {
+  background: rgba(216, 222, 233, 0.08);
+  color: rgba(216, 222, 233, 0.68);
+}
+
+html[data-theme="dark"] div.sourceCode:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output-stdout:hover .calepin-copy-code,
+html[data-theme="dark"] .cell-output-stderr:hover .calepin-copy-code,
+html[data-theme="dark"] .calepin-copy-code:focus-visible {
+  background: rgba(216, 222, 233, 0.14);
+  color: rgba(216, 222, 233, 0.92);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+__CALEPIN_SYNTAX_DARK__
+  }
+
+  html:not([data-theme]) .calepin-copy-code {
+    background: rgba(216, 222, 233, 0.08);
+    color: rgba(216, 222, 233, 0.68);
+  }
+
+  html:not([data-theme]) div.sourceCode:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output-stdout:hover .calepin-copy-code,
+  html:not([data-theme]) .cell-output-stderr:hover .calepin-copy-code,
+  html:not([data-theme]) .calepin-copy-code:focus-visible {
+    background: rgba(216, 222, 233, 0.14);
+    color: rgba(216, 222, 233, 0.92);
+  }
+}

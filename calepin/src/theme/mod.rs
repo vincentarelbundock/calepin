@@ -10,7 +10,7 @@ mod bundle;
 mod html;
 mod notebook;
 
-pub use bundle::{builtin_names, eject_builtin, eject_builtin_to};
+pub use bundle::{builtin_names, eject_builtin_to};
 pub use html::{
     resolve_explicit_site_html_entry, resolve_html_entry, style_only_html_entry, HtmlEntry,
     HtmlScope,
@@ -338,6 +338,27 @@ scripts = ["copy-code.js"]
     }
 
     #[test]
+    fn shared_imports_reject_duplicate_entries() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme = dir.path().join("custom");
+        std::fs::create_dir_all(theme.join("styles")).unwrap();
+        std::fs::create_dir_all(theme.join("layouts")).unwrap();
+        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(
+            theme.join("theme.toml"),
+            r#"[shared]
+styles = ["site.css", "site.css"]
+"#,
+        )
+        .unwrap();
+        std::fs::write(theme.join("styles/site.css"), "/* local */").unwrap();
+
+        let err = resolve_html_entry(&ThemeSelection::Dir(theme), HtmlScope::Document).unwrap_err();
+
+        assert!(err.to_string().contains("listed more than once"));
+    }
+
+    #[test]
     fn html_entry_appends_config_styles_after_theme_styles() {
         let mut entry =
             resolve_html_entry(&ThemeSelection::Builtin("academic"), HtmlScope::Document)
@@ -609,7 +630,8 @@ styles = ["../theme.css"]
     #[test]
     fn eject_builtin_copies_default_bundle() {
         let dir = tempfile::tempdir().unwrap();
-        let dest = eject_builtin(DEFAULT_THEME_NAME, &dir.path().join("themes"), false).unwrap();
+        let dest =
+            bundle::eject_builtin(DEFAULT_THEME_NAME, &dir.path().join("themes"), false).unwrap();
 
         assert_eq!(dest, dir.path().join("themes/calepin"));
         assert!(dest.join("layouts/notebook.html").is_file());
@@ -621,31 +643,26 @@ styles = ["../theme.css"]
         assert!(dest.join("partials/navbar-item.html").is_file());
         assert!(dest.join("partials/theme-switcher.html").is_file());
         assert!(dest.join("partials/site-topbar.html").is_file());
-        assert!(!dest.join("partials/scripts.html").exists());
-        assert!(!dest.join("partials/styles.html").exists());
+        assert!(dest.join("partials/site-meta.html").is_file());
+        assert!(dest.join("partials/theme-init.html").is_file());
+        assert!(dest.join("partials/styles.html").is_file());
+        assert!(dest.join("partials/scripts.html").is_file());
+        assert!(dest.join("partials/pagefind-modal.html").is_file());
         assert!(dest.join("theme.toml").is_file());
+        assert!(dest.join("styles/theme.css").is_file());
+        assert!(dest.join("styles/code.css").is_file());
+        assert!(dest.join("styles/widgets.css").is_file());
         assert!(dest.join("styles/site.css").is_file());
+        assert!(dest.join("scripts/theme-toggle.js").is_file());
+        assert!(dest.join("scripts/language-picker.js").is_file());
+        assert!(dest.join("scripts/copy-code.js").is_file());
         assert!(dest.join("scripts/site.js").is_file());
-        assert!(!dest.join("styles/00-theme.css").exists());
-        assert!(!dest.join("scripts/02-copy-code.js").exists());
+        assert!(!dest.parent().unwrap().join("shared").exists());
 
-        let shared = dest.parent().unwrap().join("shared");
-        assert!(shared.join("partials/site-meta.html").is_file());
-        assert!(shared.join("partials/theme-init.html").is_file());
-        assert!(shared.join("partials/styles.html").is_file());
-        assert!(shared.join("partials/scripts.html").is_file());
-        assert!(shared.join("partials/pagefind-modal.html").is_file());
-        assert!(shared.join("partials/theme-toggle.html").is_file());
-        assert!(shared.join("styles/theme.css").is_file());
-        assert!(shared.join("styles/code.css").is_file());
-        assert!(shared.join("styles/widgets.css").is_file());
-        assert!(shared.join("scripts/theme-toggle.js").is_file());
-        assert!(shared.join("scripts/language-picker.js").is_file());
-        assert!(shared.join("scripts/copy-code.js").is_file());
-        assert!(std::fs::read_to_string(shared.join("styles/widgets.css"))
+        assert!(std::fs::read_to_string(dest.join("styles/widgets.css"))
             .unwrap()
             .contains("[data-calepin-theme-toggle]"));
-        assert!(std::fs::read_to_string(shared.join("scripts/copy-code.js"))
+        assert!(std::fs::read_to_string(dest.join("scripts/copy-code.js"))
             .unwrap()
             .contains("window.CalepinCopyCode"));
     }
@@ -662,9 +679,10 @@ styles = ["../theme.css"]
         assert!(wrote.join("theme.toml").is_file());
         assert!(wrote.join("styles/main.css").is_file());
         assert!(wrote.join("scripts/main.js").is_file());
-        let shared = wrote.parent().unwrap().join("shared");
-        assert!(shared.join("styles/theme.css").is_file());
-        assert!(shared.join("scripts/copy-code.js").is_file());
+        assert!(wrote.join("partials/theme-toggle.html").is_file());
+        assert!(wrote.join("styles/theme.css").is_file());
+        assert!(wrote.join("scripts/copy-code.js").is_file());
+        assert!(!wrote.parent().unwrap().join("shared").exists());
     }
 
     #[test]
@@ -673,7 +691,7 @@ styles = ["../theme.css"]
         let themes = dir.path().join("themes");
         std::fs::create_dir_all(themes.join("calepin")).unwrap();
 
-        let err = eject_builtin(DEFAULT_THEME_NAME, &themes, false).unwrap_err();
+        let err = bundle::eject_builtin(DEFAULT_THEME_NAME, &themes, false).unwrap_err();
 
         assert!(err.to_string().contains("already exists"));
     }
@@ -681,7 +699,7 @@ styles = ["../theme.css"]
     #[test]
     fn eject_builtin_unknown_name_lists_builtins() {
         let dir = tempfile::tempdir().unwrap();
-        let err = eject_builtin("zensical", &dir.path().join("themes"), false).unwrap_err();
+        let err = bundle::eject_builtin("zensical", &dir.path().join("themes"), false).unwrap_err();
 
         assert!(err.to_string().contains("academic"));
     }

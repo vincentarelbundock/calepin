@@ -142,7 +142,7 @@ pub(super) fn apply_html_theme(
     let rewritten = syntax_theme.rewrite_classes(html);
     // Typst emits a bare HTML fragment (no <html>/<head>/<body> wrapper) when
     // the document has no explicit html.elem("html") root element. Wrap those
-    // fragments in a minimal well-formed document so html_document_parts can
+    // fragments in a minimal well-formed document so split_html_document can
     // always locate </head>, <body>, and </body>.
     let normalized = if rewritten.contains("</head>") {
         rewritten
@@ -152,7 +152,7 @@ pub(super) fn apply_html_theme(
             rewritten.trim()
         )
     };
-    let parts = html_document_parts(&normalized)?;
+    let parts = split_html_document(&normalized)?;
     render_theme(
         entry,
         &parts,
@@ -219,7 +219,7 @@ fn render_theme(
         .is_some()
         .then_some(parts.title.as_deref())
         .flatten();
-    let (body, toc) = body_with_heading_ids(parts.body, site_title_heading);
+    let (body, toc) = annotate_body_headings(parts.body, site_title_heading);
     let context = ThemeContext {
         doc: DocContext {
             head: parts.head.to_string(),
@@ -327,7 +327,7 @@ fn nav_entries(project_root: Option<&Path>, output_path: Option<&Path>) -> Vec<S
         .collect()
 }
 
-fn body_with_heading_ids(body: &str, title_heading: Option<&str>) -> (String, Vec<TocEntry>) {
+fn annotate_body_headings(body: &str, title_heading: Option<&str>) -> (String, Vec<TocEntry>) {
     let mut out = String::with_capacity(body.len());
     let mut toc = Vec::new();
     let mut counts = HashMap::<String, usize>::new();
@@ -457,7 +457,7 @@ fn theme_error(name: &str, error: minijinja::Error) -> anyhow::Error {
     anyhow!("theme `{name}`: {error}")
 }
 
-fn html_document_parts(html: &str) -> Result<HtmlDocumentParts<'_>> {
+fn split_html_document(html: &str) -> Result<HtmlDocumentParts<'_>> {
     let head_close = html
         .find("</head>")
         .ok_or_else(|| anyhow!("HTML output is missing </head>"))?;

@@ -4,13 +4,13 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use crate::typst::paths::slash_path;
-use crate::utils::path::normalize_path;
+use crate::utils::path::slash_path;
+use crate::utils::url::output_href_with_extension;
 
 use super::source::{
-    collect_typst_files, display_rel, find_matching_delimiter, is_external_or_special_target,
-    is_identifier_char, is_left_identifier_boundary, line_number, mask_raw_spans,
-    parse_string_literal, skip_ws,
+    collect_typst_files, display_rel, find_matching_delimiter, is_identifier_char,
+    is_left_identifier_boundary, line_number, mask_raw_spans, parse_string_literal,
+    resolve_local_reference_target, skip_ws,
 };
 use super::{HealthCheck, HealthStatus};
 
@@ -186,33 +186,20 @@ fn alt_argument_state(args: &str) -> AltState {
 }
 
 fn validate_local_image(root: &Path, image: &ImageOccurrence) -> Option<String> {
-    let target = image.target.trim();
-    if target.is_empty() || is_external_or_special_target(target) {
+    let Some(candidate) = resolve_local_reference_target(root, &image.source, &image.target) else {
         return None;
-    }
-    let path_part = target
-        .split_once(['#', '?'])
-        .map(|(path, _)| path)
-        .unwrap_or(target)
-        .trim();
-    if path_part.is_empty() {
-        return None;
-    }
-
-    let base = if path_part.starts_with('/') {
-        root.to_path_buf()
-    } else {
-        image.source.parent().unwrap_or(root).to_path_buf()
     };
-    let candidate = normalize_path(&base.join(path_part.trim_start_matches('/')));
-    if !candidate.starts_with(root) {
-        return Some(format!(
-            "{}:{} image `{}` escapes the project root",
-            display_rel(root, &image.source),
-            image.line,
-            image.target
-        ));
-    }
+    let candidate = match candidate {
+        Ok(candidate) => candidate,
+        Err(_) => {
+            return Some(format!(
+                "{}:{} image `{}` escapes the project root",
+                display_rel(root, &image.source),
+                image.line,
+                image.target
+            ));
+        }
+    };
     if candidate.is_file() {
         return None;
     }
@@ -400,16 +387,6 @@ fn route_value_for_safety(route: &PageRoute) -> &str {
     } else {
         route.value.as_str()
     }
-}
-
-fn output_href_with_extension(url: &str, extension: &str) -> String {
-    let url = url.trim().trim_start_matches('/').trim_start_matches("./");
-    if url.ends_with('/') {
-        return format!("{url}index.{extension}");
-    }
-    let mut path = PathBuf::from(url);
-    path.set_extension(extension);
-    slash_path(&path)
 }
 
 fn named_string_argument(args: &str, name: &str) -> Option<String> {

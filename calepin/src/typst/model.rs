@@ -7,6 +7,11 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 pub const RESULT_SCHEMA_VERSION: u8 = 1;
+pub const DEFAULT_FIG_DEVICE_FORMAT: &str = "svg";
+pub const DEFAULT_FIG_DEVICE_DPI: u32 = 150;
+pub const DEFAULT_FIG_DEVICE_WIDTH: f64 = 6.0;
+pub const DEFAULT_FIG_DEVICE_HEIGHT: Option<f64> = None;
+pub const DEFAULT_FIG_DEVICE_ASPECT: f64 = 0.618;
 
 // Copy is not derived: Jupyter(String) is not Copy.
 // Serde is implemented manually so Jupyter("julia") serializes as "julia".
@@ -21,24 +26,28 @@ pub enum EngineName {
 }
 
 impl serde::Serialize for EngineName {
-    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> std::result::Result<S::Ok, S::Error> {
         s.serialize_str(self.as_str())
     }
 }
 
 impl<'de> serde::Deserialize<'de> for EngineName {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> std::result::Result<Self, D::Error> {
         let s = String::deserialize(d)?;
         Ok(Self::from_name(&s))
     }
 }
 
 impl EngineName {
-    pub fn parse(value: &str) -> anyhow::Result<Self> {
+    pub fn parse(value: &str) -> Result<Self> {
+        let value = value.trim();
+        if value.is_empty() {
+            return Err(anyhow!("engine name cannot be empty"));
+        }
         Ok(Self::from_name(value))
     }
 
-    fn from_name(value: &str) -> Self {
+    pub fn from_name(value: &str) -> Self {
         match value {
             "r" => Self::R,
             "python" => Self::Python,
@@ -69,7 +78,7 @@ impl fmt::Display for EngineName {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ResultsMode {
     Verbatim,
@@ -114,7 +123,7 @@ pub struct SetupDefaults {
     pub echo: bool,
     pub eval: bool,
     pub output: bool,
-    pub results: String,
+    pub results: ResultsMode,
     pub warning: bool,
     pub message: bool,
     pub error: bool,
@@ -133,7 +142,7 @@ pub struct SetupDefaults {
     #[serde(default)]
     pub params: Value,
     /// Document-level theme from `calepin.setup(theme: ...)`: a builtin name, a
-    /// project-relative path, or `false` to disable.
+    /// project-relative path, or `"typst"` for raw Typst output.
     #[serde(default)]
     pub theme: Option<Value>,
 }
@@ -144,16 +153,16 @@ impl Default for SetupDefaults {
             echo: true,
             eval: true,
             output: true,
-            results: "render".to_string(),
+            results: ResultsMode::Render,
             warning: true,
             message: true,
             error: false,
             placeholder: true,
-            fig_device_format: "svg".to_string(),
-            fig_device_dpi: 150,
-            fig_device_width: 6.0,
-            fig_device_height: None,
-            fig_device_aspect: 0.618,
+            fig_device_format: DEFAULT_FIG_DEVICE_FORMAT.to_string(),
+            fig_device_dpi: DEFAULT_FIG_DEVICE_DPI,
+            fig_device_width: DEFAULT_FIG_DEVICE_WIDTH,
+            fig_device_height: DEFAULT_FIG_DEVICE_HEIGHT,
+            fig_device_aspect: DEFAULT_FIG_DEVICE_ASPECT,
             fig_width: Some(Value::String("70%".to_string())),
             fig_align: Some(Value::String("center".to_string())),
             fig_responsive: Some(true),
@@ -231,30 +240,31 @@ pub struct FigureSpec {
 }
 
 impl FigureSpec {
-    pub fn from_exec_options(engine: EngineName, options: &ExecOptions) -> Self {
+    pub fn from_exec_options(engine: &EngineName, options: &ExecOptions) -> Result<Self> {
         let format = if engine.is_diagram() {
             "svg".to_string()
         } else {
             options.fig_device_format.clone()
         };
+        validate_figure_format(&format)?;
+        validate_figure_dimension("fig-device-width", options.fig_device_width)?;
+        validate_figure_dimension("fig-device-aspect", options.fig_device_aspect)?;
+        if let Some(height) = options.fig_device_height {
+            validate_figure_dimension("fig-device-height", height)?;
+        }
         let height = options
             .fig_device_height
             .unwrap_or(options.fig_device_width * options.fig_device_aspect);
-        Self {
+        Ok(Self {
             format,
             dpi: options.fig_device_dpi,
             width: options.fig_device_width,
             height,
-        }
+        })
     }
 
     pub fn extension(&self) -> &'static str {
-        match self.format.as_str() {
-            "png" => "png",
-            "jpeg" | "jpg" => "jpg",
-            "pdf" | "cairo_pdf" => "pdf",
-            _ => "svg",
-        }
+        figure_extension(&self.format).expect("FigureSpec format is validated")
     }
 
     pub fn mime_type(&self) -> &'static str {
@@ -280,6 +290,29 @@ impl FigureSpec {
 
     pub fn artifact_filename(&self, label: &str) -> String {
         format!("{}.{}", label, self.extension())
+    }
+}
+
+fn validate_figure_format(format: &str) -> Result<()> {
+    figure_extension(format)
+        .map(|_| ())
+        .ok_or_else(|| anyhow!("unsupported figure device format `{format}`"))
+}
+
+fn validate_figure_dimension(field: &str, value: f64) -> Result<()> {
+    if value.is_finite() && value > 0.0 {
+        return Ok(());
+    }
+    Err(anyhow!("`{field}` must be a positive finite number"))
+}
+
+fn figure_extension(format: &str) -> Option<&'static str> {
+    match format {
+        "png" => Some("png"),
+        "jpeg" | "jpg" => Some("jpg"),
+        "pdf" | "cairo_pdf" => Some("pdf"),
+        "svg" => Some("svg"),
+        _ => None,
     }
 }
 
@@ -339,6 +372,45 @@ impl Default for ResultItem {
             traceback: None,
             data: None,
             metadata: BTreeMap::new(),
+        }
+    }
+}
+
+impl ResultItem {
+    pub fn stream(name: ResultItemName, text: impl Into<String>) -> Self {
+        Self {
+            item_type: ResultItemType::Stream,
+            name: Some(name),
+            text: Some(text.into()),
+            ..Self::default()
+        }
+    }
+
+    pub fn diagnostic(level: DiagnosticLevel, text: impl Into<String>) -> Self {
+        Self {
+            item_type: ResultItemType::Diagnostic,
+            text: Some(text.into()),
+            level: Some(level),
+            ..Self::default()
+        }
+    }
+
+    pub fn error(message: impl Into<String>) -> Self {
+        Self {
+            item_type: ResultItemType::Error,
+            name: Some(ResultItemName::Error),
+            message: Some(message.into()),
+            ..Self::default()
+        }
+    }
+
+    pub fn rich_data(kind: ResultItemType, mime: impl Into<String>, value: Value) -> Self {
+        let mut data = MimeData::new();
+        data.insert(mime.into(), value);
+        Self {
+            item_type: kind,
+            data: Some(data),
+            ..Self::default()
         }
     }
 }
@@ -408,15 +480,23 @@ impl LayoutPaths {
             .map(Path::to_path_buf)
             .unwrap_or(path)
     }
-
-    pub fn sibling_path(&self, name: impl AsRef<Path>) -> PathBuf {
-        self.artifact_path(name)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn exec_options() -> ExecOptions {
+        ExecOptions {
+            fig_device_format: DEFAULT_FIG_DEVICE_FORMAT.to_string(),
+            fig_device_dpi: DEFAULT_FIG_DEVICE_DPI,
+            fig_device_width: DEFAULT_FIG_DEVICE_WIDTH,
+            fig_device_height: DEFAULT_FIG_DEVICE_HEIGHT,
+            fig_device_aspect: DEFAULT_FIG_DEVICE_ASPECT,
+            eval: true,
+            error: false,
+        }
+    }
 
     #[test]
     fn chunk_result_document_serializes_crossref_labels() {
@@ -444,11 +524,46 @@ mod tests {
     }
 
     #[test]
+    fn result_item_constructors_populate_expected_fields() {
+        let stream = ResultItem::stream(ResultItemName::Stdout, "hello");
+        assert_eq!(stream.item_type, ResultItemType::Stream);
+        assert_eq!(stream.name, Some(ResultItemName::Stdout));
+        assert_eq!(stream.text.as_deref(), Some("hello"));
+
+        let diagnostic = ResultItem::diagnostic(DiagnosticLevel::Warning, "careful");
+        assert_eq!(diagnostic.item_type, ResultItemType::Diagnostic);
+        assert_eq!(diagnostic.level, Some(DiagnosticLevel::Warning));
+        assert_eq!(diagnostic.text.as_deref(), Some("careful"));
+
+        let error = ResultItem::error("boom");
+        assert_eq!(error.item_type, ResultItemType::Error);
+        assert_eq!(error.name, Some(ResultItemName::Error));
+        assert_eq!(error.message.as_deref(), Some("boom"));
+
+        let rich = ResultItem::rich_data(
+            ResultItemType::Display,
+            "text/plain",
+            Value::String("rendered".to_string()),
+        );
+        let data = rich.data.as_ref().unwrap();
+        assert_eq!(rich.item_type, ResultItemType::Display);
+        assert_eq!(
+            data.get("text/plain"),
+            Some(&Value::String("rendered".to_string()))
+        );
+    }
+
+    #[test]
     fn parses_typed_diagram_engines() {
         for name in ["mermaid", "tikz", "dot", "d2"] {
-            let engine = EngineName::parse(name).unwrap();
+            let engine = EngineName::from_name(name);
             assert_eq!(engine.as_str(), name);
         }
+    }
+
+    #[test]
+    fn setup_defaults_store_typed_results_mode() {
+        assert_eq!(SetupDefaults::default().results, ResultsMode::Render);
     }
 
     #[test]
@@ -467,10 +582,96 @@ mod tests {
 
     #[test]
     fn unknown_engine_name_parses_as_jupyter() {
-        let engine = EngineName::parse("octave").unwrap();
+        let engine = EngineName::from_name("octave");
         assert_eq!(engine, EngineName::Jupyter("octave".to_string()));
         assert_eq!(engine.as_str(), "octave");
         assert!(!engine.is_diagram());
+    }
+
+    #[test]
+    fn engine_name_parse_rejects_blank_names() {
+        for value in ["", " ", "\t\n"] {
+            let err = EngineName::parse(value).unwrap_err().to_string();
+            assert!(err.contains("engine name"), "{value:?}: {err}");
+            assert!(err.contains("empty"), "{value:?}: {err}");
+        }
+    }
+
+    #[test]
+    fn engine_name_parse_accepts_known_and_jupyter_names() {
+        assert_eq!(EngineName::parse("python").unwrap(), EngineName::Python);
+        assert_eq!(
+            EngineName::parse("octave").unwrap(),
+            EngineName::Jupyter("octave".to_string())
+        );
+    }
+
+    #[test]
+    fn figure_spec_rejects_unknown_formats() {
+        let options = ExecOptions {
+            fig_device_format: "bmp".to_string(),
+            ..exec_options()
+        };
+
+        let err = FigureSpec::from_exec_options(&EngineName::R, &options).unwrap_err();
+
+        assert!(err.to_string().contains("unsupported figure device format"));
+    }
+
+    #[test]
+    fn figure_spec_rejects_invalid_dimensions() {
+        let cases = [
+            (
+                "fig-device-width",
+                ExecOptions {
+                    fig_device_width: 0.0,
+                    ..exec_options()
+                },
+            ),
+            (
+                "fig-device-width",
+                ExecOptions {
+                    fig_device_width: f64::INFINITY,
+                    ..exec_options()
+                },
+            ),
+            (
+                "fig-device-height",
+                ExecOptions {
+                    fig_device_height: Some(-1.0),
+                    ..exec_options()
+                },
+            ),
+            (
+                "fig-device-height",
+                ExecOptions {
+                    fig_device_height: Some(f64::NAN),
+                    ..exec_options()
+                },
+            ),
+            (
+                "fig-device-aspect",
+                ExecOptions {
+                    fig_device_aspect: 0.0,
+                    ..exec_options()
+                },
+            ),
+            (
+                "fig-device-aspect",
+                ExecOptions {
+                    fig_device_aspect: f64::NEG_INFINITY,
+                    ..exec_options()
+                },
+            ),
+        ];
+
+        for (field, options) in cases {
+            let err = FigureSpec::from_exec_options(&EngineName::R, &options)
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains(field), "{field}: {err}");
+            assert!(err.contains("positive finite number"), "{field}: {err}");
+        }
     }
 
     #[test]

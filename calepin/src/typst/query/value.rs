@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Context, Result};
 use serde_json::Value;
 
+use crate::typst::fence_label::FENCE_LABEL_METADATA_LABEL;
+
 pub(super) fn parse_query_values(query_json: &str) -> Result<Vec<Value>> {
     serde_json::from_str(query_json).context("failed to parse typst query output")
 }
@@ -38,7 +40,7 @@ pub(super) fn is_calepin_fence_label_metadata(value: &Value) -> bool {
         && value
             .get("label")
             .and_then(Value::as_str)
-            .is_some_and(|value| value == "<calepin-fence-label>")
+            .is_some_and(|value| value == FENCE_LABEL_METADATA_LABEL)
 }
 
 pub(super) fn value_for<'a>(object: &'a Value, key: &str) -> Option<&'a Value> {

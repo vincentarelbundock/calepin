@@ -17,7 +17,7 @@ import sys, base64, os, traceback, re, json
 
 try:
     from jupyter_client import KernelManager
-    from jupyter_client.kernelspec import KernelSpecManager
+    from jupyter_client.kernelspec import KernelSpecManager, NoSuchKernel
 except ImportError:
     sys.stderr.write(
         "calepin: jupyter_client not found - "
@@ -222,6 +222,11 @@ while True:
     try:
         km, kc = _get_kernel(kernel_name, timeout)
         result = _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeout)
+    except NoSuchKernel:
+        sep = sentinel + "_SEP"
+        result = (sentinel + "_SOURCE:" + code + "\n" + sep + "\n"
+                  + sentinel + "_UNAVAILABLE:"
+                  + f"Jupyter kernel `{kernel_name}` is not installed")
     except Exception:
         tb = traceback.format_exc()
         sep = sentinel + "_SEP"

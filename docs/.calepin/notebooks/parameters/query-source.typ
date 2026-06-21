@@ -61,9 +61,7 @@ The selected species is #calepin.inline("r")[`cat(params$Species)`].
 
 Because parameters live in `#calepin.setup`, you can override them on the command line with `-P key=value` (repeatable). This renders the same source with different inputs, without editing the notebook:
 
-```sh
-calepin compile iris.typ -P Species=setosa -P min_petal_length=1.5 -P palette=magma
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile iris.typ -P Species=setosa -P min_petal_length=1.5 -P palette=magma\n", block: true, lang: "sh"))
 
 Command-line values are typed the same way as `#|` header values, so `1.5` is a number, `true` is a boolean, and `setosa` is a string.
 

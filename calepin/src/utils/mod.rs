@@ -8,4 +8,5 @@ pub mod template;
 #[cfg(test)]
 pub mod testutil;
 pub mod tools;
+pub mod url;
 pub mod watch;

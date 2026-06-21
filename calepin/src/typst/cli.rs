@@ -5,21 +5,23 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use crate::cli::{set_quiet, CleanArgs, CompileArgs, NewArgs, WatchArgs};
+use crate::cli::{is_quiet, set_quiet, CleanArgs, CompileArgs, NewArgs, NewTheme, WatchArgs};
 use crate::html::SiteContextInput;
-use crate::typst::compile::{resolve_output_format, compile_with_typst, CompileOptions};
+use crate::typst::compile::{
+    compile_with_typst, resolve_output_format, CompileOptions, OutputFormat,
+};
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
 
 const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/notebook.typ");
 
 pub fn handle_new(args: NewArgs) -> Result<()> {
+    let theme = args.theme.unwrap_or(NewTheme::Calepin).as_str();
     if args.path == Path::new("theme") {
-        let name = crate::theme::DEFAULT_THEME_NAME;
         let dest = match args.output.as_deref() {
-            Some(output) => crate::theme::eject_builtin_to(name, output, args.force)?,
-            None => crate::theme::eject_builtin(name, Path::new("themes"), args.force)?,
+            Some(output) => crate::theme::eject_builtin_to(theme, output, args.force)?,
+            None => crate::theme::eject_builtin_to(theme, default_theme_dir(), args.force)?,
         };
-        if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
+        if !is_quiet() {
             eprintln!("Created {}", dest.display());
             eprintln!(
                 "Select it with `theme = \"{}\"` in calepin.toml",
@@ -29,10 +31,12 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
         return Ok(());
     }
     if args.path == Path::new("website") {
-        let dest = args.output.as_deref().unwrap_or(Path::new("docs"));
-        let theme = crate::theme::DEFAULT_THEME_NAME;
+        let dest = match args.output.as_deref() {
+            Some(output) => output,
+            None => default_website_dir(),
+        };
         crate::website::scaffold_website(dest, theme, args.force)?;
-        if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
+        if !is_quiet() {
             eprintln!("Created {theme} website scaffold in {}", dest.display());
         }
         return Ok(());
@@ -44,34 +48,50 @@ pub fn handle_new(args: NewArgs) -> Result<()> {
         ));
     }
 
-    if let Some(parent) = args
-        .path
+    if args.theme.is_some() {
+        return Err(anyhow::anyhow!(
+            "`--theme` only applies to `calepin new website` or `calepin new theme`"
+        ));
+    }
+
+    write_notebook_scaffold(&args.path, args.force)?;
+
+    if !is_quiet() {
+        eprintln!("Created {}", args.path.display());
+    }
+
+    Ok(())
+}
+
+fn default_website_dir() -> &'static Path {
+    Path::new("calepin_website")
+}
+
+fn default_theme_dir() -> &'static Path {
+    Path::new("calepin_theme")
+}
+
+fn write_notebook_scaffold(path: &Path, force: bool) -> Result<()> {
+    if let Some(parent) = path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
     {
         fs::create_dir_all(parent)
             .with_context(|| format!("failed to create {}", parent.display()))?;
     }
-
     let mut options = OpenOptions::new();
     options.write(true);
-    if args.force {
+    if force {
         options.create(true).truncate(true);
     } else {
         options.create_new(true);
     }
 
     let mut file = options
-        .open(&args.path)
-        .with_context(|| format!("failed to create {}", args.path.display()))?;
+        .open(path)
+        .with_context(|| format!("failed to create {}", path.display()))?;
     file.write_all(NEW_FILE_TEMPLATE.as_bytes())
-        .with_context(|| format!("failed to write {}", args.path.display()))?;
-
-    if !crate::cli::QUIET.load(std::sync::atomic::Ordering::Relaxed) {
-        eprintln!("Created {}", args.path.display());
-    }
-
-    Ok(())
+        .with_context(|| format!("failed to write {}", path.display()))
 }
 
 pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
@@ -80,40 +100,61 @@ pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
         return crate::website::watch_from_watch_args(args);
     }
 
-    let format = resolve_output_format(args.format.as_ref().map(|format| format.as_str()), args.output.as_deref());
-    let is_html = format.as_deref() == Some("html");
+    let format = resolve_output_format(args.format.map(OutputFormat::from), args.output.as_deref());
+    let is_html = format == Some(OutputFormat::Html);
 
-    if args.serve && !is_html {
-        return Err(anyhow::anyhow!(
-            "`calepin watch --serve` can only be used when watching a website directory"
-        ));
-    }
-    if args.open && !is_html {
-        return Err(anyhow::anyhow!(
-            "`calepin watch --open` is only for website serving; pass Typst's flag after `--` as `calepin watch paper.typ -- --open`"
-        ));
-    }
+    validate_single_file_watch_flags(&args, is_html)?;
+    apply_html_watch_typst_args(&mut args, is_html);
 
+    crate::typst::watch::run_watch(args)
+}
+
+fn validate_single_file_watch_flags(args: &WatchArgs, is_html: bool) -> Result<()> {
     if is_html {
-        if args.open && !contains_typst_open_arg(&args.typst_args) {
+        return Ok(());
+    }
+    if args.serve {
+        return Err(anyhow::anyhow!(
+            "`calepin watch --serve` can only be used for HTML output"
+        ));
+    }
+    if args.open {
+        return Err(anyhow::anyhow!(
+            "`calepin watch --open` can only be used for HTML output"
+        ));
+    }
+    if args.port.is_some() {
+        return Err(anyhow::anyhow!(
+            "`calepin watch --port` can only be used for HTML output"
+        ));
+    }
+    Ok(())
+}
+
+fn apply_html_watch_typst_args(args: &mut WatchArgs, is_html: bool) {
+    if is_html {
+        if args.open && !has_typst_open_flag(&args.typst_args) {
             args.typst_args.push("--open".to_string());
         }
         if let Some(port) = args.port {
-            if !contains_typst_port_arg(&args.typst_args) {
+            if !has_typst_port_flag(&args.typst_args) {
                 args.typst_args.push("--port".to_string());
                 args.typst_args.push(port.to_string());
             }
         }
     }
-    crate::typst::watch::run_watch(args)
 }
 
-fn contains_typst_open_arg(typst_args: &[String]) -> bool {
-    typst_args.iter().any(|arg| arg == "--open" || arg.starts_with("--open="))
+fn has_typst_open_flag(typst_args: &[String]) -> bool {
+    typst_args
+        .iter()
+        .any(|arg| arg == "--open" || arg.starts_with("--open="))
 }
 
-fn contains_typst_port_arg(typst_args: &[String]) -> bool {
-    typst_args.iter().any(|arg| arg == "--port" || arg.starts_with("--port="))
+fn has_typst_port_flag(typst_args: &[String]) -> bool {
+    typst_args
+        .iter()
+        .any(|arg| arg == "--port" || arg.starts_with("--port="))
 }
 
 pub fn handle_clean(args: CleanArgs) -> Result<()> {
@@ -149,7 +190,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         return crate::website::build_from_compile_args(args);
     }
 
-    let format = args.format.map(|format| format.as_str().to_string());
+    let format = args.format.map(OutputFormat::from);
     let current_dir = std::env::current_dir()?;
     let calepin_config =
         crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
@@ -178,7 +219,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         &output.layout,
         CompileOptions {
             output: args.output,
-            format: format.as_deref(),
+            format,
             typst_args: &args.typst_args,
             theme: &output.theme,
             html_scope: crate::theme::HtmlScope::Document,
@@ -252,6 +293,8 @@ fn confirm_deletion() -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cli::{Cli, Command, CommonArgs, CompileFormat};
+    use clap::Parser;
 
     #[test]
     fn new_writes_example_file() {
@@ -260,6 +303,7 @@ mod tests {
 
         handle_new(NewArgs {
             path: path.clone(),
+            theme: None,
             output: None,
             force: false,
         })
@@ -282,6 +326,7 @@ mod tests {
 
         let err = handle_new(NewArgs {
             path: path.clone(),
+            theme: None,
             output: None,
             force: false,
         })
@@ -299,6 +344,7 @@ mod tests {
 
         handle_new(NewArgs {
             path: path.clone(),
+            theme: None,
             output: None,
             force: true,
         })
@@ -315,6 +361,7 @@ mod tests {
         let path = dir.path().join("x.typ");
         handle_new(NewArgs {
             path: path.clone(),
+            theme: None,
             output: None,
             force: false,
         })
@@ -330,6 +377,7 @@ mod tests {
 
         handle_new(NewArgs {
             path: PathBuf::from("website"),
+            theme: None,
             output: Some(site.clone()),
             force: false,
         })
@@ -374,12 +422,35 @@ mod tests {
     }
 
     #[test]
+    fn new_website_uses_selected_academic_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        let site_arg = site.to_string_lossy().to_string();
+        let args = parse_new_args([
+            "calepin",
+            "new",
+            "website",
+            site_arg.as_str(),
+            "--theme",
+            "academic",
+        ]);
+
+        handle_new(args).unwrap();
+
+        let config = std::fs::read_to_string(site.join("calepin.toml")).unwrap();
+        assert!(config.contains(r#"theme = "academic""#));
+        let post = std::fs::read_to_string(site.join("posts/first-post.typ")).unwrap();
+        assert!(post.contains(r#"thumbnail: "/assets/flowers_01.jpg""#));
+    }
+
+    #[test]
     fn new_theme_writes_to_requested_dir() {
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("trash");
 
         handle_new(NewArgs {
             path: PathBuf::from("theme"),
+            theme: None,
             output: Some(theme.clone()),
             force: false,
         })
@@ -393,10 +464,43 @@ mod tests {
     }
 
     #[test]
+    fn new_theme_uses_selected_academic_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme = dir.path().join("trash");
+        let theme_arg = theme.to_string_lossy().to_string();
+        let args = parse_new_args([
+            "calepin",
+            "new",
+            "theme",
+            theme_arg.as_str(),
+            "--theme",
+            "academic",
+        ]);
+
+        handle_new(args).unwrap();
+
+        assert!(theme.join("layouts/webpage.html").exists());
+        assert!(theme.join("partials/site-nav.html").exists());
+        assert!(theme.join("partials/theme-toggle.html").exists());
+        assert!(theme.join("styles/main.css").exists());
+        assert!(theme.join("styles/theme.css").exists());
+        assert!(theme.join("scripts/main.js").exists());
+        assert!(theme.join("scripts/copy-code.js").exists());
+        assert!(!theme.parent().unwrap().join("shared").exists());
+    }
+
+    #[test]
+    fn new_default_dirs_are_fixed() {
+        assert_eq!(default_website_dir(), Path::new("calepin_website"));
+        assert_eq!(default_theme_dir(), Path::new("calepin_theme"));
+    }
+
+    #[test]
     fn new_rejects_output_for_plain_files() {
         let dir = tempfile::tempdir().unwrap();
         let err = handle_new(NewArgs {
             path: dir.path().join("x.typ"),
+            theme: None,
             output: Some(dir.path().join("site")),
             force: false,
         })
@@ -407,16 +511,96 @@ mod tests {
     }
 
     #[test]
-    fn contains_typst_open_arg_detects_typst_open_flags() {
-        assert!(contains_typst_open_arg(&["--open".to_string()]));
-        assert!(contains_typst_open_arg(&["--open=chromium".to_string()]));
-        assert!(!contains_typst_open_arg(&["--port".to_string()]));
+    fn new_rejects_theme_for_plain_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let err = handle_new(NewArgs {
+            path: dir.path().join("x.typ"),
+            theme: Some(NewTheme::Academic),
+            output: None,
+            force: false,
+        })
+        .unwrap_err();
+
+        assert!(err.to_string().contains("--theme"));
+        assert!(err.to_string().contains("new website"));
+    }
+
+    fn parse_new_args<const N: usize>(args: [&str; N]) -> NewArgs {
+        match Cli::try_parse_from(args).unwrap().command {
+            Command::New(args) => args,
+            other => panic!("expected new command, got {other:?}"),
+        }
     }
 
     #[test]
-    fn contains_typst_port_arg_detects_typst_port_flags() {
-        assert!(contains_typst_port_arg(&["--port".to_string()]));
-        assert!(contains_typst_port_arg(&["--port=3001".to_string()]));
-        assert!(!contains_typst_port_arg(&["--open".to_string()]));
+    fn has_typst_open_flag_detects_typst_open_flags() {
+        assert!(has_typst_open_flag(&["--open".to_string()]));
+        assert!(has_typst_open_flag(&["--open=chromium".to_string()]));
+        assert!(!has_typst_open_flag(&["--port".to_string()]));
+    }
+
+    #[test]
+    fn has_typst_port_flag_detects_typst_port_flags() {
+        assert!(has_typst_port_flag(&["--port".to_string()]));
+        assert!(has_typst_port_flag(&["--port=3001".to_string()]));
+        assert!(!has_typst_port_flag(&["--open".to_string()]));
+    }
+
+    #[test]
+    fn watch_rejects_serve_for_non_html_notebooks() {
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Pdf));
+        args.serve = true;
+
+        let err = handle_watch(args).unwrap_err().to_string();
+
+        assert!(err.contains("--serve"), "{err}");
+        assert!(err.contains("HTML"), "{err}");
+    }
+
+    #[test]
+    fn watch_rejects_port_for_non_html_notebooks() {
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Pdf));
+        args.port = Some(3000);
+
+        let err = handle_watch(args).unwrap_err().to_string();
+
+        assert!(err.contains("--port"), "{err}");
+        assert!(err.contains("HTML"), "{err}");
+    }
+
+    #[test]
+    fn html_watch_allows_serve_and_forwards_open_and_port_to_typst() {
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Html));
+        args.serve = true;
+        args.open = true;
+        args.port = Some(3000);
+
+        validate_single_file_watch_flags(&args, true).unwrap();
+        apply_html_watch_typst_args(&mut args, true);
+
+        assert!(args.typst_args.contains(&"--open".to_string()));
+        assert!(args
+            .typst_args
+            .windows(2)
+            .any(|pair| pair == ["--port", "3000"]));
+    }
+
+    fn watch_args(input: PathBuf, format: Option<CompileFormat>) -> WatchArgs {
+        WatchArgs {
+            input,
+            output: None,
+            format,
+            serve: false,
+            open: false,
+            host: "127.0.0.1".to_string(),
+            port: None,
+            common: CommonArgs {
+                config: None,
+                quiet: true,
+                timeout: None,
+                params: Vec::new(),
+            },
+            typst_args: Vec::new(),
+        }
     }
 }

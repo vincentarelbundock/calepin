@@ -175,7 +175,7 @@ printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$out"
         let source = vec!["flowchart LR".to_string(), "  A --> B".to_string()];
         let results = execute_diagram(
             "flowchart LR\n  A --> B",
-            EngineName::parse("mermaid").unwrap(),
+            EngineName::from_name("mermaid"),
             &fig_path,
             &source,
             &ExecutablePaths::defaults(),
@@ -227,7 +227,7 @@ printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$out"
         let source = vec!["flowchart LR".to_string(), "  A --> B".to_string()];
         let results = execute_diagram(
             "flowchart LR\n  A --> B",
-            EngineName::parse("mermaid").unwrap(),
+            EngineName::from_name("mermaid"),
             &fig_path,
             &source,
             &ExecutablePaths::defaults(),

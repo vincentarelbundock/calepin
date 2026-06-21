@@ -260,6 +260,7 @@ dependencies = [
  "notify-debouncer-full",
  "pagefind",
  "plist",
+ "quick-xml",
  "serde",
  "serde_json",
  "tempfile",

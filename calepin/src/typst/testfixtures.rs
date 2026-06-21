@@ -2,17 +2,20 @@ use std::path::{Path, PathBuf};
 
 use crate::typst::model::{
     ChunkSpec, DisplayOptions, EngineName, ExecOptions, LayoutPaths, ResultsMode,
+    DEFAULT_FIG_DEVICE_ASPECT, DEFAULT_FIG_DEVICE_DPI, DEFAULT_FIG_DEVICE_FORMAT,
+    DEFAULT_FIG_DEVICE_HEIGHT, DEFAULT_FIG_DEVICE_WIDTH,
 };
+use crate::typst::paths::CALEPIN_DIR;
 
 pub fn exec_options() -> ExecOptions {
     ExecOptions {
         eval: true,
         error: false,
-        fig_device_format: "svg".to_string(),
-        fig_device_dpi: 150,
-        fig_device_width: 6.0,
-        fig_device_height: None,
-        fig_device_aspect: 0.618,
+        fig_device_format: DEFAULT_FIG_DEVICE_FORMAT.to_string(),
+        fig_device_dpi: DEFAULT_FIG_DEVICE_DPI,
+        fig_device_width: DEFAULT_FIG_DEVICE_WIDTH,
+        fig_device_height: DEFAULT_FIG_DEVICE_HEIGHT,
+        fig_device_aspect: DEFAULT_FIG_DEVICE_ASPECT,
     }
 }
 
@@ -52,14 +55,15 @@ pub fn chunk(label: &str, code: &str, results: ResultsMode) -> ChunkSpec {
 }
 
 pub fn layout(root: &Path) -> LayoutPaths {
+    let artifact_dir = root.join(CALEPIN_DIR).join("paper");
     LayoutPaths {
         root: root.to_path_buf(),
         input: root.join("paper.typ"),
         input_rel: PathBuf::from("paper.typ"),
         render_input: PathBuf::from("paper.typ"),
         work_dir: root.to_path_buf(),
-        artifact_dir: root.join(".calepin/paper"),
-        results_path: root.join(".calepin/paper/results.json"),
-        figures_dir: root.join(".calepin/paper/figures"),
+        results_path: artifact_dir.join("results.json"),
+        figures_dir: artifact_dir.join("figures"),
+        artifact_dir,
     }
 }

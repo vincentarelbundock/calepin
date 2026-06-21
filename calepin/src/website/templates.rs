@@ -5,12 +5,14 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 use serde::Serialize;
 
+use crate::utils::static_files::collect_files_by;
 use crate::utils::template::no_autoescape_env;
 
-use super::paths::slash_path;
+use super::paths::{relative_or_self, slash_path};
+use super::url::absolute_site_url;
+use super::util::xml_escape;
 use super::{
-    absolute_site_url, xml_escape, WebsiteConfig, DEFAULT_ROBOTS_TEMPLATE, ROBOTS_FILE,
-    ROBOTS_TEMPLATE_DIR, ROBOTS_TEMPLATE_FILE,
+    WebsiteConfig, DEFAULT_ROBOTS_TEMPLATE, ROBOTS_FILE, ROBOTS_TEMPLATE_DIR, ROBOTS_TEMPLATE_FILE,
 };
 
 /// Writes the sitemap from every built page except the 404 page.
@@ -95,7 +97,7 @@ pub(super) fn read_template_files(dir: &Path) -> Result<Vec<(String, String)>> {
 
     let mut files = Vec::with_capacity(paths.len());
     for path in paths {
-        let rel = path.strip_prefix(dir).unwrap_or(&path);
+        let rel = relative_or_self(dir, &path);
         let name = slash_path(rel);
         let contents = fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
@@ -105,20 +107,16 @@ pub(super) fn read_template_files(dir: &Path) -> Result<Vec<(String, String)>> {
 }
 
 fn collect_template_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let path = entry?.path();
-        if path.is_dir() {
-            collect_template_files(root, &path, out)?;
-        } else if path.is_file() {
-            let rel = path.strip_prefix(root).unwrap_or(&path);
-            if rel
-                .components()
-                .any(|component| component.as_os_str().to_str() == Some(".calepin"))
-            {
-                continue;
-            }
-            out.push(path);
-        }
-    }
-    Ok(())
+    collect_files_by(
+        root,
+        dir,
+        out,
+        |rel, _| !has_calepin_component(rel),
+        |rel, _| !has_calepin_component(rel),
+    )
+}
+
+fn has_calepin_component(path: &Path) -> bool {
+    path.components()
+        .any(|component| component.as_os_str().to_str() == Some(".calepin"))
 }

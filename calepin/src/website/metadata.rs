@@ -4,10 +4,13 @@ use std::path::{Path, PathBuf};
 
 use crate::typst::preprocess::read_page_meta_with_root;
 
+use super::util::clean_optional_string;
+
 /// Per-page metadata exposed through the `<website-metadata>` Typst label,
 /// extracted during preprocessing and persisted under `.calepin/`. `title`,
-/// `pdf`, and `layout` are the keys calepin interprets; `raw` carries the
-/// author's whole dictionary verbatim for the pages index.
+/// `pdf`, `layout`, `translation_key`, `slug`, and `url` are the keys calepin
+/// interprets; `raw` carries the author's whole dictionary verbatim for the
+/// pages index.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(super) struct PageMeta {
     pub(super) title: Option<String>,
@@ -45,8 +48,7 @@ fn document_title_from_source(path: &Path) -> Option<String> {
 
 pub(super) fn extract_document_title(source: &str) -> Option<String> {
     let mut offset = 0;
-    while let Some(relative) = source[offset..].find("#set") {
-        let start = offset + relative;
+    while let Some(start) = find_next_visible_set(source, offset) {
         let mut rest_start = start + "#set".len();
         rest_start = skip_ws(source, rest_start);
         if !source[rest_start..].starts_with("document") {
@@ -69,9 +71,68 @@ pub(super) fn extract_document_title(source: &str) -> Option<String> {
         }
         let close = find_matching_delimiter(source, open, '(', ')')?;
         let args = &source[open + 1..close];
-        return title_argument(args).and_then(title_value_to_text);
+        if let Some(title) = title_argument(args).and_then(title_value_to_text) {
+            return Some(title);
+        }
+        offset = close + 1;
     }
     None
+}
+
+fn find_next_visible_set(source: &str, mut index: usize) -> Option<usize> {
+    while index < source.len() {
+        if source[index..].starts_with("#set") {
+            return Some(index);
+        }
+        if let Some(next) = ignored_source_span_end(source, index) {
+            index = next;
+            continue;
+        }
+        let ch = source[index..].chars().next()?;
+        index += ch.len_utf8();
+    }
+    None
+}
+
+fn ignored_source_span_end(source: &str, index: usize) -> Option<usize> {
+    let rest = &source[index..];
+    if rest.starts_with("//") {
+        return Some(line_comment_end(source, index));
+    }
+    if rest.starts_with("/*") {
+        return Some(block_comment_end(source, index));
+    }
+    match rest.chars().next()? {
+        '"' => find_string_end(source, index).map(|end| end + 1),
+        '`' => raw_span_end(source, index),
+        _ => None,
+    }
+}
+
+fn line_comment_end(source: &str, index: usize) -> usize {
+    source[index..]
+        .find('\n')
+        .map(|relative| index + relative + 1)
+        .unwrap_or(source.len())
+}
+
+fn block_comment_end(source: &str, index: usize) -> usize {
+    source[index + 2..]
+        .find("*/")
+        .map(|relative| index + 2 + relative + "*/".len())
+        .unwrap_or(source.len())
+}
+
+fn raw_span_end(source: &str, index: usize) -> Option<usize> {
+    let tick_count = source[index..]
+        .chars()
+        .take_while(|candidate| *candidate == '`')
+        .count();
+    let marker = "`".repeat(tick_count);
+    let search_start = index + tick_count;
+    source[search_start..]
+        .find(&marker)
+        .map(|relative| search_start + relative + tick_count)
 }
 
 fn title_argument(args: &str) -> Option<&str> {
@@ -216,38 +277,13 @@ fn is_identifier_char(ch: char) -> bool {
 
 pub(super) fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
     PageMeta {
-        title: value
-            .get("title")
-            .and_then(|title| title.as_str())
-            .map(str::trim)
-            .filter(|title| !title.is_empty())
-            .map(str::to_string),
+        title: string_field(value, "title"),
         pdf: value.get("pdf").and_then(|pdf| pdf.as_bool()),
-        layout: value
-            .get("layout")
-            .and_then(|layout| layout.as_str())
-            .map(str::trim)
-            .filter(|layout| !layout.is_empty())
-            .map(str::to_string),
-        translation_key: value
-            .get("translation_key")
-            .or_else(|| value.get("translationKey"))
-            .and_then(|key| key.as_str())
-            .map(str::trim)
-            .filter(|key| !key.is_empty())
-            .map(str::to_string),
-        slug: value
-            .get("slug")
-            .and_then(|slug| slug.as_str())
-            .map(str::trim)
-            .filter(|slug| !slug.is_empty())
-            .map(str::to_string),
-        url: value
-            .get("url")
-            .and_then(|url| url.as_str())
-            .map(str::trim)
-            .filter(|url| !url.is_empty())
-            .map(str::to_string),
+        layout: string_field(value, "layout"),
+        translation_key: string_field(value, "translation_key")
+            .or_else(|| string_field(value, "translationKey")),
+        slug: string_field(value, "slug"),
+        url: string_field(value, "url"),
         raw: if value.is_object() {
             value.clone()
         } else {
@@ -256,9 +292,9 @@ pub(super) fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
     }
 }
 
-fn clean_optional_string(value: Option<&str>) -> Option<String> {
+fn string_field(value: &serde_json::Value, key: &str) -> Option<String> {
     value
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
+        .get(key)
+        .and_then(|field| field.as_str())
+        .and_then(|field| clean_optional_string(Some(field)))
 }

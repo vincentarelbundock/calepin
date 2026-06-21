@@ -130,7 +130,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     // checks so paged/query passes never evaluate `html.*` calls.
     let query_source = write_query_source(&layout, &staged_input)?;
     let query_input = write_render_wrapper(&layout, &query_source, &[], None)?;
-    let results_input = artifact_reference(&layout.root, &layout.results_path);
+    let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let metadata = preprocess_metadata(
         &config.executables.typst,
         &layout,
@@ -334,7 +334,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         .collect::<Result<Vec<_>>>()?;
 
     publish_staged_figures(&staged_figures_dir, &plan.layout.figures_dir)?;
-    let document = build_results_document(&plan.layout.input_rel, chunk_results);
+    let document = build_results_document(&plan.layout.input_rel, chunk_results)?;
     write_results(&plan.layout.results_path, &document)?;
     write_preprocess_fingerprint(&plan.layout, plan.fingerprint)?;
     if plan.sync_pages {
@@ -356,7 +356,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
 }
 
 fn page_meta_path(layout: &LayoutPaths) -> PathBuf {
-    layout.sibling_path(PAGE_META_FILE)
+    layout.artifact_path(PAGE_META_FILE)
 }
 
 fn source_fingerprint(input: &Path) -> Result<String> {
@@ -437,7 +437,7 @@ fn execution_artifact_reference(
     execution_figures_dir: &Path,
     final_figures_dir: &Path,
     path: &Path,
-) -> String {
+) -> Result<String> {
     let final_path = path
         .strip_prefix(execution_figures_dir)
         .map(|relative| final_figures_dir.join(relative))
@@ -487,7 +487,7 @@ fn publish_staged_file(source: &Path, target: &Path) -> Result<()> {
 /// Write `params.json` next to `results.json` when there are parameters, and
 /// return its path. Returns `None` (and removes any stale file) when empty.
 fn write_params_file(layout: &LayoutPaths, params: &serde_json::Value) -> Result<Option<PathBuf>> {
-    let path = layout.sibling_path("params.json");
+    let path = layout.artifact_path("params.json");
     let is_empty = params.as_object().is_none_or(|map| map.is_empty());
     if is_empty {
         let _ = fs::remove_file(&path);
@@ -522,11 +522,7 @@ mod tests {
     use crate::typst::model::ResultsMode;
     use crate::typst::paths::slash_path;
     use crate::typst::testfixtures;
-    use std::process::Command;
-
-    fn typst_available() -> bool {
-        Command::new("typst").arg("--version").output().is_ok()
-    }
+    use crate::utils::testutil::command_available;
 
     #[test]
     fn page_meta_roundtrips_and_detects_stale_source() {
@@ -575,7 +571,7 @@ mod tests {
 
     #[test]
     fn preprocess_theme_can_come_from_config() {
-        if !typst_available() {
+        if !command_available("typst") {
             return;
         }
 
@@ -849,7 +845,8 @@ mod tests {
                 staged.path(),
                 &final_figures_dir,
                 &staged_artifact,
-            ),
+            )
+            .unwrap(),
             "/.calepin/paper/figures/answer.svg"
         );
     }
@@ -909,7 +906,8 @@ mod tests {
                 items: Vec::new(),
                 crossref_labels: chunk.crossref_labels.clone(),
             }],
-        );
+        )
+        .unwrap();
         write_results(&layout.results_path, &results).unwrap();
         write_preprocess_fingerprint(&layout, fingerprint).unwrap();
         let mut executables = ExecutablePaths::defaults();

@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Themes])
 #import "/.calepin/calepin.typ" as calepin
 
@@ -34,9 +35,7 @@ theme = "typst"              # raw Typst output, no Calepin theme
 
 If the `calepin.toml` file is not located in the same directory as the document or website being compiled, you can specify the path to the config file with `--config`:
 
-```sh
-calepin compile notebook.typ --config=/path/to/calepin.toml
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile notebook.typ --config=/path/to/calepin.toml\n", block: true, lang: "sh"))
 
 You can also set the theme in-document with:
 

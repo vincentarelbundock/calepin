@@ -40,7 +40,7 @@ pub(crate) fn image_meta_relative_path(layout: &LayoutPaths) -> PathBuf {
 
 pub(super) fn write_image_meta(layout: &LayoutPaths) -> Result<ImageMetaDocument> {
     let document = collect_image_meta(layout)?;
-    let path = layout.sibling_path(IMAGE_META_FILE);
+    let path = layout.artifact_path(IMAGE_META_FILE);
     write_if_changed(&path, serde_json::to_string_pretty(&document)?)?;
     Ok(document)
 }
@@ -375,7 +375,26 @@ fn svg_viewbox_dimensions(tag: &str) -> Option<(u32, u32)> {
 
 fn svg_attr(tag: &str, name: &str) -> Option<String> {
     let needle = format!("{name}=");
-    let start = tag.find(&needle)? + needle.len();
+    let mut search_start = 0;
+    while let Some(offset) = tag[search_start..].find(&needle) {
+        let name_start = search_start + offset;
+        if !is_svg_attr_name_boundary(tag, name_start) {
+            search_start = name_start + needle.len();
+            continue;
+        }
+        return svg_quoted_attr_value(tag, name_start + needle.len());
+    }
+    None
+}
+
+fn is_svg_attr_name_boundary(tag: &str, name_start: usize) -> bool {
+    tag[..name_start]
+        .chars()
+        .next_back()
+        .is_some_and(|ch| ch == '<' || ch.is_ascii_whitespace())
+}
+
+fn svg_quoted_attr_value(tag: &str, start: usize) -> Option<String> {
     let quote = tag[start..].chars().next()?;
     if quote != '"' && quote != '\'' {
         return None;
@@ -383,4 +402,16 @@ fn svg_attr(tag: &str, name: &str) -> Option<String> {
     let value_start = start + quote.len_utf8();
     let value_end = tag[value_start..].find(quote)? + value_start;
     Some(tag[value_start..value_end].to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn svg_dimensions_do_not_match_suffix_attributes() {
+        let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" stroke-width="4" width="120" height="80"></svg>"#;
+
+        assert_eq!(svg_dimensions(svg), Some((120, 80)));
+    }
 }

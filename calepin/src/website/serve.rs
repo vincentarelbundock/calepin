@@ -256,15 +256,15 @@ fn respond(
     base_path_prefix: Option<&str>,
     live: Option<&LiveReload>,
 ) -> Result<()> {
+    if request.method() != &Method::Get && request.method() != &Method::Head {
+        return send_method_not_allowed(request);
+    }
+
     if request.url() == STATUS_ENDPOINT {
         let status = live
             .map(LiveReload::status_json)
             .unwrap_or_else(|| "{\"version\":0,\"error\":null}".to_string());
         return send_text(request, 200, APPLICATION_JSON_UTF8, &status);
-    }
-
-    if request.method() != &Method::Get && request.method() != &Method::Head {
-        return send_text(request, 405, TEXT_PLAIN_UTF8, "Method Not Allowed");
     }
 
     let Some(path) = resolve_request_path(root, request.url(), base_path_prefix, true) else {
@@ -322,6 +322,16 @@ fn send_text(request: Request, status: u16, content_type: &str, body: &str) -> R
     Ok(())
 }
 
+fn send_method_not_allowed(request: Request) -> Result<()> {
+    let response = Response::from_string("Method Not Allowed")
+        .with_status_code(StatusCode(405))
+        .with_header(allow_methods_header("GET, HEAD")?)
+        .with_header(content_type_header(TEXT_PLAIN_UTF8)?)
+        .with_header(no_store_header()?);
+    request.respond(response)?;
+    Ok(())
+}
+
 fn content_type_header(value: &str) -> Result<Header> {
     Header::from_bytes("Content-Type", value)
         .map_err(|_| anyhow!("failed to create content-type header"))
@@ -330,6 +340,10 @@ fn content_type_header(value: &str) -> Result<Header> {
 fn content_length_header(length: usize) -> Result<Header> {
     Header::from_bytes("Content-Length", length.to_string())
         .map_err(|_| anyhow!("failed to create content-length header"))
+}
+
+fn allow_methods_header(value: &str) -> Result<Header> {
+    Header::from_bytes("Allow", value).map_err(|_| anyhow!("failed to create allow header"))
 }
 
 fn no_store_header() -> Result<Header> {
@@ -469,6 +483,32 @@ mod tests {
     #[test]
     fn browser_url_brackets_ipv6_hosts() {
         assert_eq!(browser_url("::1", "::1:8000"), "http://[::1]:8000/");
+    }
+
+    #[test]
+    fn status_endpoint_rejects_invalid_method() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().to_path_buf();
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let addr = server.server_addr().to_string();
+
+        let handle = thread::spawn(move || {
+            let request = server.recv().unwrap();
+            respond(request, &root, None, None).unwrap();
+        });
+
+        let mut stream = TcpStream::connect(addr).unwrap();
+        stream
+            .write_all(
+                b"POST /__calepin/status HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+            )
+            .unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        handle.join().unwrap();
+
+        assert!(response.starts_with("HTTP/1.1 405 Method Not Allowed"));
+        assert!(response.contains("Allow: GET, HEAD"));
     }
 
     #[test]

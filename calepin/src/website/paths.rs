@@ -1,6 +1,8 @@
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 
-pub(super) use crate::utils::path::normalize_path;
+use anyhow::{bail, Context, Result};
+
+pub(super) use crate::utils::path::{normalize_path, slash_path};
 
 pub(super) fn rel_posix(src_dir: &Path, path: &Path) -> String {
     path.strip_prefix(src_dir)
@@ -9,11 +11,86 @@ pub(super) fn rel_posix(src_dir: &Path, path: &Path) -> String {
         .replace('\\', "/")
 }
 
-pub(super) fn slash_path(path: &Path) -> String {
-    path.components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/")
+pub(super) fn source_relative_path<'a>(src_dir: &Path, input_path: &'a Path) -> &'a Path {
+    relative_or_self(src_dir, input_path)
+}
+
+pub(super) fn relative_or_self<'a>(base: &Path, path: &'a Path) -> &'a Path {
+    path.strip_prefix(base).unwrap_or(path)
+}
+
+pub(super) fn canonicalize_within_root(root: &Path, path: &Path, what: &str) -> Result<PathBuf> {
+    let normalized_root = root
+        .canonicalize()
+        .with_context(|| format!("failed to resolve source directory {}", root.display()))?;
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        normalized_root.join(path)
+    };
+    let resolved = absolute
+        .canonicalize()
+        .with_context(|| format!("failed to resolve local path {}", path.display()))?;
+    if !resolved.starts_with(&normalized_root) {
+        bail!("{what}");
+    }
+    Ok(resolved)
+}
+
+pub(super) fn join_normalized_under_root(root: &Path, value: &Path, what: &str) -> Result<PathBuf> {
+    let root = normalize_path(root);
+    if value.as_os_str().is_empty()
+        || value.is_absolute()
+        || value
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_) | Component::CurDir))
+    {
+        bail!("{what}: {}", value.display());
+    }
+    let candidate = normalize_path(&root.join(value));
+    if !candidate.starts_with(&root) {
+        bail!("{what}: {}", value.display());
+    }
+    Ok(candidate)
+}
+
+pub(super) fn output_path_for_source_file(
+    src_dir: &Path,
+    out_dir: &Path,
+    input_path: &Path,
+) -> PathBuf {
+    out_dir.join(source_relative_path(src_dir, input_path))
+}
+
+pub(super) fn ensure_path_within_root<'a>(
+    root: &Path,
+    path: &'a Path,
+    what: &str,
+) -> Result<&'a Path> {
+    if !path.starts_with(root)
+        || path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
+    {
+        bail!(
+            "invalid {what} {} for output directory {}",
+            path.display(),
+            root.display()
+        )
+    }
+    Ok(path)
+}
+
+pub(super) fn ensure_relative_path<'a>(path: &'a Path, what: &str) -> Result<&'a Path> {
+    if path.as_os_str().is_empty()
+        || path.is_absolute()
+        || path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
+    {
+        bail!("invalid {what}: {}", path.display())
+    }
+    Ok(path)
 }
 
 pub(super) fn wildcard_match(pattern: &str, value: &str) -> bool {

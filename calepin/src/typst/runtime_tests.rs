@@ -1,24 +1,14 @@
 use std::process::Command;
 
 use super::*;
-
-fn typst_accessible_tempdir() -> tempfile::TempDir {
-    tempfile::Builder::new()
-        .prefix("calepin-runtime-test-")
-        .tempdir_in(env!("CARGO_MANIFEST_DIR"))
-        .unwrap()
-}
+use crate::utils::testutil::{command_available, tempdir_in_manifest};
 
 macro_rules! skip_if_no_typst {
     () => {
-        if !typst_available() {
+        if !command_available("typst") {
             return;
         }
     };
-}
-
-fn typst_available() -> bool {
-    Command::new("typst").arg("--version").output().is_ok()
 }
 
 fn typst_query(root: &Path, input: &Path, selector: &str) -> String {
@@ -96,7 +86,7 @@ fn write_runtime_writes_calepin_typ() {
 fn typst_compile_html_elements_columns_uses_plain_pico_grid() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -143,7 +133,7 @@ fn typst_compile_html_elements_columns_uses_plain_pico_grid() {
 fn typst_compile_html_elements_columns_wraps_items_by_default() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -179,7 +169,7 @@ fn typst_compile_html_elements_columns_wraps_items_by_default() {
 fn typst_compile_elements_columns_rejects_track_list() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -222,7 +212,7 @@ fn typst_compile_elements_columns_rejects_track_list() {
 fn typst_compile_html_elements_tabs_emit_webawesome_markup() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -275,7 +265,7 @@ fn typst_compile_html_elements_tabs_emit_webawesome_markup() {
 fn typst_query_elements_tabs_exposes_nested_chunks() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -309,7 +299,7 @@ print("hello from tab")
 fn typst_query_emits_chunk_metadata() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -346,7 +336,7 @@ print("hello")
 fn typst_query_infers_chunk_engine_from_fenced_language() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -369,7 +359,7 @@ x <- 1
 fn typst_query_supports_plain_python_raw_blocks_when_enabled() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -403,7 +393,7 @@ print("hello")
 fn typst_query_supports_fenced_chunks_engine_option() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -427,7 +417,7 @@ fn typst_query_supports_fenced_chunks_engine_option() {
 fn typst_query_plain_fenced_chunks_does_not_reprocess_chunk_body() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -472,7 +462,7 @@ fn typst_compile_without_results_shows_code() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     let output = dir.path().join("paper.pdf");
@@ -503,7 +493,7 @@ fn typst_compile_with_results_and_echo_shows_both() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     let output = dir.path().join("paper.pdf");
@@ -557,7 +547,7 @@ fn svg_path_heights(svg: &str, fill: &str) -> Vec<f64> {
 fn typst_compile_raw_size_applies_to_rewritten_and_explicit_chunks() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     let output = dir.path().join("paper.svg");
@@ -602,7 +592,7 @@ print("explicit")
 fn typst_compile_html_themed_raw_blocks_use_source_container() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     let output = dir.path().join("paper.html");
@@ -622,7 +612,10 @@ fn typst_compile_html_themed_raw_blocks_use_source_container() {
         &["--features", "html", "--input", "calepin-target=html"],
     );
     let html = std::fs::read_to_string(output).unwrap();
-    assert!(html.contains("sourceCode"), "expected source wrapper: {html}");
+    assert!(
+        html.contains("sourceCode"),
+        "expected source wrapper: {html}"
+    );
     assert!(html.contains("data-lang=python") || html.contains(r#"data-lang="python""#));
 }
 
@@ -633,7 +626,7 @@ fn typst_compile_echo_strips_qmd_header_lines() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     let output = dir.path().join("paper.pdf");
@@ -663,7 +656,7 @@ print("VISIBLE_CODE_12345")
 fn typst_compile_renders_canonical_figure_options_from_results() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let figures = dir.path().join(".calepin/paper/figures");
     std::fs::create_dir_all(&figures).unwrap();
@@ -767,7 +760,7 @@ print("ignored")
 fn typst_compile_html_renders_explicit_figure_grid_layout_from_results() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let figures = dir.path().join(".calepin/paper/figures");
     std::fs::create_dir_all(&figures).unwrap();
@@ -867,7 +860,7 @@ fn typst_compile_html_renders_explicit_figure_grid_layout_from_results() {
 fn typst_compile_html_respects_figure_display_dimensions_from_results() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let figures = dir.path().join(".calepin/paper/figures");
     std::fs::create_dir_all(&figures).unwrap();
@@ -960,7 +953,7 @@ fn typst_compile_html_respects_figure_display_dimensions_from_results() {
 fn typst_compile_html_accepts_css_string_figure_display_dimensions_from_results() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let figures = dir.path().join(".calepin/paper/figures");
     std::fs::create_dir_all(&figures).unwrap();
@@ -1043,7 +1036,7 @@ fn typst_compile_html_accepts_css_string_figure_display_dimensions_from_results(
 fn typst_compile_paged_respects_string_figure_width_from_results() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let figures = dir.path().join(".calepin/paper/figures");
     std::fs::create_dir_all(&figures).unwrap();
@@ -1132,7 +1125,7 @@ fn typst_compile_paged_respects_string_figure_width_from_results() {
 fn typst_query_emits_crossref_labels_for_array_label() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -1158,7 +1151,7 @@ fn typst_query_emits_crossref_labels_for_array_label() {
 fn typst_query_emits_crossref_labels_for_string_label() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -1183,7 +1176,7 @@ fn typst_query_emits_crossref_labels_for_string_label() {
 fn typst_query_emits_crossref_labels_for_qmd_label() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -1208,7 +1201,7 @@ fn typst_query_emits_crossref_labels_for_qmd_label() {
 fn typst_query_emits_crossref_labels_for_trailing_fence_label_metadata() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let input = dir.path().join("paper.typ");
     std::fs::write(
@@ -1232,7 +1225,7 @@ fn typst_query_emits_crossref_labels_for_trailing_fence_label_metadata() {
 fn typst_compile_html_applies_default_figure_display_options_from_results() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     let figures = dir.path().join(".calepin/paper/figures");
     std::fs::create_dir_all(&figures).unwrap();
@@ -1397,7 +1390,7 @@ fn typst_compile_relocates_hidden_chunk_output_once() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_stream_results(dir.path(), "greeting", "RELOCATED_12345");
 
@@ -1439,7 +1432,7 @@ fn typst_compile_hidden_chunk_without_relocation_suppresses_output() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_stream_results(dir.path(), "greeting", "SUPPRESSED_12345");
 
@@ -1478,7 +1471,7 @@ fn typst_compile_hidden_results_alias_suppresses_inline_output() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_stream_results(dir.path(), "greeting", "ALIAS_12345");
 
@@ -1521,7 +1514,7 @@ fn typst_compile_relocates_output_twice() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_stream_results(dir.path(), "greeting", "TWICE_12345");
 
@@ -1564,7 +1557,7 @@ fn typst_compile_relocation_before_chunk_renders() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_stream_results(dir.path(), "greeting", "FORWARD_12345");
 
@@ -1606,7 +1599,7 @@ fn typst_compile_relocated_hidden_figure_resolves_crossref() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_figure_results(dir.path(), "fig-plot");
 
@@ -1649,7 +1642,7 @@ See @fig-plot for details.
 fn typst_compile_referencing_figure_shown_in_two_places_errors() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_figure_results(dir.path(), "fig-plot");
 
@@ -1695,7 +1688,7 @@ fn typst_compile_hidden_figure_relocated_twice_unreferenced_ok() {
         return;
     }
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_figure_results(dir.path(), "fig-plot");
 
@@ -1733,7 +1726,7 @@ pass
 fn typst_compile_relocation_unknown_label_errors() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     write_stream_results(dir.path(), "greeting", "IGNORED");
 
@@ -1766,7 +1759,7 @@ fn typst_compile_relocation_unknown_label_errors() {
 fn typst_compile_html_relocates_hidden_chunk_with_stored_options() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
     std::fs::create_dir_all(dir.path().join(".calepin/paper")).unwrap();
     // Realistic results.json: the chunk's stored options carry results: "hide",
@@ -1835,7 +1828,7 @@ pass
 fn typst_compile_html_sidenote_links_marker_to_note() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -1887,7 +1880,7 @@ Text#calepin.elements.sidenote[A margin remark.] continues.
 fn typst_compile_html_sidenote_unnumbered_emits_calepin_sidenote() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -1930,7 +1923,7 @@ Text#calepin.elements.sidenote(numbering: none)[An unnumbered aside.] ends.
 fn typst_compile_html_sidefigure_emits_calepin_sidefigure_with_caption() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -1954,8 +1947,7 @@ fn typst_compile_html_sidefigure_emits_calepin_sidefigure_with_caption() {
     );
     let html = std::fs::read_to_string(output).unwrap();
     assert!(
-        html.contains("class=calepin-sidefigure")
-            || html.contains(r#"class="calepin-sidefigure""#),
+        html.contains("class=calepin-sidefigure") || html.contains(r#"class="calepin-sidefigure""#),
         "expected a calepin-sidefigure container:\n{html}"
     );
     assert!(
@@ -1976,7 +1968,7 @@ fn typst_compile_html_sidefigure_emits_calepin_sidefigure_with_caption() {
 fn typst_query_paged_sidenote_falls_back_to_footnote() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -2005,7 +1997,7 @@ Body text#calepin.elements.sidenote[A footnote fallback remark.] here.
 fn typst_query_paged_sidenote_uses_installed_margin_impl() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");
@@ -2038,7 +2030,7 @@ Body#calepin.elements.sidenote[a remark] here.
 fn typst_query_margin_elements_pass_body_through_in_query_mode() {
     skip_if_no_typst!();
 
-    let dir = typst_accessible_tempdir();
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
 
     let input = dir.path().join("paper.typ");

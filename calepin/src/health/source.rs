@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-const HEALTH_CHECK_SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modules", ".venv"];
+use crate::utils::path::normalize_path;
+use crate::utils::static_files::path_has_common_skip_dir;
 
 pub(super) fn collect_typst_files(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
@@ -23,12 +24,7 @@ fn collect_typst_files_in(
         let entry = entry?;
         let path = entry.path();
         let rel = path.strip_prefix(root).unwrap_or(&path);
-        if rel.components().any(|component| {
-            component
-                .as_os_str()
-                .to_str()
-                .is_some_and(|name| HEALTH_CHECK_SKIP_DIRS.contains(&name))
-        }) {
+        if path_has_common_skip_dir(rel) {
             continue;
         }
         if path.is_dir() {
@@ -203,9 +199,70 @@ pub(super) fn is_external_or_special_target(target: &str) -> bool {
         || target.starts_with("data:")
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum LocalReferenceError {
+    EscapesRoot,
+}
+
+pub(super) fn resolve_local_reference_target(
+    root: &Path,
+    source: &Path,
+    target: &str,
+) -> Option<Result<PathBuf, LocalReferenceError>> {
+    let target = target.trim();
+    if target.is_empty() || is_external_or_special_target(target) {
+        return None;
+    }
+    let path_part = target
+        .split_once(['#', '?'])
+        .map(|(path, _)| path)
+        .unwrap_or(target)
+        .trim();
+    if path_part.is_empty() {
+        return None;
+    }
+
+    let base = if path_part.starts_with('/') {
+        root.to_path_buf()
+    } else {
+        source.parent().unwrap_or(root).to_path_buf()
+    };
+    let candidate = normalize_path(&base.join(path_part.trim_start_matches('/')));
+    if candidate.starts_with(root) {
+        Some(Ok(candidate))
+    } else {
+        Some(Err(LocalReferenceError::EscapesRoot))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn resolve_local_reference_target_handles_project_and_source_relative_paths() {
+        let root = Path::new("/project");
+        let source = root.join("notes").join("paper.typ");
+
+        assert_eq!(
+            resolve_local_reference_target(root, &source, "/assets/logo.svg")
+                .unwrap()
+                .unwrap(),
+            root.join("assets").join("logo.svg")
+        );
+        assert_eq!(
+            resolve_local_reference_target(root, &source, "figures/plot.svg")
+                .unwrap()
+                .unwrap(),
+            root.join("notes").join("figures").join("plot.svg")
+        );
+        assert!(resolve_local_reference_target(root, &source, "https://example.com").is_none());
+        assert!(
+            resolve_local_reference_target(root, &source, "../../secret.txt")
+                .unwrap()
+                .is_err()
+        );
+    }
 
     #[test]
     fn raw_span_mask_preserves_line_numbers_and_hides_code() {

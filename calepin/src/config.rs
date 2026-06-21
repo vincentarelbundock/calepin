@@ -4,7 +4,7 @@ use serde::Deserialize;
 use serde_json::Value as JsonValue;
 use std::path::{Path, PathBuf};
 
-use crate::utils::path::{expand_home, is_path_like};
+use crate::utils::path::{absolutize_from, expand_home, is_path_like};
 use crate::utils::tools;
 
 pub const PYTHON_EXECUTABLE_ENV_VAR: &str = "CALEPIN_PYTHON";
@@ -85,11 +85,7 @@ impl CalepinConfig {
 }
 
 fn resolve_config_path(path: &Path) -> Result<PathBuf> {
-    if path.is_absolute() {
-        Ok(path.to_path_buf())
-    } else {
-        Ok(std::env::current_dir()?.join(path))
-    }
+    Ok(absolutize_from(&std::env::current_dir()?, path))
 }
 
 fn is_toml_file(path: &Path) -> bool {
@@ -229,11 +225,7 @@ fn resolve_css_override(config_dir: &Path, path: PathBuf) -> Result<CssOverride>
             path.display()
         ));
     }
-    let resolved = if path.is_absolute() {
-        path
-    } else {
-        config_dir.join(path)
-    };
+    let resolved = absolutize_from(config_dir, &path);
     if !resolved.is_file() {
         return Err(anyhow!(
             "configured style file not found: {}",

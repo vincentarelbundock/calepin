@@ -15,16 +15,16 @@ one into your project first. Use `--theme` to choose which built-in theme gets e
 that theme becomes the base for your local customizations.
 
 ```sh
-calepin new theme                          # eject the default `calepin` theme to themes/calepin/
+calepin new theme                          # eject the default `calepin` theme to calepin_theme/
 calepin new theme --theme calepin          # same, explicitly
-calepin new theme --theme academic          # eject the `academic` theme
+calepin new theme --theme academic          # eject the `academic` theme to calepin_theme/
 calepin new theme --theme calepin themes/my  # copy into a custom directory
 ```
 
 Then point Calepin at your copy:
 
 ```toml
-theme = "themes/calepin"
+theme = "calepin_theme"
 theme = "themes/my-theme" # with the custom name
 ```
 

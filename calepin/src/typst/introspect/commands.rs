@@ -4,14 +4,14 @@ use std::path::Path;
 
 use super::root_relative;
 use crate::typst::model::LayoutPaths;
-use crate::typst::run::{run_typst_capture, TypstInput};
+use crate::typst::run::{run_typst_capture, CalepinTarget, TypstInput};
 
 pub(super) fn typst_eval(
     typst: &Path,
     layout: &LayoutPaths,
     input: &Path,
     expression: &str,
-    target: &str,
+    target: CalepinTarget,
     inputs: &[TypstInput],
 ) -> Result<String> {
     let input = root_relative(input, &layout.root);
@@ -23,7 +23,7 @@ pub(super) fn typst_eval(
         "--root".into(),
         layout.root.as_os_str().into(),
         "--target".into(),
-        target.into(),
+        target.as_str().into(),
         "--format".into(),
         "json".into(),
         // Documents may use Typst's HTML module even during metadata

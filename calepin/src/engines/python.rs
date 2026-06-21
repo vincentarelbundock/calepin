@@ -314,16 +314,9 @@ impl PythonSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::process::Command;
     use std::time::Duration;
 
-    fn has_python3() -> bool {
-        Command::new("python3")
-            .arg("--version")
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
-    }
+    use crate::utils::testutil::command_available;
 
     fn session() -> PythonSession {
         PythonSession::init_with_program(Path::new("python3"), None, Some(Duration::from_secs(10)))
@@ -332,7 +325,7 @@ mod tests {
 
     #[test]
     fn python_session_captures_stderr_as_warning() {
-        if !has_python3() {
+        if !command_available("python3") {
             return;
         }
 
@@ -352,7 +345,7 @@ mod tests {
 
     #[test]
     fn python_session_preserves_warnings_before_errors() {
-        if !has_python3() {
+        if !command_available("python3") {
             return;
         }
 
@@ -374,7 +367,7 @@ mod tests {
 
     #[test]
     fn python_session_removes_stale_figure_file() {
-        if !has_python3() {
+        if !command_available("python3") {
             return;
         }
 
@@ -395,7 +388,7 @@ mod tests {
 
     #[test]
     fn python_session_suppresses_matplotlib_artist_repr() {
-        if !has_python3() {
+        if !command_available("python3") {
             return;
         }
 

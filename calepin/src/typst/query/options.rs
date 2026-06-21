@@ -74,7 +74,7 @@ fn parse_display_options(
     Ok(DisplayOptions {
         echo: bool_option(value, "echo", defaults.echo)?,
         output: bool_option(value, "output", defaults.output)?,
-        results: results_option(value, "results", &defaults.results)?,
+        results: results_option(value, "results", defaults.results)?,
         warning: bool_option(value, "warning", defaults.warning)?,
         message: bool_option(value, "message", defaults.message)?,
         placeholder: bool_option(value, "placeholder", defaults.placeholder)?,
@@ -98,7 +98,7 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         echo: bool_option(value, "echo", base.echo)?,
         eval: bool_option(value, "eval", base.eval)?,
         output: bool_option(value, "output", base.output)?,
-        results: string_option(value, "results", &base.results)?,
+        results: results_option(value, "results", base.results)?,
         warning: bool_option(value, "warning", base.warning)?,
         message: bool_option(value, "message", base.message)?,
         error: bool_option(value, "error", base.error)?,
@@ -132,12 +132,16 @@ fn fenced_chunks_option(value: &Value, base: &FencedChunks) -> Result<FencedChun
         Some(Value::Bool(false)) => Ok(FencedChunks::Off),
         Some(Value::Bool(true)) => Ok(FencedChunks::All),
         Some(Value::String(lang)) => Ok(FencedChunks::Only(vec![lang.clone()])),
-        Some(Value::Array(items)) => Ok(FencedChunks::Only(
-            items
-                .iter()
-                .filter_map(|item| item.as_str().map(str::to_string))
-                .collect(),
-        )),
+        Some(Value::Array(items)) => {
+            let mut langs = Vec::with_capacity(items.len());
+            for item in items {
+                let Some(lang) = item.as_str() else {
+                    return Err(anyhow!("`fenced-chunks` array entries must be strings"));
+                };
+                langs.push(lang.to_string());
+            }
+            Ok(FencedChunks::Only(langs))
+        }
         Some(other) => Err(anyhow!("invalid `fenced-chunks` value: {other}")),
     }
 }
@@ -173,7 +177,12 @@ fn u32_option(object: &Value, key: &str, default: u32) -> Result<u32> {
         object,
         key,
         default,
-        |value| value.as_u64().and_then(|n| u32::try_from(n).ok()),
+        |value| {
+            value
+                .as_u64()
+                .filter(|n| *n > 0)
+                .and_then(|n| u32::try_from(n).ok())
+        },
         "a positive integer",
     )
 }
@@ -244,9 +253,14 @@ fn opt_f64_option(object: &Value, key: &str, default: Option<f64>) -> Result<Opt
     optional_option(object, key, Value::as_f64, "a number").map(|value| value.or(default))
 }
 
-fn results_option(object: &Value, key: &str, default: &str) -> Result<ResultsMode> {
-    let value = string_option(object, key, default)?;
-    ResultsMode::parse(&value)
+fn results_option(object: &Value, key: &str, default: ResultsMode) -> Result<ResultsMode> {
+    let Some(value) = value_for(object, key) else {
+        return Ok(default);
+    };
+    let value = value
+        .as_str()
+        .ok_or_else(|| anyhow!("`{}` must be a string", key))?;
+    ResultsMode::parse(value)
 }
 
 fn option_or<T>(

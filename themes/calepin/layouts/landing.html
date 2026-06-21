@@ -1,0 +1,15 @@
+{{ doc.head }}
+{% include "partials/site-meta.html" %}
+{% include "partials/site-theme-init.html" %}
+{% include "partials/styles.html" %}
+{{ doc.body_open }}
+{% set show_site_sidebar = false %}
+{% include "partials/site-topbar.html" %}
+    <main class="calepin-website-main calepin-website-main--landing calepin-landing calepin-content" data-pagefind-body>
+        <div class="landing-page calepin-landing-page">
+            {{ doc.body }}
+        </div>
+    </main>
+{% include "partials/pagefind-modal.html" %}
+{% include "partials/scripts.html" %}
+{{ doc.body_close }}

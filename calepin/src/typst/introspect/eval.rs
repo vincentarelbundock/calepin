@@ -5,8 +5,10 @@ use std::path::Path;
 
 use super::{commands, split_page_meta, PreprocessMetadata, PAGE_META_LABEL, PAGE_SYNC_SELECTOR};
 use crate::typst::model::LayoutPaths;
-use crate::typst::paths::slash_path;
-use crate::typst::run::{TypstInput, INPUT_MODE, INPUT_RESULTS, INPUT_SOURCE_DIR, INPUT_TARGET};
+use crate::typst::run::{
+    source_dir_input, CalepinMode, CalepinTarget, TypstInput, INPUT_MODE, INPUT_RESULTS,
+    INPUT_SOURCE_DIR, INPUT_TARGET,
+};
 
 pub fn preprocess_metadata(
     typst: &Path,
@@ -25,8 +27,10 @@ pub fn preprocess_metadata(
     // chunks inside `if target == "paged"` fallbacks. Calepin executes chunks
     // before the final render, so a single-target scan can miss chunks that the
     // later render will ask for.
-    let paged = preprocess_metadata_for_target(typst, layout, input, results_input, "paged")?;
-    let html = preprocess_metadata_for_target(typst, layout, input, results_input, "html")?;
+    let paged =
+        preprocess_metadata_for_target(typst, layout, input, results_input, CalepinTarget::Paged)?;
+    let html =
+        preprocess_metadata_for_target(typst, layout, input, results_input, CalepinTarget::Html)?;
     let setup = paged
         .get("setup")
         .cloned()
@@ -59,7 +63,7 @@ fn preprocess_metadata_for_target(
     layout: &LayoutPaths,
     input: &Path,
     results_input: &str,
-    target: &str,
+    target: CalepinTarget,
 ) -> Result<Value> {
     let output = commands::typst_eval(
         typst,
@@ -73,17 +77,17 @@ fn preprocess_metadata_for_target(
         ),
         target,
         &[
-            TypstInput::new(INPUT_MODE, "query"),
+            TypstInput::new(INPUT_MODE, CalepinMode::Query.as_str()),
             TypstInput::new(INPUT_RESULTS, results_input),
             TypstInput::new(INPUT_SOURCE_DIR, source_dir_input(layout)),
-            TypstInput::new(INPUT_TARGET, target),
+            TypstInput::new(INPUT_TARGET, target.as_str()),
         ],
     )?;
     serde_json::from_str(&output).context("failed to parse typst eval metadata output")
 }
 
 pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String, usize>> {
-    let results_input = super::results_input(layout);
+    let results_input = super::results_input(layout)?;
     let output = commands::typst_eval(
         typst,
         layout,
@@ -94,25 +98,17 @@ pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String
   page: it.value.page,
 ))"#
         ),
-        "paged",
+        CalepinTarget::Paged,
         &[
-            TypstInput::new(INPUT_MODE, "render"),
+            TypstInput::new(INPUT_MODE, CalepinMode::Render.as_str()),
             TypstInput::new(INPUT_RESULTS, results_input),
             TypstInput::new(INPUT_SOURCE_DIR, source_dir_input(layout)),
-            TypstInput::new(INPUT_TARGET, "paged"),
+            TypstInput::new(INPUT_TARGET, CalepinTarget::Paged.as_str()),
         ],
     )?;
     let root: Value =
         serde_json::from_str(&output).context("failed to parse typst eval page sync output")?;
     super::parse_page_anchor_entries(&root)
-}
-
-fn source_dir_input(layout: &LayoutPaths) -> String {
-    layout
-        .input_rel
-        .parent()
-        .map(slash_path)
-        .unwrap_or_default()
 }
 
 #[cfg(test)]

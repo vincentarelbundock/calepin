@@ -50,7 +50,7 @@ pub(super) fn preprocess_cache_hit(layout: &LayoutPaths, fingerprint: u64) -> Re
 }
 
 fn preprocess_fingerprint_path(layout: &LayoutPaths) -> PathBuf {
-    layout.sibling_path(PREPROCESS_FINGERPRINT_FILE)
+    layout.artifact_path(PREPROCESS_FINGERPRINT_FILE)
 }
 
 fn read_preprocess_fingerprint(layout: &LayoutPaths) -> Result<Option<u64>> {

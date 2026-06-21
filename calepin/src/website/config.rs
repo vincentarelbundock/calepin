@@ -80,7 +80,7 @@ impl WebsiteConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub(super) struct LanguageConfig {
     pub(super) label: Option<String>,
     pub(super) content_dir: Option<PathBuf>,

@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Create])
 
 #title()
@@ -14,17 +15,12 @@ Built-in themes are compiled into the Calepin binary, so you customize them by c
 one into your project first. Use `--theme` to choose which built-in theme gets ejected:
 that theme becomes the base for your local customizations.
 
-```sh
-calepin new theme                          # eject the default `calepin` theme to themes/calepin/
-calepin new theme --theme calepin          # same, explicitly
-calepin new theme --theme academic          # eject the `academic` theme
-calepin new theme --theme calepin themes/my  # copy into a custom directory
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin new theme                          # eject the default `calepin` theme to calepin_theme/\ncalepin new theme --theme calepin          # same, explicitly\ncalepin new theme --theme academic          # eject the `academic` theme to calepin_theme/\ncalepin new theme --theme calepin themes/my  # copy into a custom directory\n", block: true, lang: "sh"))
 
 Then point Calepin at your copy:
 
 ```toml
-theme = "themes/calepin"
+theme = "calepin_theme"
 theme = "themes/my-theme" # with the custom name
 ```
 

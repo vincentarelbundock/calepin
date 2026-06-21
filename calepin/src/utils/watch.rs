@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
@@ -71,6 +72,7 @@ pub fn run_debounced_watch_until(
         match rx.recv_timeout(poll) {
             Ok(Ok(events)) => {
                 let mut changed = Vec::new();
+                let mut unique = HashSet::new();
                 for event in events {
                     if !event_filter(&event.event.kind) {
                         continue;
@@ -78,7 +80,7 @@ pub fn run_debounced_watch_until(
                     for path in event.event.paths {
                         let path = path.canonicalize().unwrap_or(path);
                         if let Some(path) = path_filter(path) {
-                            if !changed.contains(&path) {
+                            if unique.insert(path.clone()) {
                                 changed.push(path);
                             }
                         }

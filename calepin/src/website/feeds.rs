@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::template::no_autoescape_env;
 
-use super::{
-    absolute_site_url, clean_optional_string, is_safe_output_route, templates::read_template_files,
-    xml_escape, SiteMetadata, WebsiteConfig, ROBOTS_TEMPLATE_DIR,
-};
+use super::site::SiteMetadata;
+use super::url::{absolute_site_url, is_safe_output_route};
+use super::util::{clean_optional_string, xml_escape};
+use super::{templates::read_template_files, WebsiteConfig, ROBOTS_TEMPLATE_DIR};
 
 const DEFAULT_FEED_FILE: &str = "atom.xml";
 const DEFAULT_ATOM_TEMPLATE_NAME: &str = "__calepin_builtin_atom.xml";

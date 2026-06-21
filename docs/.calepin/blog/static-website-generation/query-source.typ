@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Calepin is now a static website generator])
 #metadata((
   title: "Calepin is now a static website generator",
@@ -25,10 +26,7 @@ With _Calepin_, the source files are Typst files. This is the important part. Th
 
 A _Calepin_ website starts with a directory and a `calepin.toml` file:
 
-```sh
-calepin new website my_site/
-calepin compile my_site/
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin new website my_site/\ncalepin compile my_site/\n", block: true, lang: "sh"))
 
 From there, you can write pages in Typst and let _Calepin_ handle the website machinery. Pages can share a theme, appear in menus and sidebars, expose metadata for listings, and be rendered to HTML, PDF, or both.
 
@@ -54,9 +52,7 @@ This website was built that way. The documentation pages, the landing page, the 
 
 - *Fast local development.* `calepin watch` rebuilds changed pages incrementally, and `calepin serve` previews the site locally. Use both together while writing:
 
-  ```sh
-  calepin watch my_site/ my_site/ --serve --open
-  ```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("  calepin watch my_site/ my_site/ --serve --open\n", block: true, lang: "sh"))
 
 - *Search and minification.* For larger sites, _Calepin_ can build a Pagefind search index and minify the generated HTML, CSS, and JavaScript.
 

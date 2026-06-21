@@ -1,0 +1,11 @@
+{% if site.scripts %}
+{% for script in site.scripts -%}
+    <script src="{{ script }}"></script>
+{% endfor -%}
+{% else %}
+{% for script in scripts -%}
+    <script>
+{{ script.content }}
+    </script>
+{% endfor -%}
+{% endif %}

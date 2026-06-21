@@ -31,7 +31,7 @@ pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String
     eval::page_anchors(typst, layout)
 }
 
-fn results_input(layout: &LayoutPaths) -> String {
+fn results_input(layout: &LayoutPaths) -> Result<String> {
     crate::typst::paths::artifact_reference(&layout.root, &layout.results_path)
 }
 

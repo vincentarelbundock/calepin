@@ -1,0 +1,29 @@
+    {% if not doc.title %}
+    {% if site.page_title or site.title %}
+    <title>{% if site.page_title %}{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}{% elif site.title %}{{ site.title }}{% endif %}</title>
+    {% endif %}
+    {% endif %}
+    {% if site.description %}
+    <meta name="description" content="{{ site.description }}">
+    <meta property="og:description" content="{{ site.description }}">
+    {% endif %}
+    {% if site.title %}
+    <meta property="og:site_name" content="{{ site.title }}">
+    {% endif %}
+    {% if doc.title %}
+    <meta property="og:title" content="{{ doc.title }}{% if site.title %} | {{ site.title }}{% endif %}">
+    {% elif site.page_title %}
+    <meta property="og:title" content="{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}">
+    {% elif site.title %}
+    <meta property="og:title" content="{{ site.title }}">
+    {% endif %}
+    {% if site.current_url %}
+    <link rel="canonical" href="{{ site.current_url }}">
+    <meta property="og:url" content="{{ site.current_url }}">
+    {% endif %}
+    {% if site.favicon %}
+    <link rel="icon" href="{{ site.favicon }}">
+    {% endif %}
+    {% for translation in site.translations %}
+    <link rel="alternate" hreflang="{{ translation.code }}" href="{{ translation.href }}">
+    {% endfor %}

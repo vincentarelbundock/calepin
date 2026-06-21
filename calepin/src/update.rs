@@ -3,6 +3,8 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+use crate::utils::process::is_executable_file;
+
 #[cfg(windows)]
 const UPDATER_BINARY: &str = "calepin-update.exe";
 #[cfg(not(windows))]
@@ -33,13 +35,13 @@ fn find_updater() -> Option<PathBuf> {
 
 fn sibling_updater(current_exe: &Path) -> Option<PathBuf> {
     let candidate = current_exe.parent()?.join(UPDATER_BINARY);
-    candidate.is_file().then_some(candidate)
+    is_executable_file(&candidate).then_some(candidate)
 }
 
 fn find_updater_on_path(path: &OsStr) -> Option<PathBuf> {
     std::env::split_paths(path)
         .map(|dir| dir.join(UPDATER_BINARY))
-        .find(|candidate| candidate.is_file())
+        .find(|candidate| is_executable_file(candidate))
 }
 
 fn missing_updater_error() -> anyhow::Error {
