@@ -38,7 +38,7 @@ fn typst_accessible_tempdir() -> tempfile::TempDir {
 }
 
 #[test]
-fn compile_config_runtime_dir_writes_no_dot_calepin_directory() {
+fn compile_config_asset_dir_writes_no_dot_calepin_directory() {
     if !has_command("typst") {
         return;
     }
@@ -52,8 +52,11 @@ fn compile_config_runtime_dir_writes_no_dot_calepin_directory() {
 "#,
     )
     .unwrap();
-    std::fs::write(dir.path().join("tmp.toml"), r#"runtime-dir = "_calepin"
-"#)
+    std::fs::write(
+        dir.path().join("tmp.toml"),
+        r#"asset-dir = "_calepin"
+"#,
+    )
     .unwrap();
 
     let output = Command::new(calepin_bin())
@@ -72,8 +75,8 @@ fn compile_config_runtime_dir_writes_no_dot_calepin_directory() {
     assert!(dir.path().join("_calepin/tmp/source.typ").exists());
     assert!(!dir.path().join(".calepin").exists());
 
-    let wrapper = std::fs::read_to_string(dir.path().join("_calepin/tmp/calepin-wrapper.typ"))
-        .unwrap();
+    let wrapper =
+        std::fs::read_to_string(dir.path().join("_calepin/tmp/calepin-wrapper.typ")).unwrap();
     assert!(wrapper.contains("#import \"/_calepin/calepin.typ\""));
     assert!(!wrapper.contains("/.calepin/calepin.typ"));
 }

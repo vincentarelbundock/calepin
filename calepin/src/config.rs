@@ -21,9 +21,9 @@ pub struct CalepinConfig {
     pub styles: Vec<CssOverride>,
     /// JSON string injected into HTML templates as `site.revealjs`.
     pub revealjs: String,
-    /// Directory (relative to project root) where the Calepin runtime facade is
-    /// written and imported from. `None` means the built-in default `.calepin`.
-    pub runtime_dir: Option<PathBuf>,
+    /// Directory (relative to project root) for generated Calepin assets.
+    /// `None` means the built-in default `.calepin`.
+    pub asset_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,21 +50,25 @@ impl CalepinConfig {
         }
         let contents = std::fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
-        let raw: RawCalepinConfig = toml::from_str(&contents)
+        let raw_value: toml::Value = toml::from_str(&contents)
+            .with_context(|| format!("failed to parse {}", path.display()))?;
+        reject_removed_asset_dir_keys(&raw_value)?;
+        let raw: RawCalepinConfig = raw_value
+            .try_into()
             .with_context(|| format!("failed to parse {}", path.display()))?;
         // Relative paths written in the config resolve against the config
         // file's own directory, so a config can live anywhere and still point
         // at its siblings without `../` gymnastics.
         let config_dir = path.parent().unwrap_or(root).to_path_buf();
         let styles = resolve_css_overrides(&config_dir, raw.styles)?;
-        let runtime_dir = resolve_runtime_dir(raw.runtime_dir.or(raw.asset_dir))?;
+        let asset_dir = resolve_asset_dir(raw.asset_dir)?;
         Ok(Self {
             executables: ExecutablePaths::from_raw(root, &config_dir, raw.executables),
             config_dir,
             theme: raw.theme,
             styles,
             revealjs: parse_revealjs_config(raw.revealjs)?,
-            runtime_dir,
+            asset_dir,
         })
     }
 
@@ -75,7 +79,7 @@ impl CalepinConfig {
             theme: None,
             styles: Vec::new(),
             revealjs: "{}".to_string(),
-            runtime_dir: None,
+            asset_dir: None,
         }
     }
 
@@ -169,11 +173,7 @@ struct RawCalepinConfig {
     theme: Option<String>,
     styles: Vec<PathBuf>,
     revealjs: Option<toml::Value>,
-    #[serde(rename = "runtime-dir", alias = "runtime_dir")]
-    runtime_dir: Option<PathBuf>,
-    // Kept as a backward-compatibility alias for existing website naming and
-    // docs that still reference `asset-dir`.
-    #[serde(rename = "asset-dir", alias = "asset_dir")]
+    #[serde(rename = "asset-dir")]
     asset_dir: Option<PathBuf>,
 }
 
@@ -212,39 +212,55 @@ fn resolve_tool_path(root: &Path, path: PathBuf) -> PathBuf {
     root.join(path)
 }
 
-fn resolve_runtime_dir(value: Option<PathBuf>) -> Result<Option<PathBuf>> {
+fn reject_removed_asset_dir_keys(value: &toml::Value) -> Result<()> {
+    let Some(table) = value.as_table() else {
+        return Ok(());
+    };
+    for key in ["runtime-dir", "runtime_dir", "asset_dir"] {
+        if table.contains_key(key) {
+            return Err(anyhow!(
+                "`{key}` is not a supported config key; use `asset-dir` instead"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn resolve_asset_dir(value: Option<PathBuf>) -> Result<Option<PathBuf>> {
     let Some(raw) = value else {
         return Ok(None);
     };
     let path = expand_home(raw);
     if path.as_os_str().is_empty() {
-        return Err(anyhow!("runtime-dir must not be empty"));
+        return Err(anyhow!("asset-dir must not be empty"));
     }
     if path.is_absolute() {
         return Err(anyhow!(
-            "runtime-dir must be a relative path: {}",
+            "asset-dir must be a relative path: {}",
             path.display()
         ));
     }
     if path.to_string_lossy().contains('\\') {
         return Err(anyhow!(
-            "runtime-dir must not contain '\\': {}",
+            "asset-dir must not contain '\\': {}",
             path.display()
         ));
     }
-    if path
-        .components()
-        .any(|component| matches!(component, std::path::Component::ParentDir | std::path::Component::Prefix(_)))
-    {
+    if path.components().any(|component| {
+        matches!(
+            component,
+            std::path::Component::ParentDir | std::path::Component::Prefix(_)
+        )
+    }) {
         return Err(anyhow!(
-            "runtime-dir must not include parent or drive path segments: {}",
+            "asset-dir must not include parent or drive path segments: {}",
             path.display()
         ));
     }
 
     let path = normalize_path(&path);
     if path.as_os_str().is_empty() {
-        return Err(anyhow!("runtime-dir must include at least one path segment"));
+        return Err(anyhow!("asset-dir must include at least one path segment"));
     }
     Ok(Some(path))
 }
@@ -365,11 +381,11 @@ chrome = "tools/chrome"
             config.executables.chrome,
             Some(calepin_dir.join("tools/chrome"))
         );
-        assert_eq!(config.runtime_dir, None);
+        assert_eq!(config.asset_dir, None);
     }
 
     #[test]
-    fn config_parses_runtime_dir() {
+    fn config_rejects_runtime_dir_key() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("calepin.toml"),
@@ -377,29 +393,27 @@ chrome = "tools/chrome"
         )
         .unwrap();
 
-        let config =
-            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
 
-        assert_eq!(config.runtime_dir, Some(PathBuf::from("_calepin")));
+        assert!(err.contains("runtime-dir"), "{err}");
+        assert!(err.contains("asset-dir"), "{err}");
     }
 
     #[test]
-    fn config_accepts_asset_dir_alias_for_runtime_dir() {
+    fn config_accepts_asset_dir() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(
-            dir.path().join("calepin.toml"),
-            "asset-dir = \"_calepin\"",
-        )
-        .unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "asset-dir = \"_calepin\"").unwrap();
 
         let config =
             CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
 
-        assert_eq!(config.runtime_dir, Some(PathBuf::from("_calepin")));
+        assert_eq!(config.asset_dir, Some(PathBuf::from("_calepin")));
     }
 
     #[test]
-    fn config_accepts_runtime_dir_underscore_alias() {
+    fn config_rejects_runtime_dir_underscore_key() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("calepin.toml"),
@@ -407,27 +421,42 @@ chrome = "tools/chrome"
         )
         .unwrap();
 
-        let config =
-            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
 
-        assert_eq!(config.runtime_dir, Some(PathBuf::from("_calepin")));
+        assert!(err.contains("runtime_dir"), "{err}");
+        assert!(err.contains("asset-dir"), "{err}");
     }
 
     #[test]
-    fn runtime_dir_takes_precedence_over_asset_dir_alias() {
+    fn config_rejects_asset_dir_underscore_key() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "asset_dir = \"_calepin\"").unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("asset_dir"), "{err}");
+        assert!(err.contains("asset-dir"), "{err}");
+    }
+
+    #[test]
+    fn config_asset_dir_validation_errors_use_public_key() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("calepin.toml"),
-            r#"runtime-dir = "_runtime"
-asset-dir = "legacy"
-"#,
+            r#"asset-dir = "../_calepin""#,
         )
         .unwrap();
 
-        let config =
-            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
 
-        assert_eq!(config.runtime_dir, Some(PathBuf::from("_runtime")));
+        assert!(err.contains("asset-dir"), "{err}");
+        assert!(!err.contains("runtime-dir"), "{err}");
     }
 
     #[test]

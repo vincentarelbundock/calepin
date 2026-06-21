@@ -89,21 +89,21 @@ pub(crate) fn write_runtime_with_syntax_theme(
 
 pub(crate) fn write_runtime_with_syntax_theme_in_dir(
     root: &Path,
-    runtime_dir: &Path,
+    asset_dir: &Path,
     syntax_theme: &crate::html::HtmlSyntaxTheme,
 ) -> Result<PathBuf> {
-    let calepin_dir = root.join(runtime_dir);
-    let runtime_dir = calepin_dir.join(RUNTIME_DIR);
-    fs::create_dir_all(&runtime_dir)
-        .with_context(|| format!("failed to create {}", runtime_dir.display()))?;
+    let calepin_dir = root.join(asset_dir);
+    let generated_runtime_dir = calepin_dir.join(RUNTIME_DIR);
+    fs::create_dir_all(&generated_runtime_dir)
+        .with_context(|| format!("failed to create {}", generated_runtime_dir.display()))?;
 
     write_if_changed(
-        &runtime_dir.join(GENERATED_SYNTAX_THEME_FILE),
+        &generated_runtime_dir.join(GENERATED_SYNTAX_THEME_FILE),
         syntax_theme.typst_runtime_source(),
     )?;
 
     for source_file in runtime_source_files() {
-        let destination = runtime_dir.join(runtime_asset_path(source_file.path)?);
+        let destination = generated_runtime_dir.join(runtime_asset_path(source_file.path)?);
         write_if_changed(&destination, source_file.source)?;
     }
 

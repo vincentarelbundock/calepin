@@ -123,16 +123,25 @@ fn resolve_website_asset_dir(config: &WebsiteConfig) -> Result<PathBuf> {
     };
     let raw = raw.to_path_buf();
     if raw.is_absolute() {
-        bail!("website `asset-dir` must be a relative path: {}", raw.display());
+        bail!(
+            "website `asset-dir` must be a relative path: {}",
+            raw.display()
+        );
     }
     if raw.to_string_lossy().contains('\\') {
-        bail!("website `asset-dir` path must not contain '\\': {}", raw.display());
+        bail!(
+            "website `asset-dir` path must not contain '\\': {}",
+            raw.display()
+        );
     }
     if raw
         .components()
         .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
     {
-        bail!("website `asset-dir` path must not escape the source directory: {}", raw.display());
+        bail!(
+            "website `asset-dir` path must not escape the source directory: {}",
+            raw.display()
+        );
     }
     let normalized = normalize_path(&raw);
     if normalized.as_os_str().is_empty() {
@@ -386,7 +395,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         params: &args.params,
         fallback_theme: config_theme.clone(),
         html_syntax_theme: html_syntax_theme.clone(),
-        runtime_dir: &asset_dir,
+        asset_dir: &asset_dir,
         parallelism: args.parallelism,
         progress: progress.clone(),
     })?;
