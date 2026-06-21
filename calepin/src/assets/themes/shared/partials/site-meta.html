@@ -1,6 +1,16 @@
     {% if not doc.title %}
-    {% if site.page_title or site.title %}
-    <title>{% if site.page_title %}{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}{% elif site.title %}{{ site.title }}{% endif %}</title>
+    {% set meta_title = none %}
+    {% if site.page_title %}
+    {% set meta_title = site.page_title %}
+    {% elif site.title %}
+    {% set meta_title = site.title %}
+    {% endif %}
+    {% if meta_title %}
+    {% if site.title and meta_title != site.title %}
+    <title>{{ meta_title }} | {{ site.title }}</title>
+    {% else %}
+    <title>{{ meta_title }}</title>
+    {% endif %}
     {% endif %}
     {% endif %}
     {% if site.description %}
@@ -11,11 +21,18 @@
     <meta property="og:site_name" content="{{ site.title }}">
     {% endif %}
     {% if doc.title %}
-    <meta property="og:title" content="{{ doc.title }}{% if site.title %} | {{ site.title }}{% endif %}">
+    {% set meta_title = doc.title %}
     {% elif site.page_title %}
-    <meta property="og:title" content="{{ site.page_title }}{% if site.title %} | {{ site.title }}{% endif %}">
+    {% set meta_title = site.page_title %}
     {% elif site.title %}
-    <meta property="og:title" content="{{ site.title }}">
+    {% set meta_title = site.title %}
+    {% endif %}
+    {% if meta_title %}
+    {% if site.title and meta_title != site.title %}
+    <meta property="og:title" content="{{ meta_title }} | {{ site.title }}">
+    {% else %}
+    <meta property="og:title" content="{{ meta_title }}">
+    {% endif %}
     {% endif %}
     {% if site.current_url %}
     <link rel="canonical" href="{{ site.current_url }}">

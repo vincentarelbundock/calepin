@@ -1729,13 +1729,48 @@ fn reconcile_manifest_outputs_removes_only_stale_generated_files() {
 #[test]
 fn write_sitemap_uses_absolute_page_urls() {
     let temp = tempfile::tempdir().unwrap();
-    let hrefs = BTreeSet::from(["index.html".to_string(), "guide/usage.html".to_string()]);
+    let hrefs = BTreeSet::from([
+        "index.html".to_string(),
+        "guide/index.html".to_string(),
+        "guide/usage.html".to_string(),
+    ]);
 
     write_sitemap(temp.path(), Some("https://example.com/project/"), &hrefs).unwrap();
 
     let sitemap = fs::read_to_string(temp.path().join("sitemap.xml")).unwrap();
-    assert!(sitemap.contains("<loc>https://example.com/project/index.html</loc>"));
+    assert!(sitemap.contains("<loc>https://example.com/project/</loc>"));
+    assert!(sitemap.contains("<loc>https://example.com/project/guide/</loc>"));
     assert!(sitemap.contains("<loc>https://example.com/project/guide/usage.html</loc>"));
+}
+
+#[test]
+fn site_context_current_url_uses_directory_style_for_index_routes() {
+    let site = SiteModel::new(
+        vec![],
+        MenusModel::default(),
+        SiteMetadata {
+            title: Some("Name".to_string()),
+            description: None,
+            base_url: Some("https://example.com/project".to_string()),
+            logo: None,
+            logo_alt: None,
+            favicon: None,
+        },
+        true,
+    );
+    let empty_page_info = PageInfoMap::new();
+
+    let home = site.theme_context("index.html", None, &empty_page_info, None, None);
+    assert_eq!(
+        home.current_url.as_deref(),
+        Some("https://example.com/project/")
+    );
+
+    let section = site.theme_context("guide/index.html", None, &empty_page_info, None, None);
+    assert_eq!(
+        section.current_url.as_deref(),
+        Some("https://example.com/project/guide/")
+    );
 }
 
 #[test]

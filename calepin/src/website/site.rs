@@ -12,7 +12,7 @@ use super::language::LanguageInfo;
 use super::navigation::{MenusModel, NavSectionModel};
 use super::pagefind::{PAGEFIND_CSS, PAGEFIND_DIR, PAGEFIND_JS};
 use super::paths::{join_normalized_under_root, normalize_path, slash_path};
-use super::url::{absolute_site_url, is_absolute_or_special_url, page_relative_url};
+use super::url::{absolute_site_url_without_index, is_absolute_or_special_url, page_relative_url};
 use super::util::clean_optional_string;
 use super::{PageInfo, PageInfoMap};
 
@@ -185,11 +185,9 @@ impl SiteModel {
                 .favicon
                 .as_deref()
                 .map(|favicon| html_escape(&page_relative_url(current_href, favicon))),
-            current_url: self
-                .metadata
-                .base_url
-                .as_deref()
-                .map(|base_url| html_escape(&absolute_site_url(base_url, current_href))),
+            current_url: self.metadata.base_url.as_deref().map(|base_url| {
+                html_escape(&absolute_site_url_without_index(base_url, current_href))
+            }),
             page_title,
             stylesheet: None,
             config_stylesheets: Vec::new(),

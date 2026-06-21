@@ -9,7 +9,7 @@ use crate::utils::static_files::collect_files_by;
 use crate::utils::template::no_autoescape_env;
 
 use super::paths::{relative_or_self, slash_path};
-use super::url::absolute_site_url;
+use super::url::{absolute_site_url, absolute_site_url_without_index};
 use super::util::xml_escape;
 use super::{
     WebsiteConfig, DEFAULT_ROBOTS_TEMPLATE, ROBOTS_FILE, ROBOTS_TEMPLATE_DIR, ROBOTS_TEMPLATE_FILE,
@@ -35,7 +35,9 @@ pub(super) fn write_sitemap(
     );
     for href in hrefs {
         xml.push_str("  <url><loc>");
-        xml.push_str(&xml_escape(&absolute_site_url(base_url, href)));
+        xml.push_str(&xml_escape(&absolute_site_url_without_index(
+            base_url, href,
+        )));
         xml.push_str("</loc></url>\n");
     }
     xml.push_str("</urlset>\n");

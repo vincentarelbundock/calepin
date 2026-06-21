@@ -10,6 +10,15 @@ pub(super) fn absolute_site_url(base_url: &str, href: &str) -> String {
     }
 }
 
+pub(super) fn absolute_site_url_without_index(base_url: &str, href: &str) -> String {
+    let base = absolute_site_url(base_url, href);
+    if let Some(prefix) = base.strip_suffix("/index.html") {
+        format!("{prefix}/")
+    } else {
+        base
+    }
+}
+
 pub(super) fn clean_url_prefix(value: &str) -> String {
     value
         .trim()
