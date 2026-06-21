@@ -24,6 +24,8 @@ Use that import, not Typst Universe, for now. You may see a `calepin` package on
 
 A _Calepin_ notebook is still a standard Typst document. Headings, paragraphs, lists, math, links, functions, variables, and layout rules are normal Typst. The notebook behavior comes from a small set of imported helper functions and from fenced code blocks that _Calepin_ sees before Typst renders the document.
 
+In Calepin documents, `#title()` is used for the page `<h1>`, so the first Typst heading `=` renders as `<h2>`, `==` as `<h3>`, and so on. If you write CSS targeting specific heading levels, use this mapping unless your theme remaps headings differently.
+
 That means a notebook can begin like any other Typst file:
 
 ````typ
