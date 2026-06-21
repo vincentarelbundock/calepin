@@ -12,16 +12,9 @@ calepin compile --config config.toml paper.typ
 
 If `--config` is omitted, `Calepin` uses defaults.
 
-Relative paths written inside the config resolve relative to the config file's
-own directory, not the document being compiled. Absolute paths are used as is.
+Relative paths written inside the config resolve relative to the config file's own directory, not the document being compiled. Absolute paths are used as is.
 
-`asset-dir` controls where Calepin writes generated runtime files and
-browser-facing assets, including theme CSS, JavaScript, and fonts. The default
-is `.calepin`, which works in local preview. Netlify and GitHub Pages do not
-serve files from dot-directories, so deployed pages can load without styling,
-search, dark-mode toggles, or other theme JavaScript even though they looked
-correct locally. For sites published to those hosts, set
-`asset-dir = "_calepin"` before building.
+`asset-dir` controls where Calepin writes generated runtime files and browser-facing assets, including theme CSS, JavaScript, and fonts. The default is `.calepin`, which works in local preview. Some hosts like Netlify do not serve files from dot-directories, so deployed pages can sometimes load without styling, search, dark-mode toggles, or other theme JavaScript even though they looked correct locally. For sites published to those hosts, set `asset-dir = "_calepin"` before building.
 
 ```toml
 # config.toml
