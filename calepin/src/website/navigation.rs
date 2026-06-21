@@ -76,6 +76,7 @@ pub(super) struct NavItemPlan {
     pub(super) path: Option<PathBuf>,
     pub(super) url: Option<String>,
     pub(super) configured_label: Option<String>,
+    pub(super) configured_aria_label: Option<String>,
     pub(super) weight: Option<i32>,
 }
 
@@ -90,6 +91,7 @@ struct NavItemInput<'a> {
     target: Option<&'a str>,
     glob: Option<&'a str>,
     label: Option<&'a str>,
+    aria_label: Option<&'a str>,
     weight: Option<i32>,
 }
 
@@ -245,6 +247,7 @@ pub(super) fn discover_pages(
                 path: Some(path.clone()),
                 url: None,
                 configured_label: None,
+                configured_aria_label: None,
                 weight: None,
             })
             .collect();
@@ -279,6 +282,7 @@ pub(super) fn discover_pages(
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
                 label: None,
+                aria_label: None,
                 weight: None,
             })
             .collect::<Vec<_>>();
@@ -325,6 +329,7 @@ pub(super) fn discover_menus(
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
                 label: item.label.as_deref(),
+                aria_label: item.aria_label.as_deref(),
                 weight: item.weight,
             })
             .collect::<Vec<_>>();
@@ -409,6 +414,7 @@ fn resolve_nav_item_plans(
                         path: None,
                         url: Some(url),
                         configured_label,
+                        configured_aria_label: input.aria_label.map(str::to_string),
                         weight: input.weight,
                     });
                 }
@@ -425,6 +431,7 @@ fn resolve_nav_item_plans(
                             path: Some(path),
                             url: None,
                             configured_label,
+                            configured_aria_label: input.aria_label.map(str::to_string),
                             weight: input.weight,
                         });
                     }
@@ -447,6 +454,7 @@ fn resolve_nav_item_plans(
                     path: Some(path),
                     url: None,
                     configured_label: configured_label.clone(),
+                    configured_aria_label: input.aria_label.map(str::to_string),
                     weight: input.weight,
                 });
             }
@@ -814,7 +822,10 @@ fn nav_item_model(
         return Ok(NavItemModel {
             language: None,
             href: url.clone(),
-            label: accessible_nav_label(&raw_label, url),
+            label: item
+                .configured_aria_label
+                .clone()
+                .unwrap_or_else(|| accessible_nav_label(&raw_label, url)),
             label_html,
         });
     }
@@ -844,7 +855,10 @@ fn nav_item_model(
     Ok(NavItemModel {
         language: language_override.or_else(|| info.language.clone()),
         href: info.href.clone(),
-        label: accessible_nav_label(&raw_label, &fallback),
+        label: item
+            .configured_aria_label
+            .clone()
+            .unwrap_or_else(|| accessible_nav_label(&raw_label, &fallback)),
         label_html,
     })
 }

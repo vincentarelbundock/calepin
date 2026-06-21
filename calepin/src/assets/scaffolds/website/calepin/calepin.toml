@@ -42,10 +42,12 @@ label = "Blog"
 [[menus.social]]
 target = "https://scholar.google.com/citations?user=RKN66-kAAAAJ&hl"
 label = "{icon:simple-icons:googlescholar}"
+aria-label = "Google Scholar"
 
 [[menus.social]]
 target = "https://github.com/vincentarelbundock/calepin"
 label = "{icon:github}"
+aria-label = "GitHub"
 
 [sidebar]
 fold = false

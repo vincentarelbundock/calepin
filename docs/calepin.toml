@@ -28,6 +28,7 @@ label = "Documentation"
 [[menus.social]]
 target = "https://github.com/vincentarelbundock/calepin"
 label = "{icon:github}"
+aria-label = "GitHub"
 
 [executables]
 python = "../.venv/bin/python"

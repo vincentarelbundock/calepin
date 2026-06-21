@@ -143,5 +143,7 @@ pub(super) struct MenuItemConfig {
     pub(super) target: Option<String>,
     pub(super) glob: Option<String>,
     pub(super) label: Option<String>,
+    #[serde(rename = "aria-label")]
+    pub(super) aria_label: Option<String>,
     pub(super) weight: Option<i32>,
 }
