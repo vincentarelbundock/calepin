@@ -1378,6 +1378,54 @@ fn pages_exclude_removes_pages_from_navigation_and_includes() {
 }
 
 #[test]
+fn pages_exclude_prevents_typ_sources_from_being_copied_to_output() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::create_dir_all(src.join("lib")).unwrap();
+    std::fs::write(
+        src.join("calepin.toml"),
+        r#"
+[pages]
+exclude = ["lib/**"]
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        src.join("lib/helpers.typ"),
+        "#let greeting() = [Hello from helper]\n",
+    )
+    .unwrap();
+    std::fs::write(
+        src.join("index.typ"),
+        "#set document(title: [Home])\n#import \"/lib/helpers.typ\": greeting\n#heading[Home]\n#greeting()\n",
+    )
+    .unwrap();
+
+    let result = build_site(WebsiteBuildOptions {
+        config: src.join("calepin.toml"),
+        src: Some(src.to_path_buf()),
+        out: Some(src.join("public")),
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        params: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        clean: true,
+        minify_html: false,
+    })
+    .unwrap();
+
+    assert!(result.out_dir.join("index.html").is_file());
+    assert!(!result.out_dir.join("lib/helpers.typ").exists());
+}
+
+#[test]
 fn discover_static_files_includes_files_dirs_and_globs_then_excludes() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path();

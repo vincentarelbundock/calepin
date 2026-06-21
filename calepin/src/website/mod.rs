@@ -55,8 +55,7 @@ use metadata::{load_page_meta, PageMetaMap};
 use navigation::{
     build_page_info, build_pages_index, discover_site_build_pages, discover_site_menus,
     discover_site_pages, discover_static_files, fallback_pages, implicit_build_pages,
-    iter_typ_files, menus_from_plan, nav_from_plans, write_pages_index, MenusModel,
-    NavSectionModel,
+    menus_from_plan, nav_from_plans, write_pages_index, MenusModel, NavSectionModel,
 };
 #[cfg(test)]
 use navigation::{
@@ -518,10 +517,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         }
         let source_files = if args.incremental_inputs.is_some() {
             build_set.clone()
-        } else if config.sidebar.is_some() {
-            typ_files.clone()
         } else {
-            iter_typ_files(&src_dir, false, &[])?
+            typ_files.clone()
         };
         copy_typ_sources(&src_dir, &out_dir, &source_files)?;
     }
