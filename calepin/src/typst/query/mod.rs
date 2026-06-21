@@ -11,7 +11,7 @@ use crate::typst::chunk_options::{
 };
 use crate::typst::crossref::parse_prefixed_label_docs;
 use crate::typst::fence_label::{label_name, metadata_node_label};
-use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName, FencedChunks};
+use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName};
 
 use options::parse_chunk_options;
 pub use options::{parse_setup_config, SetupConfig};
@@ -253,11 +253,6 @@ fn parse_chunk_raw_block(
     if !defaults.fenced_chunks.allows(lang) && !defaults.fenced_chunks.allows(engine.as_str()) {
         return Ok(None);
     }
-    if matches!(defaults.fenced_chunks, FencedChunks::All)
-        && matches!(engine, EngineName::Jupyter(_))
-    {
-        return Ok(None);
-    }
     if has_chunk_metadata && !matches!(engine, EngineName::Jupyter(_)) {
         return Ok(None);
     }
@@ -457,7 +452,7 @@ fn reattach_version_suffix(engine: EngineName, lang: &str, raw_text: &str) -> (E
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{EngineName, ResultsMode, SetupDefaults};
+    use crate::typst::model::{EngineName, FencedChunks, ResultsMode, SetupDefaults};
 
     fn metadata(value: &str) -> String {
         format!(r#"[{{"func":"metadata","value":{value},"label":"<calepin-chunk>"}}]"#)
@@ -746,7 +741,7 @@ mod tests {
     }
 
     #[test]
-    fn ignores_unknown_fences_when_all_fenced_chunks_enabled() {
+    fn routes_unknown_fences_to_jupyter_when_all_fenced_chunks_enabled() {
         let json = serde_json::json!([
           {"func":"raw","text":"not executable","block":true,"lang":"text"}
         ])
@@ -756,7 +751,12 @@ mod tests {
             ..SetupDefaults::default()
         };
         let parsed = parse_chunks_with_warnings(&json, Some(setup_config_with(defaults))).unwrap();
-        assert!(parsed.chunks.is_empty());
+        assert_eq!(parsed.chunks.len(), 1);
+        assert_eq!(
+            parsed.chunks[0].engine,
+            EngineName::Jupyter("text".to_string())
+        );
+        assert_eq!(parsed.chunks[0].code, "not executable");
     }
 
     #[test]

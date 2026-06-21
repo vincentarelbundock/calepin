@@ -93,6 +93,9 @@ impl EnginePool {
             .map_err(|err| anyhow!("{}: {err}", execution_context(chunk)))?;
         let engine_results =
             self.run_engine_results(chunk, figures_dir, engine, &source, &figure)?;
+        if engine_results_unavailable(&engine_results) {
+            return Ok(unavailable_chunk_result_document(chunk));
+        }
         let items =
             normalize_engine_results(chunk, figures_dir, &figure, engine_results, artifact_path)
                 .map_err(|err| {
@@ -142,9 +145,13 @@ impl EnginePool {
             )
             .map_err(|err| anyhow!("{}: {err}", execution_context(chunk)))
         } else {
-            let mut ctx = self
-                .context_for(engine.clone())
-                .map_err(|err| anyhow!("{}: {err}", execution_context(chunk)))?;
+            let mut ctx = match self.context_for(engine.clone()) {
+                Ok(ctx) => ctx,
+                Err(err) if is_unavailable_engine_error(&err) => {
+                    return Ok(vec![EngineResult::Unavailable(err.to_string())]);
+                }
+                Err(err) => return Err(anyhow!("{}: {err}", execution_context(chunk))),
+            };
             engines::execute_chunk(
                 source,
                 engine.clone(),
@@ -229,6 +236,34 @@ fn execution_context(chunk: &ChunkSpec) -> String {
     )
 }
 
+fn engine_results_unavailable(results: &[EngineResult]) -> bool {
+    results
+        .iter()
+        .any(|result| matches!(result, EngineResult::Unavailable(_)))
+}
+
+fn unavailable_chunk_result_document(chunk: &ChunkSpec) -> ChunkResultDocument {
+    let mut display_options = chunk.display_options.clone();
+    display_options.echo = true;
+    ChunkResultDocument {
+        label: chunk.label.clone(),
+        engine: chunk.engine.clone(),
+        status: ChunkStatus::Skipped,
+        display_options,
+        items: Vec::new(),
+        crossref_labels: chunk.crossref_labels.clone(),
+    }
+}
+
+fn is_unavailable_engine_error(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        let message = cause.to_string();
+        message.contains("executable not found")
+            || message.contains("not found on PATH")
+            || message.contains("jupyter_client Python package not found")
+    })
+}
+
 fn inject_r_params(session: &mut RSession, params: &Value) -> Result<()> {
     let code = engines::prelude::r_prelude("params", params);
     let raw = session.capture(
@@ -308,7 +343,9 @@ where
     fn normalize(mut self, engine_results: Vec<EngineResult>) -> Result<Vec<ResultItem>> {
         for result in engine_results {
             match result {
-                EngineResult::Source(_) | EngineResult::Preamble(_) => {}
+                EngineResult::Source(_)
+                | EngineResult::Unavailable(_)
+                | EngineResult::Preamble(_) => {}
                 EngineResult::Output(text) => self.push_output(text)?,
                 EngineResult::Warning(text) => {
                     self.items
@@ -809,7 +846,7 @@ mod tests {
     }
 
     #[test]
-    fn engine_pool_routes_unknown_engine_to_jupyter_arm() {
+    fn engine_pool_falls_back_when_jupyter_bridge_is_unavailable() {
         let dir = tempfile::tempdir().unwrap();
         let missing_python = dir.path().join("missing-python3");
         let mut executables = ExecutablePaths::defaults();
@@ -827,12 +864,68 @@ mod tests {
         octave_chunk.label = "octave-test".to_string();
         octave_chunk.code = "disp(42)".to_string();
         let result = pool.execute_chunk(&octave_chunk, dir.path(), unused_artifact_path);
-        let err = result.unwrap_err().to_string();
-        assert!(
-            err.contains("failed to start Jupyter bridge")
-                || err.contains(missing_python.to_string_lossy().as_ref()),
-            "expected Jupyter bridge startup error, got: {err}"
-        );
+        let result = result.unwrap();
+        assert_eq!(result.status, ChunkStatus::Skipped);
+        assert!(result.display_options.echo);
+        assert!(result.items.is_empty());
+    }
+
+    #[test]
+    fn engine_pool_falls_back_when_builtin_engine_is_unavailable() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing_python = dir.path().join("missing-python3");
+        let mut executables = ExecutablePaths::defaults();
+        executables.python = missing_python;
+        let config = ExecutionConfig {
+            cwd: dir.path().to_path_buf(),
+            executables,
+            timeout: Some(std::time::Duration::from_secs(5)),
+            params: Value::Object(serde_json::Map::new()),
+            params_path: None,
+        };
+        let mut pool = EnginePool::new(config);
+        let mut python_chunk = chunk(ResultsMode::Verbatim);
+        python_chunk.engine = EngineName::Python;
+        python_chunk.label = "python-test".to_string();
+        python_chunk.code = "print(42)".to_string();
+
+        let result = pool
+            .execute_chunk(&python_chunk, dir.path(), unused_artifact_path)
+            .unwrap();
+
+        assert_eq!(result.status, ChunkStatus::Skipped);
+        assert!(result.display_options.echo);
+        assert!(result.items.is_empty());
+    }
+
+    #[test]
+    fn engine_pool_preserves_available_engine_code_errors() {
+        if !command_available("python3") {
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let mut executables = ExecutablePaths::defaults();
+        executables.python = PathBuf::from("python3");
+        let config = ExecutionConfig {
+            cwd: dir.path().to_path_buf(),
+            executables,
+            timeout: Some(std::time::Duration::from_secs(5)),
+            params: Value::Object(serde_json::Map::new()),
+            params_path: None,
+        };
+        let mut pool = EnginePool::new(config);
+        let mut python_chunk = chunk(ResultsMode::Verbatim);
+        python_chunk.engine = EngineName::Python;
+        python_chunk.label = "python-error-test".to_string();
+        python_chunk.code = "raise RuntimeError('boom')".to_string();
+
+        let err = pool
+            .execute_chunk(&python_chunk, dir.path(), unused_artifact_path)
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("chunk `python-error-test` failed"), "{err}");
+        assert!(err.contains("boom"), "{err}");
     }
 
     fn pool_with_params(dir: &Path, params: Value) -> EnginePool {

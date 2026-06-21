@@ -30,6 +30,7 @@ pub enum EngineResult {
     Warning(String),
     Message(String),
     Error(String),
+    Unavailable(String),
     Plot(PathBuf),
     Preamble(String),
 }
@@ -142,6 +143,7 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
     let error_prefix = format!("{}_ERROR:", sentinel);
     let warning_prefix = format!("{}_WARNING:", sentinel);
     let message_prefix = format!("{}_MESSAGE:", sentinel);
+    let unavailable_prefix = format!("{}_UNAVAILABLE:", sentinel);
     let plot_prefix = format!("{}_PLOT:", sentinel);
     let preamble_prefix = format!("{}_PREAMBLE:", sentinel);
 
@@ -173,6 +175,10 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
         } else if let Some(text) = part.strip_prefix(&message_prefix) {
             if !text.is_empty() {
                 results.push(EngineResult::Message(text.to_string()));
+            }
+        } else if let Some(text) = part.strip_prefix(&unavailable_prefix) {
+            if !text.is_empty() {
+                results.push(EngineResult::Unavailable(text.to_string()));
             }
         } else if let Some(text) = part.strip_prefix(&plot_prefix) {
             let path = if text.is_empty() {
@@ -206,5 +212,18 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         assert!(matches!(&results[0], EngineResult::Plot(path) if path == &missing));
+    }
+
+    #[test]
+    fn process_results_parses_unavailable_engine_marker() {
+        let raw = "__TEST__\n__TEST___UNAVAILABLE:no kernel named sh";
+        let mut results = Vec::new();
+
+        process_results(raw, Path::new("unused.svg"), &mut results).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert!(
+            matches!(&results[0], EngineResult::Unavailable(message) if message == "no kernel named sh")
+        );
     }
 }

@@ -161,13 +161,13 @@ pub(super) fn run_tool(
     results: &mut Vec<EngineResult>,
 ) -> Result<Option<Output>> {
     if let Err(error) = process::validate_executable(program, "run diagram tool", Some(tool)) {
-        results.push(EngineResult::Error(error.to_string()));
+        results.push(EngineResult::Unavailable(error.to_string()));
         return Ok(None);
     }
     match std::process::Command::new(program).args(args).output() {
         Ok(out) => Ok(Some(out)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            results.push(EngineResult::Error(
+            results.push(EngineResult::Unavailable(
                 process::spawn_error(program, "run diagram tool", error, Some(tool)).to_string(),
             ));
             Ok(None)
