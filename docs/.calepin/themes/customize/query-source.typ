@@ -18,6 +18,8 @@ Configured CSS files load after the selected theme's CSS, in the order listed.
 Paths are resolved relative to `calepin.toml`, and each file must have a `.css`
 extension. The setting affects HTML output only.
 
+In Calepin HTML output, `#title()` is rendered as the page `<h1>`, so the first Typst heading `=` becomes `<h2>`, `==` as `<h3>`, and so on. If you target heading selectors in CSS, use this mapping unless your theme remaps heading markup.
+
 = Style raw HTML with CSS
 
 In some contexts, it can be useful to generate very simple HTML documents, and to define CSS to style raw classless HTML elements directly. One way to achieve this is to use the `typst` theme, which creates unstyled HTML that leaves styling fully in your project CSS. Set `theme = "typst"` when you do not want a bundled base theme. Configured styles still apply to HTML output:

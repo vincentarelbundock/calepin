@@ -80,11 +80,9 @@ use pagefind::{
 use paths::wildcard_match;
 use paths::{normalize_path, rel_posix, relative_or_self, slash_path};
 use preprocess::{preprocess_documents, WebsitePreprocessOptions};
+use render::{default_site_html_entry, render_documents, ConfigStyleAssets, ThemeGeneratedAssets};
 #[cfg(test)]
-use render::page_asset_decision;
-use render::{
-    default_site_html_entry, html_entry_with_config_styles, render_documents, ThemeGeneratedAssets,
-};
+use render::{html_entry_with_config_styles, page_asset_decision};
 pub(crate) use scaffold::scaffold_website;
 #[cfg(test)]
 use site::{language_entries, translation_entries};
@@ -327,13 +325,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         ),
         _ => None,
     };
-    let site_entry = html_entry_with_config_styles(
-        crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?,
-        &calepin_config.styles,
-    );
-    let mut external_theme_assets = site_entry
-        .as_ref()
-        .is_some_and(|entry| entry.is_default || !calepin_config.styles.is_empty());
+    let site_entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?;
+    let mut external_theme_assets = site_entry.as_ref().is_some_and(|entry| entry.is_default);
     let languages = configured_languages(&src_dir, &config)?;
     let (section_plans, mut typ_files) = discover_site_pages(
         &src_dir,
@@ -410,11 +403,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         external_theme_assets = true;
     }
     let theme_asset_entry = if external_theme_assets {
-        Some(if !calepin_config.styles.is_empty() {
-            site_entry.clone().unwrap_or_else(default_site_html_entry)
-        } else {
-            default_site_html_entry()
-        })
+        Some(site_entry.clone().unwrap_or_else(default_site_html_entry))
     } else {
         None
     };
@@ -423,6 +412,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     } else {
         ThemeGeneratedAssets::default()
     };
+    let config_style_assets = ConfigStyleAssets::from_styles(&calepin_config.styles, &asset_dir);
 
     let page_meta = load_page_meta(&src_dir, &typ_files);
     let metadata = SiteMetadata::from_config(
@@ -464,7 +454,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
     let pages_signature = xxh3_64(pages_index_json.as_bytes());
     write_pages_index(&typ_files, &pages_index_json, &asset_dir)?;
-    let theme_asset_paths = theme_assets.output_paths(&out_dir);
+    let mut theme_asset_paths = theme_assets.output_paths(&out_dir);
+    theme_asset_paths.extend(config_style_assets.output_paths(&out_dir));
     let expected_outputs = expected_generated_outputs(GeneratedOutputInputs {
         out_dir: &out_dir,
         typ_files: &typ_files,
@@ -514,6 +505,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
 
     let asset_progress = progress.spinner("[site] write assets");
     theme_assets.write(&out_dir)?;
+    config_style_assets.write(&out_dir)?;
     if let Some(path) = default_favicon_path.as_deref() {
         write_default_favicon(&out_dir, path)?;
     }
@@ -553,6 +545,11 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
                 .stylesheet
                 .as_ref()
                 .map(|asset| slash_path(&asset.rel_path)),
+            config_stylesheets: config_style_assets
+                .stylesheets
+                .iter()
+                .map(|asset| slash_path(&asset.rel_path))
+                .collect(),
             theme_scripts: theme_assets
                 .script
                 .as_ref()
@@ -919,6 +916,7 @@ struct BuildContext {
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
     theme_stylesheet: Option<String>,
+    config_stylesheets: Vec<String>,
     theme_scripts: Vec<String>,
     generated_theme_entry: Option<crate::theme::HtmlEntry>,
     config_styles: Vec<crate::config::CssOverride>,

@@ -60,6 +60,9 @@ pub fn style_only_html_entry(styles: Vec<crate::config::CssOverride>) -> HtmlEnt
   </style>
   {% endfor %}
 {% endif %}
+{% for stylesheet in site.config_stylesheets %}
+  <link rel="stylesheet" href="{{ stylesheet }}">
+{% endfor %}
 {{ doc.body_open }}
 {{ doc.body }}
 {{ doc.body_close }}"#

@@ -192,6 +192,7 @@ impl SiteModel {
                 .map(|base_url| html_escape(&absolute_site_url(base_url, current_href))),
             page_title,
             stylesheet: None,
+            config_stylesheets: Vec::new(),
             scripts: Vec::new(),
             pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {
                 css: html_escape(&page_relative_url(current_href, PAGEFIND_CSS)),

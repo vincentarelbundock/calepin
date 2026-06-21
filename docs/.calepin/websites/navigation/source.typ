@@ -60,7 +60,8 @@ weight = 10
 
 [[menus.social]]
 target = "https://github.com/user/repo"
-label = "{icon:github} GitHub"
+label = "{icon:github}"
+aria-label = "GitHub"
 ```
 
 Menu items use `target` or `glob`. Use a `.typ` `target` or `glob` for internal
@@ -75,6 +76,14 @@ Labels can include Iconify icons with `{icon:...}`. If the prefix is omitted,
 _Calepin_ uses `lucide`, so `{icon:github}` means `{icon:lucide:github}`.
 Icon prefixes are Iconify collection names. Search available icons in the
 #link("https://icon-sets.iconify.design/")[Iconify icon sets] browser.
+
+For icon-only visible labels, set `aria-label` so screen readers get a human-readable name:
+
+```toml
+aria-label = "GitHub"
+```
+
+(If you omit `aria-label`, Calepin uses fallback text if available; for an icon-only label with no fallback text this will be less readable.)
 
 Local SVG icons are also supported with source-relative paths:
 

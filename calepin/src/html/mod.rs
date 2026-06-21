@@ -1205,6 +1205,7 @@ mod tests {
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
             stylesheet: Some("../.calepin/calepin-website.css".to_string()),
+            config_stylesheets: vec!["../.calepin/calepin-style-0.0123456789abcdef.css".to_string()],
             ..SiteContextInput::default()
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
@@ -1219,9 +1220,15 @@ mod tests {
         )
         .unwrap();
 
-        assert!(
-            themed.contains(r#"<link rel="stylesheet" href="../.calepin/calepin-website.css">"#)
-        );
+        let theme_stylesheet = themed
+            .find(r#"<link rel="stylesheet" href="../.calepin/calepin-website.css">"#)
+            .unwrap();
+        let config_stylesheet = themed
+            .find(
+                r#"<link rel="stylesheet" href="../.calepin/calepin-style-0.0123456789abcdef.css">"#,
+            )
+            .unwrap();
+        assert!(theme_stylesheet < config_stylesheet);
         assert!(!themed.contains("--calepin-code-border"));
         assert!(!themed.contains("--calepin-topbar-height"));
     }
