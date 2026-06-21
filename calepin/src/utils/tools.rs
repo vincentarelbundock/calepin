@@ -11,6 +11,11 @@ pub struct Tool {
     pub install_hint: &'static str,
 }
 
+#[cfg(windows)]
+const PYTHON_COMMAND: &str = "python";
+#[cfg(not(windows))]
+const PYTHON_COMMAND: &str = "python3";
+
 // ---------------------------------------------------------------------------
 // Tool registry
 // ---------------------------------------------------------------------------
@@ -21,7 +26,7 @@ pub const RSCRIPT: Tool = Tool {
 };
 
 pub const PYTHON: Tool = Tool {
-    cmd: "python3",
+    cmd: PYTHON_COMMAND,
     install_hint: "install from https://www.python.org/downloads/",
 };
 
@@ -34,7 +39,7 @@ pub const TYPST: Tool = Tool {
 };
 
 pub const JUPYTER_CLIENT: Tool = Tool {
-    cmd: "python3",
+    cmd: PYTHON_COMMAND,
     install_hint: "jupyter_client not found — install with: pip install jupyter_client",
 };
 

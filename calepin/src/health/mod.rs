@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::cli::HealthArgs;
 use crate::config::CalepinConfig;
 use crate::typst::version::{typst_version, version_is_too_old, REQUIRED_TYPST_VERSION};
-use crate::utils::process::validate_executable;
+use crate::utils::process::{validate_executable, validate_python_interpreter};
 use crate::utils::tools::{self, Tool};
 
 mod links;
@@ -152,7 +152,7 @@ pub fn build_report(
             true,
             "render Typst documents",
         ),
-        tool_check(
+        python_check(
             "python",
             &config.executables.python,
             Some(&tools::PYTHON),
@@ -238,6 +238,29 @@ fn tool_check(
     action: &str,
 ) -> HealthCheck {
     match validate_executable(path, action, tool) {
+        Ok(()) => HealthCheck::ok(name, "found").with_path(path.display().to_string()),
+        Err(error) => HealthCheck::new(
+            name,
+            if required {
+                HealthStatus::Error
+            } else {
+                HealthStatus::Warning
+            },
+            error.to_string(),
+        )
+        .with_path(path.display().to_string())
+        .with_optional_hint(tool.map(|tool| tool.install_hint.to_string())),
+    }
+}
+
+fn python_check(
+    name: &str,
+    path: &Path,
+    tool: Option<&Tool>,
+    required: bool,
+    action: &str,
+) -> HealthCheck {
+    match validate_python_interpreter(path, action, tool) {
         Ok(()) => HealthCheck::ok(name, "found").with_path(path.display().to_string()),
         Err(error) => HealthCheck::new(
             name,

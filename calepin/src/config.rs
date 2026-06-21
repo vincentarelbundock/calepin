@@ -5,6 +5,8 @@ use serde_json::Value as JsonValue;
 use std::path::{Path, PathBuf};
 
 use crate::utils::path::{absolutize_from, expand_home, is_path_like, normalize_path};
+#[cfg(windows)]
+use crate::utils::process;
 use crate::utils::tools;
 
 pub const PYTHON_EXECUTABLE_ENV_VAR: &str = "CALEPIN_PYTHON";
@@ -149,7 +151,7 @@ impl ExecutablePaths {
             None => env_python
                 .or_else(|| project_venv_python(project_root))
                 .map(|path| resolve_tool_path(project_root, path))
-                .unwrap_or(defaults.python),
+                .unwrap_or_else(default_python_executable),
         };
         Self {
             typst: tool_path(config_dir, raw.typst, defaults.typst),
@@ -202,6 +204,25 @@ fn project_venv_python(root: &Path) -> Option<PathBuf> {
     let path = root.join(PROJECT_VENV_PYTHON_RELATIVE_PATH);
     path.is_file()
         .then(|| PathBuf::from(PROJECT_VENV_PYTHON_RELATIVE_PATH))
+}
+
+fn default_python_executable() -> PathBuf {
+    #[cfg(windows)]
+    {
+        windows_default_python_executable().unwrap_or_else(|| PathBuf::from(tools::PYTHON.cmd))
+    }
+    #[cfg(not(windows))]
+    {
+        PathBuf::from(tools::PYTHON.cmd)
+    }
+}
+
+#[cfg(windows)]
+fn windows_default_python_executable() -> Option<PathBuf> {
+    ["python", "py", "python3"]
+        .into_iter()
+        .map(PathBuf::from)
+        .find(|program| process::python_interpreter_is_usable(program))
 }
 
 fn resolve_tool_path(root: &Path, path: PathBuf) -> PathBuf {

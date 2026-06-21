@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Output, Stdio};
 
 use crate::utils::path::is_path_like;
 use crate::utils::tools::Tool;
@@ -15,6 +16,30 @@ pub fn validate_executable(
     } else {
         Err(missing_executable_error(program, action, tool))
     }
+}
+
+pub fn validate_python_interpreter(
+    program: &Path,
+    action: &str,
+    tool: Option<&Tool>,
+) -> anyhow::Result<()> {
+    validate_executable(program, action, tool)?;
+    let output = Command::new(program)
+        .args(["-s", "-c", "import sys; print(sys.executable)"])
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|error| spawn_error(program, action, error, tool))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(unusable_python_error(program, action, &output, tool))
+    }
+}
+
+#[cfg(windows)]
+pub fn python_interpreter_is_usable(program: &Path) -> bool {
+    validate_python_interpreter(program, "check Python interpreter", None).is_ok()
 }
 
 pub fn spawn_error(
@@ -44,6 +69,48 @@ fn missing_executable_error(program: &Path, action: &str, tool: Option<&Tool>) -
     } else {
         anyhow!("executable `{configured}` not found on PATH while trying to {action}.{hint}")
     }
+}
+
+fn unusable_python_error(
+    program: &Path,
+    action: &str,
+    output: &Output,
+    tool: Option<&Tool>,
+) -> anyhow::Error {
+    let details = command_output(output);
+    let hint = tool
+        .map(|tool| format!(" {}", tool.install_hint))
+        .unwrap_or_default();
+    if looks_like_windows_python_store_alias(&details) {
+        return anyhow!(
+            "Python executable {} is a Windows App execution alias, not a usable Python interpreter, while trying to {action}: {} Disable the Python App execution aliases in Windows Settings or set `[executables] python` to the full path of python.exe.",
+            program.display(),
+            details
+        );
+    }
+    anyhow!(
+        "Python executable {} failed while trying to {action}: {}{}",
+        program.display(),
+        details,
+        hint
+    )
+}
+
+fn command_output(output: &Output) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    match (stdout.is_empty(), stderr.is_empty()) {
+        (true, true) => format!("exit status {}", output.status),
+        (false, true) => stdout,
+        (true, false) => stderr,
+        (false, false) => format!("{stdout}\n{stderr}"),
+    }
+}
+
+fn looks_like_windows_python_store_alias(output: &str) -> bool {
+    output.contains("Python was not found")
+        && output.contains("Microsoft Store")
+        && output.contains("App execution aliases")
 }
 
 fn executable_exists(program: &Path) -> bool {
@@ -161,6 +228,29 @@ mod tests {
         validate_executable(Path::new("tool"), "run external tool", None).unwrap();
     }
 
+    #[test]
+    fn validate_python_rejects_windows_store_alias_message() {
+        let dir = tempfile::tempdir().unwrap();
+        let executable = write_script(
+            &dir.path().join("python3"),
+            "Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut from Settings Apps Advanced app settings App execution aliases.\n",
+            9009,
+        );
+
+        let error =
+            validate_python_interpreter(&executable, "execute Python chunks", None).unwrap_err();
+        let message = error.to_string();
+
+        assert!(
+            message.contains("Microsoft Store") || message.contains("App execution aliases"),
+            "{message}"
+        );
+        assert!(
+            message.contains(&executable.display().to_string()),
+            "{message}"
+        );
+    }
+
     #[cfg(unix)]
     fn make_executable(path: &Path) {
         use std::os::unix::fs::PermissionsExt;
@@ -172,4 +262,26 @@ mod tests {
 
     #[cfg(not(unix))]
     fn make_executable(_path: &Path) {}
+
+    #[cfg(unix)]
+    fn write_script(path: &Path, message: &str, exit_code: i32) -> PathBuf {
+        std::fs::write(
+            path,
+            format!("#!/bin/sh\nprintf '%s' {:?}\nexit {}\n", message, exit_code),
+        )
+        .unwrap();
+        make_executable(path);
+        path.to_path_buf()
+    }
+
+    #[cfg(windows)]
+    fn write_script(path: &Path, message: &str, exit_code: i32) -> PathBuf {
+        let path = path.with_extension("cmd");
+        std::fs::write(
+            &path,
+            format!("@echo off\necho {message}\nexit /B {exit_code}\n"),
+        )
+        .unwrap();
+        path
+    }
 }

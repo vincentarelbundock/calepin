@@ -10,6 +10,7 @@ use std::path::Path;
 
 use super::subprocess::SubprocessSession;
 use super::{build_payload, make_sentinel};
+use crate::utils::process;
 use crate::utils::tools;
 
 pub(crate) const JUPYTER_BRIDGE: &str = r#"
@@ -260,6 +261,8 @@ impl JupyterBridgeSession {
         timeout: Option<std::time::Duration>,
         params_path: Option<&Path>,
     ) -> Result<Self> {
+        process::validate_python_interpreter(program, "start Jupyter bridge", Some(&tools::PYTHON))
+            .context("failed to start Jupyter bridge")?;
         // Set CALEPIN_PARAMS_PATH on the bridge process before it launches any
         // kernel, so every kernel (whatever its language) inherits it and can
         // read params.json. This is the only reliable transport for kernels

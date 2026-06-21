@@ -33,6 +33,7 @@ use std::path::Path;
 
 use super::subprocess::SubprocessSession;
 use super::{build_payload, make_sentinel};
+use crate::utils::process;
 use crate::utils::tools;
 
 /// Bootstrap Python script sent once at startup.
@@ -275,6 +276,8 @@ impl PythonSession {
         cwd: Option<&Path>,
         timeout: Option<std::time::Duration>,
     ) -> Result<Self> {
+        process::validate_python_interpreter(program, "start Python", Some(&tools::PYTHON))
+            .context("Failed to start Python")?;
         let proc = SubprocessSession::spawn(
             program,
             &["-s", "-u", "-c", PYTHON_BOOTSTRAP],
