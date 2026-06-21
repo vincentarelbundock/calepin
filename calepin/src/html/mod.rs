@@ -749,6 +749,91 @@ mod tests {
     }
 
     #[test]
+    fn bundled_themes_render_footer_menu_items() {
+        let site_context = SiteContextInput {
+            menus: BTreeMap::from([(
+                "footer".to_string(),
+                vec![
+                    SiteNavEntry {
+                        href: "about.html".to_string(),
+                        label: "About".to_string(),
+                        label_html: "About".to_string(),
+                        active: false,
+                    },
+                    SiteNavEntry {
+                        href: String::new(),
+                        label: "© 2026 Example".to_string(),
+                        label_html: "© 2026 Example".to_string(),
+                        active: false,
+                    },
+                ],
+            )]),
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            ..SiteContextInput::default()
+        };
+
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+            let entry = entry_for(&selection, HtmlScope::Site);
+            let theme_name = entry.theme_name.clone();
+            let themed = theme::apply_html_theme(
+                SAMPLE_HTML,
+                Some(&entry),
+                &HtmlSyntaxTheme::builtin(),
+                None,
+                None,
+                Some(&site_context),
+            )
+            .unwrap();
+
+            assert!(themed.contains("calepin-site-footer"), "{theme_name}");
+            assert!(
+                themed.contains(r#"<a href="about.html" aria-label="About">About</a>"#),
+                "{theme_name}: missing footer link"
+            );
+            assert!(
+                themed.contains(r#"<span>© 2026 Example</span>"#),
+                "{theme_name}: missing footer text"
+            );
+        }
+    }
+
+    #[test]
+    fn bundled_themes_render_default_footer_when_not_configured() {
+        let site_context = SiteContextInput {
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            ..SiteContextInput::default()
+        };
+
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+            let entry = entry_for(&selection, HtmlScope::Site);
+            let theme_name = entry.theme_name.clone();
+            let themed = theme::apply_html_theme(
+                SAMPLE_HTML,
+                Some(&entry),
+                &HtmlSyntaxTheme::builtin(),
+                None,
+                None,
+                Some(&site_context),
+            )
+            .unwrap();
+            assert!(
+                !themed.contains("Made with Calepin"),
+                "{theme_name}: footer should not be auto-injected"
+            );
+            assert!(
+                !themed.contains("© 2026"),
+                "{theme_name}: footer should not include default copyright"
+            );
+            assert!(
+                !themed.contains(r#"<footer class="calepin-site-footer""#),
+                "{theme_name}: footer wrapper should not render without footer config"
+            );
+        }
+    }
+
+    #[test]
     fn default_website_theme_renders_output_picker_directly() {
         let site_context = SiteContextInput {
             title: Some("Example".to_string()),

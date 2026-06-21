@@ -1168,6 +1168,35 @@ body:has(.academic-document-main .calepin-sidefigure) .academic-document-main {
   color: var(--calepin-color-accent);
 }
 
+.calepin-site-footer {
+  width: min(100% - 2rem, var(--calepin-page-width));
+  margin: 2.25rem auto 0;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--calepin-color-border);
+  color: var(--calepin-color-muted);
+  font-size: 0.86rem;
+}
+
+.calepin-site-footer-inner {
+  width: min(100%, var(--calepin-page-width));
+}
+
+.calepin-site-footer-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  list-style-type: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem 1rem;
+}
+
+.calepin-site-footer-links li {
+  list-style: none;
+}
+
+
 .academic-landing {
   width: min(100% - 2rem, var(--calepin-page-width));
   margin-inline: auto;

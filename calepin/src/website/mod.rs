@@ -45,8 +45,6 @@ use config::{SearchEngine, WebsiteConfig};
 #[cfg(test)]
 use feeds::{feed_items_from_pages, infer_feed_format, rss_feed_date, FeedFormat, FeedTarget};
 use feeds::{feed_targets, write_feeds};
-#[cfg(test)]
-use icons::nav_label_html;
 use icons::IconCache;
 use language::{configured_languages, LanguageInfo};
 #[cfg(test)]
@@ -62,8 +60,7 @@ use navigation::{
 };
 #[cfg(test)]
 use navigation::{
-    discover_menus, discover_pages, MenuItemPlan, MenusPlan, NavItemModel, NavItemPlan,
-    NavSectionPlan,
+    discover_menus, discover_pages, MenuItemPlan, MenusPlan, NavItemPlan, NavSectionPlan,
 };
 #[cfg(test)]
 use outputs::MANIFEST_PATH;
@@ -334,8 +331,13 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config.pages.as_ref(),
         &languages,
     )?;
-    let (menus_plan, mut menu_files) =
-        discover_site_menus(&src_dir, &config.menus, config.pages.as_ref(), &languages)?;
+    let (menus_plan, mut menu_files) = discover_site_menus(
+        &src_dir,
+        &config.menus,
+        config.footer.as_ref(),
+        config.pages.as_ref(),
+        &languages,
+    )?;
     typ_files.append(&mut menu_files);
     let mut included_pages =
         discover_site_build_pages(&src_dir, config.pages.as_ref(), &languages)?;

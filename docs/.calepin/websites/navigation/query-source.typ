@@ -50,7 +50,7 @@ fold = false
 
 Use `[menus]` for named navigation groups. Menu names describe what the links
 mean; themes decide where to render them. The bundled themes understand
-`main`, `social`, and `footer`. Custom themes can use any additional menu name.
+`main` and `social`. Custom themes can use any additional menu name.
 
 ```toml
 [[menus.main]]
@@ -69,7 +69,23 @@ source pages; use any other `target` for external links or a literal
 already-rendered URL. Omit `label` for internal pages to use the page metadata
 title, document title, or filename stem.
 
-Use `weight` to control ordering within one menu. Lower weights appear first.
+= Footer
+
+Configure the site footer with `[[footer.item]]`. Footer items can be links or
+plain text rows for copyright and legal notices:
+
+```toml
+[[footer.item]]
+label = "© 2026 Example"
+
+[[footer.item]]
+target = "https://example.com/privacy"
+label = "Privacy"
+```
+
+A footer row with only `label` is rendered as text (no hyperlink).
+
+Use `weight` to control ordering within one menu or footer. Lower weights appear first.
 Items without weights keep their config order after weighted items.
 
 Labels can include Iconify icons with `{icon:...}`. If the prefix is omitted,

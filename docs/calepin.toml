@@ -8,8 +8,11 @@ minify = true
 search = "pagefind"
 highlight-light = "assets/Catppuccin Latte.tmTheme"
 highlight-dark = "assets/Catppuccin Mocha.tmTheme"
-
 generate_feeds = true
+
+[executables]
+python = "../.venv/bin/python"
+typst = "typst"
 
 [feeds]
 filenames = ["atom.xml", "rss.xml"]
@@ -21,18 +24,26 @@ include = ["assets/**", "index.typ", "themes/examples/tufte/**"]
 include = ["blog/*.typ"]
 exclude = ["themes/examples/**", "slides/examples/**"]
 
-[[menus.main]]
-target = "getting-started/install.typ"
-label = "Documentation"
+[menus]
 
-[[menus.social]]
-target = "https://github.com/vincentarelbundock/calepin"
-label = "{icon:github}"
-aria-label = "GitHub"
+  [[menus.main]]
+  target = "getting-started/install.typ"
+  label = "Documentation"
 
-[executables]
-python = "../.venv/bin/python"
-typst = "typst"
+  [[menus.social]]
+  target = "https://github.com/vincentarelbundock/calepin"
+  label = "{icon:github}"
+  aria-label = "GitHub"
+
+[footer]
+
+  [[footer.item]]
+  label = "© 2026 Vincent Arel-Bundock"
+
+  [[footer.item]]
+  label = "Made with Calepin."
+  target = "https://vincentarelbundock.github.io/calepin"
+
 
 [sidebar]
 fold = true

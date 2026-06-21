@@ -814,6 +814,36 @@ html:not([data-theme]) {
   padding: 0 1rem;
 }
 
+.calepin-site-footer {
+  width: min(100%, var(--calepin-wide-width));
+  margin: 0 auto 3.2rem;
+  padding: 1.25rem 1rem 0;
+  border-top: 1px solid var(--calepin-color-border);
+  color: var(--calepin-color-muted);
+  font-size: 0.86rem;
+}
+
+.calepin-site-footer-inner {
+  max-width: calc(min(100%, var(--calepin-wide-width)) - 2rem);
+  margin: 0 auto;
+}
+
+.calepin-site-footer-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  list-style-type: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem 1rem;
+}
+
+.calepin-site-footer-links li {
+  list-style: none;
+}
+
+
 .calepin-website-page-nav-inner {
   max-width: 52rem;
   margin: 0 auto;

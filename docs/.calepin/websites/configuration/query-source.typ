@@ -71,6 +71,19 @@ Set `search = "pagefind"` to add static search to bundled website themes. _Calep
 
 Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, `styles`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
 
+= Auto-generated metadata
+
+Bundled website themes emit a small set of page-level head tags from config:
+
+- `<title>` (fallback when no `<title>` is present in the rendered page)
+- `<meta name="description">` and `<meta property="og:description">` from `description`
+- `<meta property="og:title">` from page title and site title
+- `<meta property="og:site_name">` from `title`
+- `<meta property="og:url">` and `<link rel="canonical">` from `base_url` plus the page route
+
+If you inject your own tags for these fields in a theme override, check for
+duplication with what the theme already emits.
+
 = CSS styles
 
 Use `styles` for project CSS that should load after the selected theme:

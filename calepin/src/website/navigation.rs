@@ -9,7 +9,7 @@ use crate::utils::html::escape as html_escape;
 use crate::utils::static_files::{collect_files_by, path_has_common_skip_dir};
 use crate::utils::url::output_href_with_extension;
 
-use super::config::{MenuItemConfig, PagesConfig, SidebarConfig, StaticConfig};
+use super::config::{FooterConfig, MenuItemConfig, PagesConfig, SidebarConfig, StaticConfig};
 use super::icons::{accessible_nav_label, nav_label_html, IconCache};
 use super::language::LanguageInfo;
 use super::metadata::{PageMeta, PageMetaMap};
@@ -58,7 +58,7 @@ impl MenusModel {
                             .is_none_or(|language| Some(language) == current_language)
                     })
                     .map(|item| SiteNavEntry {
-                        href: html_escape(&page_relative_url(current_href, &item.href)),
+                        href: html_escape(&menu_item_href(current_href, &item.href)),
                         label: html_escape(&item.label),
                         label_html: item.label_html.clone(),
                         active: item.href == current_href,
@@ -67,6 +67,14 @@ impl MenusModel {
                 (name.clone(), entries)
             })
             .collect()
+    }
+}
+
+fn menu_item_href(current_href: &str, href: &str) -> String {
+    if href.is_empty() {
+        String::new()
+    } else {
+        page_relative_url(current_href, href)
     }
 }
 
@@ -115,6 +123,10 @@ impl NavSurface<'_> {
 
     fn skip_duplicate_items(self) -> bool {
         matches!(self, NavSurface::Sidebar)
+    }
+
+    fn allows_linkless_items(self) -> bool {
+        matches!(self, NavSurface::Menu("footer"))
     }
 
     fn uses_configured_labels(self) -> bool {
@@ -173,20 +185,22 @@ pub(super) fn discover_site_pages(
 pub(super) fn discover_site_menus(
     src_dir: &Path,
     menus: &BTreeMap<String, Vec<MenuItemConfig>>,
+    footer: Option<&FooterConfig>,
     pages: Option<&PagesConfig>,
     languages: &Option<Vec<LanguageInfo>>,
 ) -> Result<(MenusPlan, Vec<PathBuf>)> {
+    let menus = effective_site_menus(menus, footer)?;
     if menus.is_empty() {
         return Ok((MenusPlan::default(), Vec::new()));
     }
     let Some(languages) = languages else {
-        return discover_menus(src_dir, menus, pages);
+        return discover_menus(src_dir, &menus, pages);
     };
     let mut plan = MenusPlan::default();
     let mut files = Vec::new();
     for language in languages {
         let (mut language_plan, mut language_files) =
-            discover_menus(&language.content_dir, menus, pages)?;
+            discover_menus(&language.content_dir, &menus, pages)?;
         language_files.retain(|path| !is_nested_language_page(path, language, languages));
         retain_menu_language_items(&mut language_plan, language, languages);
         if !language.is_default {
@@ -198,6 +212,23 @@ pub(super) fn discover_site_menus(
         files.append(&mut language_files);
     }
     Ok((plan, files))
+}
+
+fn effective_site_menus(
+    menus: &BTreeMap<String, Vec<MenuItemConfig>>,
+    footer: Option<&FooterConfig>,
+) -> Result<BTreeMap<String, Vec<MenuItemConfig>>> {
+    if menus.contains_key("footer") {
+        bail!("use `[[footer.item]]` instead of `[[menus.footer]]`");
+    }
+
+    let mut effective = menus.clone();
+    if let Some(footer) = footer {
+        if !footer.item.is_empty() {
+            effective.insert("footer".to_string(), footer.item.clone());
+        }
+    }
+    Ok(effective)
 }
 
 fn retain_menu_language_items(
@@ -439,6 +470,30 @@ fn resolve_nav_item_plans(
                 None => {}
             }
             continue;
+        }
+
+        if resolution.surface.allows_linkless_items() {
+            if let Some(label) = configured_label.clone() {
+                items.push(NavItemPlan {
+                    path: None,
+                    url: None,
+                    configured_label: Some(label),
+                    configured_aria_label: input.aria_label.map(str::to_string),
+                    weight: input.weight,
+                });
+                continue;
+            }
+        }
+
+        if !input
+            .glob
+            .map(str::trim)
+            .is_some_and(|glob| !glob.is_empty())
+        {
+            bail!(
+                "{} item must set path, glob, or url",
+                resolution.surface.context()
+            );
         }
 
         for path in resolve_file_list(resolution.src_dir, input.glob, resolution.all_typ_files)?
@@ -796,10 +851,13 @@ pub(super) fn menus_from_plan(
     let mut menus = BTreeMap::new();
     for (name, items) in &plan.items {
         let surface = NavSurface::Menu(name);
-        let entries = items
+        let mut entries = items
             .iter()
             .map(|item| nav_item_model(item, None, page_meta, page_info, icon_cache, surface))
             .collect::<Result<Vec<_>>>()?;
+        if name == "footer" {
+            entries.retain(|entry| !entry.label_html.trim().is_empty() || !entry.href.is_empty());
+        }
         menus.insert(name.clone(), entries);
     }
     Ok(MenusModel { items: menus })
@@ -831,6 +889,24 @@ fn nav_item_model(
     }
 
     let Some(path) = item.path.as_ref() else {
+        if matches!(surface, NavSurface::Menu("footer")) {
+            let raw_label = item
+                .configured_label
+                .as_ref()
+                .map(|label| label.as_str())
+                .unwrap_or_default();
+            let label_html = nav_label_html(raw_label, icon_cache)?;
+            return Ok(NavItemModel {
+                language: None,
+                href: String::new(),
+                label: item
+                    .configured_aria_label
+                    .clone()
+                    .unwrap_or_else(|| accessible_nav_label(raw_label, "")),
+                label_html,
+            });
+        }
+
         return Err(anyhow!(
             "{} item must set path, glob, or url",
             surface.context()

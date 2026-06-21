@@ -1,0 +1,31 @@
+{% set footer_items = [] %}
+{% for menu in site.menu_list %}
+  {% if menu.name == "footer" %}
+    {% set footer_items = menu.items %}
+  {% endif %}
+{% endfor %}
+{% if footer_items | length == 0 %}
+  {% set footer_items = site.menus.footer | default(value=[]) %}
+{% endif %}
+
+{% for item in footer_items if item.href or (item.label_html | trim) != "" %}
+  {% if loop.first %}
+  <footer class="calepin-site-footer" aria-label="Site footer">
+    <div class="calepin-site-footer-inner">
+      <ul class="calepin-site-footer-links" aria-label="Footer links">
+  {% endif %}
+
+  <li>
+      {% if item.href %}
+      <a href="{{ item.href }}" aria-label="{{ item.label }}">{{ item.label_html }}</a>
+      {% else %}
+      <span>{{ item.label_html }}</span>
+      {% endif %}
+  </li>
+
+  {% if loop.last %}
+      </ul>
+    </div>
+  </footer>
+  {% endif %}
+{% endfor %}

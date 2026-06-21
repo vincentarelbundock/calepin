@@ -1,3 +1,5 @@
+use super::icons::nav_label_html;
+use super::navigation::NavItemModel;
 use super::*;
 use crate::utils::html::escape as html_escape;
 use crate::utils::testutil::{command_available, tempdir_in_manifest};
@@ -2431,6 +2433,92 @@ target = "index.typ"
 }
 
 #[test]
+fn footer_config_parses_items() {
+    let config = website_config_from_toml(
+        r#"
+[footer]
+
+[[footer.item]]
+label = "© 2026 Example"
+
+[[footer.item]]
+target = "https://example.com/privacy"
+label = "Privacy"
+aria-label = "Privacy policy"
+weight = 10
+"#,
+    );
+
+    let footer = config.footer.as_ref().unwrap();
+    assert_eq!(footer.item[0].label.as_deref(), Some("© 2026 Example"));
+    assert_eq!(
+        footer.item[1].target.as_deref(),
+        Some("https://example.com/privacy")
+    );
+    assert_eq!(footer.item[1].label.as_deref(), Some("Privacy"));
+    assert_eq!(footer.item[1].aria_label.as_deref(), Some("Privacy policy"));
+    assert_eq!(footer.item[1].weight, Some(10));
+}
+
+#[test]
+fn discover_site_menus_resolves_footer_config_items() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("index.typ"), "= Home\n").unwrap();
+
+    let config = website_config_from_toml(
+        r#"
+[footer]
+
+[[footer.item]]
+target = "index.typ"
+label = "Docs"
+
+[[footer.item]]
+label = "© 2026 Example"
+"#,
+    );
+
+    let (plan, files) =
+        discover_site_menus(src, &config.menus, config.footer.as_ref(), None, &None).unwrap();
+
+    assert_eq!(
+        plan.items["footer"][0].path.as_deref(),
+        Some(src.join("index.typ").as_path())
+    );
+    assert_eq!(plan.items["footer"][1].path, None);
+    assert_eq!(plan.items["footer"][1].url, None);
+    assert_eq!(
+        plan.items["footer"][1].configured_label.as_deref(),
+        Some("© 2026 Example")
+    );
+    assert_eq!(files, vec![src.join("index.typ").as_path()]);
+}
+
+#[test]
+fn discover_site_menus_rejects_legacy_footer_menu_config() {
+    let config = website_config_from_toml(
+        r#"
+[[menus.footer]]
+label = "© 2026 Example"
+"#,
+    );
+
+    let err = discover_site_menus(
+        Path::new("/site/docs"),
+        &config.menus,
+        config.footer.as_ref(),
+        None,
+        &None,
+    )
+    .unwrap_err();
+
+    assert!(err
+        .to_string()
+        .contains("use `[[footer.item]]` instead of `[[menus.footer]]`"));
+}
+
+#[test]
 fn discover_menus_resolves_named_menus_and_orders_by_weight() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path();
@@ -2485,6 +2573,58 @@ fn discover_menus_resolves_named_menus_and_orders_by_weight() {
             .collect::<Vec<_>>(),
         vec!["guide/usage.typ", "index.typ"]
     );
+}
+
+#[test]
+fn discover_menus_allows_footer_items_without_targets() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("index.typ"), "= Home\n").unwrap();
+    let menus = BTreeMap::from([(
+        "footer".to_string(),
+        vec![
+            MenuItemConfig {
+                target: Some("index.typ".to_string()),
+                label: Some("Docs".to_string()),
+                ..MenuItemConfig::default()
+            },
+            MenuItemConfig {
+                label: Some("© 2026 Example".to_string()),
+                ..MenuItemConfig::default()
+            },
+        ],
+    )]);
+
+    let (plan, files) = discover_menus(src, &menus, None).unwrap();
+
+    assert_eq!(
+        plan.items["footer"][0].path.as_deref(),
+        Some(src.join("index.typ").as_path())
+    );
+    assert_eq!(plan.items["footer"][1].path, None);
+    assert_eq!(plan.items["footer"][1].url, None);
+    assert_eq!(
+        plan.items["footer"][1].configured_label.as_deref(),
+        Some("© 2026 Example")
+    );
+    assert_eq!(files, vec![src.join("index.typ").as_path()]);
+}
+
+#[test]
+fn discover_menus_rejects_linkless_items_for_non_footer_menus() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    let menus = BTreeMap::from([(
+        "main".to_string(),
+        vec![MenuItemConfig {
+            label: Some("Broken".to_string()),
+            ..MenuItemConfig::default()
+        }],
+    )]);
+
+    let err = discover_menus(src, &menus, None).unwrap_err();
+
+    assert!(err.to_string().contains("item must set path, glob, or url"));
 }
 
 #[test]
@@ -2873,6 +3013,82 @@ fn menus_from_plan_uses_page_metadata_and_external_labels() {
 }
 
 #[test]
+fn menus_from_plan_supports_footer_text_items_without_links() {
+    let src = Path::new("/site/docs");
+    let home = PathBuf::from("/site/docs/index.typ");
+    let plan = MenusPlan {
+        items: BTreeMap::from([(
+            "footer".to_string(),
+            vec![
+                MenuItemPlan {
+                    path: Some(home.clone()),
+                    url: None,
+                    configured_label: Some("Docs".to_string()),
+                    configured_aria_label: Some("Documentation".to_string()),
+                    weight: None,
+                },
+                MenuItemPlan {
+                    path: None,
+                    url: None,
+                    configured_label: Some("© 2026 Example".to_string()),
+                    configured_aria_label: None,
+                    weight: None,
+                },
+            ],
+        )]),
+    };
+    let page_info = test_page_info(src, std::slice::from_ref(&home), &BTreeSet::new());
+    let mut icon_cache = IconCache::new(src, Path::new(ICON_CACHE_DIR));
+
+    let menus = menus_from_plan(&plan, &PageMetaMap::new(), &page_info, &mut icon_cache).unwrap();
+
+    assert_eq!(menus.items["footer"][0].href, "index.html");
+    assert_eq!(menus.items["footer"][0].label, "Documentation");
+    assert_eq!(menus.items["footer"][1].href, "");
+    assert_eq!(menus.items["footer"][1].label, "© 2026 Example");
+}
+
+#[test]
+fn menus_from_plan_skips_footer_items_without_content() {
+    let plan = MenusPlan {
+        items: BTreeMap::from([(
+            "footer".to_string(),
+            vec![
+                MenuItemPlan {
+                    path: None,
+                    url: None,
+                    configured_label: Some("   ".to_string()),
+                    configured_aria_label: None,
+                    weight: None,
+                },
+                MenuItemPlan {
+                    path: None,
+                    url: None,
+                    configured_label: Some("© 2026 Example".to_string()),
+                    configured_aria_label: None,
+                    weight: None,
+                },
+            ],
+        )]),
+    };
+
+    let icon_temp = tempfile::tempdir().unwrap();
+    let mut icon_cache = IconCache::new(icon_temp.path(), Path::new(ICON_CACHE_DIR));
+
+    let menus = menus_from_plan(
+        &plan,
+        &PageMetaMap::new(),
+        &PageInfoMap::new(),
+        &mut icon_cache,
+    )
+    .unwrap();
+
+    let footer = menus.items.get("footer").unwrap();
+    assert_eq!(footer.len(), 1);
+    assert_eq!(footer[0].label, "© 2026 Example");
+}
+
+#[test]
 fn menus_from_plan_errors_when_page_info_is_missing() {
     let src = Path::new("/site/docs");
     let missing = PathBuf::from("/site/docs/missing.typ");
@@ -2936,6 +3152,15 @@ fn theme_context_exposes_relative_named_menus() {
                         label_html: html_escape("External"),
                     }],
                 ),
+                (
+                    "footer".to_string(),
+                    vec![NavItemModel {
+                        language: None,
+                        href: String::new(),
+                        label: "© 2026 Example".to_string(),
+                        label_html: html_escape("© 2026 Example"),
+                    }],
+                ),
             ]),
         },
         SiteMetadata::default(),
@@ -2948,8 +3173,13 @@ fn theme_context_exposes_relative_named_menus() {
     assert_eq!(context.menus["main"][1].href, "usage.html");
     assert!(context.menus["main"][1].active);
     assert_eq!(context.menus["social"][0].href, "https://example.com");
-    assert_eq!(context.menu_list[0].name, "main");
-    assert_eq!(context.menu_list[1].name, "social");
+    assert_eq!(context.menus["footer"][0].href, "");
+    let menu_names = context
+        .menu_list
+        .iter()
+        .map(|menu| menu.name.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(menu_names, vec!["footer", "main", "social"]);
 }
 
 #[test]

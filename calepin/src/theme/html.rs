@@ -78,7 +78,7 @@ pub fn style_only_html_entry(styles: Vec<crate::config::CssOverride>) -> HtmlEnt
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-struct ThemeManifest {
+pub(crate) struct ThemeManifest {
     shared: SharedImports,
 }
 

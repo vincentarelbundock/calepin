@@ -49,6 +49,12 @@ target = "https://github.com/vincentarelbundock/calepin"
 label = "{icon:github}"
 aria-label = "GitHub"
 
+[footer]
+
+[[footer.item]]
+target = "https://vincentarelbundock.github.io/calepin"
+label = "Made with Calepin"
+
 [sidebar]
 fold = false
 

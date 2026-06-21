@@ -39,6 +39,7 @@ pub(super) struct WebsiteConfig {
     #[serde(rename = "static")]
     pub(super) static_files: Option<StaticConfig>,
     pub(super) menus: BTreeMap<String, Vec<MenuItemConfig>>,
+    pub(super) footer: Option<FooterConfig>,
     pub(super) sidebar: Option<SidebarConfig>,
 }
 
@@ -134,6 +135,12 @@ pub(super) struct PagesConfig {
 pub(super) struct StaticConfig {
     pub(super) include: Vec<String>,
     pub(super) exclude: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+#[serde(default, deny_unknown_fields)]
+pub(super) struct FooterConfig {
+    pub(super) item: Vec<MenuItemConfig>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]
