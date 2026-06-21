@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Compile, watch, serve])
 
 #title() <compile-watch-serve>
@@ -10,33 +11,17 @@ document. The command line shape is intentionally the same as
 `typst compile`: same output-first/format-driven arguments, with `--`
 pass-through for Typst flags, plus Calepin preprocessing.
 
-```sh
-calepin compile paper.typ --format pdf
-calepin compile paper.typ --format html
-calepin compile paper.typ {p}.svg --format svg
-
-# explicit output path
-calepin compile paper.typ path/to/paper.pdf --format pdf
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n", block: true, lang: "sh"))
 
 Compile a website by pointing `calepin compile` at a source directory
 that contains `calepin.toml`:
 
-```sh
-calepin compile docs docs
-calepin compile my_site public
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile docs docs\ncalepin compile my_site public\n", block: true, lang: "sh"))
 
 Arguments after `--` are forwarded to Typst, so project-specific Typst
 flags can stay in the same command.
 
-```sh
-# open PDF in system viewer
-calepin compile paper.typ -- --open
-
-# set path to font directory
-calepin compile paper.typ -- --font-path fonts
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n", block: true, lang: "sh"))
 
 = Watch
 <watch>
@@ -47,11 +32,7 @@ re-runs preprocessing, and delegates recompilation and previewing to
 positional arguments and pass-through flags, with Calepin running its
 preprocessing step first.
 
-```sh
-calepin watch paper.typ
-calepin watch paper.typ --format html
-calepin watch paper.typ {p}.svg --format svg
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n", block: true, lang: "sh"))
 
 The default output format is PDF. Choose another format with `--format`,
 or let the output extension select the format.
@@ -60,25 +41,16 @@ Arguments after `--` are passed through to `typst watch`. Typst's
 `--open` flag opens the rendered output in the operating system's
 default viewer, and Typst's `--port` flag chooses the HTML preview port.
 
-```sh
-calepin watch example.typ -- --open
-calepin watch paper.typ paper.html --format html -- --port 3001 --open
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n", block: true, lang: "sh"))
 
 Watch a website directory by passing the source and output directories:
 
-```sh
-calepin watch docs docs
-calepin watch my_site public
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin watch docs docs\ncalepin watch my_site public\n", block: true, lang: "sh"))
 
 Add `--serve` to run the local server while watching a website. It uses
 the same `--host`, `--port`, and `--open` options as `calepin serve`.
 
-```sh
-calepin watch docs docs --serve --open
-calepin watch my_site public --serve --host 127.0.0.1 --port 8001
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n", block: true, lang: "sh"))
 
 == PDF viewer auto-refresh
 <pdf-viewer-auto-refresh>
@@ -100,21 +72,14 @@ Use `calepin serve` to preview a compiled website directory locally.
 This is useful for checking routing, assets, Pagefind search, and links
 after a static build.
 
-```sh
-calepin serve docs
-calepin serve public
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin serve docs\ncalepin serve public\n", block: true, lang: "sh"))
 
 By default, Calepin uses `127.0.0.1` and the first available port from
 8000. Set the host and port explicitly when you need a stable preview
 URL:
 
-```sh
-calepin serve docs --host 127.0.0.1 --port 8001
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin serve docs --host 127.0.0.1 --port 8001\n", block: true, lang: "sh"))
 
 Open the served website in your default browser:
 
-```sh
-calepin serve docs --open
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin serve docs --open\n", block: true, lang: "sh"))

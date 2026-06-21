@@ -1,0 +1,61 @@
+        <aside id="calepin-website-sidebar" class="calepin-website-sidebar">
+            <nav class="calepin-website-mobile-drawer-nav" aria-label="Site navigation">
+                <p><strong>Site</strong></p>
+                <ul>
+                    {% for item in site.menus.main %}
+                    {% include "partials/navbar-item.html" %}
+                    {% endfor %}
+                    {% for item in site.menus.social %}
+                    {% include "partials/navbar-item.html" %}
+                    {% endfor %}
+                </ul>
+                <div class="calepin-website-mobile-drawer-actions" aria-label="Site controls">
+                    <button class="calepin-website-theme-button outline secondary" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button>
+                    {% if site.languages and site.languages | length > 1 %}
+                    <select class="calepin-website-view-mode" aria-label="Language" data-calepin-language-picker>
+                        {% for language in site.languages %}
+                        <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                    <select class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view" data-calepin-view-mode>
+                        <option value="rendered">HTML</option>
+                        <option value="source">Source</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </div>
+            </nav>
+            <nav aria-label="Documentation">
+                {% if site.sidebar_sections %}
+                    {% for section in site.sidebar_sections %}
+                    {% if section.items %}
+                    {% if section.title and site.sidebar_fold %}
+                    <details class="calepin-website-sidebar-section"{% if section.active %} open{% endif %}>
+                        <summary>{{ section.title }}</summary>
+                        <ul>
+                            {% for item in section.items %}
+                            <li><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                    {% else %}
+                    {% if section.title %}
+                    <p><strong>{{ section.title }}</strong></p>
+                    {% endif %}
+                    <ul>
+                        {% for item in section.items %}
+                        <li><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {% endif %}
+                    {% endfor %}
+                {% elif site.sidebar %}
+                    <ul>
+                        {% for item in site.sidebar %}
+                        <li><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </nav>
+        </aside>

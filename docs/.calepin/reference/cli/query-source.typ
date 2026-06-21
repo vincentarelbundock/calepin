@@ -38,13 +38,17 @@ Arguments:
   [DIR]                 Destination directory when creating a website scaffold or ejected theme
 
 Options:
+      --theme <THEME>  Built-in theme to use when creating a website scaffold or ejected theme
+                       [possible values: calepin, academic]
   -f, --force          Overwrite the file if it already exists
   -h, --help           Print help
 
 Examples:
   calepin new paper.typ
-  calepin new website my_site/
+  calepin new website
+  calepin new website --theme academic
   calepin new theme
+  calepin new theme --theme academic
   calepin new theme themes/my-theme
 ```
 

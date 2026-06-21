@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Configuration])
 
 #title()
@@ -6,9 +7,7 @@
 
 `Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:
 
-```bash
-calepin compile --config config.toml paper.typ
-```
+#calepin_runtime.chunk_from_raw_plain("bash", raw("calepin compile --config config.toml paper.typ\n", block: true, lang: "bash"))
 
 If `--config` is omitted, `Calepin` uses defaults.
 

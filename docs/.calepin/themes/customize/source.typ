@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Customize])
 
 #title()
@@ -150,11 +151,7 @@ but the layout behavior still comes from the built-in theme.
 
 From the case-study directory, render the HTML and PDF with:
 
-```sh
-cd docs/themes/examples/tufte
-calepin compile tufte.typ --config calepin.toml --format html
-calepin compile tufte.typ --config calepin.toml --format pdf
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("cd docs/themes/examples/tufte\ncalepin compile tufte.typ --config calepin.toml --format html\ncalepin compile tufte.typ --config calepin.toml --format pdf\n", block: true, lang: "sh"))
 
 The config path matters because `styles = ["tufte.css"]` is resolved relative to
 `calepin.toml`. Keeping the config, stylesheet, and document together makes the

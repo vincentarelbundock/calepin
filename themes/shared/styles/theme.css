@@ -1,0 +1,448 @@
+@import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
+
+:root {
+  color-scheme: light;
+
+  /* Color */
+  --calepin-color-background: #ffffff;
+  --calepin-color-text: #1f2933;
+  --calepin-color-muted: #5f6b7a;
+  --calepin-color-border: #d8dee6;
+  --calepin-color-accent: #1c9bad;
+  --calepin-color-accent-hover: #16808f;
+  --calepin-color-accent-soft: rgba(28, 155, 173, 0.12);
+  --calepin-color-accent-soft: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+  --calepin-color-accent-contrast: #ffffff;
+  --calepin-color-link: var(--calepin-color-accent);
+  --calepin-color-link-hover: var(--calepin-color-accent-hover);
+  --calepin-color-focus: var(--calepin-color-accent);
+  --calepin-color-selection: rgba(28, 155, 173, 0.24);
+  --calepin-color-selection: color-mix(in srgb, var(--calepin-color-accent) 24%, transparent);
+  --calepin-color-info: #1c7ed6;
+  --calepin-color-success: #2e7d32;
+  --calepin-color-warning: #b26a00;
+  --calepin-color-danger: #b3261e;
+  --calepin-color-important: #7c3aed;
+  --calepin-color-info-soft: rgba(28, 126, 214, 0.12);
+  --calepin-color-info-soft: color-mix(in srgb, var(--calepin-color-info) 12%, transparent);
+  --calepin-color-success-soft: rgba(46, 125, 50, 0.12);
+  --calepin-color-success-soft: color-mix(in srgb, var(--calepin-color-success) 12%, transparent);
+  --calepin-color-warning-soft: rgba(178, 106, 0, 0.14);
+  --calepin-color-warning-soft: color-mix(in srgb, var(--calepin-color-warning) 14%, transparent);
+  --calepin-color-danger-soft: rgba(179, 38, 30, 0.12);
+  --calepin-color-danger-soft: color-mix(in srgb, var(--calepin-color-danger) 12%, transparent);
+  --calepin-color-important-soft: rgba(124, 58, 237, 0.12);
+  --calepin-color-important-soft: color-mix(in srgb, var(--calepin-color-important) 12%, transparent);
+
+  /* Callouts */
+  --calepin-callout-note-color: var(--calepin-color-info);
+  --calepin-callout-tip-color: var(--calepin-color-success);
+  --calepin-callout-warning-color: var(--calepin-color-warning);
+  --calepin-callout-caution-color: var(--calepin-color-danger);
+  --calepin-callout-important-color: var(--calepin-color-important);
+
+  /* Surfaces */
+  --calepin-surface: #ffffff;
+  --calepin-surface-muted: #f4f7f9;
+  --calepin-surface-raised: #ffffff;
+  --calepin-surface-inset: #eef3f6;
+  --calepin-surface-code: #f7f7f5;
+  --calepin-surface-output: var(--calepin-surface-muted);
+
+  /* Typography */
+  --calepin-font-body: var(--pico-font-family);
+  --calepin-font-heading: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+  --calepin-font-mono: var(--pico-font-family-monospace);
+  --calepin-font-size: 100%;
+  --calepin-font-size-sm: 0.875rem;
+  --calepin-font-size-aside: 0.84rem;
+  --calepin-line-height: 1.65;
+  --calepin-line-height-tight: 1.25;
+  --calepin-heading-weight: 700;
+  --calepin-code-font-size: 0.92em;
+
+  /* Spacing */
+  --calepin-space-xs: 0.5rem;
+  --calepin-space-sm: 0.75rem;
+  --calepin-space-md: 1rem;
+  --calepin-space-lg: 1.5rem;
+  --calepin-space-xl: 2rem;
+  --calepin-space-2xl: 3rem;
+  --calepin-block-gap: var(--calepin-space-lg);
+  --calepin-inline-gap: var(--calepin-space-md);
+  --calepin-section-gap: var(--calepin-space-2xl);
+
+  /* Layout */
+  --calepin-content-width: 39rem;
+  --calepin-wide-width: 68rem;
+  --calepin-page-width: var(--calepin-wide-width);
+  --calepin-margin-width: 11.5rem;
+  --calepin-margin-gap: 2rem;
+  --calepin-page-padding-inline: clamp(1rem, 4vw, 2rem);
+  --pico-font-size: 100%;
+  --calepin-radius-sm: 0.25rem;
+  --calepin-radius-md: 0.5rem;
+  --calepin-radius-lg: 0.75rem;
+  --calepin-border-width: 1px;
+  --calepin-border: var(--calepin-border-width) solid var(--calepin-color-border);
+  --calepin-topbar-height: 3.5rem;
+  --calepin-sidebar-width: 12rem;
+  --calepin-shell-gap: 1.5rem;
+  --calepin-shadow-card: 0 10px 30px color-mix(in srgb, var(--calepin-color-text) 8%, transparent);
+  --calepin-focus-ring: 0 0 0 3px color-mix(in srgb, var(--calepin-color-focus) 28%, transparent);
+
+  /* Layers */
+  --calepin-z-topbar: 20;
+  --calepin-z-backdrop: 25;
+  --calepin-z-drawer: 30;
+  --calepin-z-popover: 40;
+  --calepin-z-modal: 50;
+
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --calepin-color-background: #111820;
+  --calepin-color-text: #d8dee9;
+  --calepin-color-muted: #9aa7b6;
+  --calepin-color-border: #344252;
+  --calepin-color-accent: #67d4df;
+  --calepin-color-accent-hover: #8be4ec;
+  --calepin-color-accent-contrast: #071316;
+  --calepin-color-link: var(--calepin-color-accent);
+  --calepin-color-link-hover: var(--calepin-color-accent-hover);
+  --calepin-color-focus: var(--calepin-color-accent);
+  --calepin-color-info: #74c0fc;
+  --calepin-color-success: #8ce99a;
+  --calepin-color-warning: #ffd43b;
+  --calepin-color-danger: #ff8787;
+  --calepin-color-important: #b197fc;
+  --calepin-surface: #17202a;
+  --calepin-surface-muted: #202b36;
+  --calepin-surface-raised: #1d2833;
+  --calepin-surface-inset: #101820;
+  --calepin-surface-code: #151d26;
+  --calepin-surface-output: var(--calepin-surface-muted);
+  --calepin-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --pico-font-size: 106.25%;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    color-scheme: dark;
+    --calepin-color-background: #111820;
+    --calepin-color-text: #d8dee9;
+    --calepin-color-muted: #9aa7b6;
+    --calepin-color-border: #344252;
+    --calepin-color-accent: #67d4df;
+    --calepin-color-accent-hover: #8be4ec;
+    --calepin-color-accent-contrast: #071316;
+    --calepin-color-link: var(--calepin-color-accent);
+    --calepin-color-link-hover: var(--calepin-color-accent-hover);
+    --calepin-color-focus: var(--calepin-color-accent);
+    --calepin-color-info: #74c0fc;
+    --calepin-color-success: #8ce99a;
+    --calepin-color-warning: #ffd43b;
+    --calepin-color-danger: #ff8787;
+    --calepin-color-important: #b197fc;
+    --calepin-surface: #17202a;
+    --calepin-surface-muted: #202b36;
+    --calepin-surface-raised: #1d2833;
+    --calepin-surface-inset: #101820;
+    --calepin-surface-code: #151d26;
+    --calepin-surface-output: var(--calepin-surface-muted);
+    --calepin-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.22);
+  }
+}
+
+:root,
+html[data-theme="light"],
+html[data-theme="dark"] {
+  --pico-background-color: var(--calepin-color-background);
+  --pico-color: var(--calepin-color-text);
+  --pico-muted-color: var(--calepin-color-muted);
+  --pico-muted-border-color: var(--calepin-color-border);
+  --pico-card-background-color: var(--calepin-surface-raised);
+  --pico-card-sectioning-background-color: var(--calepin-surface-muted);
+  --pico-code-background-color: var(--calepin-surface-code);
+  --pico-code-color: var(--calepin-color-text);
+  --pico-primary: var(--calepin-color-accent);
+  --pico-primary-background: var(--calepin-color-accent);
+  --pico-primary-border: var(--calepin-color-accent);
+  --pico-primary-underline: transparent;
+  --pico-primary-hover: var(--calepin-color-accent-hover);
+  --pico-primary-hover-background: var(--calepin-color-accent-hover);
+  --pico-primary-hover-border: var(--calepin-color-accent-hover);
+  --pico-primary-hover-underline: transparent;
+  --pico-primary-focus: color-mix(in srgb, var(--calepin-color-focus) 40%, transparent);
+  --pico-primary-inverse: var(--calepin-color-accent-contrast);
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-text);
+  font-family: var(--calepin-font-body);
+}
+
+body {
+  background: var(--calepin-color-background);
+  color: var(--calepin-color-text);
+  font-family: var(--calepin-font-body);
+  font-variant-numeric: oldstyle-nums;
+}
+
+a,
+a:hover,
+a:focus,
+a:focus-visible,
+a:active,
+a:visited {
+  color: var(--calepin-color-link);
+  text-decoration: none;
+}
+
+a:hover,
+a:focus,
+a:focus-visible,
+a:active {
+  color: var(--calepin-color-link-hover);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--calepin-font-heading);
+  font-weight: var(--calepin-heading-weight);
+  margin-top: 2rem;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: var(--calepin-line-height-tight);
+  margin-bottom: 1.15rem;
+}
+
+h2 {
+  margin-top: 2.8rem;
+  font-size: 1.55rem;
+}
+
+h3 {
+  margin-top: 2.1rem;
+  font-size: 1.2rem;
+}
+
+.calepin-content :where(p, li, dd) {
+  line-height: var(--calepin-line-height);
+}
+
+.calepin-content {
+  min-width: 0;
+}
+
+.calepin-document-main {
+  width: min(100% - 2rem, var(--calepin-content-width));
+  margin-inline: auto;
+}
+
+.calepin-content > :first-child {
+  margin-top: 0;
+}
+
+.calepin-content img,
+.calepin-content svg,
+.calepin-content video,
+.calepin-content canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.calepin-content math[display="block"] {
+  margin-block: var(--calepin-block-gap);
+}
+
+figure {
+  text-align: center;
+}
+
+figure > img {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.calepin-content figure {
+  margin: var(--calepin-block-gap) 0;
+}
+
+.calepin-content figcaption {
+  max-width: 34rem;
+  margin-top: 0.6rem;
+  color: var(--calepin-color-muted);
+  font-size: var(--calepin-font-size-sm);
+  line-height: 1.45;
+}
+
+.calepin-content .fullwidth,
+.calepin-content .full-width,
+.calepin-content figure.fullwidth,
+.calepin-content figure.full-width {
+  width: min(100vw - 2rem, var(--calepin-page-width));
+  max-width: var(--calepin-page-width);
+}
+
+.calepin-content blockquote {
+  margin: var(--calepin-block-gap) 0;
+  padding: 0.15rem 0 0.15rem 1.1rem;
+  border-left: 2px solid var(--calepin-color-accent);
+  color: var(--calepin-color-muted);
+}
+
+.calepin-content .calepin-float-right {
+  float: right;
+  width: min(32%, 12rem);
+  height: auto;
+  margin: 0.25rem 0 1rem 1.25rem;
+  border-radius: var(--calepin-radius-md);
+}
+
+.calepin-content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin-block: var(--calepin-block-gap);
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.calepin-content th,
+.calepin-content td {
+  padding: 0.45rem 0.65rem;
+  border-bottom: var(--calepin-border-width) solid var(--calepin-color-border);
+  vertical-align: top;
+}
+
+.calepin-content th {
+  font-weight: 700;
+}
+
+.calepin-landing,
+.calepin-landing-page {
+  width: 100%;
+  margin: 0;
+}
+
+.calepin-landing > :first-child,
+.calepin-landing-page > :first-child {
+  margin-top: 0;
+}
+
+.landing-button,
+.landing-button:visited {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
+  border: var(--calepin-border);
+  border-radius: var(--calepin-radius-md);
+  color: inherit;
+  font-weight: 650;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.landing-button-primary,
+.landing-button-primary:visited {
+  border-color: var(--calepin-color-accent);
+  background: var(--calepin-color-accent);
+  color: var(--calepin-color-accent-contrast);
+}
+
+.landing-button-primary:hover,
+.landing-button-primary:focus-visible {
+  border-color: var(--calepin-color-accent-hover);
+  background: var(--calepin-color-accent-hover);
+  color: var(--calepin-color-accent-contrast);
+}
+
+.landing-button-secondary,
+.landing-button-secondary:visited {
+  border-color: var(--calepin-color-border);
+  background: var(--calepin-surface);
+  color: inherit;
+}
+
+.landing-button-secondary:hover,
+.landing-button-secondary:focus-visible {
+  border-color: color-mix(in srgb, var(--calepin-color-accent) 50%, var(--calepin-color-border));
+  color: var(--calepin-color-accent-hover);
+}
+
+.landing-command-row,
+.landing-cta-row,
+.landing-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--calepin-space-sm);
+  align-items: center;
+}
+
+.landing-command-row code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  border: var(--calepin-border);
+  border-radius: var(--calepin-radius-md);
+  background: var(--calepin-surface-muted);
+  color: var(--calepin-color-text);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.landing-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--calepin-space-lg);
+  margin-block: var(--calepin-section-gap);
+}
+
+.landing-panel {
+  padding-block: var(--calepin-space-md);
+  border-top: var(--calepin-border);
+}
+
+.landing-checklist {
+  padding-left: 1.1rem;
+}
+
+@media (max-width: 48rem) {
+  h1 {
+    font-size: 1.9rem;
+  }
+
+  .landing-two-column {
+    grid-template-columns: 1fr;
+  }
+
+  .calepin-content .calepin-float-right {
+    float: none;
+    display: block;
+    width: min(100%, 16rem);
+    margin: 0.75rem auto 1.2rem;
+  }
+}
