@@ -459,8 +459,8 @@ mod tests {
 
         assert!(theme.join("layouts/webpage.html").exists());
         assert!(theme.join("partials/navbar-item.html").exists());
-        assert!(theme.join("styles/site.css").exists());
-        assert!(theme.join("scripts/site.js").exists());
+        assert!(theme.join("css/50_site.css").exists());
+        assert!(theme.join("js/site.js").exists());
         assert!(!theme.join("academic").exists());
     }
 
@@ -483,10 +483,9 @@ mod tests {
         assert!(theme.join("layouts/webpage.html").exists());
         assert!(theme.join("partials/site-nav.html").exists());
         assert!(theme.join("partials/theme-toggle.html").exists());
-        assert!(theme.join("styles/main.css").exists());
-        assert!(theme.join("styles/theme.css").exists());
-        assert!(theme.join("scripts/main.js").exists());
-        assert!(theme.join("scripts/copy-code.js").exists());
+        assert!(theme.join("css/50_main.css").exists());
+        assert!(theme.join("js/main.js").exists());
+        assert!(theme.join("js/copy-code.js").exists());
         assert!(!theme.parent().unwrap().join("shared").exists());
     }
 

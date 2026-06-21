@@ -56,9 +56,9 @@ themes/my-theme/
     landing.html         # optional page-specific override
   partials/
     ...                 # reusable template fragments
-  styles/
+  css/
     ...                 # theme CSS
-  scripts/
+  js/
     ...                 # theme JavaScript
   notebook.typ.jinja   # Typst template around notebook source
 ```
@@ -134,20 +134,20 @@ Partials receive the same template context as the file that includes them.
 
 = Shared imports
 
-`theme.toml` can request shared partials, styles, and scripts so a theme uses common
+`theme.toml` can request shared partials, CSS, and JS so a theme uses common
 pieces from the built-in stack.
 
 ```toml
 [shared]
 partials = ["site-meta.html", "theme-init.html", "styles.html", "scripts.html", "pagefind-modal.html", "theme-toggle.html"]
-styles = ["theme.css", "code.css", "widgets.css"]
-scripts = ["theme-toggle.js", "language-picker.js", "copy-code.js"]
+css = ["theme.css", "code.css", "widgets.css"]
+js = ["theme-toggle.js", "language-picker.js", "copy-code.js"]
 ```
 
-Shared items load first, then local files in `partials/`, `styles/`, and `scripts/`
+Shared items load first, then local files in `partials/`, `css/`, and `js/`
 override by filename if they exist.
 
-Use filenames only (`theme.css`, not `styles/theme.css`, and not `../theme.css`).
+Use filenames only (`theme.css`, not `css/theme.css`, and not `../theme.css`).
 
 = Notebook Typst templates
 

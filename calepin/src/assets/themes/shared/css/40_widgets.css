@@ -1,0 +1,207 @@
+[data-calepin-theme-toggle],
+.calepin-nav-toggle {
+  min-width: 0;
+  border: 0;
+  border-radius: var(--calepin-radius-sm);
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-size: 0.82rem;
+}
+
+[data-calepin-theme-toggle] {
+  display: inline-grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  line-height: 1;
+}
+
+[data-calepin-theme-toggle]:hover,
+[data-calepin-theme-toggle]:focus,
+[data-calepin-theme-toggle]:active,
+.calepin-nav-toggle:hover,
+.calepin-nav-toggle:focus,
+.calepin-nav-toggle:active {
+  border: 0;
+  background: var(--calepin-color-accent-soft);
+  box-shadow: none;
+  color: inherit;
+}
+
+[data-calepin-theme-toggle]:focus-visible,
+.calepin-nav-toggle:focus-visible {
+  outline: 2px solid var(--calepin-color-focus);
+  outline-offset: 2px;
+}
+
+[data-calepin-theme-toggle] svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: inherit;
+  stroke: currentColor;
+  fill: none;
+}
+
+[data-calepin-theme-toggle] svg path[fill="currentColor"] {
+  fill: currentColor;
+}
+
+.calepin-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  width: 1.05em;
+  height: 1.05em;
+  flex: 0 0 auto;
+}
+
+.calepin-nav-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+a:has(.calepin-nav-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.calepin-site-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--calepin-z-topbar);
+  min-height: var(--calepin-topbar-height);
+  border-bottom: var(--calepin-border);
+  background: color-mix(in srgb, var(--calepin-color-background) 94%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.calepin-site-nav {
+  min-height: var(--calepin-topbar-height);
+  gap: 1rem;
+}
+
+.calepin-site-brand {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: inherit;
+  font-family: var(--calepin-font-heading);
+  font-weight: var(--calepin-heading-weight);
+  text-decoration: none;
+}
+
+.calepin-site-logo {
+  display: block;
+  width: auto;
+  max-height: 1.8rem;
+}
+
+.calepin-site-topbar a,
+.calepin-site-topbar a:hover,
+.calepin-site-topbar a:focus,
+.calepin-site-topbar a:focus-visible,
+.calepin-site-topbar a:active,
+.calepin-site-topbar a:visited,
+.calepin-site-topbar a.active,
+.calepin-site-topbar a[aria-current] {
+  color: inherit;
+  text-decoration: none;
+}
+
+.calepin-site-menu a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0.1rem 0;
+  border-bottom: 1px solid transparent;
+  color: inherit;
+  font-size: 0.92rem;
+}
+
+.calepin-site-menu a:hover,
+.calepin-site-menu a:focus-visible,
+.calepin-site-menu a.active,
+.calepin-site-menu a[aria-current] {
+  border-bottom-color: var(--calepin-color-accent);
+  color: inherit;
+}
+
+.calepin-nav-toggle {
+  display: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  gap: 0.22rem;
+}
+
+.calepin-nav-toggle span {
+  display: block;
+  width: 1.05rem;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.calepin-language-picker.dropdown {
+  margin: 0;
+  width: max-content;
+}
+
+.calepin-language-picker-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: max-content;
+  max-width: none;
+  border: 0;
+  padding-inline: 0.65rem;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.calepin-language-picker-button:hover,
+.calepin-language-picker-button:focus,
+.calepin-language-picker-button:active {
+  border: 0;
+  background: color-mix(in srgb, var(--calepin-color-muted) 10%, transparent);
+  box-shadow: none;
+  color: inherit;
+}
+
+.calepin-language-picker-button::after {
+  display: none;
+}
+
+.calepin-language-picker-button span,
+.calepin-language-picker-menu a span {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.calepin-language-picker-menu a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: max-content;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.calepin-language-picker-menu {
+  min-width: 100%;
+  width: max-content;
+}
+
+.calepin-language-picker-menu a[aria-current="true"] {
+  background: var(--calepin-surface-muted);
+}

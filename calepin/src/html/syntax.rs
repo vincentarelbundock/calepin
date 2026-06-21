@@ -61,7 +61,7 @@ impl HtmlSyntaxTheme {
         syntax_theme::typst_runtime_source(&self.runtime_theme_source, &self.paged_theme_source)
     }
 
-    pub(super) fn declarations(&self, dark: bool) -> String {
+    pub(crate) fn declarations(&self, dark: bool) -> String {
         let mut declarations = String::new();
         declarations.push_str("  --calepin-syntax-foreground: ");
         declarations.push_str(if dark {
@@ -110,7 +110,7 @@ impl HtmlSyntaxTheme {
         declarations
     }
 
-    pub(super) fn class_rules(&self) -> String {
+    pub(crate) fn class_rules(&self) -> String {
         let mut rules = String::new();
         for token in &self.tokens {
             rules.push_str(".sourceCode .");

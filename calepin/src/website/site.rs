@@ -93,6 +93,7 @@ impl SiteModel {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn theme_context(
         &self,
         current_href: &str,
@@ -100,6 +101,25 @@ impl SiteModel {
         page_info_map: &PageInfoMap,
         languages: Option<&[LanguageInfo]>,
         search: Option<SearchEngine>,
+    ) -> SiteContextInput {
+        self.theme_context_with_assets(
+            current_href,
+            page_info,
+            page_info_map,
+            languages,
+            search,
+            &[],
+        )
+    }
+
+    pub(super) fn theme_context_with_assets(
+        &self,
+        current_href: &str,
+        page_info: Option<&PageInfo>,
+        page_info_map: &PageInfoMap,
+        languages: Option<&[LanguageInfo]>,
+        search: Option<SearchEngine>,
+        theme_assets: &[crate::html::SiteThemeAsset],
     ) -> SiteContextInput {
         let mut sidebar = Vec::new();
         let mut sidebar_sections = Vec::new();
@@ -192,6 +212,7 @@ impl SiteModel {
             stylesheet: None,
             config_stylesheets: Vec::new(),
             scripts: Vec::new(),
+            theme_assets: theme_assets.to_vec(),
             pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {
                 css: html_escape(&page_relative_url(current_href, PAGEFIND_CSS)),
                 js: html_escape(&page_relative_url(current_href, PAGEFIND_JS)),

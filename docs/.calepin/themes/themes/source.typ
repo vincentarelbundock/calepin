@@ -57,8 +57,8 @@ themes/my-theme/
     notebook.html    # layout for a single notebook rendered to HTML
     landing.html     # optional page-specific website layout
   partials/          # MiniJinja fragments
-  styles/            # CSS files
-  scripts/           # JavaScript files
+  css/               # CSS files
+  js/                # JavaScript files
   notebook.typ.jinja # Typst notebook template for PDF (and SVG)
 ```
 

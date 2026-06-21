@@ -295,7 +295,7 @@ Theme is a compile-time concern.
 
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
     assert!(
-        html.contains("href=\"https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css\""),
+        !html.contains("cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"),
         "{html}"
     );
     assert!(html.contains("calepin-document-main"), "{html}");

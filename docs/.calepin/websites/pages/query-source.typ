@@ -13,6 +13,8 @@ include = ["blog/*.typ", "legal/privacy.typ"]
 exclude = ["drafts/**"]
 ```
 
+Excluded files are also omitted from copied `.typ` source artifacts in the build output directory.
+
 Put the page title in the document and keep website metadata for fields used by listings, routing, and output options:
 
 ```typ

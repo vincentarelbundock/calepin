@@ -1,13 +1,9 @@
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-{% if site.stylesheet %}
-    <link rel="stylesheet" href="{{ site.stylesheet }}">
-{% else %}
-{% for style in styles -%}
-    <style>
-{{ style.css }}
-    </style>
-{% endfor -%}
+{% for asset in site.theme_assets %}
+{% if asset.kind == "css" %}
+    <link rel="stylesheet" href="{{ asset.href }}">
 {% endif %}
+{% endfor %}
+
 {% for stylesheet in site.config_stylesheets -%}
     <link rel="stylesheet" href="{{ stylesheet }}">
 {% endfor -%}

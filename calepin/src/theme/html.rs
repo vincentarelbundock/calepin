@@ -5,7 +5,8 @@ use serde::Deserialize;
 
 use super::bundle::{require_builtin, shared_file, BundleDef, CALEPIN};
 use super::{
-    dir_theme_name, read_theme_files, validate_theme_dir, ThemeSelection, DEFAULT_THEME_NAME,
+    dir_theme_name, read_theme_files, read_theme_files_any, validate_theme_dir, ThemeSelection,
+    DEFAULT_THEME_NAME,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,6 +36,8 @@ pub struct HtmlEntry {
     pub styles: Vec<(String, String)>,
     /// (file name, js), shared imports first, then theme-local files.
     pub scripts: Vec<(String, String)>,
+    /// (file name, text), shared imports first, then theme-local files.
+    pub assets: Vec<(String, String)>,
     /// True when the layout came from the builtin default bundle (either
     /// because it was selected or via fallback).
     pub is_default: bool,
@@ -70,6 +73,7 @@ pub fn style_only_html_entry(styles: Vec<crate::config::CssOverride>) -> HtmlEnt
         partials: Vec::new(),
         styles: Vec::new(),
         scripts: Vec::new(),
+        assets: Vec::new(),
         is_default: false,
     };
     entry.append_styles(styles);
@@ -86,8 +90,9 @@ pub(crate) struct ThemeManifest {
 #[serde(default, deny_unknown_fields)]
 struct SharedImports {
     partials: Vec<String>,
-    styles: Vec<String>,
-    scripts: Vec<String>,
+    css: Vec<String>,
+    js: Vec<String>,
+    assets: Vec<String>,
 }
 
 /// Resolve the layout for `scope`. `None` means raw Typst output.
@@ -209,8 +214,9 @@ fn bundle_entry(bundle: &'static BundleDef, entry: &str, is_default: bool) -> Re
             .into_iter()
             .map(|(name, source)| (format!("partials/{name}"), source))
             .collect(),
-        styles: bundle_assets(bundle, &manifest.shared.styles, "styles/", "css")?,
-        scripts: bundle_assets(bundle, &manifest.shared.scripts, "scripts/", "js")?,
+        styles: bundle_assets(bundle, &manifest.shared.css, "css/", "css")?,
+        scripts: bundle_assets(bundle, &manifest.shared.js, "js/", "js")?,
+        assets: bundle_assets_any(bundle, &manifest.shared.assets, "assets/")?,
         is_default,
     })
 }
@@ -228,8 +234,9 @@ fn dir_entry(dir: &Path, entry: &str) -> Result<HtmlEntry> {
             .into_iter()
             .map(|(file, source)| (format!("partials/{file}"), source))
             .collect(),
-        styles: dir_assets(dir, &manifest.shared.styles, "styles", "css")?,
-        scripts: dir_assets(dir, &manifest.shared.scripts, "scripts", "js")?,
+        styles: dir_assets(dir, &manifest.shared.css, "css", "css")?,
+        scripts: dir_assets(dir, &manifest.shared.js, "js", "js")?,
+        assets: dir_assets_any(dir, &manifest.shared.assets, "assets")?,
         is_default: false,
     })
 }
@@ -255,18 +262,17 @@ fn dir_manifest(dir: &Path) -> Result<ThemeManifest> {
 fn collect_shared_assets(
     local_files: Vec<(String, String)>,
     imports: &[String],
-    ext: &str,
+    label: &str,
+    extension: Option<&str>,
     mut resolve_import: impl FnMut(&str) -> Result<Option<String>>,
 ) -> Result<Vec<(String, String)>> {
     let mut imported = std::collections::BTreeSet::new();
     let mut files = Vec::new();
 
     for name in imports {
-        validate_shared_import(name, ext)?;
+        validate_shared_import(name, extension)?;
         if !imported.insert(name.clone()) {
-            return Err(anyhow!(
-                "shared {ext} import `{name}` is listed more than once"
-            ));
+            return Err(anyhow!("shared import `{name}` is listed more than once"));
         }
 
         if let Some((_, source)) = local_files.iter().find(|(file, _)| file == name) {
@@ -275,7 +281,7 @@ fn collect_shared_assets(
         }
 
         let source = resolve_import(name)?
-            .ok_or_else(|| anyhow!("shared {ext} import `{name}` was not found"))?;
+            .ok_or_else(|| anyhow!("shared {label} import `{name}` was not found"))?;
         files.push((name.clone(), source));
     }
 
@@ -293,8 +299,8 @@ fn bundle_assets(
     prefix: &str,
     ext: &str,
 ) -> Result<Vec<(String, String)>> {
-    let local_files = bundle_files(bundle, prefix, ext);
-    collect_shared_assets(local_files, imports, ext, |name| {
+    let local_files = bundle_files(bundle, prefix, Some(ext));
+    collect_shared_assets(local_files, imports, ext, Some(ext), |name| {
         let path = format!("{prefix}{name}");
         Ok(bundle
             .file(&path)
@@ -303,12 +309,34 @@ fn bundle_assets(
     })
 }
 
-fn bundle_files(bundle: &BundleDef, prefix: &str, ext: &str) -> Vec<(String, String)> {
-    let suffix = format!(".{ext}");
+fn bundle_assets_any(
+    bundle: &BundleDef,
+    imports: &[String],
+    prefix: &str,
+) -> Result<Vec<(String, String)>> {
+    let local_files = bundle_files(bundle, prefix, None);
+    collect_shared_assets(local_files, imports, "asset", None, |name| {
+        let path = format!("{prefix}{name}");
+        Ok(bundle
+            .file(&path)
+            .or_else(|| shared_file(&path))
+            .map(str::to_string))
+    })
+}
+
+fn bundle_files(bundle: &BundleDef, prefix: &str, ext: Option<&str>) -> Vec<(String, String)> {
     let mut files: Vec<(String, String)> = bundle
         .files
         .iter()
-        .filter(|file| file.path.starts_with(prefix) && file.path.ends_with(&suffix))
+        .filter(|file| {
+            if !file.path.starts_with(prefix) {
+                return false;
+            }
+            match ext {
+                Some(ext) => file.path.ends_with(&format!(".{ext}")),
+                None => true,
+            }
+        })
         .map(|file| {
             let name = file
                 .path
@@ -329,7 +357,21 @@ fn dir_assets(
     ext: &str,
 ) -> Result<Vec<(String, String)>> {
     let local_files = read_theme_files(&dir.join(subdir), ext)?;
-    collect_shared_assets(local_files, imports, ext, |name| {
+    collect_shared_assets(
+        local_files,
+        imports,
+        ext,
+        Some(ext),
+        |name| {
+            let path = format!("{subdir}/{name}");
+            Ok(dir_shared_file(dir, &path)?.or_else(|| shared_file(&path).map(str::to_string)))
+        },
+    )
+}
+
+fn dir_assets_any(dir: &Path, imports: &[String], subdir: &str) -> Result<Vec<(String, String)>> {
+    let local_files = read_theme_files_any(&dir.join(subdir))?;
+    collect_shared_assets(local_files, imports, "asset", None, |name| {
         let path = format!("{subdir}/{name}");
         Ok(dir_shared_file(dir, &path)?.or_else(|| shared_file(&path).map(str::to_string)))
     })
@@ -348,7 +390,7 @@ fn dir_shared_file(dir: &Path, relative: &str) -> Result<Option<String>> {
         .with_context(|| format!("failed to read {}", path.display()))
 }
 
-fn validate_shared_import(name: &str, ext: &str) -> Result<()> {
+fn validate_shared_import(name: &str, ext: Option<&str>) -> Result<()> {
     if name.trim() != name || name.is_empty() {
         return Err(anyhow!("shared import names must be non-empty filenames"));
     }
@@ -365,8 +407,10 @@ fn validate_shared_import(name: &str, ext: &str) -> Result<()> {
             "shared import `{name}` must be a filename, not a path"
         ));
     }
-    if path.extension().and_then(|extension| extension.to_str()) != Some(ext) {
-        return Err(anyhow!("shared import `{name}` must be a .{ext} file"));
+    if let Some(ext) = ext {
+        if path.extension().and_then(|extension| extension.to_str()) != Some(ext) {
+            return Err(anyhow!("shared import `{name}` must be a .{ext} file"));
+        }
     }
     Ok(())
 }

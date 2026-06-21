@@ -11,7 +11,8 @@ use std::path::PathBuf;
 pub(crate) use minify::minify_html_file;
 pub(crate) use syntax::HtmlSyntaxTheme;
 pub(crate) use theme::{
-    SiteContextInput, SiteLanguageEntry, SiteMenu, SiteNavEntry, SiteNavSection, SitePagefindEntry,
+    theme_css, SiteContextInput, SiteLanguageEntry, SiteMenu, SiteNavEntry, SiteNavSection,
+    SitePagefindEntry, SiteThemeAsset,
 };
 
 /// Read `path`, transform its contents, and write the result back only when it
@@ -30,21 +31,6 @@ fn rewrite_file_in_place(
     Ok(())
 }
 
-/// Concatenate non-empty CSS/JS chunks separated by a blank line, each
-/// terminated by a newline. Returns `None` when there is nothing to join.
-fn join_blocks(chunks: impl IntoIterator<Item = String>) -> Option<String> {
-    let mut out = String::new();
-    for chunk in chunks {
-        if !out.is_empty() {
-            out.push_str("\n\n");
-        }
-        out.push_str(&chunk);
-        if !chunk.ends_with('\n') {
-            out.push('\n');
-        }
-    }
-    (!out.is_empty()).then_some(out)
-}
 
 pub(crate) fn apply_html_theme_file_with_site_context(
     path: &Path,
@@ -72,35 +58,6 @@ pub(crate) fn inline_html_images_file(path: &Path, root: &Path) -> Result<()> {
     })
 }
 
-pub(crate) fn html_theme_stylesheet(
-    entry: &crate::theme::HtmlEntry,
-    syntax_theme: &HtmlSyntaxTheme,
-) -> Result<Option<String>> {
-    theme::theme_stylesheet(entry, syntax_theme)
-}
-
-pub(crate) fn html_theme_script(entry: &crate::theme::HtmlEntry) -> Option<String> {
-    join_blocks(entry.scripts.iter().map(|(_, content)| content.clone()))
-}
-
-#[cfg(test)]
-pub(crate) fn write_html_theme_stylesheet(
-    entry: &crate::theme::HtmlEntry,
-    out_dir: &Path,
-    rel_path: &Path,
-) -> Result<bool> {
-    let syntax_theme = HtmlSyntaxTheme::builtin();
-    let Some(css) = html_theme_stylesheet(entry, &syntax_theme)? else {
-        return Ok(false);
-    };
-    let path = out_dir.join(rel_path);
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    std::fs::write(&path, css).with_context(|| format!("failed to write {}", path.display()))?;
-    Ok(true)
-}
 
 #[cfg(test)]
 mod minify_tests {
@@ -160,6 +117,25 @@ mod tests {
 
     fn apply_html_theme(html: &str, entry: Option<&HtmlEntry>) -> Result<String> {
         theme::apply_html_theme(html, entry, &HtmlSyntaxTheme::builtin(), None, None, None)
+    }
+
+    fn theme_stylesheet(entry: &HtmlEntry, syntax_theme: &HtmlSyntaxTheme) -> String {
+        entry
+            .styles
+            .iter()
+            .map(|(_, css)| theme_css(css, syntax_theme))
+            .filter(|css| !css.trim().is_empty())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn theme_scripts(entry: &HtmlEntry) -> String {
+        entry
+            .scripts
+            .iter()
+            .map(|(_, script)| script.as_str())
+            .collect::<Vec<_>>()
+            .join("\n\n")
     }
 
     /// Writes a minimal theme bundle directory holding one entry file.
@@ -322,7 +298,7 @@ mod tests {
         let themed = apply_html_theme(SAMPLE_HTML, Some(&entry)).unwrap();
 
         assert!(themed.contains("<title>Standard Title</title>"));
-        assert!(themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
+        assert!(!themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
         assert!(themed.contains("<main class=\"container calepin-content calepin-document-main\">"));
         assert!(themed.contains(".sourceCode,"));
         assert!(themed.contains(".cell-output,"));
@@ -337,9 +313,7 @@ mod tests {
     #[test]
     fn default_document_theme_constrains_text_width() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Document);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
+        let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
         assert!(
             css.contains(
@@ -452,7 +426,7 @@ mod tests {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Document);
         let themed = apply_html_theme(fragment, Some(&entry)).unwrap();
 
-        assert!(themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
+        assert!(!themed.contains("https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"));
         assert!(themed.contains("<main class=\"container calepin-content calepin-document-main\">"));
         assert!(themed.contains(r#"<h1 id="hello">Hello</h1>"#));
     }
@@ -516,8 +490,8 @@ mod tests {
         let theme_dir = dir.path().join("mini");
         std::fs::create_dir_all(theme_dir.join("layouts")).unwrap();
         std::fs::create_dir_all(theme_dir.join("partials")).unwrap();
-        std::fs::create_dir_all(theme_dir.join("styles")).unwrap();
-        std::fs::create_dir_all(theme_dir.join("scripts")).unwrap();
+        std::fs::create_dir_all(theme_dir.join("css")).unwrap();
+        std::fs::create_dir_all(theme_dir.join("js")).unwrap();
         std::fs::write(
             theme_dir.join("layouts/notebook.html"),
             "{{ doc.head }}{% for s in styles %}<style>{{ s.css }}</style>{% endfor %}{{ doc.body_open }}{% include \"partials/banner.html\" %}{{ doc.body }}{% for s in scripts %}<script>{{ s.content }}</script>{% endfor %}{{ doc.body_close }}",
@@ -528,8 +502,8 @@ mod tests {
             "<header>hi</header>",
         )
         .unwrap();
-        std::fs::write(theme_dir.join("styles/main.css"), "body{color:red}").unwrap();
-        std::fs::write(theme_dir.join("scripts/main.js"), "console.log(1)").unwrap();
+        std::fs::write(theme_dir.join("css/main.css"), "body{color:red}").unwrap();
+        std::fs::write(theme_dir.join("js/main.js"), "console.log(1)").unwrap();
 
         let themed = apply_html_theme(SAMPLE_HTML, Some(&dir_document_entry(&theme_dir))).unwrap();
 
@@ -858,9 +832,7 @@ mod tests {
     #[test]
     fn default_website_theme_allows_wider_landing_hero_headline() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
+        let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
         assert!(css.contains(
             r#".landing-hero h2 {
@@ -922,10 +894,8 @@ mod tests {
         for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
             let entry = entry_for(&selection, HtmlScope::Site);
             let theme_name = entry.theme_name.clone();
-            let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-                .unwrap()
-                .unwrap();
-            let script = html_theme_script(&entry).unwrap();
+            let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
+            let script = theme_scripts(&entry);
 
             assert!(
                 css.contains(
@@ -966,9 +936,7 @@ mod tests {
         for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
             let entry = entry_for(&selection, HtmlScope::Site);
             let theme_name = entry.theme_name.clone();
-            let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-                .unwrap()
-                .unwrap();
+            let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
             for token in [
                 "--calepin-color-background",
@@ -1015,9 +983,7 @@ mod tests {
     #[test]
     fn academic_document_page_width_token_is_theme_invariant() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
+        let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
         let light = root_custom_property(&css, "light", "--calepin-page-width").unwrap();
         let dark = root_custom_property(&css, "dark", "--calepin-page-width").unwrap();
@@ -1035,9 +1001,7 @@ mod tests {
     #[test]
     fn academic_document_reserves_margin_only_for_margin_content() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
+        let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
         assert!(
             css.contains(
@@ -1075,9 +1039,7 @@ mod tests {
     #[test]
     fn academic_margin_content_stacks_before_it_can_overlap_text() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
+        let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
         assert!(
             css.contains("@media (max-width: calc(39rem + 16rem + 2rem + 2rem))"),
@@ -1088,9 +1050,7 @@ mod tests {
     #[test]
     fn academic_document_caps_sized_figures_to_text_column() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
+        let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
         let max_width = element_property_with_inline(
             &css,
@@ -1105,9 +1065,7 @@ mod tests {
     #[test]
     fn academic_document_aligns_sized_figures_with_text_column() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Document);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
+        let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
         let margin_inline = element_property_with_inline(
             &css,
@@ -1158,9 +1116,7 @@ mod tests {
     #[test]
     fn academic_site_theme_centers_text_and_inherits_shared_code_styles() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
-        let css = html_theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin())
-            .unwrap()
-            .unwrap();
+        let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
 
         assert!(css.contains(
             r#".academic-page {
@@ -1186,7 +1142,7 @@ mod tests {
     #[test]
     fn academic_site_theme_does_not_rewire_footnotes() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
-        let script = html_theme_script(&entry).unwrap();
+        let script = theme_scripts(&entry);
 
         // Footnotes are left as native footnotes; the theme no longer moves
         // endnotes into the margin. Margin placement is an explicit author
@@ -1249,7 +1205,7 @@ mod tests {
     #[test]
     fn bundled_website_theme_script_closes_other_sidebar_sections() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
-        let script = html_theme_script(&entry).unwrap();
+        let script = theme_scripts(&entry);
 
         assert!(script.contains("initSidebarSections"));
         assert!(script.contains(".calepin-website-sidebar-section"));
@@ -1285,15 +1241,31 @@ mod tests {
     }
 
     #[test]
-    fn bundled_website_theme_can_link_external_stylesheet() {
+    fn bundled_website_theme_links_theme_stylesheet_assets() {
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+        let theme_assets = entry
+            .styles
+            .iter()
+            .map(|(name, _)| {
+                let stem = std::path::Path::new(name)
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .unwrap_or(name)
+                    .to_string();
+                crate::html::SiteThemeAsset {
+                    name: name.clone(),
+                    href: format!("../.calepin/{stem}.css"),
+                    kind: "css".to_string(),
+                }
+            })
+            .collect();
         let site_context = SiteContextInput {
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
-            stylesheet: Some("../.calepin/calepin-website.css".to_string()),
-            config_stylesheets: vec!["../.calepin/calepin-style-0.0123456789abcdef.css".to_string()],
+            theme_assets,
+            config_stylesheets: vec!["../.calepin/site.css".to_string()],
             ..SiteContextInput::default()
         };
-        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
 
         let themed = theme::apply_html_theme(
             SAMPLE_HTML,
@@ -1305,15 +1277,30 @@ mod tests {
         )
         .unwrap();
 
-        let theme_stylesheet = themed
-            .find(r#"<link rel="stylesheet" href="../.calepin/calepin-website.css">"#)
+        let pico_css = themed
+            .find(r#"<link rel="stylesheet" href="../.calepin/10_pico.css">"#)
+            .unwrap();
+        let theme_css = themed
+            .find(r#"<link rel="stylesheet" href="../.calepin/20_theme.css">"#)
+            .unwrap();
+        let code_css = themed
+            .find(r#"<link rel="stylesheet" href="../.calepin/30_code.css">"#)
+            .unwrap();
+        let widgets_css = themed
+            .find(r#"<link rel="stylesheet" href="../.calepin/40_widgets.css">"#)
             .unwrap();
         let config_stylesheet = themed
-            .find(
-                r#"<link rel="stylesheet" href="../.calepin/calepin-style-0.0123456789abcdef.css">"#,
-            )
+            .find(r#"<link rel="stylesheet" href="../.calepin/site.css">"#)
             .unwrap();
-        assert!(theme_stylesheet < config_stylesheet);
+
+        assert!(pico_css < theme_css);
+        assert!(theme_css < code_css);
+        assert!(code_css < widgets_css);
+        assert!(widgets_css < config_stylesheet);
+        assert!(
+            !themed.contains(r#"<link rel="stylesheet" href="../.calepin/calepin-website.css">"#)
+        );
+        assert!(!themed.contains("<style>"));
         assert!(!themed.contains("--calepin-code-border"));
         assert!(!themed.contains("--calepin-topbar-height"));
     }
@@ -1323,7 +1310,7 @@ mod tests {
         let site_context = SiteContextInput {
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
-            scripts: vec!["../.calepin/calepin-website.0123456789abcdef.js".to_string()],
+            scripts: vec!["../.calepin/theme-toggle.js".to_string()],
             ..SiteContextInput::default()
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
@@ -1338,25 +1325,24 @@ mod tests {
         )
         .unwrap();
 
-        assert!(themed.contains(
-            r#"<script src="../.calepin/calepin-website.0123456789abcdef.js"></script>"#
-        ));
+        assert!(themed.contains(r#"<script src="../.calepin/theme-toggle.js"></script>"#));
         assert!(!themed.contains("data-calepin-theme-toggle], #calepin-theme-button"));
     }
 
     #[test]
-    fn writes_bundled_website_stylesheet() {
-        let dir = tempfile::tempdir().unwrap();
-        let rel = Path::new(".calepin/calepin-website.css");
+    fn bundled_website_theme_does_not_inline_theme_js_for_default_theme() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
 
-        let wrote = write_html_theme_stylesheet(&entry, dir.path(), rel).unwrap();
-
-        assert!(wrote);
-        let css = std::fs::read_to_string(dir.path().join(rel)).unwrap();
-        assert!(css.contains(".cell-output,"));
-        assert!(css.contains(".calepin-website-shell"));
-        assert!(css.contains("--calepin-syntax-foreground"));
+        assert!(!themed.contains("[data-calepin-theme-toggle], #calepin-theme-button"));
     }
 
     #[test]

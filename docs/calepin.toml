@@ -4,7 +4,7 @@ base_url = "https://vincentarelbundock.github.io/calepin"
 logo = "assets/logo_short.svg"
 logo_alt = "Calepin"
 pdf = true
-minify = true
+minify = false
 search = "pagefind"
 highlight-light = "assets/Catppuccin Latte.tmTheme"
 highlight-dark = "assets/Catppuccin Mocha.tmTheme"
@@ -98,6 +98,9 @@ title = "Websites"
 
   [[sidebar.section.item]]
   target = "websites/multilingual.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/elements.typ"
 
   [[sidebar.section.item]]
   target = "websites/custom-elements.typ"

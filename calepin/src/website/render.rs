@@ -3,9 +3,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
-use xxhash_rust::xxh3::xxh3_64;
 
-use crate::html::{html_theme_script, html_theme_stylesheet, minify_html_file, HtmlSyntaxTheme};
+use crate::html::{minify_html_file, theme_css, HtmlSyntaxTheme};
 use crate::typst::compile::{compile_with_typst, CompileOptions, OutputFormat};
 use crate::typst::paths::project_relative_path;
 use crate::typst::preprocess::PreprocessOutput;
@@ -14,7 +13,7 @@ use crate::utils::html::escape as html_escape;
 use super::preprocess::run_parallel;
 use super::site::SiteModel;
 use super::url::page_relative_url;
-use super::{BuildContext, SOURCE_DATA_ID, WEBSITE_ASSET_STEM};
+use super::{BuildContext, SOURCE_DATA_ID};
 
 pub(super) fn render_documents(
     context: &BuildContext,
@@ -82,7 +81,6 @@ impl From<&crate::theme::HtmlEntry> for HtmlEntryAssetKey {
 
 pub(super) struct PageAssetDecision {
     pub(super) html_entry: Option<crate::theme::HtmlEntry>,
-    pub(super) stylesheet: Option<String>,
     pub(super) config_stylesheets: Vec<String>,
     pub(super) scripts: Vec<String>,
 }
@@ -91,13 +89,9 @@ pub(super) fn page_asset_decision(
     page_entry: Option<crate::theme::HtmlEntry>,
     config_styles: &[crate::config::CssOverride],
     generated_entry: Option<&crate::theme::HtmlEntry>,
-    generated_stylesheet: Option<&str>,
     generated_scripts: &[String],
     generated_config_stylesheets: &[String],
 ) -> PageAssetDecision {
-    let page_references_site_stylesheet = page_entry
-        .as_ref()
-        .is_some_and(html_entry_references_site_stylesheet);
     let page_references_config_stylesheets = page_entry
         .as_ref()
         .is_some_and(html_entry_references_config_stylesheets)
@@ -120,11 +114,6 @@ pub(super) fn page_asset_decision(
             .is_some_and(|(page, generated)| {
                 HtmlEntryAssetKey::from(page) == HtmlEntryAssetKey::from(generated)
             });
-    let stylesheet = if matches_generated_entry && page_references_site_stylesheet {
-        generated_stylesheet.map(str::to_string)
-    } else {
-        None
-    };
     let config_stylesheets = if links_config_styles {
         generated_config_stylesheets.to_vec()
     } else {
@@ -143,14 +132,9 @@ pub(super) fn page_asset_decision(
 
     PageAssetDecision {
         html_entry,
-        stylesheet,
         config_stylesheets,
         scripts,
     }
-}
-
-fn html_entry_references_site_stylesheet(entry: &crate::theme::HtmlEntry) -> bool {
-    html_entry_references_template_token(entry, b"site.stylesheet")
 }
 
 fn html_entry_references_config_stylesheets(entry: &crate::theme::HtmlEntry) -> bool {
@@ -380,12 +364,13 @@ fn render_document(
 
     let current_href = page_info.href.clone();
     let page_meta = context.page_meta.get(input_path);
-    let mut site_context = site.theme_context(
+    let mut site_context = site.theme_context_with_assets(
         &current_href,
         Some(page_info),
         &context.page_info,
         context.languages.as_deref(),
         context.search,
+        &context.theme_assets,
     );
     site_context.revealjs = context.revealjs_options.clone();
     let page_site_entry = if let Some(layout) = page_meta.and_then(|meta| meta.layout.as_deref()) {
@@ -397,14 +382,10 @@ fn render_document(
         page_site_entry,
         &context.config_styles,
         context.generated_theme_entry.as_ref(),
-        context.theme_stylesheet.as_deref(),
         &context.theme_scripts,
         &context.config_stylesheets,
     );
     let page_site_entry = asset_decision.html_entry;
-    if let Some(stylesheet) = asset_decision.stylesheet.as_deref() {
-        site_context.stylesheet = Some(html_escape(&page_relative_url(&current_href, stylesheet)));
-    }
     site_context.config_stylesheets = asset_decision
         .config_stylesheets
         .iter()
@@ -415,6 +396,7 @@ fn render_document(
         .iter()
         .map(|script| html_escape(&page_relative_url(&current_href, script)))
         .collect();
+    rewrite_theme_asset_hrefs(&current_href, &mut site_context.theme_assets);
 
     let compile = |output: PathBuf,
                    format: OutputFormat,
@@ -470,6 +452,13 @@ fn render_document(
     Ok(())
 }
 
+fn rewrite_theme_asset_hrefs(current_href: &str, theme_assets: &mut [crate::html::SiteThemeAsset]) {
+    for asset in theme_assets.iter_mut() {
+        let href = page_relative_url(current_href, &asset.href);
+        asset.href = html_escape(&href);
+    }
+}
+
 fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
     let source = fs::read_to_string(source_path)
         .with_context(|| format!("failed to read {}", source_path.display()))?;
@@ -489,8 +478,17 @@ fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct ThemeGeneratedAssets {
-    pub(super) stylesheet: Option<GeneratedThemeAsset>,
-    pub(super) script: Option<GeneratedThemeAsset>,
+    pub(super) stylesheets: Vec<GeneratedThemeAsset>,
+    pub(super) scripts: Vec<GeneratedThemeAsset>,
+    pub(super) assets: Vec<GeneratedThemeAsset>,
+    pub(super) theme_assets: Vec<ThemeAssetInfo>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ThemeAssetInfo {
+    pub(crate) name: String,
+    pub(crate) rel_path: PathBuf,
+    pub(crate) kind: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -510,15 +508,71 @@ impl ThemeGeneratedAssets {
         syntax_theme: &HtmlSyntaxTheme,
         asset_dir: &Path,
     ) -> Result<Self> {
-        let stylesheet = html_theme_stylesheet(entry, syntax_theme)?
-            .map(|content| GeneratedThemeAsset::new(asset_dir, WEBSITE_ASSET_STEM, "css", content));
-        let script = html_theme_script(entry)
-            .map(|content| GeneratedThemeAsset::new(asset_dir, WEBSITE_ASSET_STEM, "js", content));
-        Ok(Self { stylesheet, script })
+        let mut stylesheets = Vec::new();
+        let mut scripts = Vec::new();
+        let mut assets = Vec::new();
+        let mut theme_assets = Vec::new();
+        for (name, source) in &entry.styles {
+            let css = theme_css(source, syntax_theme);
+            if css.trim().is_empty() {
+                continue;
+            }
+            let asset = GeneratedThemeAsset::new_with_name(asset_dir, name, "css", css);
+            theme_assets.push(ThemeAssetInfo {
+                name: name.clone(),
+                rel_path: asset.rel_path.clone(),
+                kind: "css".to_string(),
+            });
+            stylesheets.push(asset);
+        }
+        for (name, source) in &entry.scripts {
+            let kind = Path::new(name)
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .unwrap_or("js")
+                .to_string();
+            let asset = GeneratedThemeAsset::new_with_name(asset_dir, name, &kind, source.clone());
+            theme_assets.push(ThemeAssetInfo {
+                name: name.clone(),
+                rel_path: asset.rel_path.clone(),
+                kind: kind.clone(),
+            });
+            scripts.push(asset);
+        }
+        for (name, source) in &entry.assets {
+            let kind = Path::new(name)
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .unwrap_or("")
+                .to_string();
+            let rel_kind = if kind.is_empty() { "txt" } else { &kind };
+            let asset =
+                GeneratedThemeAsset::new_with_name(asset_dir, name, rel_kind, source.clone());
+            theme_assets.push(ThemeAssetInfo {
+                name: name.clone(),
+                rel_path: asset.rel_path.clone(),
+                kind: rel_kind.to_string(),
+            });
+            assets.push(asset);
+        }
+
+        Ok(Self {
+            stylesheets,
+            scripts,
+            assets,
+            theme_assets,
+        })
     }
 
     fn assets(&self) -> impl Iterator<Item = &GeneratedThemeAsset> {
-        self.stylesheet.iter().chain(self.script.iter())
+        self.stylesheets
+            .iter()
+            .chain(self.scripts.iter())
+            .chain(self.assets.iter())
+    }
+
+    pub(crate) fn theme_assets(&self) -> &[ThemeAssetInfo] {
+        &self.theme_assets
     }
 
     pub(super) fn output_paths(&self, out_dir: &Path) -> BTreeSet<PathBuf> {
@@ -536,16 +590,29 @@ impl ThemeGeneratedAssets {
 }
 
 impl ConfigStyleAssets {
-    pub(super) fn from_styles(styles: &[crate::config::CssOverride], asset_dir: &Path) -> Self {
-        let stylesheets = styles
-            .iter()
-            .enumerate()
-            .map(|(index, style)| {
-                let stem = format!("calepin-style-{index}");
-                GeneratedThemeAsset::new(asset_dir, &stem, "css", style.css.clone())
-            })
-            .collect();
-        Self { stylesheets }
+    pub(super) fn from_styles(
+        styles: &[crate::config::CssOverride],
+        asset_dir: &Path,
+    ) -> Result<Self> {
+        let mut used: BTreeSet<String> = BTreeSet::new();
+        let mut stylesheets = Vec::new();
+
+        for style in styles {
+            if !used.insert(style.name.clone()) {
+                return Err(anyhow!(
+                    "configured styles must use unique basenames to avoid collisions; duplicate `{}`",
+                    style.name
+                ));
+            }
+            stylesheets.push(GeneratedThemeAsset::new_with_name(
+                asset_dir,
+                &style.name,
+                "css",
+                style.css.clone(),
+            ));
+        }
+
+        Ok(Self { stylesheets })
     }
 
     pub(super) fn output_paths(&self, out_dir: &Path) -> BTreeSet<PathBuf> {
@@ -564,12 +631,17 @@ impl ConfigStyleAssets {
 }
 
 impl GeneratedThemeAsset {
-    fn new(asset_dir: &Path, stem: &str, extension: &str, content: String) -> Self {
-        let hash = xxh3_64(content.as_bytes());
-        Self {
-            rel_path: asset_dir.join(format!("{stem}.{hash:016x}.{extension}")),
-            content,
-        }
+    fn new_with_name(asset_dir: &Path, name: &str, extension: &str, content: String) -> Self {
+        let stem = Path::new(name)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or(name);
+        let rel_path = if extension.is_empty() {
+            asset_dir.join(stem)
+        } else {
+            asset_dir.join(format!("{stem}.{extension}"))
+        };
+        Self { rel_path, content }
     }
 
     pub(super) fn write(&self, out_dir: &Path) -> Result<()> {
@@ -584,53 +656,6 @@ impl GeneratedThemeAsset {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-
-    use crate::theme::HtmlEntry;
-
-    #[test]
-    fn html_entry_references_site_stylesheet_requires_template_token() {
-        let entry = HtmlEntry {
-            theme_name: "local".into(),
-            layout: r#"<script>var source = "site.stylesheet";</script>"#.into(),
-            partials: Vec::new(),
-            styles: Vec::new(),
-            scripts: Vec::new(),
-            is_default: false,
-        };
-
-        assert!(!html_entry_references_site_stylesheet(&entry));
-    }
-
-    #[test]
-    fn html_entry_references_site_stylesheet_follows_whitespace_control_includes() {
-        let entry = HtmlEntry {
-            theme_name: "local".into(),
-            layout: r#"{{ doc.head }}{%- include 'partials/styles.html' +%}"#.into(),
-            partials: vec![(
-                "partials/styles.html".to_string(),
-                "{{ if x and site.stylesheet }}".into(),
-            )],
-            styles: Vec::new(),
-            scripts: Vec::new(),
-            is_default: false,
-        };
-
-        assert!(html_entry_references_site_stylesheet(&entry));
-    }
-
-    #[test]
-    fn html_entry_references_site_stylesheet_ignores_quoted_values() {
-        let entry = HtmlEntry {
-            theme_name: "local".into(),
-            layout: "{{ \"a \\\"site.stylesheet\\\" token\" }}".into(),
-            partials: Vec::new(),
-            styles: Vec::new(),
-            scripts: Vec::new(),
-            is_default: false,
-        };
-
-        assert!(!html_entry_references_site_stylesheet(&entry));
-    }
 
     #[test]
     fn static_html_includes_parses_whitespace_control_markers() {
@@ -668,5 +693,26 @@ mod tests {
 
         assert!(script_pos < head_pos);
         assert!(output.contains("<\\/SCRIPT>"));
+    }
+
+    #[test]
+    fn rewrite_theme_asset_hrefs_is_relative_to_page() {
+        let mut theme_assets = vec![
+            crate::html::SiteThemeAsset {
+                name: "10_pico.css".to_string(),
+                href: ".calepin/10_pico.css".to_string(),
+                kind: "css".to_string(),
+            },
+            crate::html::SiteThemeAsset {
+                name: "site.css".to_string(),
+                href: "_calepin/site.css".to_string(),
+                kind: "css".to_string(),
+            },
+        ];
+
+        rewrite_theme_asset_hrefs("getting-started/install.html", &mut theme_assets);
+
+        assert_eq!(theme_assets[0].href, "../.calepin/10_pico.css");
+        assert_eq!(theme_assets[1].href, "../_calepin/site.css");
     }
 }

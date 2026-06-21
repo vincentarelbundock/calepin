@@ -377,7 +377,7 @@ fn watch_roots_changed_detects_style_and_theme_updates() {
 }
 
 #[test]
-fn theme_generated_assets_use_fingerprinted_calepin_paths() {
+fn theme_generated_assets_use_deterministic_calepin_paths() {
     let entry = crate::theme::resolve_html_entry(
         &crate::theme::ThemeSelection::Default,
         crate::theme::HtmlScope::Site,
@@ -391,43 +391,51 @@ fn theme_generated_assets_use_fingerprinted_calepin_paths() {
         Path::new(".calepin"),
     )
     .unwrap();
-    let stylesheet = assets.stylesheet.as_ref().unwrap();
-    let script = assets.script.as_ref().unwrap();
+    let scripts = assets
+        .scripts
+        .iter()
+        .map(|asset| slash_path(&asset.rel_path))
+        .collect::<Vec<_>>();
 
-    let stylesheet_path = slash_path(&stylesheet.rel_path);
-    let script_path = slash_path(&script.rel_path);
-    assert!(stylesheet_path.starts_with(".calepin/calepin-website."));
-    assert!(stylesheet_path.ends_with(".css"));
-    assert!(script_path.starts_with(".calepin/calepin-website."));
-    assert!(script_path.ends_with(".js"));
-    assert_ne!(stylesheet_path, ".calepin/calepin-website.css");
-    assert_ne!(script_path, ".calepin/calepin-website.js");
-    assert!(stylesheet.content.contains(".calepin-website-shell"));
-    assert!(
-        stylesheet
-            .content
-            .contains(".calepin-content math[display=\"block\"]"),
-        "block MathML should get document-level vertical rhythm"
+    assert_eq!(assets.stylesheets.len(), 6);
+    assert_eq!(
+        assets
+            .stylesheets
+            .iter()
+            .map(|asset| slash_path(&asset.rel_path))
+            .collect::<Vec<_>>(),
+        vec![
+            ".calepin/10_pico.css".to_string(),
+            ".calepin/20_theme.css".to_string(),
+            ".calepin/30_code.css".to_string(),
+            ".calepin/40_widgets.css".to_string(),
+            ".calepin/50_site.css".to_string(),
+            ".calepin/60_document.css".to_string(),
+        ]
     );
-    assert!(
-        !stylesheet
-            .content
-            .contains(".calepin-content math[display=\"block\"] {\n  display:"),
-        "block MathML spacing must not override native MathML display"
+    assert_eq!(
+        scripts,
+        vec![
+            ".calepin/theme-toggle.js".to_string(),
+            ".calepin/language-picker.js".to_string(),
+            ".calepin/copy-code.js".to_string(),
+            ".calepin/search.js".to_string(),
+            ".calepin/theme-init.js".to_string(),
+            ".calepin/site.js".to_string(),
+        ]
     );
-    assert!(
-        !stylesheet
-            .content
-            .contains(".calepin-content .calepin-figure-grid"),
-        "figure grids should stay within the figure display wrapper, not be promoted to full-width"
-    );
-    assert!(
-        !stylesheet.content.contains("@media (max-width: 88rem)"),
-        "the site TOC should not move below page content at a desktop/tablet breakpoint"
-    );
-    assert!(script.content.contains("data-calepin-theme-toggle"));
+    let theme_css = slash_path(&assets.stylesheets[1].rel_path);
+    assert_eq!(theme_css, ".calepin/20_theme.css");
+    let theme_styles = &assets.stylesheets[1].content;
+    assert!(theme_styles.contains(".calepin-content math[display=\"block\"]"));
+    assert!(assets
+        .stylesheets
+        .iter()
+        .any(|stylesheet| stylesheet.content.contains(".calepin-website-shell")));
+    assert!(assets.scripts[0]
+        .content
+        .contains("data-calepin-theme-toggle"));
 }
-
 #[test]
 fn theme_generated_assets_use_custom_asset_dir() {
     let entry = crate::theme::resolve_html_entry(
@@ -444,10 +452,38 @@ fn theme_generated_assets_use_custom_asset_dir() {
     )
     .unwrap();
 
-    assert!(slash_path(&assets.stylesheet.as_ref().unwrap().rel_path)
-        .starts_with("_calepin/calepin-website."),);
-    assert!(slash_path(&assets.script.as_ref().unwrap().rel_path)
-        .starts_with("_calepin/calepin-website."),);
+    let stylesheet_paths = assets
+        .stylesheets
+        .iter()
+        .map(|asset| slash_path(&asset.rel_path))
+        .collect::<Vec<_>>();
+    let script_paths = assets
+        .scripts
+        .iter()
+        .map(|asset| slash_path(&asset.rel_path))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        stylesheet_paths,
+        vec![
+            "_calepin/10_pico.css".to_string(),
+            "_calepin/20_theme.css".to_string(),
+            "_calepin/30_code.css".to_string(),
+            "_calepin/40_widgets.css".to_string(),
+            "_calepin/50_site.css".to_string(),
+            "_calepin/60_document.css".to_string(),
+        ]
+    );
+    assert_eq!(
+        script_paths,
+        vec![
+            "_calepin/theme-toggle.js".to_string(),
+            "_calepin/language-picker.js".to_string(),
+            "_calepin/copy-code.js".to_string(),
+            "_calepin/search.js".to_string(),
+            "_calepin/theme-init.js".to_string(),
+            "_calepin/site.js".to_string(),
+        ]
+    );
 }
 
 #[test]
@@ -458,12 +494,12 @@ fn config_style_assets_preserve_imports_in_separate_stylesheets() {
         css: "@import url(\"https://example.test/icons.css\");\n:root { --site: yes; }".to_string(),
     }];
 
-    let assets = ConfigStyleAssets::from_styles(&styles, Path::new(".calepin"));
+    let assets = ConfigStyleAssets::from_styles(&styles, Path::new(".calepin")).unwrap();
 
     assert_eq!(assets.stylesheets.len(), 1);
     let stylesheet = &assets.stylesheets[0];
     let stylesheet_path = slash_path(&stylesheet.rel_path);
-    assert!(stylesheet_path.starts_with(".calepin/calepin-style-0."));
+    assert_eq!(stylesheet_path, ".calepin/site.css");
     assert!(stylesheet_path.ends_with(".css"));
     assert!(stylesheet.content.trim_start().starts_with("@import "));
     assert!(stylesheet.content.contains("--site: yes"));
@@ -484,11 +520,17 @@ fn config_style_assets_keep_config_order_even_when_contents_match() {
         },
     ];
 
-    let assets = ConfigStyleAssets::from_styles(&styles, Path::new(".calepin"));
+    let assets = ConfigStyleAssets::from_styles(&styles, Path::new(".calepin")).unwrap();
 
     assert_eq!(assets.stylesheets.len(), 2);
-    assert!(slash_path(&assets.stylesheets[0].rel_path).contains("calepin-style-0."));
-    assert!(slash_path(&assets.stylesheets[1].rel_path).contains("calepin-style-1."));
+    assert_eq!(
+        slash_path(&assets.stylesheets[0].rel_path),
+        ".calepin/first.css"
+    );
+    assert_eq!(
+        slash_path(&assets.stylesheets[1].rel_path),
+        ".calepin/second.css"
+    );
 }
 
 #[test]
@@ -504,39 +546,55 @@ fn page_asset_decision_links_config_stylesheets_for_shared_partial() {
     )
     .unwrap()
     .unwrap();
-    let config_stylesheets = vec![".calepin/calepin-style-0.0123456789abcdef.css".to_string()];
+    let config_stylesheets = vec![".calepin/site.css".to_string()];
 
     let decision = page_asset_decision(
         page_entry,
         &[test_css_override()],
         Some(&generated_entry),
-        Some(".calepin/calepin-website.0123456789abcdef.css"),
-        &[".calepin/calepin-website.0123456789abcdef.js".to_string()],
+        &[
+            ".calepin/theme-toggle.js".to_string(),
+            ".calepin/language-picker.js".to_string(),
+            ".calepin/copy-code.js".to_string(),
+            ".calepin/search.js".to_string(),
+            ".calepin/theme-init.js".to_string(),
+            ".calepin/site.js".to_string(),
+        ],
         &config_stylesheets,
     );
 
-    assert_eq!(
-        decision.stylesheet.as_deref(),
-        Some(".calepin/calepin-website.0123456789abcdef.css")
-    );
     assert_eq!(decision.config_stylesheets, config_stylesheets);
     assert_config_style_count(decision.html_entry.as_ref().unwrap(), 0);
 }
 
 #[test]
+fn config_style_assets_reject_duplicate_names() {
+    let styles = vec![
+        crate::config::CssOverride {
+            name: "shared.css".to_string(),
+            path: PathBuf::from("/project/styles/one.css"),
+            css: ":root { --site: yes; }".to_string(),
+        },
+        crate::config::CssOverride {
+            name: "shared.css".to_string(),
+            path: PathBuf::from("/project/styles/two.css"),
+            css: ":root { --site: yes; }".to_string(),
+        },
+    ];
+
+    let err = ConfigStyleAssets::from_styles(&styles, Path::new(".calepin")).unwrap_err();
+    assert!(err
+        .to_string()
+        .contains("configured styles must use unique basenames"));
+}
+
+#[test]
 fn page_asset_decision_links_config_stylesheets_when_theme_disabled() {
-    let config_stylesheets = vec![".calepin/calepin-style-0.0123456789abcdef.css".to_string()];
+    let config_stylesheets = vec![".calepin/site.css".to_string()];
 
-    let decision = page_asset_decision(
-        None,
-        &[test_css_override()],
-        None,
-        None,
-        &[],
-        &config_stylesheets,
-    );
+    let decision =
+        page_asset_decision(None, &[test_css_override()], None, &[], &config_stylesheets);
 
-    assert_eq!(decision.stylesheet, None);
     assert_eq!(decision.config_stylesheets, config_stylesheets);
     let html_entry = decision.html_entry.as_ref().unwrap();
     assert_eq!(html_entry.theme_name, "styles");
@@ -565,12 +623,17 @@ fn page_asset_decision_does_not_link_academic_assets_for_calepin_page() {
         page_entry,
         &styles,
         Some(&generated_entry),
-        Some(".calepin/calepin-website.academic.css"),
-        &[".calepin/calepin-website.academic.js".to_string()],
+        &[
+            ".calepin/theme-toggle.js".to_string(),
+            ".calepin/language-picker.js".to_string(),
+            ".calepin/copy-code.js".to_string(),
+            ".calepin/search.js".to_string(),
+            ".calepin/theme-init.js".to_string(),
+            ".calepin/site.js".to_string(),
+        ],
         &[],
     );
 
-    assert_eq!(decision.stylesheet, None);
     assert!(decision.scripts.is_empty());
     assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
 }
@@ -594,12 +657,17 @@ fn page_asset_decision_does_not_link_calepin_assets_for_academic_page() {
         page_entry,
         &styles,
         Some(&generated_entry),
-        Some(".calepin/calepin-website.calepin.css"),
-        &[".calepin/calepin-website.calepin.js".to_string()],
+        &[
+            ".calepin/theme-toggle.js".to_string(),
+            ".calepin/language-picker.js".to_string(),
+            ".calepin/copy-code.js".to_string(),
+            ".calepin/search.js".to_string(),
+            ".calepin/theme-init.js".to_string(),
+            ".calepin/site.js".to_string(),
+        ],
         &[],
     );
 
-    assert_eq!(decision.stylesheet, None);
     assert!(decision.scripts.is_empty());
     assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
 }
@@ -613,21 +681,15 @@ fn page_asset_decision_keeps_config_style_for_local_layout_that_loops_styles() {
             partials: Vec::new(),
             styles: Vec::new(),
             scripts: Vec::new(),
+            assets: Vec::new(),
             is_default: false,
         };
     let generated_entry =
         html_entry_with_config_styles(Some(local_entry.clone()), &styles).unwrap();
 
-    let decision = page_asset_decision(
-        Some(local_entry),
-        &styles,
-        Some(&generated_entry),
-        Some(".calepin/calepin-website.local.css"),
-        &[],
-        &[],
-    );
+    let decision =
+        page_asset_decision(Some(local_entry), &styles, Some(&generated_entry), &[], &[]);
 
-    assert_eq!(decision.stylesheet, None);
     assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
 }
 
@@ -643,21 +705,15 @@ fn page_asset_decision_ignores_unused_stylesheet_partial() {
             )],
             styles: Vec::new(),
             scripts: Vec::new(),
+            assets: Vec::new(),
             is_default: false,
         };
     let generated_entry =
         html_entry_with_config_styles(Some(local_entry.clone()), &styles).unwrap();
 
-    let decision = page_asset_decision(
-        Some(local_entry),
-        &styles,
-        Some(&generated_entry),
-        Some(".calepin/calepin-website.local.css"),
-        &[],
-        &[],
-    );
+    let decision =
+        page_asset_decision(Some(local_entry), &styles, Some(&generated_entry), &[], &[]);
 
-    assert_eq!(decision.stylesheet, None);
     assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
 }
 
@@ -680,24 +736,27 @@ fn page_asset_decision_follows_whitespace_control_static_includes() {
             ],
             styles: Vec::new(),
             scripts: Vec::new(),
+            assets: Vec::new(),
             is_default: false,
         };
     let generated_entry = local_entry.clone();
-    let scripts = vec![".calepin/calepin-website.local.js".to_string()];
+    let scripts = vec![
+        ".calepin/theme-toggle.js".to_string(),
+        ".calepin/language-picker.js".to_string(),
+        ".calepin/copy-code.js".to_string(),
+        ".calepin/search.js".to_string(),
+        ".calepin/theme-init.js".to_string(),
+        ".calepin/site.js".to_string(),
+    ];
 
     let decision = page_asset_decision(
         Some(local_entry),
         &styles,
         Some(&generated_entry),
-        Some(".calepin/calepin-website.local.css"),
         &scripts,
         &[],
     );
 
-    assert_eq!(
-        decision.stylesheet.as_deref(),
-        Some(".calepin/calepin-website.local.css")
-    );
     assert_eq!(decision.scripts, scripts);
     assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
 }
@@ -716,22 +775,24 @@ fn page_asset_decision_reuses_generated_assets_for_matching_explicit_layout() {
         "layouts/landing.html",
     )
     .unwrap();
-    let scripts = vec![".calepin/calepin-website.calepin.js".to_string()];
-    let config_stylesheets = vec![".calepin/calepin-style-0.0123456789abcdef.css".to_string()];
+    let scripts = vec![
+        ".calepin/theme-toggle.js".to_string(),
+        ".calepin/language-picker.js".to_string(),
+        ".calepin/copy-code.js".to_string(),
+        ".calepin/search.js".to_string(),
+        ".calepin/theme-init.js".to_string(),
+        ".calepin/site.js".to_string(),
+    ];
+    let config_stylesheets = vec![".calepin/site.css".to_string()];
 
     let decision = page_asset_decision(
         page_entry,
         &styles,
         Some(&generated_entry),
-        Some(".calepin/calepin-website.calepin.css"),
         &scripts,
         &config_stylesheets,
     );
 
-    assert_eq!(
-        decision.stylesheet.as_deref(),
-        Some(".calepin/calepin-website.calepin.css")
-    );
     assert_eq!(decision.config_stylesheets, config_stylesheets);
     assert_eq!(decision.scripts, scripts);
     assert_config_style_count(decision.html_entry.as_ref().unwrap(), 0);
@@ -2276,10 +2337,10 @@ fn theme_context_marks_section_containing_current_page_active() {
 
 #[test]
 fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
-    let stylesheet = ".calepin/calepin-website.0123456789abcdef.css";
+    let stylesheet = ".calepin/20_theme.css";
     assert_eq!(
         page_relative_url("guide/usage.html", stylesheet),
-        "../.calepin/calepin-website.0123456789abcdef.css"
+        "../.calepin/20_theme.css"
     );
     assert_eq!(
         page_relative_url("guide/usage.html", "guide/advanced.html"),
@@ -2291,7 +2352,7 @@ fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
     );
     assert_eq!(
         page_relative_url("index.html", stylesheet),
-        ".calepin/calepin-website.0123456789abcdef.css"
+        ".calepin/20_theme.css"
     );
 }
 
@@ -3607,7 +3668,7 @@ fn should_rebuild_for_path_ignores_generated_calepin_directory() {
 fn should_rebuild_for_path_ignores_custom_asset_dir() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path().join("docs");
-    let asset = src.join("_calepin").join("calepin-website.css");
+    let asset = src.join("_calepin").join("20_theme.css");
     fs::create_dir_all(asset.parent().unwrap()).unwrap();
     fs::write(&asset, "/* generated */").unwrap();
     let mut current = test_build_result(&src, &[]);

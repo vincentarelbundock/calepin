@@ -100,20 +100,24 @@ struct ThemeManifest {
 #[serde(default, deny_unknown_fields)]
 struct SharedImports {
     partials: Vec<String>,
-    styles: Vec<String>,
-    scripts: Vec<String>,
+    css: Vec<String>,
+    js: Vec<String>,
+    assets: Vec<String>,
 }
 
 fn write_resolved_shared_files(bundle: &BundleDef, dest: &Path) -> Result<()> {
     let manifest = bundle_manifest(bundle)?;
     for name in manifest.shared.partials {
-        write_resolved_shared_file(bundle, dest, "partials", &name, "html")?;
+        write_resolved_shared_file(bundle, dest, "partials", &name, Some("html"))?;
     }
-    for name in manifest.shared.styles {
-        write_resolved_shared_file(bundle, dest, "styles", &name, "css")?;
+    for name in manifest.shared.css {
+        write_resolved_shared_file(bundle, dest, "css", &name, Some("css"))?;
     }
-    for name in manifest.shared.scripts {
-        write_resolved_shared_file(bundle, dest, "scripts", &name, "js")?;
+    for name in manifest.shared.js {
+        write_resolved_shared_file(bundle, dest, "js", &name, Some("js"))?;
+    }
+    for name in manifest.shared.assets {
+        write_resolved_shared_file(bundle, dest, "assets", &name, None)?;
     }
     Ok(())
 }
@@ -131,7 +135,7 @@ fn write_resolved_shared_file(
     dest: &Path,
     subdir: &str,
     name: &str,
-    ext: &str,
+    ext: Option<&str>,
 ) -> Result<()> {
     validate_shared_import(name, ext)?;
     let relative = format!("{subdir}/{name}");
@@ -139,11 +143,11 @@ fn write_resolved_shared_file(
         return Ok(());
     }
     let source = shared_file(&relative)
-        .ok_or_else(|| anyhow!("shared {ext} import `{name}` was not found"))?;
+        .ok_or_else(|| anyhow!("shared import `{name}` was not found"))?;
     write_theme_file(dest, &relative, source)
 }
 
-fn validate_shared_import(name: &str, ext: &str) -> Result<()> {
+fn validate_shared_import(name: &str, ext: Option<&str>) -> Result<()> {
     if name.trim() != name || name.is_empty() {
         return Err(anyhow!("shared import names must be non-empty filenames"));
     }
@@ -160,8 +164,10 @@ fn validate_shared_import(name: &str, ext: &str) -> Result<()> {
             "shared import `{name}` must be a filename, not a path"
         ));
     }
-    if path.extension().and_then(|extension| extension.to_str()) != Some(ext) {
-        return Err(anyhow!("shared import `{name}` must be a .{ext} file"));
+    if let Some(ext) = ext {
+        if path.extension().and_then(|extension| extension.to_str()) != Some(ext) {
+            return Err(anyhow!("shared import `{name}` must be a .{ext} file"));
+        }
     }
     Ok(())
 }

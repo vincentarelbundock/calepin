@@ -122,6 +122,31 @@ fn read_theme_files(dir: &Path, ext: &str) -> Result<Vec<(String, String)>> {
     Ok(files)
 }
 
+fn read_theme_files_any(dir: &Path) -> Result<Vec<(String, String)>> {
+    if !dir.is_dir() {
+        return Ok(Vec::new());
+    }
+
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
+        .with_context(|| format!("failed to read {}", dir.display()))?
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.is_file())
+        .collect();
+    paths.sort();
+
+    let mut files = Vec::with_capacity(paths.len());
+    for path in paths {
+        let name = path
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_default();
+        let contents = std::fs::read_to_string(&path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        files.push((name, contents));
+    }
+    Ok(files)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,9 +234,9 @@ mod tests {
         let css = site
             .styles
             .iter()
-            .find(|(name, _)| name == "main.css")
+            .find(|(name, _)| name == "50_main.css")
             .map(|(_, source)| source)
-            .expect("academic main.css should be included");
+            .expect("academic 50_main.css should be included");
         let js = site
             .scripts
             .iter()
@@ -290,27 +315,27 @@ mod tests {
     fn dir_theme_imports_shared_assets_in_manifest_order() {
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("custom");
-        std::fs::create_dir_all(theme.join("styles")).unwrap();
-        std::fs::create_dir_all(theme.join("scripts")).unwrap();
+        std::fs::create_dir_all(theme.join("css")).unwrap();
+        std::fs::create_dir_all(theme.join("js")).unwrap();
         std::fs::create_dir_all(theme.join("layouts")).unwrap();
-        std::fs::create_dir_all(dir.path().join("shared/styles")).unwrap();
+        std::fs::create_dir_all(dir.path().join("shared/css")).unwrap();
         std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
             r#"[shared]
-styles = ["theme.css", "widgets.css"]
-scripts = ["copy-code.js"]
+css = ["theme.css", "widgets.css"]
+js = ["copy-code.js"]
 "#,
         )
         .unwrap();
         std::fs::write(
-            dir.path().join("shared/styles/theme.css"),
+            dir.path().join("shared/css/theme.css"),
             "/* sibling shared theme */",
         )
         .unwrap();
-        std::fs::write(theme.join("styles/widgets.css"), "/* local override */").unwrap();
-        std::fs::write(theme.join("styles/local.css"), "/* local extra */").unwrap();
-        std::fs::write(theme.join("scripts/local.js"), "console.log('local')").unwrap();
+        std::fs::write(theme.join("css/widgets.css"), "/* local override */").unwrap();
+        std::fs::write(theme.join("css/local.css"), "/* local extra */").unwrap();
+        std::fs::write(theme.join("js/local.js"), "console.log('local')").unwrap();
 
         let entry = resolve_html_entry(&ThemeSelection::Dir(theme), HtmlScope::Document)
             .unwrap()
@@ -341,17 +366,17 @@ scripts = ["copy-code.js"]
     fn shared_imports_reject_duplicate_entries() {
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("custom");
-        std::fs::create_dir_all(theme.join("styles")).unwrap();
+        std::fs::create_dir_all(theme.join("css")).unwrap();
         std::fs::create_dir_all(theme.join("layouts")).unwrap();
         std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
             r#"[shared]
-styles = ["site.css", "site.css"]
+css = ["site.css", "site.css"]
 "#,
         )
         .unwrap();
-        std::fs::write(theme.join("styles/site.css"), "/* local */").unwrap();
+        std::fs::write(theme.join("css/site.css"), "/* local */").unwrap();
 
         let err = resolve_html_entry(&ThemeSelection::Dir(theme), HtmlScope::Document).unwrap_err();
 
@@ -399,7 +424,7 @@ styles = ["site.css", "site.css"]
         std::fs::write(
             dir.path().join("theme.toml"),
             r#"[shared]
-styles = ["../theme.css"]
+css = ["../theme.css"]
 "#,
         )
         .unwrap();
@@ -649,20 +674,21 @@ styles = ["../theme.css"]
         assert!(dest.join("partials/scripts.html").is_file());
         assert!(dest.join("partials/pagefind-modal.html").is_file());
         assert!(dest.join("theme.toml").is_file());
-        assert!(dest.join("styles/theme.css").is_file());
-        assert!(dest.join("styles/code.css").is_file());
-        assert!(dest.join("styles/widgets.css").is_file());
-        assert!(dest.join("styles/site.css").is_file());
-        assert!(dest.join("scripts/theme-toggle.js").is_file());
-        assert!(dest.join("scripts/language-picker.js").is_file());
-        assert!(dest.join("scripts/copy-code.js").is_file());
-        assert!(dest.join("scripts/site.js").is_file());
+        assert!(dest.join("css/20_theme.css").is_file());
+        assert!(dest.join("css/30_code.css").is_file());
+        assert!(dest.join("css/40_widgets.css").is_file());
+        assert!(dest.join("css/50_site.css").is_file());
+        assert!(dest.join("css/60_document.css").is_file());
+        assert!(dest.join("js/theme-toggle.js").is_file());
+        assert!(dest.join("js/language-picker.js").is_file());
+        assert!(dest.join("js/copy-code.js").is_file());
+        assert!(dest.join("js/site.js").is_file());
         assert!(!dest.parent().unwrap().join("shared").exists());
 
-        assert!(std::fs::read_to_string(dest.join("styles/widgets.css"))
+        assert!(std::fs::read_to_string(dest.join("css/40_widgets.css"))
             .unwrap()
             .contains("[data-calepin-theme-toggle]"));
-        assert!(std::fs::read_to_string(dest.join("scripts/copy-code.js"))
+        assert!(std::fs::read_to_string(dest.join("js/copy-code.js"))
             .unwrap()
             .contains("window.CalepinCopyCode"));
     }
@@ -677,11 +703,11 @@ styles = ["../theme.css"]
         assert!(wrote.join("layouts/webpage.html").is_file());
         assert!(wrote.join("partials/navbar-item.html").is_file());
         assert!(wrote.join("theme.toml").is_file());
-        assert!(wrote.join("styles/main.css").is_file());
-        assert!(wrote.join("scripts/main.js").is_file());
+        assert!(wrote.join("css/50_main.css").is_file());
+        assert!(wrote.join("js/main.js").is_file());
         assert!(wrote.join("partials/theme-toggle.html").is_file());
-        assert!(wrote.join("styles/theme.css").is_file());
-        assert!(wrote.join("scripts/copy-code.js").is_file());
+        assert!(wrote.join("css/20_theme.css").is_file());
+        assert!(wrote.join("js/copy-code.js").is_file());
         assert!(!wrote.parent().unwrap().join("shared").exists());
     }
 

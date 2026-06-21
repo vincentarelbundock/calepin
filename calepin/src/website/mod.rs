@@ -93,7 +93,6 @@ use util::clean_optional_string;
 const DEFAULT_CONFIG: &str = "calepin.toml";
 const DEFAULT_SRC_DIR: &str = "docs";
 const DEFAULT_WEBSITE_ASSET_DIR: &str = ".calepin";
-const WEBSITE_ASSET_STEM: &str = "calepin-website";
 const DEFAULT_FAVICON_NAME: &str = "favicon.svg";
 const FALLBACK_PAGE: &str = "404.typ";
 const INDEX_PAGE: &str = "index.typ";
@@ -322,7 +321,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         _ => None,
     };
     let site_entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?;
-    let mut external_theme_assets = site_entry.as_ref().is_some_and(|entry| entry.is_default);
+    let mut external_theme_assets = site_entry.as_ref().is_some_and(|entry| {
+        entry.is_default
+            || !entry.styles.is_empty()
+            || !entry.scripts.is_empty()
+            || !entry.assets.is_empty()
+    });
     let languages = configured_languages(&src_dir, &config)?;
     let (section_plans, mut typ_files) = discover_site_pages(
         &src_dir,
@@ -398,7 +402,12 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             crate::theme::resolve_html_entry(&output.theme, crate::theme::HtmlScope::Site)
                 .ok()
                 .flatten()
-                .is_some_and(|entry| entry.is_default)
+                .is_some_and(|entry| {
+                    entry.is_default
+                        || !entry.styles.is_empty()
+                        || !entry.scripts.is_empty()
+                        || !entry.assets.is_empty()
+                })
         })
     {
         external_theme_assets = true;
@@ -413,7 +422,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     } else {
         ThemeGeneratedAssets::default()
     };
-    let config_style_assets = ConfigStyleAssets::from_styles(&calepin_config.styles, &asset_dir);
+    let config_style_assets = ConfigStyleAssets::from_styles(&calepin_config.styles, &asset_dir)?;
 
     let page_meta = load_page_meta(&src_dir, &typ_files);
     let metadata = SiteMetadata::from_config(
@@ -540,21 +549,27 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             page_meta: page_meta.clone(),
             page_info: page_info.clone(),
             languages: languages.clone(),
-            theme_stylesheet: theme_assets
-                .stylesheet
-                .as_ref()
-                .map(|asset| slash_path(&asset.rel_path)),
+
             config_stylesheets: config_style_assets
                 .stylesheets
                 .iter()
                 .map(|asset| slash_path(&asset.rel_path))
                 .collect(),
             theme_scripts: theme_assets
-                .script
-                .as_ref()
-                .map(|asset| vec![slash_path(&asset.rel_path)])
-                .unwrap_or_default(),
+                .scripts
+                .iter()
+                .map(|asset| slash_path(&asset.rel_path))
+                .collect(),
             generated_theme_entry: theme_asset_entry,
+            theme_assets: theme_assets
+                .theme_assets()
+                .iter()
+                .map(|asset| crate::html::SiteThemeAsset {
+                    name: asset.name.clone(),
+                    href: slash_path(&asset.rel_path),
+                    kind: asset.kind.clone(),
+                })
+                .collect(),
             config_styles: calepin_config.styles.clone(),
             syntax_theme: html_syntax_theme,
             revealjs_options: calepin_config.revealjs,
@@ -914,10 +929,11 @@ struct BuildContext {
     page_meta: PageMetaMap,
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
-    theme_stylesheet: Option<String>,
+
     config_stylesheets: Vec<String>,
     theme_scripts: Vec<String>,
     generated_theme_entry: Option<crate::theme::HtmlEntry>,
+    theme_assets: Vec<crate::html::SiteThemeAsset>,
     config_styles: Vec<crate::config::CssOverride>,
     syntax_theme: HtmlSyntaxTheme,
     revealjs_options: String,

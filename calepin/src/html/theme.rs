@@ -40,6 +40,13 @@ struct ThemeContext {
     target: String,
 }
 
+#[derive(Serialize, Debug, Clone)]
+pub(crate) struct SiteThemeAsset {
+    pub(crate) name: String,
+    pub(crate) href: String,
+    pub(crate) kind: String,
+}
+
 #[derive(Serialize, Debug, Clone, Default)]
 pub(crate) struct SiteContextInput {
     pub(crate) sidebar: Vec<SiteNavEntry>,
@@ -62,6 +69,7 @@ pub(crate) struct SiteContextInput {
     pub(crate) stylesheet: Option<String>,
     pub(crate) config_stylesheets: Vec<String>,
     pub(crate) scripts: Vec<String>,
+    pub(crate) theme_assets: Vec<SiteThemeAsset>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
     /// JSON config used by themes for runtime behavior (e.g., Reveal.js options).
     pub(crate) revealjs: String,
@@ -162,22 +170,6 @@ pub(super) fn apply_html_theme(
         project_root,
         site_context,
     )
-}
-
-/// Build the shared website stylesheet from a resolved Site entry. The site
-/// layouts skip ALL inline CSS when `site.stylesheet` is set, so the shared
-/// stylesheet carries the bundle's styles.
-pub(super) fn theme_stylesheet(
-    entry: &crate::theme::HtmlEntry,
-    syntax_theme: &HtmlSyntaxTheme,
-) -> Result<Option<String>> {
-    let blocks = entry
-        .styles
-        .iter()
-        .map(|(_, css)| theme_css(css, syntax_theme))
-        .filter(|css| !css.trim().is_empty())
-        .collect::<Vec<_>>();
-    Ok((!blocks.is_empty()).then(|| blocks.join("\n")))
 }
 
 fn render_theme(
@@ -492,7 +484,7 @@ fn html_title(head: &str) -> Option<String> {
 }
 
 /// Substitute the syntax-color placeholders inside a theme CSS asset.
-fn theme_css(source: &str, syntax_theme: &HtmlSyntaxTheme) -> String {
+pub(crate) fn theme_css(source: &str, syntax_theme: &HtmlSyntaxTheme) -> String {
     source
         .replace(
             "__CALEPIN_SYNTAX_LIGHT__",

@@ -1,11 +1,7 @@
 {% if site.scripts %}
 {% for script in site.scripts -%}
+    {% if "theme-init.js" not in script %}
     <script src="{{ script }}"></script>
-{% endfor -%}
-{% else %}
-{% for script in scripts -%}
-    <script>
-{{ script.content }}
-    </script>
+    {% endif -%}
 {% endfor -%}
 {% endif %}
