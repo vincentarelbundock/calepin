@@ -11,6 +11,7 @@ use crate::typst::model::LayoutPaths;
 const DEFAULT_RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
 const RUNTIME_IMPORT_LEGACY: &str = "_calepin/calepin.typ";
 const RUNTIME_ALIAS: &str = "calepin_runtime";
+const RUNTIME_DEFAULT_ALIAS: &str = "calepin";
 const PREVIEW_IMPORT_PREFIX: &str = "@preview/calepin:";
 const SOURCE_REWRITTEN_CHUNK_LANGS: &[&str] = &["python", "r", "julia", "sh", "bash"];
 
@@ -20,7 +21,7 @@ pub fn write_staged_source(layout: &LayoutPaths, runtime_import: &str) -> Result
     let source = std::fs::read_to_string(&layout.input)
         .with_context(|| format!("failed to read {}", layout.input.display()))?;
     reject_preview_calepin_imports(&source)?;
-    let staged = rewrite_runtime_imports(&source, runtime_import);
+    let staged = stage_user_source(&source, runtime_import);
     let staged_path = layout.root.join(&staged_relative);
 
     write_if_changed(&staged_path, staged)?;
@@ -100,13 +101,40 @@ pub(crate) fn rewrite_runtime_imports(source: &str, runtime_import: &str) -> Str
     }
 }
 
+/// Rewrites a user document for staging. When the document never imports the
+/// Calepin runtime itself, a default `as calepin` import is prepended so authors
+/// can call `calepin.setup`/`calepin.chunk` without writing the import line. Any
+/// user-written runtime import (any path spelling or alias) suppresses the
+/// injection, so an author keeping their own `#import ... as calepin` is left
+/// untouched rather than duplicated.
+fn stage_user_source(source: &str, runtime_import: &str) -> String {
+    let rewritten = rewrite_source(source, runtime_import);
+    let mut prefix = String::new();
+    if !rewritten.saw_runtime_import {
+        prefix.push_str(&runtime_default_import(runtime_import));
+    }
+    if rewritten.needs_runtime_alias {
+        prefix.push_str(&runtime_alias_import(runtime_import));
+    }
+    if prefix.is_empty() {
+        rewritten.source
+    } else {
+        format!("{prefix}{}", rewritten.source)
+    }
+}
+
 fn runtime_alias_import(runtime_import: &str) -> String {
     format!("#import \"{runtime_import}\" as {RUNTIME_ALIAS}\n")
+}
+
+fn runtime_default_import(runtime_import: &str) -> String {
+    format!("#import \"{runtime_import}\" as {RUNTIME_DEFAULT_ALIAS}\n")
 }
 
 struct RewriteResult {
     source: String,
     needs_runtime_alias: bool,
+    saw_runtime_import: bool,
 }
 
 #[cfg(test)]
@@ -120,6 +148,7 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
     let mut parse_state = TypstParseState::default();
     let mut source_lex = LexState::default();
     let mut needs_runtime_alias = false;
+    let mut saw_runtime_import = false;
 
     for segment in source.split_inclusive('\n') {
         let (line, newline) = split_segment(segment);
@@ -154,7 +183,12 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
             }
         }
 
-        let rewritten = rewrite_calepin_imports_in_line(line, &mut source_lex, runtime_import);
+        let rewritten = rewrite_calepin_imports_in_line(
+            line,
+            &mut source_lex,
+            runtime_import,
+            &mut saw_runtime_import,
+        );
         parse_state.scan_line(&rewritten);
         out.push_str(&rewritten);
         out.push_str(newline);
@@ -166,6 +200,7 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
     RewriteResult {
         source: out,
         needs_runtime_alias,
+        saw_runtime_import,
     }
 }
 
@@ -551,7 +586,12 @@ fn typst_string_escape(value: &str) -> String {
     out
 }
 
-fn rewrite_calepin_imports_in_line(line: &str, lex: &mut LexState, runtime_import: &str) -> String {
+fn rewrite_calepin_imports_in_line(
+    line: &str,
+    lex: &mut LexState,
+    runtime_import: &str,
+    saw_runtime_import: &mut bool,
+) -> String {
     let mut out = String::with_capacity(line.len());
     let mut idx = 0;
 
@@ -593,6 +633,7 @@ fn rewrite_calepin_imports_in_line(line: &str, lex: &mut LexState, runtime_impor
         let candidate = &line[idx..];
         if candidate.starts_with("#import") {
             if let Some((rewritten, tail)) = rewrite_import_candidate(candidate, runtime_import) {
+                *saw_runtime_import = true;
                 let consumed = candidate.len() - tail.len();
                 out.push_str(&rewritten);
                 idx += consumed;
@@ -871,6 +912,81 @@ print("comment")
         let staged = std::fs::read_to_string(layout.root.join(staged_relative)).unwrap();
 
         assert!(!staged.contains("as calepin_runtime"), "{staged}");
+    }
+
+    fn runtime_import_count(staged: &str) -> usize {
+        staged
+            .matches("/.calepin/calepin.typ\" as calepin")
+            .count()
+    }
+
+    #[test]
+    fn injects_default_runtime_import_when_source_lacks_one() {
+        let staged = stage_user_source("#calepin.setup()\nHello\n", "/.calepin/calepin.typ");
+
+        assert!(
+            staged
+                .trim_start()
+                .starts_with("#import \"/.calepin/calepin.typ\" as calepin"),
+            "{staged}"
+        );
+    }
+
+    #[test]
+    fn does_not_duplicate_runtime_import_authors_already_wrote() {
+        let staged = stage_user_source(
+            "#import \"/.calepin/calepin.typ\" as calepin\n#calepin.setup()\n",
+            "/.calepin/calepin.typ",
+        );
+
+        assert_eq!(runtime_import_count(&staged), 1, "{staged}");
+    }
+
+    #[test]
+    fn skips_injection_when_author_glob_imports_runtime() {
+        let staged = stage_user_source(
+            "#import \"/.calepin/calepin.typ\": *\n#setup()\n",
+            "/.calepin/calepin.typ",
+        );
+
+        assert!(!staged.contains("as calepin"), "{staged}");
+    }
+
+    #[test]
+    fn skips_injection_when_author_uses_custom_runtime_alias() {
+        let staged = stage_user_source(
+            "#import \"/.calepin/calepin.typ\" as cp\n#cp.setup()\n",
+            "/.calepin/calepin.typ",
+        );
+
+        assert_eq!(runtime_import_count(&staged), 0, "{staged}");
+        assert!(staged.contains("as cp"), "{staged}");
+    }
+
+    #[test]
+    fn injects_default_import_when_only_commented_runtime_import_present() {
+        let staged = stage_user_source(
+            "// #import \"/.calepin/calepin.typ\" as calepin\n#calepin.setup()\n",
+            "/.calepin/calepin.typ",
+        );
+
+        assert!(
+            staged
+                .trim_start()
+                .starts_with("#import \"/.calepin/calepin.typ\" as calepin\n"),
+            "{staged}"
+        );
+    }
+
+    #[test]
+    fn default_and_chunk_alias_imports_coexist_without_author_import() {
+        let staged = stage_user_source(
+            "#calepin.setup()\n```python\nprint(1)\n```\n",
+            "/.calepin/calepin.typ",
+        );
+
+        assert!(staged.contains("as calepin\n"), "{staged}");
+        assert!(staged.contains("as calepin_runtime\n"), "{staged}");
     }
 
     #[test]

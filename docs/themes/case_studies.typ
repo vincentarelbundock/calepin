@@ -23,7 +23,7 @@ The source tree is intentionally small:
 project/
   calepin.toml
   tufte.typ
-  tufte/
+  theme/
     theme.toml
     css/
       tufte.css
@@ -32,7 +32,7 @@ project/
 `calepin.toml` points `calepin` at the local theme directory:
 
 ```toml
-theme = "tufte"
+theme = "./theme"
 ```
 
 The theme directory itself declares its base theme:
@@ -143,7 +143,7 @@ First put the `classicthesis` MiniJinja template in `theme/layouts/pdf.typ`:
   abstract: [This book explores...],
 )
 
-#part("Part One", preamble: [Introduction to the topic.])
+{{ doc.body }}
 ```
 
 Then write the notebook content without the template preamble:
@@ -151,7 +151,6 @@ Then write the notebook content without the template preamble:
 ```typ
 = Chapter One
 
-{{ doc.body }}
 
 == Section
 
