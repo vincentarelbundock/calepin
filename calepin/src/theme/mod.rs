@@ -761,7 +761,7 @@ css = ["../theme.css"]
     fn explicit_site_layout_requires_local_or_inherited_file() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
-        std::fs::write(dir.path().join("layouts/pdf.typ"), "{{ document.body }}").unwrap();
+        std::fs::write(dir.path().join("layouts/pdf.typ"), "{{ doc.body }}").unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
@@ -936,7 +936,7 @@ css = ["../theme.css"]
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("notebook.typ.jinja"),
-            "{{ target }} {{ document.body }}",
+            "{{ target }} {{ doc.body }}",
         )
         .unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
@@ -953,7 +953,7 @@ css = ["../theme.css"]
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("paged.typ.jinja"),
-            "{{ target }} {{ document.body }}",
+            "{{ target }} {{ doc.body }}",
         )
         .unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();

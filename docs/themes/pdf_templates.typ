@@ -10,9 +10,9 @@ themes/my-theme/
     pdf.typ
 ```
 
-Before Typst runs, Calepin renders this file with MiniJinja so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.
+Before Typst runs, Calepin renders this file with MiniJinja, the same engine used for HTML layouts (see #link("templating.html")[Templating]), so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.
 
-Inside the layout, place notebook content with `document.body`:
+Inside the layout, place notebook content with `doc.body`:
 
 ```typ
 #set page(
@@ -23,20 +23,21 @@ Inside the layout, place notebook content with `document.body`:
 
 #set text(font: "Libertinus Serif", size: 10.5pt)
 
-{{ document.body }}
+{{ doc.body }}
 ```
 
 Useful `layouts/pdf.typ` values:
 
 - `theme`: local theme directory name
-- `target`: `notebook`
-- `document.path`: `.typ` input path relative to workspace
-- `document.dir`: input directory relative to workspace
-- `document.stem`: input filename without `.typ`
-- `document.body`: notebook body, injected as a `#include`
-- `document.meta`: values from `#metadata(...) <website-metadata>`
-- `params`: CLI parameter map
+- `target`: `paged`
+- `doc.path`: `.typ` input path relative to workspace
+- `doc.dir`: input directory relative to workspace
+- `doc.stem`: input filename without `.typ`
+- `doc.title`: document title, or an empty string
+- `doc.body`: notebook body, injected as a `#include`
+- `doc.meta`: values from `#metadata(...) <website-metadata>`
+- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--var` overrides
 
-If `document.body` is not referenced, Calepin appends the notebook body after the rendered layout.
+If `doc.body` is not referenced, Calepin appends the notebook body after the rendered layout.
 
 `theme = "typst"` disables notebook-specific theming, and `extends = "typst"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout. `notebook.typ.jinja` and `paged.typ.jinja` are not supported.

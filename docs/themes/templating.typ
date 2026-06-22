@@ -59,7 +59,7 @@ course = "Econ 101"
 semester = "Fall 2026"
 ```
 
-These values are available as a top-level `vars` in both HTML and paged layouts. In HTML templates, `vars` sits at the top level, not under `site`:
+These values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values and CLI `--var` overrides are merged into the same map. In HTML templates, `vars` sits at the top level, not under `site`:
 
 ```html
 <p>{{ vars.course }}, {{ vars.semester }}</p>

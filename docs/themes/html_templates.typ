@@ -4,15 +4,15 @@
 
 = HTML templates
 
-For a single HTML notebook, use `layouts/document.html`. For websites, the default entry is `layouts/site.html`.
+HTML layouts are MiniJinja templates; see #link("templating.html")[Templating] for the syntax. For a single HTML notebook, use `layouts/document.html`. For websites, the default entry is `layouts/site.html`.
 
-Layouts are MiniJinja templates. The template context contains these top-level values:
+The template context contains these top-level values:
 
 - `doc`: Typst's generated HTML shell and document content.
 - `site`: website metadata, navigation, and search settings.
 - `css`: theme CSS files. Each item has `name` and `content`.
 - `js`: theme JS files. Each item has `name` and `content`.
-- `vars`: custom values from `[vars]` in `calepin.toml`.
+- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--var` overrides.
 - `highlight_css`: standalone syntax-highlight CSS.
 - `theme`: the active theme name.
 - `target`: the render target; currently `html`.
@@ -79,25 +79,11 @@ Here is a minimal `layouts/document.html`:
 
 Keep `doc.head`, `doc.body_open`, and `doc.body_close` unless you are intentionally replacing the entire HTML shell.
 
-= Custom variables
-
-Add a `[vars]` table to `calepin.toml` for project-specific values you want to use in templates:
-
-```toml
-[vars]
-course = "Econ 101"
-semester = "Fall 2026"
-```
-
-These values are available as top-level `vars`, not under `site`:
-
-```html
-<p>{{ vars.course }} — {{ vars.semester }}</p>
-```
+For project-specific values such as a course code or semester, add a `[vars]` table to `calepin.toml` and read the resolved map as top-level `vars` in your templates. See #link("templating.html")[Templating].
 
 = Partials
 
-Keep repeated HTML in partials under `partials/` and include them from layouts.
+Keep repeated HTML in partials under `partials/` and include them from layouts with the `{% include %}` tag.
 
 ```html
 {% include "partials/header.html" %}

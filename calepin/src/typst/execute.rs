@@ -42,14 +42,14 @@ impl ExecutionConfig {
 /// A prelude that errored is a Calepin bug (we generate the literal), so surface
 /// the raw engine output rather than letting later chunks fail mysteriously.
 ///
-/// The error tag is matched with its per-run sentinel prefix so a parameter
+/// The error tag is matched with its per-run sentinel prefix so a variable
 /// string value that happens to contain `_ERROR:` cannot trigger a false alarm
 /// (the engine echoes the prelude source back as a tagged line).
 fn check_prelude_output(raw: &str, engine: &str) -> Result<()> {
     let sentinel = raw.split_once('\n').map_or("", |(first, _)| first);
     if !sentinel.is_empty() && raw.contains(&format!("{sentinel}_ERROR:")) {
         return Err(anyhow!(
-            "failed to inject document parameters into the {engine} engine: {}",
+            "failed to inject document variables into the {engine} engine: {}",
             raw.trim()
         ));
     }
