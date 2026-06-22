@@ -1,0 +1,1 @@
+#figure(table(columns: 3, align: (left, left, left), inset: 0.28em, table.hline(), [*Item*], [factor 1], [factor 2], table.hline(), [Linear algebra], [1.41], [-0.73], [Optimization], [1.37], [-0.03], [Sci-fi], [-1.26], [-0.86], [Cooking], [-0.73], [1.27], table.hline()), caption: [Learned item factors])
