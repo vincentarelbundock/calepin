@@ -151,7 +151,9 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let mut html_postprocessor = None;
     let mut write_events = None;
     if is_html {
-        let site_context = SiteContextInput::default();
+        let config = crate::config::CalepinConfig::load(&root, args.common.config.as_deref())?;
+        let mut site_context = SiteContextInput::default();
+        site_context.vars = config.vars.clone();
         let html_entry =
             crate::theme::resolve_html_entry(&initial.theme, crate::theme::HtmlScope::Document)?;
         let (sender, receiver) = mpsc::channel();

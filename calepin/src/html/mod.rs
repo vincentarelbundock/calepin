@@ -483,6 +483,42 @@ mod tests {
     }
 
     #[test]
+    fn user_theme_exposes_custom_vars() {
+        let entry = HtmlEntry {
+            theme_name: "vars".to_string(),
+            layout: "{{ vars.course }} — {{ vars.semester }}".to_string(),
+            partials: Vec::new(),
+            styles: Vec::new(),
+            scripts: Vec::new(),
+        };
+        let mut vars = BTreeMap::new();
+        vars.insert(
+            "course".to_string(),
+            toml::Value::String("Econ 101".to_string()),
+        );
+        vars.insert(
+            "semester".to_string(),
+            toml::Value::String("Fall 2026".to_string()),
+        );
+        let site_context = SiteContextInput {
+            vars,
+            ..SiteContextInput::default()
+        };
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert_eq!(themed, "Econ 101 — Fall 2026");
+    }
+
+    #[test]
     fn user_theme_loops_css_js_and_includes_partials() {
         let dir = tempfile::tempdir().unwrap();
         let theme_dir = dir.path().join("mini");

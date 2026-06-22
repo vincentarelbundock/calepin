@@ -33,6 +33,7 @@ struct DocContext {
 struct ThemeContext {
     doc: DocContext,
     site: SiteContext,
+    vars: BTreeMap<String, toml::Value>,
     css: Vec<CssEntry>,
     js: Vec<JsEntry>,
     highlight_css: String,
@@ -59,6 +60,8 @@ pub(crate) struct SiteContextInput {
     pub(crate) page_url: Option<String>,
     pub(crate) page_title: Option<String>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
+    #[serde(skip)]
+    pub(crate) vars: BTreeMap<String, toml::Value>,
 }
 
 /// The site context handed to the template: the caller-supplied input (or a
@@ -193,6 +196,8 @@ fn render_theme(
         .then_some(parts.title.as_deref())
         .flatten();
     let (body, toc) = annotate_body_headings(parts.body, site_title_heading);
+    let site = site_context(project_root, output_path, toc, site_context_input);
+    let vars = site.input.vars.clone();
     let context = ThemeContext {
         doc: DocContext {
             head: parts.head.to_string(),
@@ -201,7 +206,8 @@ fn render_theme(
             body_close: parts.body_close.to_string(),
             title: parts.title.clone().unwrap_or_default(),
         },
-        site: site_context(project_root, output_path, toc, site_context_input),
+        site,
+        vars,
         css,
         js,
         highlight_css: highlight_css(syntax_theme),

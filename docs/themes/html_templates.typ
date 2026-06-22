@@ -12,6 +12,7 @@ Layouts are MiniJinja templates. The template context contains these top-level v
 - `site`: website metadata, navigation, and search settings.
 - `css`: theme CSS files. Each item has `name` and `content`.
 - `js`: theme JS files. Each item has `name` and `content`.
+- `vars`: custom values from `[vars]` in `calepin.toml`.
 - `highlight_css`: standalone syntax-highlight CSS.
 - `theme`: the active theme name.
 - `target`: the render target; currently `html`.
@@ -46,6 +47,22 @@ Nested entries expose these fields:
 - TOC entries: `level`, `href`, `label`.
 - Language and translation entries: `code`, `label`, `href`, `active`.
 - Pagefind: `css`, `js`, `bundle`.
+
+= Custom variables
+
+Add a `[vars]` table to `calepin.toml` for project-specific values you want to use in templates:
+
+```toml
+[vars]
+course = "Econ 101"
+semester = "Fall 2026"
+```
+
+These values are available as top-level `vars`, not under `site`:
+
+```html
+<p>{{ vars.course }} — {{ vars.semester }}</p>
+```
 
 Here is a minimal `layouts/notebook.html`:
 

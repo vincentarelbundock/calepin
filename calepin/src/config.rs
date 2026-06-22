@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
 
 use crate::utils::path::{absolutize_from, expand_home, is_path_like, normalize_path};
 #[cfg(windows)]
@@ -18,6 +20,7 @@ pub struct CalepinConfig {
     pub executables: ExecutablePaths,
     pub config_dir: PathBuf,
     pub theme: Option<String>,
+    pub vars: BTreeMap<String, toml::Value>,
     /// Directory (relative to project root) for generated Calepin assets.
     /// `None` means the built-in default `.calepin`.
     pub asset_dir: Option<PathBuf>,
@@ -56,6 +59,7 @@ impl CalepinConfig {
             executables: ExecutablePaths::from_raw(root, &config_dir, raw.executables),
             config_dir,
             theme: raw.theme,
+            vars: raw.vars,
             asset_dir,
         })
     }
@@ -65,6 +69,7 @@ impl CalepinConfig {
             executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
             config_dir: root.to_path_buf(),
             theme: None,
+            vars: BTreeMap::new(),
             asset_dir: None,
         }
     }
@@ -157,6 +162,7 @@ impl ExecutablePaths {
 struct RawCalepinConfig {
     executables: RawExecutablePaths,
     theme: Option<String>,
+    vars: BTreeMap<String, toml::Value>,
     #[serde(rename = "asset-dir")]
     asset_dir: Option<PathBuf>,
 }
@@ -556,6 +562,46 @@ styles = ["styles/site.css"]
 
         assert!(err.contains("config file must be a .toml file"), "{err}");
         assert!(err.contains("paper.typ"), "{err}");
+    }
+
+    #[test]
+    fn config_parses_custom_vars() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            r#"[vars]
+course = "Econ 101"
+semester = "Fall 2026"
+credits = 3
+"#,
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        assert_eq!(
+            config.vars.get("course"),
+            Some(&toml::Value::String("Econ 101".to_string()))
+        );
+        assert_eq!(
+            config.vars.get("semester"),
+            Some(&toml::Value::String("Fall 2026".to_string()))
+        );
+        assert_eq!(config.vars.get("credits"), Some(&toml::Value::Integer(3)));
+    }
+
+    #[test]
+    fn vars_config_key_rejects_non_table_values() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "vars = false").unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("invalid type"), "{err}");
+        assert!(err.contains("vars"), "{err}");
     }
 
     #[test]

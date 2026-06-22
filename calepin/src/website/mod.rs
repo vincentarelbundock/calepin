@@ -507,7 +507,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             page_meta: page_meta.clone(),
             page_info: page_info.clone(),
             languages: languages.clone(),
-
+            vars: calepin_config.vars.clone(),
             syntax_theme: html_syntax_theme,
             parallelism: args.parallelism,
             typst_args: args.typst_args,
@@ -856,7 +856,7 @@ struct BuildContext {
     page_meta: PageMetaMap,
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
-
+    vars: BTreeMap<String, toml::Value>,
     syntax_theme: HtmlSyntaxTheme,
     parallelism: Option<usize>,
     typst_args: Vec<String>,

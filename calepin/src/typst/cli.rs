@@ -191,7 +191,10 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     }
 
     let format = args.format.map(OutputFormat::from);
-    let site_context = SiteContextInput::default();
+    let current_dir = std::env::current_dir()?;
+    let config = crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
+    let mut site_context = SiteContextInput::default();
+    site_context.vars = config.vars.clone();
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
         root: None,

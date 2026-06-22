@@ -13,6 +13,8 @@ pub(super) struct WebsiteConfig {
     #[serde(rename = "executables")]
     pub(super) _executables: Option<toml::Value>,
     pub(super) theme: Option<toml::Value>,
+    #[serde(rename = "vars")]
+    pub(super) _vars: BTreeMap<String, toml::Value>,
     pub(super) title: Option<String>,
     pub(super) description: Option<String>,
     pub(super) base_url: Option<String>,

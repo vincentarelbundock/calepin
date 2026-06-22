@@ -72,6 +72,20 @@ fn missing_theme_key_is_default() {
 }
 
 #[test]
+fn website_config_allows_vars_table() {
+    let config = website_config_from_toml(
+        r#"[vars]
+course = "Econ 101"
+"#,
+    );
+
+    assert_eq!(
+        config._vars.get("course"),
+        Some(&toml::Value::String("Econ 101".to_string()))
+    );
+}
+
+#[test]
 fn website_config_defaults_asset_dir_to_dot_calepin() {
     let config = website_config_from_toml("");
 
