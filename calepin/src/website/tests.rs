@@ -2357,6 +2357,64 @@ fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
 }
 
 #[test]
+fn shared_theme_init_script_is_rendered_with_relative_asset_path() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-website-test-");
+    let root = dir.path();
+    let src = root.join("docs");
+    std::fs::create_dir_all(&src).unwrap();
+    std::fs::create_dir_all(src.join("sub")).unwrap();
+    std::fs::write(
+        root.join("calepin.toml"),
+        r#"
+        theme = "calepin"
+        "#,
+    )
+    .unwrap();
+    std::fs::write(
+        src.join("index.typ"),
+        "#set document(title: [Home])\nHome",
+    )
+    .unwrap();
+    std::fs::write(
+        src.join("sub").join("index.typ"),
+        "#set document(title: [Sub])\nSub",
+    )
+    .unwrap();
+
+    let result = build_site(WebsiteBuildOptions {
+        config: root.join("calepin.toml"),
+        src: Some(src),
+        out: Some(root.join("out")),
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        params: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        clean: true,
+        minify_html: false,
+    })
+    .unwrap();
+
+    let root_output = result.out_dir.join("index.html");
+    let nested_output = result.out_dir.join("sub").join("index.html");
+    let root_html = std::fs::read_to_string(root_output).unwrap();
+    let nested_html = std::fs::read_to_string(nested_output).unwrap();
+
+    assert!(root_html.contains("src=\".calepin/theme-init.js\""));
+    assert!(nested_html.contains("src=\"../.calepin/theme-init.js\""));
+    assert!(
+        !nested_html.contains("src=\"../.calepin/.calepin/theme-init.js\""),
+        "theme-init script should be canonicalized"
+    );
+}
+
+#[test]
 fn theme_context_exposes_pagefind_assets_when_search_enabled() {
     let site = SiteModel::new(
         Vec::new(),
