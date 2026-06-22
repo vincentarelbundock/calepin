@@ -129,7 +129,7 @@ entirely from the template:
 extends = "typst"
 ```
 
-Then put the `classicthesis` MiniJinja template in `theme/layouts/pdf.typ`:
+First put the `classicthesis` MiniJinja template in `theme/layouts/pdf.typ`:
 
 ```typ
 #import "@preview/classicthesis:0.1.0": *
@@ -144,39 +144,23 @@ Then put the `classicthesis` MiniJinja template in `theme/layouts/pdf.typ`:
 )
 
 #part("Part One", preamble: [Introduction to the topic.])
+```
 
+Then write the notebook content without the template preamble:
+
+```typ
 = Chapter One
 
-Your content here...
+{{ doc.body }}
 
 == Section
 
 More content...
 ```
 
-`layouts/pdf.typ` is rendered before Typst compiles the notebook, so `doc.body`
-is where Calepin injects the document source. The template itself is MiniJinja,
-so the notebook body belongs in `{{ doc.body }}`:
-
-```typ
-#import "@preview/classicthesis:0.1.0": *
-
-#show: classicthesis.with(
-  title: "My Book Title",
-  subtitle: "A Subtitle",
-  author: "Author Name",
-  date: "2025",
-  dedication: [To my readers.],
-  abstract: [This book explores...],
-)
-
-#part("Part One", preamble: [Introduction to the topic.])
-
-{{ doc.body }}
-```
-
 Here, the `classicthesis` template provides the page design and chapter
-structure, while the notebook body still comes from your `.typ` file.
+structure, while the notebook body still comes from your `.typ` file. `doc.body`
+is where Calepin injects the document source.
 
 From the project root, render the PDF with:
 
