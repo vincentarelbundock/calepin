@@ -509,7 +509,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             languages: languages.clone(),
 
             syntax_theme: html_syntax_theme,
-            revealjs_options: calepin_config.revealjs,
             parallelism: args.parallelism,
             typst_args: args.typst_args,
             minify_html,
@@ -859,7 +858,6 @@ struct BuildContext {
     languages: Option<Vec<LanguageInfo>>,
 
     syntax_theme: HtmlSyntaxTheme,
-    revealjs_options: String,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
     minify_html: bool,

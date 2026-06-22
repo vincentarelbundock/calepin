@@ -1,7 +1,5 @@
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
-#[cfg(test)]
-use serde_json::Value as JsonValue;
 use std::path::{Path, PathBuf};
 
 use crate::utils::path::{absolutize_from, expand_home, is_path_like, normalize_path};
@@ -20,8 +18,6 @@ pub struct CalepinConfig {
     pub executables: ExecutablePaths,
     pub config_dir: PathBuf,
     pub theme: Option<String>,
-    /// JSON string injected into HTML templates as `site.revealjs`.
-    pub revealjs: String,
     /// Directory (relative to project root) for generated Calepin assets.
     /// `None` means the built-in default `.calepin`.
     pub asset_dir: Option<PathBuf>,
@@ -60,7 +56,6 @@ impl CalepinConfig {
             executables: ExecutablePaths::from_raw(root, &config_dir, raw.executables),
             config_dir,
             theme: raw.theme,
-            revealjs: parse_revealjs_config(raw.revealjs)?,
             asset_dir,
         })
     }
@@ -70,7 +65,6 @@ impl CalepinConfig {
             executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
             config_dir: root.to_path_buf(),
             theme: None,
-            revealjs: "{}".to_string(),
             asset_dir: None,
         }
     }
@@ -163,7 +157,6 @@ impl ExecutablePaths {
 struct RawCalepinConfig {
     executables: RawExecutablePaths,
     theme: Option<String>,
-    revealjs: Option<toml::Value>,
     #[serde(rename = "asset-dir")]
     asset_dir: Option<PathBuf>,
 }
@@ -285,16 +278,6 @@ fn resolve_asset_dir(value: Option<PathBuf>) -> Result<Option<PathBuf>> {
         return Err(anyhow!("asset-dir must include at least one path segment"));
     }
     Ok(Some(path))
-}
-
-fn parse_revealjs_config(value: Option<toml::Value>) -> Result<String> {
-    let value = value.unwrap_or_else(|| toml::Value::Table(Default::default()));
-    if !value.is_table() {
-        return Err(anyhow!(
-            "`revealjs` must be a table, for example: [revealjs]\nnavigationMode = \"linear\""
-        ));
-    }
-    serde_json::to_string(&value).context("failed to serialize revealjs config as JSON")
 }
 
 #[cfg(test)]
@@ -576,36 +559,14 @@ styles = ["styles/site.css"]
     }
 
     #[test]
-    fn config_parses_revealjs_options() {
+    fn revealjs_config_key_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(
-            dir.path().join("calepin.toml"),
-            r#"[revealjs]
-hash = false
-center = false
-navigationMode = "linear"
-"#,
-        )
-        .unwrap();
-
-        let config =
-            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
-
-        let options: JsonValue = serde_json::from_str(&config.revealjs).unwrap();
-        assert_eq!(options["hash"], serde_json::json!(false));
-        assert_eq!(options["center"], serde_json::json!(false));
-        assert_eq!(options["navigationMode"], serde_json::json!("linear"));
-    }
-
-    #[test]
-    fn config_rejects_non_table_revealjs_config() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("calepin.toml"), "revealjs = false").unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "[revealjs]\nhash = false\n").unwrap();
 
         let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
             .unwrap_err()
             .to_string();
 
-        assert!(err.contains("`revealjs` must be a table"), "{err}");
+        assert!(err.contains("unknown field `revealjs`"), "{err}");
     }
 }

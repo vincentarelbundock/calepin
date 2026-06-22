@@ -189,7 +189,6 @@ impl SiteModel {
                     &format!("{PAGEFIND_DIR}/"),
                 )),
             }),
-            revealjs: String::new(),
         }
     }
 }

@@ -38,7 +38,6 @@ Layouts are MiniJinja templates. The template context contains these top-level v
 - `site.translations`: alternate-language links for the current page.
 - `site.language`: the current language code.
 - `site.pagefind`: Pagefind search assets and bundle path, when search is enabled.
-- `site.revealjs`: Reveal.js runtime configuration as a JSON string.
 
 Nested entries expose these fields:
 

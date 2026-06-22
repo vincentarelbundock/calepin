@@ -114,14 +114,13 @@ fn render_document(
 
     let current_href = page_info.href.clone();
     let page_meta = context.page_meta.get(input_path);
-    let mut site_context = site.theme_context(
+    let site_context = site.theme_context(
         &current_href,
         Some(page_info),
         &context.page_info,
         context.languages.as_deref(),
         context.search,
     );
-    site_context.revealjs = context.revealjs_options.clone();
     let page_site_entry = if let Some(layout) = page_meta.and_then(|meta| meta.layout.as_deref()) {
         crate::theme::resolve_explicit_site_html_entry(&preprocessed.theme, layout)?
     } else {
