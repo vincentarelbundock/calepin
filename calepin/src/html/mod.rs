@@ -11,7 +11,7 @@ use std::path::PathBuf;
 pub(crate) use minify::minify_html_file;
 pub(crate) use syntax::HtmlSyntaxTheme;
 pub(crate) use theme::{
-    theme_css, SiteContextInput, SiteLanguageEntry, SiteMenu, SiteNavEntry, SiteNavSection,
+    theme_css, SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection,
     SitePagefindEntry,
 };
 

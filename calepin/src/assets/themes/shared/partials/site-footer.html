@@ -1,12 +1,4 @@
-{% set footer_items = [] %}
-{% for menu in site.menu_list %}
-  {% if menu.name == "footer" %}
-    {% set footer_items = menu.items %}
-  {% endif %}
-{% endfor %}
-{% if footer_items | length == 0 %}
-  {% set footer_items = site.menus.footer | default(value=[]) %}
-{% endif %}
+{% set footer_items = site.menus.footer | default(value=[]) %}
 
 {% for item in footer_items if item.href or (item.label_html | trim) != "" %}
   {% if loop.first %}

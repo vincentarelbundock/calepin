@@ -2791,12 +2791,6 @@ fn theme_context_exposes_relative_named_menus() {
     assert!(context.menus["main"][1].active);
     assert_eq!(context.menus["social"][0].href, "https://example.com");
     assert_eq!(context.menus["footer"][0].href, "");
-    let menu_names = context
-        .menu_list
-        .iter()
-        .map(|menu| menu.name.as_str())
-        .collect::<Vec<_>>();
-    assert_eq!(menu_names, vec!["footer", "main", "social"]);
 }
 
 #[test]

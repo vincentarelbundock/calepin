@@ -34,7 +34,6 @@ Layouts are MiniJinja templates. The template context contains these top-level v
 - `site.sidebar_fold`: whether titled sidebar sections should fold.
 - `site.toc`: the current page table of contents.
 - `site.menus`: named menus, such as `site.menus.main`, `site.menus.social`, and `site.menus.footer`.
-- `site.menu_list`: all named menus as a list.
 - `site.languages`: language entries for the language picker.
 - `site.translations`: alternate-language links for the current page.
 - `site.language`: the current language code.
@@ -46,7 +45,6 @@ Nested entries expose these fields:
 - Navigation entries in `site.sidebar`, `site.menus.<name>`, and section `items`: `href`, `label`, `label_html`, `active`.
 - Sidebar sections: `title`, `active`, `items`.
 - TOC entries: `level`, `href`, `label`.
-- Menu entries in `site.menu_list`: `name`, `items`.
 - Language and translation entries: `code`, `label`, `href`, `active`.
 - Pagefind: `css`, `js`, `bundle`.
 

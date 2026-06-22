@@ -153,20 +153,12 @@ impl SiteModel {
         let menus = self
             .menus
             .entries_for_current_page(current_href, current_language);
-        let menu_list = menus
-            .iter()
-            .map(|(name, items)| crate::html::SiteMenu {
-                name: name.clone(),
-                items: items.clone(),
-            })
-            .collect();
 
         SiteContextInput {
             sidebar,
             sidebar_sections,
             sidebar_fold: self.sidebar_fold,
             menus,
-            menu_list,
             languages: language_entries,
             translations,
             language: current_language.map(str::to_string),

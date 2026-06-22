@@ -46,7 +46,6 @@ pub(crate) struct SiteContextInput {
     pub(crate) sidebar_sections: Vec<SiteNavSection>,
     pub(crate) sidebar_fold: bool,
     pub(crate) menus: BTreeMap<String, Vec<SiteNavEntry>>,
-    pub(crate) menu_list: Vec<SiteMenu>,
     pub(crate) languages: Vec<SiteLanguageEntry>,
     pub(crate) translations: Vec<SiteLanguageEntry>,
     pub(crate) language: Option<String>,
@@ -84,12 +83,6 @@ pub(crate) struct SitePagefindEntry {
 pub(crate) struct SiteNavSection {
     pub(crate) title: Option<String>,
     pub(crate) active: bool,
-    pub(crate) items: Vec<SiteNavEntry>,
-}
-
-#[derive(Serialize, Debug, Clone)]
-pub(crate) struct SiteMenu {
-    pub(crate) name: String,
     pub(crate) items: Vec<SiteNavEntry>,
 }
 
