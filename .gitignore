@@ -4,7 +4,6 @@ Cargo.lock
 pagefind/
 .DS_Store
 fingerprint.xxh3
-*.pf_index
 
 __pycache__
 .claude
