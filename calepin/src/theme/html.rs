@@ -54,8 +54,6 @@ pub(crate) struct ThemeManifest {
 #[serde(default, deny_unknown_fields)]
 struct SharedImports {
     partials: Vec<String>,
-    styles: Vec<String>,
-    scripts: Vec<String>,
     css: Vec<String>,
     js: Vec<String>,
     assets: Vec<String>,
@@ -214,39 +212,11 @@ fn layer_partials(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
 }
 
 fn style_imports(shared: &SharedImports) -> Vec<String> {
-    shared
-        .css
-        .iter()
-        .chain(shared.styles.iter())
-        .cloned()
-        .collect()
+    shared.css.clone()
 }
 
 fn script_imports(shared: &SharedImports) -> Vec<String> {
-    shared
-        .js
-        .iter()
-        .chain(shared.scripts.iter())
-        .cloned()
-        .collect()
-}
-
-fn local_style_imports(shared: &super::LocalThemeSharedImports) -> Vec<String> {
-    shared
-        .css
-        .iter()
-        .chain(shared.styles.iter())
-        .cloned()
-        .collect()
-}
-
-fn local_script_imports(shared: &super::LocalThemeSharedImports) -> Vec<String> {
-    shared
-        .js
-        .iter()
-        .chain(shared.scripts.iter())
-        .cloned()
-        .collect()
+    shared.js.clone()
 }
 
 fn layer_styles(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
@@ -258,12 +228,7 @@ fn layer_styles(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
         }
         ThemeLayer::Dir(dir) => {
             let manifest = read_local_theme_manifest(dir)?;
-            dir_assets_flexible(
-                dir,
-                &local_style_imports(&manifest.shared),
-                &["styles", "css"],
-                "css",
-            )
+            dir_assets(dir, &manifest.shared.css, "css", "css")
         }
     }
 }
@@ -277,12 +242,7 @@ fn layer_scripts(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
         }
         ThemeLayer::Dir(dir) => {
             let manifest = read_local_theme_manifest(dir)?;
-            dir_assets_flexible(
-                dir,
-                &local_script_imports(&manifest.shared),
-                &["scripts", "js"],
-                "js",
-            )
+            dir_assets(dir, &manifest.shared.js, "js", "js")
         }
     }
 }
@@ -398,30 +358,6 @@ fn bundle_files(bundle: &BundleDef, prefix: &str, ext: Option<&str>) -> Vec<(Str
         .collect();
     files.sort_by(|a, b| a.0.cmp(&b.0));
     files
-}
-
-fn dir_assets_flexible(
-    dir: &Path,
-    imports: &[String],
-    subdirs: &[&str],
-    ext: &str,
-) -> Result<Vec<(String, String)>> {
-    let mut local_files = Vec::new();
-    for subdir in subdirs {
-        merge_named_assets(&mut local_files, read_theme_files(&dir.join(subdir), ext)?);
-    }
-    collect_shared_assets(local_files, imports, ext, Some(ext), |name| {
-        for subdir in subdirs {
-            let path = format!("{subdir}/{name}");
-            if let Some(source) = dir_shared_file(dir, &path)? {
-                return Ok(Some(source));
-            }
-            if let Some(source) = shared_file(&path).map(str::to_string) {
-                return Ok(Some(source));
-            }
-        }
-        Ok(None)
-    })
 }
 
 fn dir_assets(

@@ -82,8 +82,6 @@ pub(crate) struct LocalThemeManifest {
 #[serde(default, deny_unknown_fields)]
 pub(crate) struct LocalThemeSharedImports {
     pub(crate) partials: Vec<String>,
-    pub(crate) styles: Vec<String>,
-    pub(crate) scripts: Vec<String>,
     pub(crate) css: Vec<String>,
     pub(crate) js: Vec<String>,
     pub(crate) assets: Vec<String>,
@@ -422,9 +420,9 @@ mod tests {
     fn dir_theme_extends_builtin_for_missing_entries_and_overrides_assets_by_name() {
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("child");
-        std::fs::create_dir_all(theme.join("styles")).unwrap();
+        std::fs::create_dir_all(theme.join("css")).unwrap();
         std::fs::write(theme.join("theme.toml"), "extends = \"academic\"\n").unwrap();
-        std::fs::write(theme.join("styles/20_theme.css"), "/* child theme */").unwrap();
+        std::fs::write(theme.join("css/20_theme.css"), "/* child theme */").unwrap();
 
         let sel = ThemeSelection::Dir(theme);
         let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
@@ -498,6 +496,49 @@ js = ["copy-code.js"]
             ["copy-code.js", "local.js"]
         );
         assert!(entry.scripts[0].1.contains("window.CalepinCopyCode"));
+    }
+
+    #[test]
+    fn local_theme_ignores_legacy_styles_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme = dir.path().join("child");
+        std::fs::create_dir_all(theme.join("styles")).unwrap();
+        std::fs::write(theme.join("theme.toml"), "extends = \"academic\"\n").unwrap();
+        std::fs::write(theme.join("styles/20_theme.css"), "/* legacy styles dir */").unwrap();
+
+        let entry = resolve_html_entry(&ThemeSelection::Dir(theme), HtmlScope::Site)
+            .unwrap()
+            .unwrap();
+
+        assert!(!entry
+            .styles
+            .iter()
+            .any(|(_, css)| css.contains("legacy styles dir")));
+    }
+
+    #[test]
+    fn shared_imports_reject_legacy_alias_keys() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme = dir.path().join("custom");
+        std::fs::create_dir_all(theme.join("layouts")).unwrap();
+        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(
+            theme.join("theme.toml"),
+            r#"extends = "typst"
+
+[shared]
+styles = ["theme.css"]
+scripts = ["copy-code.js"]
+"#,
+        )
+        .unwrap();
+
+        let err = resolve_html_entry(&ThemeSelection::Dir(theme), HtmlScope::Document)
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("unknown field"), "{err}");
+        assert!(err.contains("styles"), "{err}");
     }
 
     #[test]

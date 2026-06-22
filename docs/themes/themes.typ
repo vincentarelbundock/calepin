@@ -136,9 +136,9 @@ themes/my-theme/
     landing.html        # optional page-specific website layout
   partials/
     ...                 # reusable MiniJinja fragments
-  css/                  # or styles/
+  css/
     ...                 # theme CSS
-  js/                   # or scripts/
+  js/
     ...                 # theme JavaScript
   notebook.typ.jinja    # Typst template around notebook source
 ```
