@@ -31,17 +31,33 @@ theme = "themes/my-theme" # with the custom name
 Once copied, the theme is project-owned: edit its templates, styles, scripts, and
 `theme.toml` freely and keep it in version control.
 
-= Start small
+= Inherit from another theme
 
-A local theme can be tiny. You only need to include files you want to customize.
-Everything else falls back to the built-in `calepin` theme, so valid overrides include:
+A local theme can be tiny, but inheritance is explicit. Add `extends` to the
+local theme's `theme.toml` to choose the base theme:
 
-- only `layouts/webpage.html`
-- only `layouts/notebook.html`
-- only `notebook.typ.jinja`
+```toml
+extends = "academic"      # inherit from a built-in theme
+extends = "../base-theme" # inherit from another local theme in the project
+extends = "typst"         # inherit from no Calepin theme
+```
 
-Supporting assets (`partials`, `styles`, `scripts`) come from the selected theme and
-from any shared imports declared in `theme.toml`.
+Local `extends` paths are relative to the current theme directory and must stay
+inside the project. A local theme with no `extends` is standalone; it does not
+fall back to a built-in theme.
+
+A child theme can override only the files it needs:
+
+- `layouts/webpage.html`
+- `layouts/notebook.html`
+- `layouts/landing.html` or another explicit page layout
+- partials in `partials/`
+- styles in `styles/` or `css/`
+- scripts in `scripts/` or `js/`
+- `notebook.typ.jinja`
+
+Supporting assets (`partials`, `styles`, `scripts`) are inherited from parent to
+child. A child file with the same filename replaces the parent file in place.
 
 = What can be customized
 
@@ -195,6 +211,7 @@ Useful `notebook.typ.jinja` values:
 If `document.body` is not referenced, Calepin appends the notebook body after the
 rendered template.
 
-`theme = "typst"` disables notebook-specific theming, or use an empty
-`notebook.typ.jinja` for a minimal pass-through template. Older themes using
-`paged.typ.jinja` still work; new themes should use `notebook.typ.jinja`.
+`theme = "typst"` disables notebook-specific theming, and `extends = "typst"`
+creates a local theme with no inherited Calepin base. Use an empty
+`notebook.typ.jinja` for a minimal pass-through template. `paged.typ.jinja` is
+not supported; use `notebook.typ.jinja`.

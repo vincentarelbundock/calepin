@@ -31,7 +31,6 @@ fn rewrite_file_in_place(
     Ok(())
 }
 
-
 pub(crate) fn apply_html_theme_file_with_site_context(
     path: &Path,
     entry: Option<&crate::theme::HtmlEntry>,
@@ -57,7 +56,6 @@ pub(crate) fn inline_html_images_file(path: &Path, root: &Path) -> Result<()> {
         assets::inline_html_images(source, root, base_dir)
     })
 }
-
 
 #[cfg(test)]
 mod minify_tests {

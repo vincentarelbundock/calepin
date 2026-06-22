@@ -11,6 +11,7 @@ fn test_build_result(root: &Path, pages: &[PathBuf]) -> WebsiteBuildResult {
         asset_dir: PathBuf::from(".calepin"),
         config_path: root.join("calepin.toml"),
         theme_dir: None,
+        theme_dirs: Vec::new(),
         style_paths: Vec::new(),
         page_fingerprints: fingerprint_files(pages).unwrap(),
         nav_signature: 0,
@@ -2374,11 +2375,7 @@ fn shared_theme_init_script_is_rendered_with_relative_asset_path() {
         "#,
     )
     .unwrap();
-    std::fs::write(
-        src.join("index.typ"),
-        "#set document(title: [Home])\nHome",
-    )
-    .unwrap();
+    std::fs::write(src.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
     std::fs::write(
         src.join("sub").join("index.typ"),
         "#set document(title: [Sub])\nSub",

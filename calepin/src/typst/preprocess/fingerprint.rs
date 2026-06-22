@@ -150,10 +150,30 @@ fn path_fingerprint(path: &Path) -> String {
 }
 
 fn theme_fingerprint(theme: &crate::theme::ThemeSelection) -> String {
-    match theme {
-        crate::theme::ThemeSelection::Default => "default".to_string(),
-        crate::theme::ThemeSelection::Typst => "typst".to_string(),
-        crate::theme::ThemeSelection::Builtin(name) => format!("builtin:{name}"),
-        crate::theme::ThemeSelection::Dir(path) => format!("dir:{}", path.display()),
+    let Ok(chain) = crate::theme::resolve_theme_chain(theme) else {
+        return match theme {
+            crate::theme::ThemeSelection::Default => "default".to_string(),
+            crate::theme::ThemeSelection::Typst => "typst".to_string(),
+            crate::theme::ThemeSelection::Builtin(name) => format!("builtin:{name}"),
+            crate::theme::ThemeSelection::Dir(path) => format!("dir:{}", path.display()),
+        };
+    };
+    let mut parts = Vec::new();
+    if chain.terminal_typst {
+        parts.push("typst".to_string());
     }
+    for layer in chain.layers {
+        match layer {
+            crate::theme::ThemeLayer::Builtin(name) => parts.push(format!("builtin:{name}")),
+            crate::theme::ThemeLayer::Dir(path) => {
+                let manifest = path.join("theme.toml");
+                let manifest_hash = std::fs::read(&manifest)
+                    .ok()
+                    .map(|bytes| format!("{:016x}", xxh3_64(&bytes)))
+                    .unwrap_or_else(|| "missing".to_string());
+                parts.push(format!("dir:{}:{manifest_hash}", path.display()));
+            }
+        }
+    }
+    parts.join("|")
 }

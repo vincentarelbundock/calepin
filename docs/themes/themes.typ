@@ -48,11 +48,11 @@ When several theme settings are present during a compile, the document setting w
 
 = Structure
 
-A theme can provide templates for website pages, single-document HTML, and Typst-level notebook rendering:
+A theme can provide templates for website pages, single-document HTML, and Typst-level notebook rendering. Local themes inherit only from the theme named by `extends` in their `theme.toml`; without `extends`, a local theme is standalone.
 
 ```text
 themes/my-theme/
-  theme.toml         # theme metadata
+  theme.toml         # theme metadata, including optional `extends`
   layouts/
     webpage.html     # layout for website pages
     notebook.html    # layout for a single notebook rendered to HTML

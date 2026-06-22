@@ -4,11 +4,11 @@ use serde_json::Value;
 
 use crate::utils::template::no_autoescape_env;
 
-use super::bundle::{require_builtin, CALEPIN};
-use super::{dir_theme_name, validate_theme_dir, ThemeSelection, DEFAULT_THEME_NAME};
+use super::bundle::require_builtin;
+use super::{dir_theme_name, resolve_theme_chain, ThemeLayer, ThemeSelection};
 
 const NOTEBOOK_TEMPLATE: &str = "notebook.typ.jinja";
-const LEGACY_PAGED_TEMPLATE: &str = "paged.typ.jinja";
+const REMOVED_PAGED_TEMPLATE: &str = "paged.typ.jinja";
 
 #[derive(Debug, Clone)]
 pub struct NotebookTemplateContext {
@@ -57,64 +57,72 @@ struct NotebookDocumentContext<'a> {
 }
 
 /// The Typst source to inject while rendering a notebook. `None` disables
-/// notebook theming entirely. An empty `notebook.typ.jinja` file is rendered
-/// as-is (no styling), while an absent file falls back to the default bundle's
-/// `notebook.typ.jinja`.
+/// notebook theming entirely. Only `notebook.typ.jinja` is supported.
 pub fn notebook_source(
     selection: &ThemeSelection,
     context: &NotebookTemplateContext,
 ) -> Result<Option<NotebookSource>> {
-    let render = |name: &str, template_name: &str, source: String| {
-        let owns_body = source.contains("document.body");
-        let target = if template_name == LEGACY_PAGED_TEMPLATE {
-            "paged"
-        } else {
-            "notebook"
-        };
-        render_notebook_template(name, template_name, target, source, context)
-            .map(|source| NotebookSource { source, owns_body })
+    let chain = resolve_theme_chain(selection)?;
+    if chain.layers.is_empty() && chain.terminal_typst {
+        return Ok(None);
+    }
+    reject_removed_paged_templates(&chain.layers)?;
+    let Some((name, source)) = find_notebook_template(&chain.layers)? else {
+        let theme = chain
+            .layers
+            .last()
+            .map(layer_name)
+            .unwrap_or_else(|| "typst".to_string());
+        return Err(anyhow!(
+            "theme `{theme}` does not contain {NOTEBOOK_TEMPLATE}"
+        ));
     };
-    match selection {
-        ThemeSelection::Typst => Ok(None),
-        ThemeSelection::Default => {
-            render(DEFAULT_THEME_NAME, NOTEBOOK_TEMPLATE, default_source()).map(Some)
-        }
-        ThemeSelection::Builtin(name) => {
-            let bundle = require_builtin(name)?;
-            let source = bundle
-                .file(NOTEBOOK_TEMPLATE)
-                .or_else(|| bundle.file(LEGACY_PAGED_TEMPLATE))
-                .map(str::to_string)
-                .unwrap_or_else(default_source);
-            render(bundle.name, NOTEBOOK_TEMPLATE, source).map(Some)
-        }
-        ThemeSelection::Dir(dir) => {
-            validate_theme_dir(dir)?;
-            let template_path = dir.join(NOTEBOOK_TEMPLATE);
-            let legacy_template_path = dir.join(LEGACY_PAGED_TEMPLATE);
-            if template_path.is_file() {
-                let source = std::fs::read_to_string(&template_path)
-                    .with_context(|| format!("failed to read {}", template_path.display()))?;
-                let name = dir_theme_name(dir);
-                render(&name, NOTEBOOK_TEMPLATE, source).map(Some)
-            } else if legacy_template_path.is_file() {
-                let source = std::fs::read_to_string(&legacy_template_path).with_context(|| {
-                    format!("failed to read {}", legacy_template_path.display())
-                })?;
-                let name = dir_theme_name(dir);
-                render(&name, LEGACY_PAGED_TEMPLATE, source).map(Some)
-            } else {
-                render(DEFAULT_THEME_NAME, NOTEBOOK_TEMPLATE, default_source()).map(Some)
+    let owns_body = source.contains("document.body");
+    render_notebook_template(&name, NOTEBOOK_TEMPLATE, "notebook", source, context)
+        .map(|source| Some(NotebookSource { source, owns_body }))
+}
+
+fn find_notebook_template(layers: &[ThemeLayer]) -> Result<Option<(String, String)>> {
+    for layer in layers.iter().rev() {
+        match layer {
+            ThemeLayer::Builtin(name) => {
+                let bundle = require_builtin(name)?;
+                if let Some(source) = bundle.file(NOTEBOOK_TEMPLATE) {
+                    return Ok(Some((bundle.name.to_string(), source.to_string())));
+                }
+            }
+            ThemeLayer::Dir(dir) => {
+                let path = dir.join(NOTEBOOK_TEMPLATE);
+                if path.is_file() {
+                    let source = std::fs::read_to_string(&path)
+                        .with_context(|| format!("failed to read {}", path.display()))?;
+                    return Ok(Some((dir_theme_name(dir), source)));
+                }
             }
         }
     }
+    Ok(None)
 }
 
-fn default_source() -> String {
-    CALEPIN
-        .file(NOTEBOOK_TEMPLATE)
-        .map(str::to_string)
-        .expect("builtin calepin bundle ships notebook.typ.jinja")
+fn reject_removed_paged_templates(layers: &[ThemeLayer]) -> Result<()> {
+    for layer in layers {
+        if let ThemeLayer::Dir(dir) = layer {
+            let path = dir.join(REMOVED_PAGED_TEMPLATE);
+            if path.is_file() {
+                return Err(anyhow!(
+                    "{REMOVED_PAGED_TEMPLATE} is no longer supported; use {NOTEBOOK_TEMPLATE}"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn layer_name(layer: &ThemeLayer) -> String {
+    match layer {
+        ThemeLayer::Builtin(name) => (*name).to_string(),
+        ThemeLayer::Dir(dir) => dir_theme_name(dir),
+    }
 }
 
 fn render_notebook_template(

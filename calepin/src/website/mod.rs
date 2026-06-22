@@ -274,12 +274,29 @@ struct WebsiteBuildResult {
     asset_dir: PathBuf,
     config_path: PathBuf,
     theme_dir: Option<PathBuf>,
+    theme_dirs: Vec<PathBuf>,
     style_paths: Vec<PathBuf>,
     page_fingerprints: BTreeMap<PathBuf, u64>,
     nav_signature: u64,
     /// Hash of the pages index; when it changes, every page may render
     /// differently (listings), so incremental rebuilds fall back to full.
     pages_signature: u64,
+}
+
+fn theme_chain_dirs(theme: &crate::theme::ThemeSelection) -> Result<Vec<PathBuf>> {
+    let chain = crate::theme::resolve_theme_chain(theme)?;
+    chain
+        .layers
+        .into_iter()
+        .filter_map(|layer| match layer {
+            crate::theme::ThemeLayer::Dir(path) => Some(path),
+            crate::theme::ThemeLayer::Builtin(_) => None,
+        })
+        .map(|path| {
+            path.canonicalize()
+                .with_context(|| format!("failed to resolve theme directory {}", path.display()))
+        })
+        .collect()
 }
 
 fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
@@ -313,13 +330,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let config_theme = calepin_config.theme_selection()?.unwrap_or_default();
     let site_theme = config_theme.clone();
     let asset_dir = resolve_website_asset_dir(&config)?;
-    let theme_dir = match &site_theme {
-        crate::theme::ThemeSelection::Dir(dir) => Some(
-            dir.canonicalize()
-                .with_context(|| format!("failed to resolve theme directory {}", dir.display()))?,
-        ),
-        _ => None,
-    };
+    let theme_dirs = theme_chain_dirs(&site_theme)?;
+    let theme_dir = theme_dirs.last().cloned();
     let site_entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?;
     let mut external_theme_assets = site_entry.as_ref().is_some_and(|entry| {
         entry.is_default
@@ -640,6 +652,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         asset_dir,
         config_path,
         theme_dir,
+        theme_dirs,
         style_paths,
         page_fingerprints,
         nav_signature,
@@ -721,7 +734,7 @@ fn watch_roots(current: &WebsiteBuildResult) -> Vec<(PathBuf, RecursiveMode)> {
         (current.src_dir.clone(), RecursiveMode::Recursive),
         (current.config_path.clone(), RecursiveMode::NonRecursive),
     ];
-    if let Some(theme_dir) = current.theme_dir.as_deref() {
+    for theme_dir in &current.theme_dirs {
         watches.push((theme_dir.to_path_buf(), RecursiveMode::Recursive));
     }
     for style_path in &current.style_paths {
@@ -738,10 +751,12 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     if path == initial.config_path {
         return true;
     }
-    if let Some(theme_dir) = initial.theme_dir.as_deref() {
-        if path.starts_with(theme_dir) {
-            return true;
-        }
+    if initial
+        .theme_dirs
+        .iter()
+        .any(|theme_dir| path.starts_with(theme_dir))
+    {
+        return true;
     }
     // A distinct output directory only ever receives generated copies; reacting
     // to them would re-trigger the build that produced them.

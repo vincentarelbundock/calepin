@@ -1,13 +1,12 @@
 use std::path::Path;
 
+use super::bundle::{require_builtin, shared_file, BundleDef};
+use super::{
+    dir_theme_name, read_local_theme_manifest, read_theme_files, read_theme_files_any,
+    resolve_theme_chain, ThemeLayer, ThemeSelection, DEFAULT_THEME_NAME,
+};
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
-
-use super::bundle::{require_builtin, shared_file, BundleDef, CALEPIN};
-use super::{
-    dir_theme_name, read_theme_files, read_theme_files_any, validate_theme_dir, ThemeSelection,
-    DEFAULT_THEME_NAME,
-};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HtmlScope {
@@ -83,6 +82,8 @@ pub fn style_only_html_entry(styles: Vec<crate::config::CssOverride>) -> HtmlEnt
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub(crate) struct ThemeManifest {
+    #[allow(dead_code)]
+    extends: Option<String>,
     shared: SharedImports,
 }
 
@@ -90,76 +91,36 @@ pub(crate) struct ThemeManifest {
 #[serde(default, deny_unknown_fields)]
 struct SharedImports {
     partials: Vec<String>,
+    styles: Vec<String>,
+    scripts: Vec<String>,
     css: Vec<String>,
     js: Vec<String>,
     assets: Vec<String>,
 }
 
 /// Resolve the layout for `scope`. `None` means raw Typst output.
-/// Fallback: if the selected theme lacks the entry file, use the builtin
-/// default bundle's entry with the default's assets. One level, no chains.
 pub fn resolve_html_entry(
     selection: &ThemeSelection,
     scope: HtmlScope,
 ) -> Result<Option<HtmlEntry>> {
     let entry = scope.entry_file();
-    match selection {
-        ThemeSelection::Typst => Ok(None),
-        ThemeSelection::Default => Ok(Some(bundle_entry(&CALEPIN, entry, true)?)),
-        ThemeSelection::Builtin(name) => {
-            let bundle = require_builtin(name)?;
-            if bundle.has_file(entry) {
-                Ok(Some(bundle_entry(
-                    bundle,
-                    entry,
-                    bundle.name == DEFAULT_THEME_NAME,
-                )?))
-            } else {
-                Ok(Some(bundle_entry(&CALEPIN, entry, true)?))
-            }
-        }
-        ThemeSelection::Dir(dir) => {
-            validate_theme_dir(dir)?;
-            if dir.join(entry).is_file() {
-                Ok(Some(dir_entry(dir, entry)?))
-            } else {
-                Ok(Some(bundle_entry(&CALEPIN, entry, true)?))
-            }
-        }
-    }
+    let chain = resolve_theme_chain(selection)?;
+    chain_html_entry(&chain.layers, entry, chain.terminal_typst)
 }
 
-/// Resolve a website layout at an explicit theme-relative path. Unlike the
-/// standard site/document entries, explicit page layouts never fall back to
-/// the default theme: the path must exist exactly as written.
+/// Resolve a website layout at an explicit theme-relative path.
 pub fn resolve_explicit_site_html_entry(
     selection: &ThemeSelection,
     layout_path: &str,
 ) -> Result<Option<HtmlEntry>> {
     validate_explicit_html_layout_path(layout_path)?;
-    match selection {
-        ThemeSelection::Typst => Err(anyhow!(
+    let chain = resolve_theme_chain(selection)?;
+    if chain.layers.is_empty() && chain.terminal_typst {
+        return Err(anyhow!(
             "page layout `{layout_path}` requires an HTML theme, but theme is `typst`"
-        )),
-        ThemeSelection::Default => explicit_bundle_entry(&CALEPIN, layout_path, true),
-        ThemeSelection::Builtin(name) => {
-            let bundle = require_builtin(name)?;
-            explicit_bundle_entry(bundle, layout_path, bundle.name == DEFAULT_THEME_NAME)
-        }
-        ThemeSelection::Dir(dir) => {
-            validate_theme_dir(dir)?;
-            if dir.join(layout_path).is_file() {
-                Ok(Some(dir_entry(dir, layout_path)?))
-            } else if !dir.join(HtmlScope::Site.entry_file()).is_file() {
-                explicit_bundle_entry(&CALEPIN, layout_path, true)
-            } else {
-                Err(anyhow!(
-                    "theme `{}` does not contain page layout `{layout_path}`",
-                    dir_theme_name(dir)
-                ))
-            }
-        }
+        ));
     }
+    chain_html_entry(&chain.layers, layout_path, chain.terminal_typst)
 }
 
 fn validate_explicit_html_layout_path(value: &str) -> Result<()> {
@@ -186,59 +147,195 @@ fn validate_explicit_html_layout_path(value: &str) -> Result<()> {
     Ok(())
 }
 
-fn explicit_bundle_entry(
-    bundle: &'static BundleDef,
+fn chain_html_entry(
+    layers: &[ThemeLayer],
     entry: &str,
-    is_default: bool,
+    terminal_typst: bool,
 ) -> Result<Option<HtmlEntry>> {
-    if bundle.has_file(entry) {
-        Ok(Some(bundle_entry(bundle, entry, is_default)?))
-    } else {
-        Err(anyhow!(
-            "theme `{}` does not contain page layout `{entry}`",
-            bundle.name
-        ))
+    if layers.is_empty() && terminal_typst {
+        return Ok(None);
+    }
+    let Some((_layout_index, layout)) = find_chain_layout(layers, entry)? else {
+        let theme = layers
+            .last()
+            .map(layer_name)
+            .unwrap_or_else(|| "typst".to_string());
+        return Err(anyhow!(
+            "theme `{theme}` does not contain page layout `{entry}`"
+        ));
+    };
+    let mut partials = Vec::new();
+    let mut styles = Vec::new();
+    let mut scripts = Vec::new();
+    let mut assets = Vec::new();
+    for layer in layers {
+        merge_named_assets(&mut partials, layer_partials(layer)?);
+        merge_named_assets(&mut styles, layer_styles(layer)?);
+        merge_named_assets(&mut scripts, layer_scripts(layer)?);
+        merge_named_assets(&mut assets, layer_assets_any(layer)?);
+    }
+    Ok(Some(HtmlEntry {
+        theme_name: layer_name(layers.last().unwrap()),
+        layout,
+        partials,
+        styles,
+        scripts,
+        assets,
+        is_default: matches!(layers.last(), Some(ThemeLayer::Builtin(DEFAULT_THEME_NAME))),
+    }))
+}
+
+fn find_chain_layout(layers: &[ThemeLayer], entry: &str) -> Result<Option<(usize, String)>> {
+    for (index, layer) in layers.iter().enumerate().rev() {
+        match layer {
+            ThemeLayer::Builtin(name) => {
+                let bundle = require_builtin(name)?;
+                if let Some(source) = bundle.file(entry) {
+                    return Ok(Some((index, source.to_string())));
+                }
+            }
+            ThemeLayer::Dir(dir) => {
+                let path = dir.join(entry);
+                if path.is_file() {
+                    let source = std::fs::read_to_string(&path)
+                        .with_context(|| format!("failed to read {}", path.display()))?;
+                    return Ok(Some((index, source)));
+                }
+            }
+        }
+    }
+    Ok(None)
+}
+
+fn layer_name(layer: &ThemeLayer) -> String {
+    match layer {
+        ThemeLayer::Builtin(name) => (*name).to_string(),
+        ThemeLayer::Dir(dir) => dir_theme_name(dir),
     }
 }
 
-fn bundle_entry(bundle: &'static BundleDef, entry: &str, is_default: bool) -> Result<HtmlEntry> {
-    let layout = bundle
-        .file(entry)
-        .map(str::to_string)
-        .ok_or_else(|| anyhow!("builtin theme `{}` is missing `{entry}`", bundle.name))?;
-    let manifest = bundle_manifest(bundle)?;
-    Ok(HtmlEntry {
-        theme_name: bundle.name.to_string(),
-        layout,
-        partials: bundle_assets(bundle, &manifest.shared.partials, "partials/", "html")?
-            .into_iter()
-            .map(|(name, source)| (format!("partials/{name}"), source))
-            .collect(),
-        styles: bundle_assets(bundle, &manifest.shared.css, "css/", "css")?,
-        scripts: bundle_assets(bundle, &manifest.shared.js, "js/", "js")?,
-        assets: bundle_assets_any(bundle, &manifest.shared.assets, "assets/")?,
-        is_default,
-    })
+fn merge_named_assets(target: &mut Vec<(String, String)>, incoming: Vec<(String, String)>) {
+    for (name, source) in incoming {
+        if let Some((_, existing_source)) =
+            target.iter_mut().find(|(existing, _)| existing == &name)
+        {
+            *existing_source = source;
+        } else {
+            target.push((name, source));
+        }
+    }
 }
 
-fn dir_entry(dir: &Path, entry: &str) -> Result<HtmlEntry> {
-    let layout_path = dir.join(entry);
-    let layout = std::fs::read_to_string(&layout_path)
-        .with_context(|| format!("failed to read {}", layout_path.display()))?;
-    let name = dir_theme_name(dir);
-    let manifest = dir_manifest(dir)?;
-    Ok(HtmlEntry {
-        theme_name: name,
-        layout,
-        partials: dir_assets(dir, &manifest.shared.partials, "partials", "html")?
-            .into_iter()
-            .map(|(file, source)| (format!("partials/{file}"), source))
-            .collect(),
-        styles: dir_assets(dir, &manifest.shared.css, "css", "css")?,
-        scripts: dir_assets(dir, &manifest.shared.js, "js", "js")?,
-        assets: dir_assets_any(dir, &manifest.shared.assets, "assets")?,
-        is_default: false,
-    })
+fn layer_partials(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
+    match layer {
+        ThemeLayer::Builtin(name) => {
+            let bundle = require_builtin(name)?;
+            let manifest = bundle_manifest(bundle)?;
+            Ok(
+                bundle_assets(bundle, &manifest.shared.partials, "partials/", "html")?
+                    .into_iter()
+                    .map(|(name, source)| (format!("partials/{name}"), source))
+                    .collect(),
+            )
+        }
+        ThemeLayer::Dir(dir) => {
+            let manifest = read_local_theme_manifest(dir)?;
+            Ok(
+                dir_assets(dir, &manifest.shared.partials, "partials", "html")?
+                    .into_iter()
+                    .map(|(name, source)| (format!("partials/{name}"), source))
+                    .collect(),
+            )
+        }
+    }
+}
+
+fn style_imports(shared: &SharedImports) -> Vec<String> {
+    shared
+        .css
+        .iter()
+        .chain(shared.styles.iter())
+        .cloned()
+        .collect()
+}
+
+fn script_imports(shared: &SharedImports) -> Vec<String> {
+    shared
+        .js
+        .iter()
+        .chain(shared.scripts.iter())
+        .cloned()
+        .collect()
+}
+
+fn local_style_imports(shared: &super::LocalThemeSharedImports) -> Vec<String> {
+    shared
+        .css
+        .iter()
+        .chain(shared.styles.iter())
+        .cloned()
+        .collect()
+}
+
+fn local_script_imports(shared: &super::LocalThemeSharedImports) -> Vec<String> {
+    shared
+        .js
+        .iter()
+        .chain(shared.scripts.iter())
+        .cloned()
+        .collect()
+}
+
+fn layer_styles(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
+    match layer {
+        ThemeLayer::Builtin(name) => {
+            let bundle = require_builtin(name)?;
+            let manifest = bundle_manifest(bundle)?;
+            bundle_assets(bundle, &style_imports(&manifest.shared), "css/", "css")
+        }
+        ThemeLayer::Dir(dir) => {
+            let manifest = read_local_theme_manifest(dir)?;
+            dir_assets_flexible(
+                dir,
+                &local_style_imports(&manifest.shared),
+                &["styles", "css"],
+                "css",
+            )
+        }
+    }
+}
+
+fn layer_scripts(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
+    match layer {
+        ThemeLayer::Builtin(name) => {
+            let bundle = require_builtin(name)?;
+            let manifest = bundle_manifest(bundle)?;
+            bundle_assets(bundle, &script_imports(&manifest.shared), "js/", "js")
+        }
+        ThemeLayer::Dir(dir) => {
+            let manifest = read_local_theme_manifest(dir)?;
+            dir_assets_flexible(
+                dir,
+                &local_script_imports(&manifest.shared),
+                &["scripts", "js"],
+                "js",
+            )
+        }
+    }
+}
+
+fn layer_assets_any(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
+    match layer {
+        ThemeLayer::Builtin(name) => {
+            let bundle = require_builtin(name)?;
+            let manifest = bundle_manifest(bundle)?;
+            bundle_assets_any(bundle, &manifest.shared.assets, "assets/")
+        }
+        ThemeLayer::Dir(dir) => {
+            let manifest = read_local_theme_manifest(dir)?;
+            dir_assets_any(dir, &manifest.shared.assets, "assets")
+        }
+    }
 }
 
 fn bundle_manifest(bundle: &BundleDef) -> Result<ThemeManifest> {
@@ -247,16 +344,6 @@ fn bundle_manifest(bundle: &BundleDef) -> Result<ThemeManifest> {
     };
     toml::from_str(source)
         .with_context(|| format!("failed to parse builtin theme `{}` theme.toml", bundle.name))
-}
-
-fn dir_manifest(dir: &Path) -> Result<ThemeManifest> {
-    let path = dir.join("theme.toml");
-    if !path.is_file() {
-        return Ok(ThemeManifest::default());
-    }
-    let source = std::fs::read_to_string(&path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
-    toml::from_str(&source).with_context(|| format!("failed to parse {}", path.display()))
 }
 
 fn collect_shared_assets(
@@ -350,6 +437,30 @@ fn bundle_files(bundle: &BundleDef, prefix: &str, ext: Option<&str>) -> Vec<(Str
     files
 }
 
+fn dir_assets_flexible(
+    dir: &Path,
+    imports: &[String],
+    subdirs: &[&str],
+    ext: &str,
+) -> Result<Vec<(String, String)>> {
+    let mut local_files = Vec::new();
+    for subdir in subdirs {
+        merge_named_assets(&mut local_files, read_theme_files(&dir.join(subdir), ext)?);
+    }
+    collect_shared_assets(local_files, imports, ext, Some(ext), |name| {
+        for subdir in subdirs {
+            let path = format!("{subdir}/{name}");
+            if let Some(source) = dir_shared_file(dir, &path)? {
+                return Ok(Some(source));
+            }
+            if let Some(source) = shared_file(&path).map(str::to_string) {
+                return Ok(Some(source));
+            }
+        }
+        Ok(None)
+    })
+}
+
 fn dir_assets(
     dir: &Path,
     imports: &[String],
@@ -357,16 +468,10 @@ fn dir_assets(
     ext: &str,
 ) -> Result<Vec<(String, String)>> {
     let local_files = read_theme_files(&dir.join(subdir), ext)?;
-    collect_shared_assets(
-        local_files,
-        imports,
-        ext,
-        Some(ext),
-        |name| {
-            let path = format!("{subdir}/{name}");
-            Ok(dir_shared_file(dir, &path)?.or_else(|| shared_file(&path).map(str::to_string)))
-        },
-    )
+    collect_shared_assets(local_files, imports, ext, Some(ext), |name| {
+        let path = format!("{subdir}/{name}");
+        Ok(dir_shared_file(dir, &path)?.or_else(|| shared_file(&path).map(str::to_string)))
+    })
 }
 
 fn dir_assets_any(dir: &Path, imports: &[String], subdir: &str) -> Result<Vec<(String, String)>> {

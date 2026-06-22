@@ -142,8 +142,8 @@ fn write_resolved_shared_file(
     if bundle.has_file(&relative) {
         return Ok(());
     }
-    let source = shared_file(&relative)
-        .ok_or_else(|| anyhow!("shared import `{name}` was not found"))?;
+    let source =
+        shared_file(&relative).ok_or_else(|| anyhow!("shared import `{name}` was not found"))?;
     write_theme_file(dest, &relative, source)
 }
 

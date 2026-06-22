@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
+use serde::Deserialize;
 
 mod bundle;
 mod html;
@@ -60,6 +61,161 @@ impl ThemeSelection {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ThemeLayer {
+    Builtin(&'static str),
+    Dir(PathBuf),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ThemeChain {
+    /// Parent-most to child-most. Empty means terminal `typst` with no local layers.
+    pub(crate) layers: Vec<ThemeLayer>,
+    pub(crate) terminal_typst: bool,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub(crate) struct LocalThemeManifest {
+    pub(crate) extends: Option<String>,
+    pub(crate) shared: LocalThemeSharedImports,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub(crate) struct LocalThemeSharedImports {
+    pub(crate) partials: Vec<String>,
+    pub(crate) styles: Vec<String>,
+    pub(crate) scripts: Vec<String>,
+    pub(crate) css: Vec<String>,
+    pub(crate) js: Vec<String>,
+    pub(crate) assets: Vec<String>,
+}
+
+pub(crate) fn resolve_theme_chain(selection: &ThemeSelection) -> Result<ThemeChain> {
+    match selection {
+        ThemeSelection::Typst => Ok(ThemeChain {
+            layers: Vec::new(),
+            terminal_typst: true,
+        }),
+        ThemeSelection::Default => Ok(ThemeChain {
+            layers: vec![ThemeLayer::Builtin(DEFAULT_THEME_NAME)],
+            terminal_typst: false,
+        }),
+        ThemeSelection::Builtin(name) => Ok(ThemeChain {
+            layers: vec![ThemeLayer::Builtin(name)],
+            terminal_typst: false,
+        }),
+        ThemeSelection::Dir(dir) => {
+            validate_theme_dir(dir)?;
+            let project_root = infer_theme_project_root(dir);
+            let mut stack = Vec::new();
+            resolve_dir_theme_chain(dir, &project_root, &mut stack)
+        }
+    }
+}
+
+fn infer_theme_project_root(dir: &Path) -> PathBuf {
+    let mut current = dir;
+    while let Some(parent) = current.parent() {
+        if parent.join("calepin.toml").is_file() {
+            return parent.to_path_buf();
+        }
+        current = parent;
+    }
+    dir.parent().unwrap_or(dir).to_path_buf()
+}
+
+fn resolve_dir_theme_chain(
+    dir: &Path,
+    project_root: &Path,
+    stack: &mut Vec<PathBuf>,
+) -> Result<ThemeChain> {
+    let canonical = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
+    if let Some(index) = stack.iter().position(|path| path == &canonical) {
+        let mut cycle = stack[index..]
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>();
+        cycle.push(canonical.display().to_string());
+        return Err(anyhow!("theme inheritance cycle: {}", cycle.join(" -> ")));
+    }
+    stack.push(canonical.clone());
+
+    let manifest = read_local_theme_manifest(dir)?;
+    let mut chain = match manifest.extends.as_deref() {
+        None => ThemeChain {
+            layers: Vec::new(),
+            terminal_typst: false,
+        },
+        Some("typst") => ThemeChain {
+            layers: Vec::new(),
+            terminal_typst: true,
+        },
+        Some(value) if bundle::builtin_names().into_iter().any(|name| name == value) => {
+            ThemeChain {
+                layers: vec![ThemeLayer::Builtin(
+                    bundle::builtin_names()
+                        .into_iter()
+                        .find(|name| *name == value)
+                        .unwrap(),
+                )],
+                terminal_typst: false,
+            }
+        }
+        Some(value) if is_path_like(value) => {
+            let path = resolve_theme_extends_path(dir, project_root, value)?;
+            validate_theme_dir(&path)?;
+            resolve_dir_theme_chain(&path, project_root, stack)?
+        }
+        Some(value) => {
+            return Err(anyhow!(
+                "unknown theme `{value}` in extends; use `typst`, one of {}, or a relative path inside the project",
+                bundle::builtin_names().join(", ")
+            ))
+        }
+    };
+    chain.layers.push(ThemeLayer::Dir(dir.to_path_buf()));
+    stack.pop();
+    Ok(chain)
+}
+
+pub(crate) fn read_local_theme_manifest(dir: &Path) -> Result<LocalThemeManifest> {
+    let path = dir.join("theme.toml");
+    if !path.is_file() {
+        return Ok(LocalThemeManifest::default());
+    }
+    let source = std::fs::read_to_string(&path)
+        .with_context(|| format!("failed to read {}", path.display()))?;
+    toml::from_str(&source).with_context(|| format!("failed to parse {}", path.display()))
+}
+
+fn resolve_theme_extends_path(dir: &Path, project_root: &Path, value: &str) -> Result<PathBuf> {
+    let raw = Path::new(value);
+    if raw.is_absolute() {
+        return Err(anyhow!("theme extends path must be relative: `{value}`"));
+    }
+    let project_root = project_root
+        .canonicalize()
+        .unwrap_or_else(|_| project_root.to_path_buf());
+    let path = dir.join(raw);
+    let canonical = path
+        .canonicalize()
+        .with_context(|| format!("theme extends path not found: {}", path.display()))?;
+    if !canonical.starts_with(&project_root) {
+        return Err(anyhow!(
+            "theme extends path must stay inside the project: `{value}`"
+        ));
+    }
+    if !canonical.is_dir() {
+        return Err(anyhow!(
+            "theme extends path is not a directory: {}",
+            canonical.display()
+        ));
+    }
+    Ok(canonical)
+}
+
 /// Same heuristic the old html theme used: anything that looks like a path
 /// (separator, leading dot, absolute) is treated as a directory reference.
 fn is_path_like(value: &str) -> bool {
@@ -72,14 +228,15 @@ fn is_path_like(value: &str) -> bool {
 }
 
 fn validate_theme_dir(dir: &Path) -> Result<()> {
-    let has_entry = [
-        "notebook.typ.jinja",
-        "paged.typ.jinja",
-        "layouts/notebook.html",
-        "layouts/webpage.html",
-    ]
-    .iter()
-    .any(|file| dir.join(file).is_file());
+    let has_entry = dir.join("theme.toml").is_file()
+        || [
+            "notebook.typ.jinja",
+            "paged.typ.jinja",
+            "layouts/notebook.html",
+            "layouts/webpage.html",
+        ]
+        .iter()
+        .any(|file| dir.join(file).is_file());
     if !has_entry {
         return Err(anyhow!(
             "theme directory {} contains none of notebook.typ.jinja, layouts/notebook.html, layouts/webpage.html",
@@ -285,7 +442,7 @@ mod tests {
     }
 
     #[test]
-    fn dir_theme_uses_own_entry_and_falls_back_per_missing_file() {
+    fn dir_theme_without_extends_does_not_fallback_per_missing_file() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
@@ -296,18 +453,36 @@ mod tests {
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
         assert!(!site.is_default);
-        let document = resolve_html_entry(&sel, HtmlScope::Document)
-            .unwrap()
+        assert!(resolve_html_entry(&sel, HtmlScope::Document).is_err());
+        assert!(notebook_source(&sel, &NotebookTemplateContext::default()).is_err());
+    }
+
+    #[test]
+    fn dir_theme_extends_builtin_for_missing_entries_and_overrides_assets_by_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme = dir.path().join("child");
+        std::fs::create_dir_all(theme.join("styles")).unwrap();
+        std::fs::write(theme.join("theme.toml"), "extends = \"academic\"\n").unwrap();
+        std::fs::write(theme.join("styles/20_theme.css"), "/* child theme */").unwrap();
+
+        let sel = ThemeSelection::Dir(theme);
+        let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
+
+        assert_eq!(site.theme_name, "child");
+        assert!(site.layout.contains("academic-page"));
+        let theme_css = site
+            .styles
+            .iter()
+            .find(|(name, _)| name == "20_theme.css")
+            .map(|(_, css)| css)
             .unwrap();
-        assert!(document.is_default);
-        // notebook.typ.jinja absent: default notebook styling
+        assert_eq!(theme_css, "/* child theme */");
         assert_eq!(
-            notebook_source(&sel, &NotebookTemplateContext::default()).unwrap(),
-            notebook_source(
-                &ThemeSelection::Default,
-                &NotebookTemplateContext::default()
-            )
-            .unwrap()
+            site.styles
+                .iter()
+                .filter(|(name, _)| name == "20_theme.css")
+                .count(),
+            1
         );
     }
 
@@ -457,17 +632,16 @@ css = ["../theme.css"]
     }
 
     #[test]
-    fn explicit_site_layout_falls_back_for_notebook_only_local_theme() {
+    fn explicit_site_layout_requires_local_or_inherited_file() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("notebook.typ.jinja"), "{{ document.body }}").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
-        let entry = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
-            .unwrap()
-            .unwrap();
+        let err = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
+            .unwrap_err()
+            .to_string();
 
-        assert!(entry.layout.contains("calepin-website-main--landing"));
-        assert!(entry.is_default);
+        assert!(err.contains("layouts/landing.html"), "{err}");
     }
 
     #[test]
@@ -621,7 +795,7 @@ css = ["../theme.css"]
     }
 
     #[test]
-    fn legacy_paged_typ_jinja_still_works_for_local_themes() {
+    fn paged_typ_jinja_is_rejected_for_local_themes() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("paged.typ.jinja"),
@@ -629,11 +803,10 @@ css = ["../theme.css"]
         )
         .unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
-        let source = notebook_source(&sel, &NotebookTemplateContext::default())
-            .unwrap()
-            .unwrap();
-        assert_eq!(source.source, "paged ");
-        assert!(source.owns_body);
+        let err = notebook_source(&sel, &NotebookTemplateContext::default())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("paged.typ.jinja"), "{err}");
     }
 
     #[test]
