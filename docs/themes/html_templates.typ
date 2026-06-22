@@ -38,7 +38,6 @@ Layouts are MiniJinja templates. The template context contains these top-level v
 - `site.languages`: language entries for the language picker.
 - `site.translations`: alternate-language links for the current page.
 - `site.language`: the current language code.
-- `site.stylesheet`: an optional extra stylesheet URL.
 - `site.scripts`: extra script URLs.
 - `site.theme_assets`: emitted theme asset URLs, usually for built-in website themes.
 - `site.pagefind`: Pagefind search assets and bundle path, when search is enabled.

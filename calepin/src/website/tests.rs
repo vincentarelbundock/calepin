@@ -1838,7 +1838,6 @@ fn theme_context_rewrites_brand_urls_relative_to_current_page() {
     assert_eq!(context.home_url.as_deref(), Some("../index.html"));
     assert_eq!(context.favicon.as_deref(), Some("../assets/favicon.ico"));
     assert_eq!(context.logo_alt.as_deref(), Some("Example"));
-    assert_eq!(context.stylesheet, None);
 }
 
 #[test]

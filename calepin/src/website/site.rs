@@ -209,7 +209,6 @@ impl SiteModel {
                 html_escape(&absolute_site_url_without_index(base_url, current_href))
             }),
             page_title,
-            stylesheet: None,
             scripts: Vec::new(),
             theme_assets: theme_assets.to_vec(),
             pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {
