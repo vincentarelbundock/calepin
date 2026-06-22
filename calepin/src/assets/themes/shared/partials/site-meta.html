@@ -34,9 +34,9 @@
     <meta property="og:title" content="{{ meta_title }}">
     {% endif %}
     {% endif %}
-    {% if site.current_url %}
-    <link rel="canonical" href="{{ site.current_url }}">
-    <meta property="og:url" content="{{ site.current_url }}">
+    {% if site.page_url %}
+    <link rel="canonical" href="{{ site.page_url }}">
+    <meta property="og:url" content="{{ site.page_url }}">
     {% endif %}
     {% if site.favicon %}
     <link rel="icon" href="{{ site.favicon }}">

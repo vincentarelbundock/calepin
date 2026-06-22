@@ -56,7 +56,7 @@ pub(crate) struct SiteContextInput {
     pub(crate) logo_alt: Option<String>,
     pub(crate) home_url: Option<String>,
     pub(crate) favicon: Option<String>,
-    pub(crate) current_url: Option<String>,
+    pub(crate) page_url: Option<String>,
     pub(crate) page_title: Option<String>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
 }

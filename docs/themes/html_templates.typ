@@ -28,15 +28,15 @@ Layouts are MiniJinja templates. The template context contains these top-level v
 
 - `site.title`, `site.description`, `site.base_url`
 - `site.logo`, `site.logo_alt`, `site.home_url`, `site.favicon`
-- `site.current_url`, `site.page_title`
+- `site.page_url`, `site.page_title`
 - `site.sidebar`: flat navigation entries.
 - `site.sidebar_sections`: grouped navigation sections.
 - `site.sidebar_fold`: whether titled sidebar sections should fold.
 - `site.toc`: the current page table of contents.
 - `site.menus`: named menus, such as `site.menus.main`, `site.menus.social`, and `site.menus.footer`.
+- `site.language`: the current language code.
 - `site.languages`: language entries for the language picker.
 - `site.translations`: alternate-language links for the current page.
-- `site.language`: the current language code.
 - `site.pagefind`: Pagefind search assets and bundle path, when search is enabled.
 
 Nested entries expose these fields:

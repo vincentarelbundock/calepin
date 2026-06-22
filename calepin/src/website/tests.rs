@@ -1312,7 +1312,7 @@ fn write_sitemap_uses_absolute_page_urls() {
 }
 
 #[test]
-fn site_context_current_url_uses_directory_style_for_index_routes() {
+fn site_context_page_url_uses_directory_style_for_index_routes() {
     let site = SiteModel::new(
         vec![],
         MenusModel::default(),
@@ -1329,14 +1329,11 @@ fn site_context_current_url_uses_directory_style_for_index_routes() {
     let empty_page_info = PageInfoMap::new();
 
     let home = site.theme_context("index.html", None, &empty_page_info, None, None);
-    assert_eq!(
-        home.current_url.as_deref(),
-        Some("https://example.com/project/")
-    );
+    assert_eq!(home.page_url.as_deref(), Some("https://example.com/project/"));
 
     let section = site.theme_context("guide/index.html", None, &empty_page_info, None, None);
     assert_eq!(
-        section.current_url.as_deref(),
+        section.page_url.as_deref(),
         Some("https://example.com/project/guide/")
     );
 }

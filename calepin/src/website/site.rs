@@ -177,7 +177,7 @@ impl SiteModel {
                 .favicon
                 .as_deref()
                 .map(|favicon| html_escape(&page_relative_url(current_href, favicon))),
-            current_url: self.metadata.base_url.as_deref().map(|base_url| {
+            page_url: self.metadata.base_url.as_deref().map(|base_url| {
                 html_escape(&absolute_site_url_without_index(base_url, current_href))
             }),
             page_title,
