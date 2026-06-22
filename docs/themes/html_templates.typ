@@ -48,21 +48,7 @@ Nested entries expose these fields:
 - Language and translation entries: `code`, `label`, `href`, `active`.
 - Pagefind: `css`, `js`, `bundle`.
 
-= Custom variables
-
-Add a `[vars]` table to `calepin.toml` for project-specific values you want to use in templates:
-
-```toml
-[vars]
-course = "Econ 101"
-semester = "Fall 2026"
-```
-
-These values are available as top-level `vars`, not under `site`:
-
-```html
-<p>{{ vars.course }} — {{ vars.semester }}</p>
-```
+= Minimal template
 
 Here is a minimal `layouts/notebook.html`:
 
@@ -92,6 +78,22 @@ Here is a minimal `layouts/notebook.html`:
 ```
 
 Keep `doc.head`, `doc.body_open`, and `doc.body_close` unless you are intentionally replacing the entire HTML shell.
+
+= Custom variables
+
+Add a `[vars]` table to `calepin.toml` for project-specific values you want to use in templates:
+
+```toml
+[vars]
+course = "Econ 101"
+semester = "Fall 2026"
+```
+
+These values are available as top-level `vars`, not under `site`:
+
+```html
+<p>{{ vars.course }} — {{ vars.semester }}</p>
+```
 
 = Partials
 

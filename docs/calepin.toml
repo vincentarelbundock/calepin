@@ -120,6 +120,15 @@ title = "Themes"
   [[sidebar.section.item]]
   target = "themes/pdf_templates.typ"
 
+  [[sidebar.section.item]]
+  target = "themes/html_templates.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/css.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/case_studies.typ"
+
 [[sidebar.section]]
 title = "More"
 

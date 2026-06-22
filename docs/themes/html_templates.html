@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pages and metadata</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>HTML templates</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -12,12 +12,12 @@
     
     
     
-    <meta property="og:title" content="Pages and metadata | Calepin">
+    <meta property="og:title" content="HTML templates | Calepin">
     
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/websites/pages.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/websites/pages.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/themes/html_templates.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/themes/html_templates.html">
     
     
     <link rel="icon" href="../.calepin/favicon.svg">
@@ -4065,7 +4065,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Pages and metadata])\n#metadata((title: \"Pages\")) <website-metadata>\n\n#title()\n\n= Include or exclude pages\n\nUse `[pages]` for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:\n\n```toml\n[pages]\ninclude = [\"blog/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\nExcluded files are also omitted from copied `.typ` source artifacts in the build output directory.\n\nPut the page title in the document and keep website metadata for fields used by listings, routing, and output options:\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n)) <website-metadata>\n\n#title()\n```\n\n`index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.\n\n= Page metadata\n\nAdd arbitrary page metadata with Typst's `#metadata` function and the `<website-metadata>` label. _Calepin_ reads this dictionary while building the site and attaches it to the page entry returned by `calepin.pages()`.\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n  author: \"Ada Lovelace\",\n  summary: \"A short release note for the new website.\",\n  draft: false,\n)) <website-metadata>\n\n#title()\n```\n\nUse `calepin.pages()` to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.\n\n```typ\n#import \"/.calepin/calepin.typ\" as calepin\n\n#let posts = calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .filter(p => not p.meta.at(\"draft\", default: false))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev()\n\n#for post in posts [\n  - #link(post.href)[#post.title] \\\n    #post.meta.at(\"summary\", default: [])\n]\n```\n\n`calepin.pages()` returns one dictionary per built page, excluding `404.typ`. _Calepin_ creates these entry fields:\n\n- `path`: source path relative to the website root\n- `href`: rendered HTML path relative to the current page\n- `title`: resolved page title\n- `language`: language code, or `none` when languages are not configured\n- `translation_key`: resolved key used to connect translated pages\n- `translations`: matching pages in other languages, or an empty dictionary\n- `pdf`: PDF path, or `none` when the page has no PDF output\n- `meta`: the page's `<website-metadata>` dictionary, or an empty dictionary\n\nOnly `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.\n\nThere is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [HTML templates])\n#import \"/.calepin/calepin.typ\" as calepin\n#title()\n\n= HTML templates\n\nFor a single HTML notebook, use `layouts/notebook.html`. For websites, the default entry is `layouts/webpage.html`.\n\nLayouts are MiniJinja templates. The template context contains these top-level values:\n\n- `doc`: Typst's generated HTML shell and document content.\n- `site`: website metadata, navigation, and search settings.\n- `css`: theme CSS files. Each item has `name` and `content`.\n- `js`: theme JS files. Each item has `name` and `content`.\n- `vars`: custom values from `[vars]` in `calepin.toml`.\n- `highlight_css`: standalone syntax-highlight CSS.\n- `theme`: the active theme name.\n- `target`: the render target; currently `html`.\n\n`doc` contains:\n\n- `doc.head`: Typst's document shell before `</head>`.\n- `doc.body_open`: `</head>` and Typst's opening `<body>` tag.\n- `doc.body`: Typst's generated body content.\n- `doc.body_close`: Typst's closing `</body>` tag and any remaining document shell.\n- `doc.title`: the document title, or an empty string.\n\n`site` contains:\n\n- `site.title`, `site.description`, `site.base_url`\n- `site.logo`, `site.logo_alt`, `site.home_url`, `site.favicon`\n- `site.page_url`, `site.page_title`\n- `site.sidebar`: flat navigation entries.\n- `site.sidebar_sections`: grouped navigation sections.\n- `site.sidebar_fold`: whether titled sidebar sections should fold.\n- `site.toc`: the current page table of contents.\n- `site.menus`: named menus, such as `site.menus.main`, `site.menus.social`, and `site.menus.footer`.\n- `site.language`: the current language code.\n- `site.languages`: language entries for the language picker.\n- `site.translations`: alternate-language links for the current page.\n- `site.pagefind`: Pagefind search assets and bundle path, when search is enabled.\n\nNested entries expose these fields:\n\n- Navigation entries in `site.sidebar`, `site.menus.<name>`, and section `items`: `href`, `label`, `label_html`, `active`.\n- Sidebar sections: `title`, `active`, `items`.\n- TOC entries: `level`, `href`, `label`.\n- Language and translation entries: `code`, `label`, `href`, `active`.\n- Pagefind: `css`, `js`, `bundle`.\n\n= Minimal template\n\nHere is a minimal `layouts/notebook.html`:\n\n```html\n{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <header class=\"document-header\">\n    <a href=\"index.html\">Home</a>\n    <button type=\"button\" data-calepin-theme-toggle>Theme</button>\n  </header>\n  <main class=\"container\">\n    {{ doc.body }}\n  </main>\n  {% for file in js %}\n  <script>\n{{ file.content }}\n  <\/script>\n  {% endfor %}\n{{ doc.body_close }}\n```\n\nKeep `doc.head`, `doc.body_open`, and `doc.body_close` unless you are intentionally replacing the entire HTML shell.\n\n= Custom variables\n\nAdd a `[vars]` table to `calepin.toml` for project-specific values you want to use in templates:\n\n```toml\n[vars]\ncourse = \"Econ 101\"\nsemester = \"Fall 2026\"\n```\n\nThese values are available as top-level `vars`, not under `site`:\n\n```html\n<p>{{ vars.course }} — {{ vars.semester }}</p>\n```\n\n= Partials\n\nKeep repeated HTML in partials under `partials/` and include them from layouts.\n\n```html\n{% include \"partials/header.html\" %}\n```\n\nPartials receive the same template context as the file that includes them.\n\n= Page-specific layouts\n\nSometimes, we would like a specific page of a website to use a different layout than the default. For instance, the landing page is often very different than the other pages of a site.\n\nYou can switch layouts per page with `<website-metadata>`:\n\n```typ\n#metadata((\n  title: \"Landing page\",\n  layout: \"layouts/landing.html\",\n)) <website-metadata>\n```\n\nThe `layout` value must be a relative `.html` path inside the active theme. Calepin does not add `layouts/` or `.html` for you and does not fall back to `layouts/webpage.html` if the file is missing.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4182,23 +4182,23 @@ html:not([data-theme]) {
                     
                     
                     
-                    <details class="calepin-website-sidebar-section" open>
+                    <details class="calepin-website-sidebar-section">
                         <summary>Websites</summary>
                         <ul>
                             
-                            <li><a href="websites.html" aria-label="Overview">Overview</a></li>
+                            <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
                             
-                            <li><a href="configuration.html" aria-label="Configuration">Configuration</a></li>
+                            <li><a href="../websites/configuration.html" aria-label="Configuration">Configuration</a></li>
                             
-                            <li><a href="navigation.html" aria-label="Navigation">Navigation</a></li>
+                            <li><a href="../websites/navigation.html" aria-label="Navigation">Navigation</a></li>
                             
-                            <li><a href="pages.html" aria-label="Pages" class="active" aria-current="page">Pages</a></li>
+                            <li><a href="../websites/pages.html" aria-label="Pages">Pages</a></li>
                             
-                            <li><a href="multilingual.html" aria-label="Multilingual">Multilingual</a></li>
+                            <li><a href="../websites/multilingual.html" aria-label="Multilingual">Multilingual</a></li>
                             
-                            <li><a href="elements.html" aria-label="Elements">Elements</a></li>
+                            <li><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
                             
-                            <li><a href="custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+                            <li><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
                             
                         </ul>
                     </details>
@@ -4220,19 +4220,19 @@ html:not([data-theme]) {
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
+                    <details class="calepin-website-sidebar-section" open>
                         <summary>Themes</summary>
                         <ul>
                             
-                            <li><a href="../themes/themes.html" aria-label="Themes">Themes</a></li>
+                            <li><a href="themes.html" aria-label="Themes">Themes</a></li>
                             
-                            <li><a href="../themes/notebook_templates.html" aria-label="Notebook Typst layouts">Notebook Typst layouts</a></li>
+                            <li><a href="notebook_templates.html" aria-label="Notebook Typst layouts">Notebook Typst layouts</a></li>
                             
-                            <li><a href="../themes/html_templates.html" aria-label="HTML templates">HTML templates</a></li>
+                            <li><a href="html_templates.html" aria-label="HTML templates" class="active" aria-current="page">HTML templates</a></li>
                             
-                            <li><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
+                            <li><a href="css.html" aria-label="CSS">CSS</a></li>
                             
-                            <li><a href="../themes/case_studies.html" aria-label="Case studies">Case studies</a></li>
+                            <li><a href="case_studies.html" aria-label="Case studies">Case studies</a></li>
                             
                         </ul>
                     </details>
@@ -4247,7 +4247,7 @@ html:not([data-theme]) {
                             
                             <li><a href="../tips.html" aria-label="Tips &amp; tricks">Tips &amp; tricks</a></li>
                             
-                            <li><a href="health.html" aria-label="Health">Health</a></li>
+                            <li><a href="../websites/health.html" aria-label="Health">Health</a></li>
                             
                             <li><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
                             
@@ -4260,37 +4260,33 @@ html:not([data-theme]) {
             </nav>
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
-            <h1 id="pages-and-metadata">Pages and metadata</h1><h2 id="include-or-exclude-pages">Include or exclude pages</h2><p>Use <code>[pages]</code> for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">pages</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">include</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">blog/*.typ</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">legal/privacy.typ</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">exclude</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">drafts/**</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span></code></pre></div><p>Excluded files are also omitted from copied <code>.typ</code> source artifacts in the build output directory.</p><p>Put the page title in the document and keep website metadata for fields used by listings, routing, and output options:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">document</span><span class="calepin-syntax-scope-2">(</span>title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span>First post<span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>
-  date<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"2026-06-10"</span><span class="calepin-syntax-scope-2">,</span>
-  tags<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"release"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"website"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span>
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">title</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><p><code>index.typ</code> and <code>404.typ</code> are always built when present. If <code>404.typ</code> exists, <em>Calepin</em> writes <code>404.html</code>; if PDF rendering is enabled for that page, it also writes <code>404.pdf</code>.</p><h2 id="page-metadata">Page metadata</h2><p>Add arbitrary page metadata with Typst’s <code>#metadata</code> function and the <code>&lt;website-metadata></code> label. <em>Calepin</em> reads this dictionary while building the site and attaches it to the page entry returned by <code>calepin.pages()</code>.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">document</span><span class="calepin-syntax-scope-2">(</span>title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span>First post<span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>
-  date<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"2026-06-10"</span><span class="calepin-syntax-scope-2">,</span>
-  tags<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"release"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"website"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">,</span>
-  author<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Ada Lovelace"</span><span class="calepin-syntax-scope-2">,</span>
-  summary<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"A short release note for the new website."</span><span class="calepin-syntax-scope-2">,</span>
-  draft<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">false</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span>
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">title</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><p>Use <code>calepin.pages()</code> to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">import</span> <span class="calepin-syntax-scope-4">"/.calepin/calepin.typ"</span> <span class="calepin-syntax-scope-7">as</span> calepin
-
-<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> posts <span class="calepin-syntax-scope-9">=</span> calepin<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">pages</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span>
-  .filter(p => p.path.starts-with("blog/"))
-  .filter(p => not p.meta.at("draft", default: false))
-  .sorted(key: p => p.meta.at("date", default: ""))
-  .rev()
-
-<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">for</span> post <span class="calepin-syntax-scope-7">in</span> posts <span class="calepin-syntax-scope-2">[</span>
-  <span class="calepin-syntax-scope-2">-</span> <span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">link</span><span class="calepin-syntax-scope-2">(</span>post<span class="calepin-syntax-scope-2">.</span>href<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">[</span>#post<span class="calepin-syntax-scope-2">.</span>title<span class="calepin-syntax-scope-2">]</span> <span class="calepin-syntax-scope-5">\</span>
-    #post<span class="calepin-syntax-scope-2">.</span>meta<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">at</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"summary"</span><span class="calepin-syntax-scope-2">,</span> default<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
-<span class="calepin-syntax-scope-2">]</span></code></pre></div><p><code>calepin.pages()</code> returns one dictionary per built page, excluding <code>404.typ</code>. <em>Calepin</em> creates these entry fields:</p><ul><li><code>path</code>: source path relative to the website root</li><li><code>href</code>: rendered HTML path relative to the current page</li><li><code>title</code>: resolved page title</li><li><code>language</code>: language code, or <code>none</code> when languages are not configured</li><li><code>translation_key</code>: resolved key used to connect translated pages</li><li><code>translations</code>: matching pages in other languages, or an empty dictionary</li><li><code>pdf</code>: PDF path, or <code>none</code> when the page has no PDF output</li><li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, or an empty dictionary</li></ul><p>Only <code>meta</code> comes from the page’s <code>#metadata</code> value. <em>Calepin</em> interprets a few optional metadata keys: <code>title</code>, <code>pdf</code>, <code>translation_key</code>, <code>slug</code>, and <code>url</code>. All other keys are left untouched for your own Typst code.</p><p>There is no required schema for custom metadata. Common keys include <code>date</code>, <code>tags</code>, <code>author</code>, <code>authors</code>, <code>category</code>, <code>venue</code>, <code>summary</code>, and <code>draft</code>, but you can use any key your page list or template expects. Since <code>calepin.pages()</code> returns a Typst array of dictionaries, you can use Typst functions and methods such as <code>filter</code>, <code>map</code>, <code>sorted</code>, <code>rev</code>, <code>at</code>, and <code>contains</code> to select and format the pages you need.</p>
+            <h1 id="html-templates">HTML templates</h1><h2 id="html-templates-2">HTML templates</h2><p>For a single HTML notebook, use <code>layouts/notebook.html</code>. For websites, the default entry is <code>layouts/webpage.html</code>.</p><p>Layouts are MiniJinja templates. The template context contains these top-level values:</p><ul><li><code>doc</code>: Typst’s generated HTML shell and document content.</li><li><code>site</code>: website metadata, navigation, and search settings.</li><li><code>css</code>: theme CSS files. Each item has <code>name</code> and <code>content</code>.</li><li><code>js</code>: theme JS files. Each item has <code>name</code> and <code>content</code>.</li><li><code>vars</code>: custom values from <code>[vars]</code> in <code>calepin.toml</code>.</li><li><code>highlight_css</code>: standalone syntax-highlight CSS.</li><li><code>theme</code>: the active theme name.</li><li><code>target</code>: the render target; currently <code>html</code>.</li></ul><p><code>doc</code> contains:</p><ul><li><code>doc.head</code>: Typst’s document shell before <code>&lt;/head></code>.</li><li><code>doc.body_open</code>: <code>&lt;/head></code> and Typst’s opening <code>&lt;body></code> tag.</li><li><code>doc.body</code>: Typst’s generated body content.</li><li><code>doc.body_close</code>: Typst’s closing <code>&lt;/body></code> tag and any remaining document shell.</li><li><code>doc.title</code>: the document title, or an empty string.</li></ul><p><code>site</code> contains:</p><ul><li><code>site.title</code>, <code>site.description</code>, <code>site.base_url</code></li><li><code>site.logo</code>, <code>site.logo_alt</code>, <code>site.home_url</code>, <code>site.favicon</code></li><li><code>site.page_url</code>, <code>site.page_title</code></li><li><code>site.sidebar</code>: flat navigation entries.</li><li><code>site.sidebar_sections</code>: grouped navigation sections.</li><li><code>site.sidebar_fold</code>: whether titled sidebar sections should fold.</li><li><code>site.toc</code>: the current page table of contents.</li><li><code>site.menus</code>: named menus, such as <code>site.menus.main</code>, <code>site.menus.social</code>, and <code>site.menus.footer</code>.</li><li><code>site.language</code>: the current language code.</li><li><code>site.languages</code>: language entries for the language picker.</li><li><code>site.translations</code>: alternate-language links for the current page.</li><li><code>site.pagefind</code>: Pagefind search assets and bundle path, when search is enabled.</li></ul><p>Nested entries expose these fields:</p><ul><li>Navigation entries in <code>site.sidebar</code>, <code>site.menus.&lt;name></code>, and section <code>items</code>: <code>href</code>, <code>label</code>, <code>label_html</code>, <code>active</code>.</li><li>Sidebar sections: <code>title</code>, <code>active</code>, <code>items</code>.</li><li>TOC entries: <code>level</code>, <code>href</code>, <code>label</code>.</li><li>Language and translation entries: <code>code</code>, <code>label</code>, <code>href</code>, <code>active</code>.</li><li>Pagefind: <code>css</code>, <code>js</code>, <code>bundle</code>.</li></ul><h2 id="minimal-template">Minimal template</h2><p>Here is a minimal <code>layouts/notebook.html</code>:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{{ doc.head }}</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">meta</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">charset</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">UTF-8</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ doc.title }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">  {% for file in css %}</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">{ </span><span class="calepin-syntax-scope-1">file</span><span class="calepin-syntax-scope-1">.</span><span class="calepin-syntax-scope-23">content</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-1">}</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">  {% endfor %}</span>
+<span class="calepin-syntax-scope-1">{{ doc.body_open }}</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">header</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">class</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">document-header</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">a</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">href</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">index.html</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">Home</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">a</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">button</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">type</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">button</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">data-calepin-theme-toggle</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">Theme</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">button</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">header</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">main</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">class</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">container</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">    {{ doc.body }}</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">main</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">  {% for file in js %}</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">script</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">file</span><span class="calepin-syntax-scope-9">.</span><span class="calepin-syntax-scope-14">content</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-2">}</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">script</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">  {% endfor %}</span>
+<span class="calepin-syntax-scope-1">{{ doc.body_close }}</span></code></pre></div><p>Keep <code>doc.head</code>, <code>doc.body_open</code>, and <code>doc.body_close</code> unless you are intentionally replacing the entire HTML shell.</p><h2 id="custom-variables">Custom variables</h2><p>Add a <code>[vars]</code> table to <code>calepin.toml</code> for project-specific values you want to use in templates:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">vars</span><span class="calepin-syntax-scope-2">]</span>
+<span class="calepin-syntax-scope-67">course</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Econ 101</span><span class="calepin-syntax-scope-4">"</span>
+<span class="calepin-syntax-scope-67">semester</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Fall 2026</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>These values are available as top-level <code>vars</code>, not under <code>site</code>:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">p</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ vars.course }} — {{ vars.semester }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">p</span><span class="calepin-syntax-scope-9">></span></code></pre></div><h2 id="partials">Partials</h2><p>Keep repeated HTML in partials under <code>partials/</code> and include them from layouts.</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{% include "partials/header.html" %}</span></code></pre></div><p>Partials receive the same template context as the file that includes them.</p><h2 id="page-specific-layouts">Page-specific layouts</h2><p>Sometimes, we would like a specific page of a website to use a different layout than the default. For instance, the landing page is often very different than the other pages of a site.</p><p>You can switch layouts per page with <code>&lt;website-metadata></code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>
+  title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Landing page"</span><span class="calepin-syntax-scope-2">,</span>
+  layout<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"layouts/landing.html"</span><span class="calepin-syntax-scope-2">,</span>
+<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><p>The <code>layout</code> value must be a relative <code>.html</code> path inside the active theme. Calepin does not add <code>layouts/</code> or <code>.html</code> for you and does not fall back to <code>layouts/webpage.html</code> if the file is missing.</p>
         </main>
                 
         <aside class="calepin-website-toc">
@@ -4298,9 +4294,15 @@ html:not([data-theme]) {
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#include-or-exclude-pages">Include or exclude pages</a></li>
+                    <li class="level-2"><a href="#html-templates-2">HTML templates</a></li>
                     
-                    <li class="level-2"><a href="#page-metadata">Page metadata</a></li>
+                    <li class="level-2"><a href="#minimal-template">Minimal template</a></li>
+                    
+                    <li class="level-2"><a href="#custom-variables">Custom variables</a></li>
+                    
+                    <li class="level-2"><a href="#partials">Partials</a></li>
+                    
+                    <li class="level-2"><a href="#page-specific-layouts">Page-specific layouts</a></li>
                     
                 </ul>
             </nav>
@@ -4371,15 +4373,6 @@ html:not([data-theme]) {
         
     
         
-            
-            
-        
-        
-    
-        
-            
-            
-        
         
             
         
@@ -4414,6 +4407,15 @@ html:not([data-theme]) {
             
         
     
+        
+            
+            
+        
+        
+    
+        
+            
+            
         
         
             
@@ -4444,20 +4446,20 @@ html:not([data-theme]) {
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="navigation.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="notebook_templates.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Navigation</span>
+            <span class="calepin-website-page-nav-title">Notebook Typst layouts</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="multilingual.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="css.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Multilingual</span>
+            <span class="calepin-website-page-nav-title">CSS</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

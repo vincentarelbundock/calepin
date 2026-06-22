@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pages and metadata</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Case studies</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -12,12 +12,12 @@
     
     
     
-    <meta property="og:title" content="Pages and metadata | Calepin">
+    <meta property="og:title" content="Case studies | Calepin">
     
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/websites/pages.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/websites/pages.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/themes/case_studies.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/themes/case_studies.html">
     
     
     <link rel="icon" href="../.calepin/favicon.svg">
@@ -4065,7 +4065,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Pages and metadata])\n#metadata((title: \"Pages\")) <website-metadata>\n\n#title()\n\n= Include or exclude pages\n\nUse `[pages]` for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:\n\n```toml\n[pages]\ninclude = [\"blog/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\nExcluded files are also omitted from copied `.typ` source artifacts in the build output directory.\n\nPut the page title in the document and keep website metadata for fields used by listings, routing, and output options:\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n)) <website-metadata>\n\n#title()\n```\n\n`index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.\n\n= Page metadata\n\nAdd arbitrary page metadata with Typst's `#metadata` function and the `<website-metadata>` label. _Calepin_ reads this dictionary while building the site and attaches it to the page entry returned by `calepin.pages()`.\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n  author: \"Ada Lovelace\",\n  summary: \"A short release note for the new website.\",\n  draft: false,\n)) <website-metadata>\n\n#title()\n```\n\nUse `calepin.pages()` to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.\n\n```typ\n#import \"/.calepin/calepin.typ\" as calepin\n\n#let posts = calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .filter(p => not p.meta.at(\"draft\", default: false))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev()\n\n#for post in posts [\n  - #link(post.href)[#post.title] \\\n    #post.meta.at(\"summary\", default: [])\n]\n```\n\n`calepin.pages()` returns one dictionary per built page, excluding `404.typ`. _Calepin_ creates these entry fields:\n\n- `path`: source path relative to the website root\n- `href`: rendered HTML path relative to the current page\n- `title`: resolved page title\n- `language`: language code, or `none` when languages are not configured\n- `translation_key`: resolved key used to connect translated pages\n- `translations`: matching pages in other languages, or an empty dictionary\n- `pdf`: PDF path, or `none` when the page has no PDF output\n- `meta`: the page's `<website-metadata>` dictionary, or an empty dictionary\n\nOnly `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.\n\nThere is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Case studies])\n#import \"/.calepin/calepin.typ\" as calepin\n#title()\n\n= Tufte\n\n\nIn this case study, we build on top of the `academic` theme to replicate\nfeatures of the popular Tufte CSS article style: serif typography, warm paper\ncolors, restrained accents, sidenotes, margin figures, and code/output surfaces\nthat match the page.\n\nReference files and rendered output can be viewed here:\n\n- #link(\"examples/tufte/calepin.toml\")[calepin.toml]\n- #link(\"examples/tufte/themes/tufte/css/tufte.css\")[tufte.css]\n- #link(\"examples/tufte/tufte.typ\")[tufte.typ]\n- #link(\"examples/tufte/tufte.html\")[HTML]\n- #link(\"examples/tufte/tufte.pdf\")[PDF]\n\nStart with a small `calepin.toml` next to the document:\n\n```toml\ntheme = \"themes/tufte\"\n```\n\nThe local theme extends `academic`:\n\n```toml\n# themes/tufte/theme.toml\nextends = \"academic\"\n```\n\nThat keeps all of the built-in `academic` theme structure: the single-document\nHTML wrapper, the theme toggle, sidenotes, side figures, code styling, and\ndark-mode support. The local `themes/tufte/css/tufte.css` file is intentionally\nsmall. It overrides the public `--calepin-*` tokens instead of targeting private\ntheme internals:\n\n```css\n:root, html[data-theme=\"light\"] {\n  --calepin-font-body: Palatino, \"Palatino Linotype\", \"Book Antiqua\", Georgia, serif;\n  --calepin-font-heading: Palatino, \"Palatino Linotype\", \"Book Antiqua\", Georgia, serif;\n  --calepin-surface-code: #fffdf0;\n  --calepin-surface-output: #fffdf0;\n  --calepin-surface: #fffdf0;\n  --calepin-surface-muted: #fff8eb;\n  --calepin-color-background: #fffff8;\n  --calepin-color-text: #12110f;\n  --calepin-color-muted: #5a5650;\n  --calepin-color-accent: #7a2e2a;\n  --calepin-color-accent-hover: #5f2520;\n  --calepin-color-link: #7a2e2a;\n  --calepin-color-link-hover: #5f2520;\n}\n\nhtml[data-theme=\"dark\"] {\n  --calepin-color-background: #18130d;\n  --calepin-color-text: #f6efe8;\n  --calepin-color-muted: #c5baa7;\n  --calepin-color-accent: #d58a7f;\n  --calepin-color-accent-hover: #f0b7ab;\n  --calepin-color-link: #d58a7f;\n  --calepin-color-link-hover: #f0b7ab;\n  --calepin-surface-code: #1f1a14;\n  --calepin-surface-output: #1f1a14;\n  --calepin-surface: #1f1a14;\n  --calepin-surface-muted: #2b241b;\n}\n```\n\nThe document source can then use the normal academic-theme elements:\n`calepin.elements.sidenote` for margin notes,\n`calepin.elements.sidefigure` for margin figures, and regular executable code\nchunks for computed output. The stylesheet changes the feel of those elements,\nbut the layout behavior still comes from the built-in theme.\n\nFrom the case-study directory, render the HTML and PDF with:\n\n```sh\ncd docs/themes/examples/tufte\ncalepin compile tufte.typ --config calepin.toml --format html\ncalepin compile tufte.typ --config calepin.toml --format pdf\n```\n\nThe config path matters because `theme = \"themes/tufte\"` is resolved relative to\n`calepin.toml`. Keeping the config, local theme, and document together makes the\nexample portable: copy the directory, run the same commands, and the academic\ntheme plus Tufte overlay are applied in both rendered outputs.\n\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4182,23 +4182,23 @@ html:not([data-theme]) {
                     
                     
                     
-                    <details class="calepin-website-sidebar-section" open>
+                    <details class="calepin-website-sidebar-section">
                         <summary>Websites</summary>
                         <ul>
                             
-                            <li><a href="websites.html" aria-label="Overview">Overview</a></li>
+                            <li><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
                             
-                            <li><a href="configuration.html" aria-label="Configuration">Configuration</a></li>
+                            <li><a href="../websites/configuration.html" aria-label="Configuration">Configuration</a></li>
                             
-                            <li><a href="navigation.html" aria-label="Navigation">Navigation</a></li>
+                            <li><a href="../websites/navigation.html" aria-label="Navigation">Navigation</a></li>
                             
-                            <li><a href="pages.html" aria-label="Pages" class="active" aria-current="page">Pages</a></li>
+                            <li><a href="../websites/pages.html" aria-label="Pages">Pages</a></li>
                             
-                            <li><a href="multilingual.html" aria-label="Multilingual">Multilingual</a></li>
+                            <li><a href="../websites/multilingual.html" aria-label="Multilingual">Multilingual</a></li>
                             
-                            <li><a href="elements.html" aria-label="Elements">Elements</a></li>
+                            <li><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
                             
-                            <li><a href="custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+                            <li><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
                             
                         </ul>
                     </details>
@@ -4220,19 +4220,19 @@ html:not([data-theme]) {
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
+                    <details class="calepin-website-sidebar-section" open>
                         <summary>Themes</summary>
                         <ul>
                             
-                            <li><a href="../themes/themes.html" aria-label="Themes">Themes</a></li>
+                            <li><a href="themes.html" aria-label="Themes">Themes</a></li>
                             
-                            <li><a href="../themes/notebook_templates.html" aria-label="Notebook Typst layouts">Notebook Typst layouts</a></li>
+                            <li><a href="notebook_templates.html" aria-label="Notebook Typst layouts">Notebook Typst layouts</a></li>
                             
-                            <li><a href="../themes/html_templates.html" aria-label="HTML templates">HTML templates</a></li>
+                            <li><a href="html_templates.html" aria-label="HTML templates">HTML templates</a></li>
                             
-                            <li><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
+                            <li><a href="css.html" aria-label="CSS">CSS</a></li>
                             
-                            <li><a href="../themes/case_studies.html" aria-label="Case studies">Case studies</a></li>
+                            <li><a href="case_studies.html" aria-label="Case studies" class="active" aria-current="page">Case studies</a></li>
                             
                         </ul>
                     </details>
@@ -4247,7 +4247,7 @@ html:not([data-theme]) {
                             
                             <li><a href="../tips.html" aria-label="Tips &amp; tricks">Tips &amp; tricks</a></li>
                             
-                            <li><a href="health.html" aria-label="Health">Health</a></li>
+                            <li><a href="../websites/health.html" aria-label="Health">Health</a></li>
                             
                             <li><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
                             
@@ -4260,37 +4260,39 @@ html:not([data-theme]) {
             </nav>
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
-            <h1 id="pages-and-metadata">Pages and metadata</h1><h2 id="include-or-exclude-pages">Include or exclude pages</h2><p>Use <code>[pages]</code> for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">pages</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">include</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">blog/*.typ</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">legal/privacy.typ</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">exclude</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">drafts/**</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span></code></pre></div><p>Excluded files are also omitted from copied <code>.typ</code> source artifacts in the build output directory.</p><p>Put the page title in the document and keep website metadata for fields used by listings, routing, and output options:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">document</span><span class="calepin-syntax-scope-2">(</span>title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span>First post<span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
+            <h1 id="case-studies">Case studies</h1><h2 id="tufte">Tufte</h2><p>In this case study, we build on top of the <code>academic</code> theme to replicate features of the popular Tufte CSS article style: serif typography, warm paper colors, restrained accents, sidenotes, margin figures, and code/output surfaces that match the page.</p><p>Reference files and rendered output can be viewed here:</p><ul><li><a href="examples/tufte/calepin.toml">calepin.toml</a></li><li><a href="examples/tufte/themes/tufte/css/tufte.css">tufte.css</a></li><li><a href="examples/tufte/tufte.typ">tufte.typ</a></li><li><a href="examples/tufte/tufte.html">HTML</a></li><li><a href="examples/tufte/tufte.pdf">PDF</a></li></ul><p>Start with a small <code>calepin.toml</code> next to the document:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/tufte</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>The local theme extends <code>academic</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> themes/tufte/theme.toml</span>
+<span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">academic</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>That keeps all of the built-in <code>academic</code> theme structure: the single-document HTML wrapper, the theme toggle, sidenotes, side figures, code styling, and dark-mode support. The local <code>themes/tufte/css/tufte.css</code> file is intentionally small. It overrides the public <code>--calepin-*</code> tokens instead of targeting private theme internals:</p><div class="sourceCode" data-lang="css"><pre><code data-lang="css"><span class="calepin-syntax-scope-2">:</span><span class="calepin-syntax-scope-1">root</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-69">data-theme</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">light</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-font-body</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">Palatino, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Palatino Linotype</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Book Antiqua</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, Georgia, </span><span class="calepin-syntax-scope-1">serif</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-font-heading</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">Palatino, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Palatino Linotype</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Book Antiqua</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, Georgia, </span><span class="calepin-syntax-scope-1">serif</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-code</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fffdf0</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-output</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fffdf0</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fffdf0</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-muted</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fff8eb</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-background</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fffff8</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-text</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">12110f</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-muted</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">5a5650</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">7a2e2a</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent-hover</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">5f2520</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-link</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">7a2e2a</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-link-hover</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">5f2520</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-2">}</span>
 
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>
-  date<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"2026-06-10"</span><span class="calepin-syntax-scope-2">,</span>
-  tags<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"release"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"website"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span>
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">title</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><p><code>index.typ</code> and <code>404.typ</code> are always built when present. If <code>404.typ</code> exists, <em>Calepin</em> writes <code>404.html</code>; if PDF rendering is enabled for that page, it also writes <code>404.pdf</code>.</p><h2 id="page-metadata">Page metadata</h2><p>Add arbitrary page metadata with Typst’s <code>#metadata</code> function and the <code>&lt;website-metadata></code> label. <em>Calepin</em> reads this dictionary while building the site and attaches it to the page entry returned by <code>calepin.pages()</code>.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">document</span><span class="calepin-syntax-scope-2">(</span>title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span>First post<span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>
-  date<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"2026-06-10"</span><span class="calepin-syntax-scope-2">,</span>
-  tags<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"release"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"website"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">,</span>
-  author<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Ada Lovelace"</span><span class="calepin-syntax-scope-2">,</span>
-  summary<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"A short release note for the new website."</span><span class="calepin-syntax-scope-2">,</span>
-  draft<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">false</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span>
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">title</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><p>Use <code>calepin.pages()</code> to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">import</span> <span class="calepin-syntax-scope-4">"/.calepin/calepin.typ"</span> <span class="calepin-syntax-scope-7">as</span> calepin
-
-<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> posts <span class="calepin-syntax-scope-9">=</span> calepin<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">pages</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span>
-  .filter(p => p.path.starts-with("blog/"))
-  .filter(p => not p.meta.at("draft", default: false))
-  .sorted(key: p => p.meta.at("date", default: ""))
-  .rev()
-
-<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">for</span> post <span class="calepin-syntax-scope-7">in</span> posts <span class="calepin-syntax-scope-2">[</span>
-  <span class="calepin-syntax-scope-2">-</span> <span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">link</span><span class="calepin-syntax-scope-2">(</span>post<span class="calepin-syntax-scope-2">.</span>href<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">[</span>#post<span class="calepin-syntax-scope-2">.</span>title<span class="calepin-syntax-scope-2">]</span> <span class="calepin-syntax-scope-5">\</span>
-    #post<span class="calepin-syntax-scope-2">.</span>meta<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">at</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"summary"</span><span class="calepin-syntax-scope-2">,</span> default<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
-<span class="calepin-syntax-scope-2">]</span></code></pre></div><p><code>calepin.pages()</code> returns one dictionary per built page, excluding <code>404.typ</code>. <em>Calepin</em> creates these entry fields:</p><ul><li><code>path</code>: source path relative to the website root</li><li><code>href</code>: rendered HTML path relative to the current page</li><li><code>title</code>: resolved page title</li><li><code>language</code>: language code, or <code>none</code> when languages are not configured</li><li><code>translation_key</code>: resolved key used to connect translated pages</li><li><code>translations</code>: matching pages in other languages, or an empty dictionary</li><li><code>pdf</code>: PDF path, or <code>none</code> when the page has no PDF output</li><li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, or an empty dictionary</li></ul><p>Only <code>meta</code> comes from the page’s <code>#metadata</code> value. <em>Calepin</em> interprets a few optional metadata keys: <code>title</code>, <code>pdf</code>, <code>translation_key</code>, <code>slug</code>, and <code>url</code>. All other keys are left untouched for your own Typst code.</p><p>There is no required schema for custom metadata. Common keys include <code>date</code>, <code>tags</code>, <code>author</code>, <code>authors</code>, <code>category</code>, <code>venue</code>, <code>summary</code>, and <code>draft</code>, but you can use any key your page list or template expects. Since <code>calepin.pages()</code> returns a Typst array of dictionaries, you can use Typst functions and methods such as <code>filter</code>, <code>map</code>, <code>sorted</code>, <code>rev</code>, <code>at</code>, and <code>contains</code> to select and format the pages you need.</p>
+<span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-69">data-theme</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">dark</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-background</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">18130d</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-text</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">f6efe8</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-muted</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">c5baa7</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">d58a7f</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent-hover</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">f0b7ab</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-link</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">d58a7f</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-link-hover</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">f0b7ab</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-code</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">1f1a14</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-output</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">1f1a14</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">1f1a14</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-muted</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">2b241b</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>The document source can then use the normal academic-theme elements: <code>calepin.elements.sidenote</code> for margin notes, <code>calepin.elements.sidefigure</code> for margin figures, and regular executable code chunks for computed output. The stylesheet changes the feel of those elements, but the layout behavior still comes from the built-in theme.</p><p>From the case-study directory, render the HTML and PDF with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">cd</span><span class="calepin-syntax-scope-1"> docs/themes/examples/tufte</span>
+<span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile tufte.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">config</span><span class="calepin-syntax-scope-1"> calepin.toml</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> html</span>
+<span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile tufte.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">config</span><span class="calepin-syntax-scope-1"> calepin.toml</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> pdf</span>
+</code></pre></div><p>The config path matters because <code>theme = "themes/tufte"</code> is resolved relative to <code>calepin.toml</code>. Keeping the config, local theme, and document together makes the example portable: copy the directory, run the same commands, and the academic theme plus Tufte overlay are applied in both rendered outputs.</p>
         </main>
                 
         <aside class="calepin-website-toc">
@@ -4298,9 +4300,7 @@ html:not([data-theme]) {
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#include-or-exclude-pages">Include or exclude pages</a></li>
-                    
-                    <li class="level-2"><a href="#page-metadata">Page metadata</a></li>
+                    <li class="level-2"><a href="#tufte">Tufte</a></li>
                     
                 </ul>
             </nav>
@@ -4371,15 +4371,6 @@ html:not([data-theme]) {
         
     
         
-            
-            
-        
-        
-    
-        
-            
-            
-        
         
             
         
@@ -4424,6 +4415,15 @@ html:not([data-theme]) {
             
         
     
+        
+            
+            
+        
+        
+    
+        
+            
+            
         
         
             
@@ -4444,20 +4444,20 @@ html:not([data-theme]) {
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="navigation.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="css.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Navigation</span>
+            <span class="calepin-website-page-nav-title">CSS</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="multilingual.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="../tips.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Multilingual</span>
+            <span class="calepin-website-page-nav-title">Tips &amp; tricks</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>
