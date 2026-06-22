@@ -1188,6 +1188,56 @@ a:has(.calepin-nav-icon) {
   width: min(100%, var(--calepin-content-width));
 }
 
+.academic-page.has-toc {
+  width: min(100% - 2rem, var(--calepin-page-width));
+}
+
+/* The on-page TOC markup (`.calepin-website-toc`) comes from the shared
+   `site-nav-toc.html` partial also used by the calepin theme; academic
+   places it in its sidenote-style right margin instead of calepin's grid
+   column, reusing the same class names so both themes share one partial. */
+.academic-page .calepin-website-toc {
+  float: right;
+  clear: right;
+  width: var(--calepin-margin-width);
+  margin: 0.3rem 0 1.5rem var(--calepin-margin-gap);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--calepin-color-muted);
+}
+
+.academic-page .calepin-website-toc-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.academic-page .calepin-website-toc nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.academic-page .calepin-website-toc nav li {
+  margin: 0.3rem 0;
+}
+
+.academic-page .calepin-website-toc nav li.level-3 {
+  padding-left: 0.75rem;
+}
+
+.academic-page .calepin-website-toc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.academic-page .calepin-website-toc a:hover,
+.academic-page .calepin-website-toc a:focus {
+  text-decoration: underline;
+}
+
 .academic-document-main {
   width: min(100% - 2rem, var(--calepin-content-width));
   margin-inline: auto;
@@ -1329,6 +1379,14 @@ body:has(.academic-document-main .calepin-sidefigure) .academic-document-main {
     border: 1px solid var(--calepin-color-border);
     border-radius: var(--calepin-radius-sm);
     background: var(--calepin-surface-muted);
+  }
+
+  .academic-page .calepin-website-toc {
+    display: none;
+  }
+
+  .academic-page.has-toc {
+    width: min(100% - 2rem, var(--calepin-content-width));
   }
 }
 

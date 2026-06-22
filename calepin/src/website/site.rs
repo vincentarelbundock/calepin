@@ -190,6 +190,7 @@ impl SiteModel {
                 )),
             }),
             vars: Default::default(),
+            toc_depth: None,
         }
     }
 }

@@ -62,6 +62,13 @@ pub(crate) struct SiteContextInput {
     pub(crate) pagefind: Option<SitePagefindEntry>,
     #[serde(skip)]
     pub(crate) vars: BTreeMap<String, toml::Value>,
+    /// Resolved max heading level included in the on-page TOC: `Some(0)` means
+    /// no TOC, `Some(n)` includes headings up to level `n`. `None` (the
+    /// default, used when no caller resolves it) falls back to the original
+    /// always-on depth-3 behavior. Not serialized: only `annotate_body_headings`
+    /// reads it, the computed `site.toc` entries are what templates see.
+    #[serde(skip)]
+    pub(crate) toc_depth: Option<usize>,
 }
 
 /// The site context handed to the template: the caller-supplied input (or a
@@ -195,7 +202,10 @@ fn render_theme(
         .is_some()
         .then_some(parts.title.as_deref())
         .flatten();
-    let (body, toc) = annotate_body_headings(parts.body, site_title_heading);
+    let toc_depth = site_context_input
+        .and_then(|input| input.toc_depth)
+        .unwrap_or(3);
+    let (body, toc) = annotate_body_headings(parts.body, site_title_heading, toc_depth);
     let site = site_context(project_root, output_path, toc, site_context_input);
     let vars = site.input.vars.clone();
     let context = ThemeContext {
@@ -303,7 +313,11 @@ fn nav_entries(project_root: Option<&Path>, output_path: Option<&Path>) -> Vec<S
         .collect()
 }
 
-fn annotate_body_headings(body: &str, title_heading: Option<&str>) -> (String, Vec<TocEntry>) {
+fn annotate_body_headings(
+    body: &str,
+    title_heading: Option<&str>,
+    toc_depth: usize,
+) -> (String, Vec<TocEntry>) {
     let mut out = String::with_capacity(body.len());
     let mut toc = Vec::new();
     let mut counts = HashMap::<String, usize>::new();
@@ -371,7 +385,7 @@ fn annotate_body_headings(body: &str, title_heading: Option<&str>) -> (String, V
             && title_heading.is_some_and(|title| title == label);
         if skip_toc {
             skipped_title_heading = true;
-        } else if level <= 3 {
+        } else if level <= toc_depth {
             toc.push(TocEntry {
                 level,
                 href: format!("#{id}"),

@@ -46,6 +46,32 @@ Titled sections are foldable: each page loads with the section that contains it 
 fold = false
 ```
 
+= Table of contents
+
+Pages can show an "On this page" table of contents built from their own headings (levels 1-3 by default). The `calepin` theme shows one by default; other themes, including `academic`, are opt-in.
+
+Set a site-wide default with `[toc]`:
+
+```toml
+[toc]
+enabled = true
+depth = 2
+```
+
+`depth` is the maximum heading level included, from 1 to 6.
+
+Override either field for a single page with `<website-metadata>`:
+
+```typ
+#metadata((toc: (enabled: false))) <website-metadata>
+```
+
+```typ
+#metadata((toc: (depth: 2))) <website-metadata>
+```
+
+Page metadata and `calepin.toml` merge field by field: a page can override just `depth` and still inherit `enabled` from `calepin.toml`, or the reverse. Whatever is left unset falls back to the theme's own default.
+
 = Site menus
 
 Use `[menus]` for named navigation groups. Menu names describe what the links
