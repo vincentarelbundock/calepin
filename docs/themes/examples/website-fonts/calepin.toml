@@ -1,0 +1,83 @@
+title = "Example Site"
+description = "A bilingual Calepin website scaffold with pages, posts, and theme-friendly content."
+# base_url = "https://example.com"
+# Try the bundled themes:
+# theme = "./theme"
+# theme = "academic"
+theme = "calepin"
+
+pdf = true
+default_language = "en"
+
+# Uncomment to generate static search if Pagefind is available.
+# search = "pagefind"
+
+# Uncomment feeds after setting base_url.
+# generate_feeds = true
+# [feeds]
+# filenames = ["atom.xml", "rss.xml"]
+
+[languages.en]
+label = "English"
+content_dir = "."
+
+[languages.fr]
+label = "Français"
+content_dir = "fr"
+
+[static]
+include = ["assets/**"]
+
+[pages]
+include = ["posts/*.typ"]
+
+[[menus.main]]
+target = "about.typ"
+label = "About"
+
+[[menus.main]]
+target = "blog.typ"
+label = "Blog"
+
+[[menus.social]]
+target = "https://scholar.google.com/citations?user=RKN66-kAAAAJ&hl"
+label = "{icon:simple-icons:googlescholar}"
+aria-label = "Google Scholar"
+
+[[menus.social]]
+target = "https://github.com/vincentarelbundock/calepin"
+label = "{icon:github}"
+aria-label = "GitHub"
+
+[footer]
+
+[[footer.item]]
+target = "https://vincentarelbundock.github.io/calepin"
+label = "Made with Calepin"
+
+[sidebar]
+fold = false
+
+[[sidebar.section]]
+title = "Start"
+
+  [[sidebar.section.item]]
+  target = "index.typ"
+
+  [[sidebar.section.item]]
+  target = "about.typ"
+
+[[sidebar.section]]
+title = "Guide"
+
+  [[sidebar.section.item]]
+  target = "guide/features.typ"
+
+  [[sidebar.section.item]]
+  target = "guide/writing.typ"
+
+[[sidebar.section]]
+title = "Publishing"
+
+  [[sidebar.section.item]]
+  target = "blog.typ"

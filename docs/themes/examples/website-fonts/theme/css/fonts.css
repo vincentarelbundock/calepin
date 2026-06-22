@@ -1,0 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=Rubik+Moonrocks&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+:root {
+  --calepin-font-body: "Space Grotesk", system-ui, sans-serif;
+  --calepin-font-heading: "Rubik Moonrocks", "Space Grotesk", sans-serif;
+  --calepin-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}

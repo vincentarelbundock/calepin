@@ -2,20 +2,13 @@
 #import "/.calepin/calepin.typ" as calepin
 #title()
 
+This page shows how to use local themes to customize various aspects of notebooks and websites in PDF or HTML. Fully reproducible examples for each case study are available on Github:
+
+- #link("https://github.com/vincentarelbundock/calepin/tree/main/docs/themes/examples")[Case study files]
+
 = Tufte
 
-This case study shows how to build a local theme on top of `academic` to
-replicate the Tufte CSS article style: serif typography, warm paper colors,
-restrained accents, sidenotes, margin figures, and code/output surfaces that
-match the page.
-
-Reference files and rendered output can be viewed here:
-
-- #link("examples/tufte/calepin.toml")[calepin.toml]
-- #link("examples/tufte/themes/tufte/css/tufte.css")[tufte.css]
-- #link("examples/tufte/tufte.typ")[tufte.typ]
-- #link("examples/tufte/tufte.html")[HTML]
-- #link("examples/tufte/tufte.pdf")[PDF]
+This case study shows how to build a local theme on top of `academic` to replicate the Tufte CSS article style: serif typography, warm paper colors, restrained accents, sidenotes, margin figures, and code/output surfaces that match the page.
 
 The source tree is intentionally small:
 
