@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${HOMEBREW_TAP_GITHUB_TOKEN:?HOMEBREW_TAP_GITHUB_TOKEN is required}"
 
-tag="${GITHUB_REF_NAME:-}"
+tag="${CALEPIN_RELEASE_TAG:-${GITHUB_REF_NAME:-}}"
 if [[ -z "${tag}" ]]; then
   tag="$(git describe --tags --exact-match)"
 fi
