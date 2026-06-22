@@ -741,7 +741,8 @@ fn discover_site_pages_does_not_treat_language_dirs_as_default_pages() {
         },
     ]);
 
-    let (_sections, files) = discover_site_pages(src, None, None, &languages).unwrap();
+    let (_sections, files) =
+        discover_site_pages(src, None, None, &languages, Path::new(".calepin")).unwrap();
     let mut rel = files
         .iter()
         .map(|path| rel_posix(src, path))
@@ -752,6 +753,65 @@ fn discover_site_pages_does_not_treat_language_dirs_as_default_pages() {
         rel,
         vec!["about.typ", "fr/about.typ", "fr/index.typ", "index.typ"]
     );
+}
+
+#[test]
+fn discover_site_pages_skips_generated_custom_asset_dir() {
+    // A non-dot `asset-dir` (e.g. the Netlify-recommended `_calepin`) holds
+    // regenerated Typst runtime sources. They must not be rediscovered as
+    // pages: otherwise a second build feeds `_calepin/calepin.typ` back in as
+    // input and the runtime path is doubled (`_calepin/_calepin/...`), see #79.
+    // The default `.calepin` is skipped only because it is hidden, so a custom
+    // visible asset dir needs to be skipped explicitly.
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("index.typ"), "= Home\n").unwrap();
+    fs::create_dir_all(src.join("_calepin").join("index")).unwrap();
+    fs::write(src.join("_calepin").join("calepin.typ"), "// generated\n").unwrap();
+    fs::write(
+        src.join("_calepin").join("index").join("query-source.typ"),
+        "// generated\n",
+    )
+    .unwrap();
+
+    let (sections, files) =
+        discover_site_pages(src, None, None, &None, Path::new("_calepin")).unwrap();
+
+    let rel = files
+        .iter()
+        .map(|path| rel_posix(src, path))
+        .collect::<Vec<_>>();
+    assert_eq!(rel, vec!["index.typ".to_string()]);
+
+    // The nav surface must not reference the generated sources either.
+    let nav_under_asset_dir = sections
+        .iter()
+        .flat_map(|section| section.items.iter())
+        .filter_map(|item| item.path.as_ref())
+        .any(|path| rel_posix(src, path).starts_with("_calepin/"));
+    assert!(!nav_under_asset_dir);
+}
+
+#[test]
+fn discover_static_files_skips_generated_custom_asset_dir() {
+    // A broad `static.include` glob must not sweep the regenerable asset dir
+    // into the output, mirroring the page-discovery guard for #79.
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("logo.svg"), "<svg></svg>").unwrap();
+    fs::create_dir_all(src.join("_calepin")).unwrap();
+    fs::write(src.join("_calepin/calepin.typ"), "// generated\n").unwrap();
+    let config = StaticConfig {
+        include: vec!["logo.svg".to_string(), "_calepin".to_string()],
+        exclude: Vec::new(),
+    };
+
+    let files = discover_static_files(src, Some(&config), Path::new("_calepin")).unwrap();
+    let rels = files
+        .iter()
+        .map(|path| rel_posix(src, path))
+        .collect::<Vec<_>>();
+    assert_eq!(rels, vec!["logo.svg".to_string()]);
 }
 
 #[test]
@@ -772,7 +832,8 @@ fn implicit_build_pages_include_root_home_and_fallback_outside_configured_naviga
         ..SidebarConfig::default()
     };
 
-    let (_sections, files) = discover_site_pages(src, Some(&sidebar), None, &None).unwrap();
+    let (_sections, files) =
+        discover_site_pages(src, Some(&sidebar), None, &None, Path::new(".calepin")).unwrap();
     assert_eq!(
         files
             .iter()
@@ -856,8 +917,10 @@ fn pages_include_adds_build_only_pages() {
     };
 
     let (_sections, nav_files) =
-        discover_site_pages(src, Some(&sidebar), Some(&pages), &None).unwrap();
-    let include_files = discover_site_build_pages(src, Some(&pages), &None).unwrap();
+        discover_site_pages(src, Some(&sidebar), Some(&pages), &None, Path::new(".calepin"))
+            .unwrap();
+    let include_files =
+        discover_site_build_pages(src, Some(&pages), &None, Path::new(".calepin")).unwrap();
 
     assert_eq!(
         nav_files
@@ -888,8 +951,10 @@ fn pages_exclude_removes_pages_from_navigation_and_includes() {
         exclude: vec!["drafts/**".to_string(), "about.typ".to_string()],
     };
 
-    let (_sections, nav_files) = discover_site_pages(src, None, Some(&pages), &None).unwrap();
-    let include_files = discover_site_build_pages(src, Some(&pages), &None).unwrap();
+    let (_sections, nav_files) =
+        discover_site_pages(src, None, Some(&pages), &None, Path::new(".calepin")).unwrap();
+    let include_files =
+        discover_site_build_pages(src, Some(&pages), &None, Path::new(".calepin")).unwrap();
     let required = implicit_build_pages(src, &None);
 
     assert_eq!(
@@ -980,7 +1045,7 @@ fn discover_static_files_includes_files_dirs_and_globs_then_excludes() {
         exclude: vec!["assets/private/**".to_string()],
     };
 
-    let files = discover_static_files(src, Some(&config)).unwrap();
+    let files = discover_static_files(src, Some(&config), Path::new(".calepin")).unwrap();
     let rels = files
         .iter()
         .map(|path| rel_posix(src, path))
@@ -1003,7 +1068,9 @@ fn discover_static_files_rejects_paths_outside_source_directory() {
         exclude: Vec::new(),
     };
 
-    let err = discover_static_files(Path::new("/site/docs"), Some(&config)).unwrap_err();
+    let err =
+        discover_static_files(Path::new("/site/docs"), Some(&config), Path::new(".calepin"))
+            .unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -2108,7 +2175,15 @@ label = "© 2026 Example"
     );
 
     let (plan, files) =
-        discover_site_menus(src, &config.menus, config.footer.as_ref(), None, &None).unwrap();
+        discover_site_menus(
+            src,
+            &config.menus,
+            config.footer.as_ref(),
+            None,
+            &None,
+            Path::new(".calepin"),
+        )
+        .unwrap();
 
     assert_eq!(
         plan.items["footer"][0].path.as_deref(),
@@ -2138,6 +2213,7 @@ label = "© 2026 Example"
         config.footer.as_ref(),
         None,
         &None,
+        Path::new(".calepin"),
     )
     .unwrap_err();
 
@@ -2180,7 +2256,7 @@ fn discover_menus_resolves_named_menus_and_orders_by_weight() {
         ),
     ]);
 
-    let (plan, files) = discover_menus(src, &menus, None).unwrap();
+    let (plan, files) = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap();
 
     assert_eq!(
         plan.items["main"][0].path.as_deref(),
@@ -2223,7 +2299,7 @@ fn discover_menus_allows_footer_items_without_targets() {
         ],
     )]);
 
-    let (plan, files) = discover_menus(src, &menus, None).unwrap();
+    let (plan, files) = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap();
 
     assert_eq!(
         plan.items["footer"][0].path.as_deref(),
@@ -2250,7 +2326,7 @@ fn discover_menus_rejects_linkless_items_for_non_footer_menus() {
         }],
     )]);
 
-    let err = discover_menus(src, &menus, None).unwrap_err();
+    let err = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("item must set path, glob, or url"));
 }
@@ -2261,7 +2337,7 @@ fn discover_menus_rejects_invalid_menu_names() {
     let src = temp.path();
     let menus = BTreeMap::from([("Main Nav".to_string(), Vec::new())]);
 
-    let err = discover_menus(src, &menus, None).unwrap_err();
+    let err = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("invalid menu name `Main Nav`"));
 }
@@ -2365,7 +2441,8 @@ fn discover_pages_resolves_sidebar_page_targets() {
         ..SidebarConfig::default()
     };
 
-    let (sections, files) = discover_pages(src, Some(&sidebar), None, None).unwrap();
+    let (sections, files) =
+        discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap();
 
     assert_eq!(
         files
@@ -2397,7 +2474,7 @@ fn discover_pages_rejects_sidebar_targets_outside_source_directory() {
         ..SidebarConfig::default()
     };
 
-    let err = discover_pages(&src, Some(&sidebar), None, None).unwrap_err();
+    let err = discover_pages(&src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -2422,7 +2499,8 @@ fn discover_pages_applies_pages_exclude_to_explicit_sidebar_targets() {
         ..SidebarConfig::default()
     };
 
-    let (sections, files) = discover_pages(&src, Some(&sidebar), Some(&pages), None).unwrap();
+    let (sections, files) =
+        discover_pages(&src, Some(&sidebar), Some(&pages), None, Path::new(".calepin")).unwrap();
 
     assert!(files.is_empty());
     assert!(sections[0].items.is_empty());
@@ -2443,7 +2521,7 @@ fn discover_pages_rejects_sidebar_external_targets() {
         ..SidebarConfig::default()
     };
 
-    let err = discover_pages(src, Some(&sidebar), None, None).unwrap_err();
+    let err = discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err
         .to_string()
@@ -2466,7 +2544,7 @@ fn discover_pages_rejects_target_combined_with_glob() {
         ..SidebarConfig::default()
     };
 
-    let err = discover_pages(src, Some(&sidebar), None, None).unwrap_err();
+    let err = discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err
         .to_string()
@@ -2499,7 +2577,7 @@ fn discover_menus_rejects_target_combined_with_glob() {
         }],
     )]);
 
-    let err = discover_menus(src, &menus, None).unwrap_err();
+    let err = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err
         .to_string()
@@ -2520,7 +2598,7 @@ fn discover_menus_rejects_targets_outside_source_directory() {
         }],
     )]);
 
-    let err = discover_menus(&src, &menus, None).unwrap_err();
+    let err = discover_menus(&src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -2536,7 +2614,8 @@ fn discover_site_build_pages_rejects_include_paths_outside_source_directory() {
         ..PagesConfig::default()
     };
 
-    let err = discover_site_build_pages(&src, Some(&pages), &None).unwrap_err();
+    let err =
+        discover_site_build_pages(&src, Some(&pages), &None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -2554,7 +2633,7 @@ fn discover_menus_rejects_unsafe_literal_url_targets() {
         }],
     )]);
 
-    let err = discover_menus(src, &menus, None).unwrap_err();
+    let err = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("unsafe URL"));
 }
@@ -2572,7 +2651,7 @@ fn discover_menus_keeps_absolute_url_targets_ending_in_typ_as_urls() {
         }],
     )]);
 
-    let (plan, files) = discover_menus(src, &menus, None).unwrap();
+    let (plan, files) = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap();
 
     assert!(files.is_empty());
     assert_eq!(

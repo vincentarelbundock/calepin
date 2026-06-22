@@ -333,6 +333,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config.sidebar.as_ref(),
         config.pages.as_ref(),
         &languages,
+        &asset_dir,
     )?;
     let (menus_plan, mut menu_files) = discover_site_menus(
         &src_dir,
@@ -340,17 +341,19 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config.footer.as_ref(),
         config.pages.as_ref(),
         &languages,
+        &asset_dir,
     )?;
     typ_files.append(&mut menu_files);
     let mut included_pages =
-        discover_site_build_pages(&src_dir, config.pages.as_ref(), &languages)?;
+        discover_site_build_pages(&src_dir, config.pages.as_ref(), &languages, &asset_dir)?;
     typ_files.append(&mut included_pages);
     typ_files.extend(implicit_build_pages(&src_dir, &languages));
     typ_files.sort_by_key(|path| rel_posix(&src_dir, path));
     typ_files.dedup();
     let fallback_files = fallback_pages(&src_dir, &languages);
     let page_fingerprints = fingerprint_files(&typ_files)?;
-    let static_files = discover_static_files(&src_dir, config.static_files.as_ref())?;
+    let static_files =
+        discover_static_files(&src_dir, config.static_files.as_ref(), &asset_dir)?;
     let config_dir = config_path.parent().unwrap_or(&src_dir);
     let html_syntax_theme = HtmlSyntaxTheme::from_paths(
         config_dir,
