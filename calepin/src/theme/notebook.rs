@@ -7,7 +7,8 @@ use crate::utils::template::no_autoescape_env;
 use super::bundle::require_builtin;
 use super::{dir_theme_name, resolve_theme_chain, ThemeLayer, ThemeSelection};
 
-const NOTEBOOK_TEMPLATE: &str = "notebook.typ.jinja";
+const NOTEBOOK_TEMPLATE: &str = "layouts/notebook.typ";
+const REMOVED_NOTEBOOK_TEMPLATE: &str = "notebook.typ.jinja";
 const REMOVED_PAGED_TEMPLATE: &str = "paged.typ.jinja";
 
 #[derive(Debug, Clone)]
@@ -57,7 +58,7 @@ struct NotebookDocumentContext<'a> {
 }
 
 /// The Typst source to inject while rendering a notebook. `None` disables
-/// notebook theming entirely. Only `notebook.typ.jinja` is supported.
+/// notebook theming entirely. Only `layouts/notebook.typ` is supported.
 pub fn notebook_source(
     selection: &ThemeSelection,
     context: &NotebookTemplateContext,
@@ -66,7 +67,7 @@ pub fn notebook_source(
     if chain.layers.is_empty() && chain.terminal_typst {
         return Ok(None);
     }
-    reject_removed_paged_templates(&chain.layers)?;
+    reject_removed_notebook_templates(&chain.layers)?;
     let Some((name, source)) = find_notebook_template(&chain.layers)? else {
         let theme = chain
             .layers
@@ -104,14 +105,16 @@ fn find_notebook_template(layers: &[ThemeLayer]) -> Result<Option<(String, Strin
     Ok(None)
 }
 
-fn reject_removed_paged_templates(layers: &[ThemeLayer]) -> Result<()> {
+fn reject_removed_notebook_templates(layers: &[ThemeLayer]) -> Result<()> {
     for layer in layers {
         if let ThemeLayer::Dir(dir) = layer {
-            let path = dir.join(REMOVED_PAGED_TEMPLATE);
-            if path.is_file() {
-                return Err(anyhow!(
-                    "{REMOVED_PAGED_TEMPLATE} is no longer supported; use {NOTEBOOK_TEMPLATE}"
-                ));
+            for removed in [REMOVED_NOTEBOOK_TEMPLATE, REMOVED_PAGED_TEMPLATE] {
+                let path = dir.join(removed);
+                if path.is_file() {
+                    return Err(anyhow!(
+                        "{removed} is no longer supported; use {NOTEBOOK_TEMPLATE}"
+                    ));
+                }
             }
         }
     }

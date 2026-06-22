@@ -1,5 +1,5 @@
 //! Theme bundles. A theme is a directory named by family; the target and
-//! scope dimensions are well-known filenames inside it: `notebook.typ.jinja`,
+//! scope dimensions are well-known filenames inside it: `layouts/notebook.typ`,
 //! `layouts/notebook.html`, `layouts/webpage.html`. See specs/2026-06-10-theme-bundles-design.md.
 
 use std::path::{Path, PathBuf};
@@ -165,6 +165,7 @@ fn is_path_like(value: &str) -> bool {
 fn validate_theme_dir(dir: &Path) -> Result<()> {
     let has_entry = dir.join("theme.toml").is_file()
         || [
+            "layouts/notebook.typ",
             "notebook.typ.jinja",
             "paged.typ.jinja",
             "layouts/notebook.html",
@@ -174,7 +175,7 @@ fn validate_theme_dir(dir: &Path) -> Result<()> {
         .any(|file| dir.join(file).is_file());
     if !has_entry {
         return Err(anyhow!(
-            "theme directory {} contains none of notebook.typ.jinja, layouts/notebook.html, layouts/webpage.html",
+            "theme directory {} contains none of layouts/notebook.typ, layouts/notebook.html, layouts/webpage.html",
             dir.display()
         ));
     }
@@ -604,7 +605,8 @@ css = ["../theme.css"]
     #[test]
     fn explicit_site_layout_requires_local_or_inherited_file() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("notebook.typ.jinja"), "{{ document.body }}").unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
+        std::fs::write(dir.path().join("layouts/notebook.typ"), "{{ document.body }}").unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
@@ -658,9 +660,10 @@ css = ["../theme.css"]
     }
 
     #[test]
-    fn empty_notebook_typ_jinja_means_no_styling_not_fallback() {
+    fn empty_notebook_typ_means_no_styling_not_fallback() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("notebook.typ.jinja"), "").unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
+        std::fs::write(dir.path().join("layouts/notebook.typ"), "").unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         assert_eq!(
@@ -673,10 +676,11 @@ css = ["../theme.css"]
     }
 
     #[test]
-    fn notebook_typ_jinja_can_use_calepin_context() {
+    fn notebook_typ_can_use_calepin_context() {
         let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
-            dir.path().join("notebook.typ.jinja"),
+            dir.path().join("layouts/notebook.typ"),
             r#"#let title = "{{ document.meta.title }}"
 #let species = "{{ params.Species }}"
 "#,
@@ -702,10 +706,11 @@ css = ["../theme.css"]
     }
 
     #[test]
-    fn notebook_typ_jinja_can_place_document_body() {
+    fn notebook_typ_can_place_document_body() {
         let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
-            dir.path().join("notebook.typ.jinja"),
+            dir.path().join("layouts/notebook.typ"),
             r#"#set text(size: 11pt)
 {{ document.body }}
 [#emph[Generated footer]]
@@ -768,6 +773,23 @@ css = ["../theme.css"]
     }
 
     #[test]
+    fn old_notebook_typ_jinja_is_rejected_for_local_themes() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("notebook.typ.jinja"),
+            "{{ target }} {{ document.body }}",
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
+        let sel = ThemeSelection::Dir(dir.path().to_path_buf());
+        let err = notebook_source(&sel, &NotebookTemplateContext::default())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("notebook.typ.jinja"), "{err}");
+        assert!(err.contains("layouts/notebook.typ"), "{err}");
+    }
+
+    #[test]
     fn paged_typ_jinja_is_rejected_for_local_themes() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
@@ -781,6 +803,7 @@ css = ["../theme.css"]
             .unwrap_err()
             .to_string();
         assert!(err.contains("paged.typ.jinja"), "{err}");
+        assert!(err.contains("layouts/notebook.typ"), "{err}");
     }
 
     #[test]
@@ -810,7 +833,8 @@ css = ["../theme.css"]
         assert!(dest.join("layouts/notebook.html").is_file());
         assert!(dest.join("layouts/webpage.html").is_file());
         assert!(dest.join("layouts/landing.html").is_file());
-        assert!(dest.join("notebook.typ.jinja").is_file());
+        assert!(dest.join("layouts/notebook.typ").is_file());
+        assert!(!dest.join("notebook.typ.jinja").exists());
         assert!(!dest.join("paged.typ.jinja").exists());
         assert!(!dest.join("paged.typ").exists());
         assert!(dest.join("partials/navbar-item.html").is_file());

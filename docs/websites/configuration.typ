@@ -99,7 +99,7 @@ extends = "academic"
 Place project CSS in `themes/my-site/css/`. Local theme styles load after the
 parent theme's shared and local styles, so they can adjust colors, fonts,
 spacing, or component rules. The same theme directory can override HTML
-layouts, partials, scripts, assets, and `notebook.typ.jinja`.
+layouts, partials, scripts, assets, and `layouts/notebook.typ`.
 
 See #link("../themes/themes.html")[Themes] for the stable `--calepin-*`
 CSS tokens exposed by bundled themes.
