@@ -75,9 +75,9 @@ Edit `raw/layouts/notebook.html` to wrap Typst's generated HTML and inline the t
 {{ doc.head }}
   <meta charset="UTF-8">
   <title>{{ doc.title }}</title>
-  {% for style in styles %}
+  {% for file in css %}
   <style>
-{{ style.css }}
+{{ file.content }}
   </style>
   {% endfor %}
 {{ doc.body_open }}
@@ -87,7 +87,7 @@ Edit `raw/layouts/notebook.html` to wrap Typst's generated HTML and inline the t
 {{ doc.body_close }}
 ```
 
-The important pieces are `doc.head`, `doc.body_open`, `doc.body`, and `doc.body_close`, which preserve the HTML shell Typst produced. The `styles` loop loads files from the theme's `css/` directory, including `raw.css`.
+The important pieces are `doc.head`, `doc.body_open`, `doc.body`, and `doc.body_close`, which preserve the HTML shell Typst produced. The `css` loop loads files from the theme's `css/` directory, including `raw.css`.
 
 Edit the project config file `calepin.toml`:
 

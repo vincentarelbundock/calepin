@@ -9,13 +9,13 @@ use crate::utils::html::escape as html_escape;
 use crate::utils::template::no_autoescape_env;
 
 #[derive(Serialize)]
-struct StyleEntry {
+struct CssEntry {
     name: String,
-    css: String,
+    content: String,
 }
 
 #[derive(Serialize)]
-struct ScriptEntry {
+struct JsEntry {
     name: String,
     content: String,
 }
@@ -33,8 +33,8 @@ struct DocContext {
 struct ThemeContext {
     doc: DocContext,
     site: SiteContext,
-    styles: Vec<StyleEntry>,
-    scripts: Vec<ScriptEntry>,
+    css: Vec<CssEntry>,
+    js: Vec<JsEntry>,
     syntax_css: String,
     theme: String,
     target: String,
@@ -190,18 +190,18 @@ fn render_theme(
             .map_err(|error| theme_error(&name, error))?;
     }
 
-    let styles: Vec<StyleEntry> = entry
+    let css: Vec<CssEntry> = entry
         .styles
         .iter()
-        .map(|(name, css)| StyleEntry {
+        .map(|(name, source)| CssEntry {
             name: name.clone(),
-            css: theme_css(css, syntax_theme),
+            content: theme_css(source, syntax_theme),
         })
         .collect();
-    let scripts: Vec<ScriptEntry> = entry
+    let js: Vec<JsEntry> = entry
         .scripts
         .iter()
-        .map(|(name, content)| ScriptEntry {
+        .map(|(name, content)| JsEntry {
             name: name.clone(),
             content: content.clone(),
         })
@@ -221,8 +221,8 @@ fn render_theme(
             title: parts.title.clone().unwrap_or_default(),
         },
         site: site_context(project_root, output_path, toc, site_context_input),
-        styles,
-        scripts,
+        css,
+        js,
         syntax_css: syntax_css(syntax_theme),
         theme: name.clone(),
         target: "html".to_string(),

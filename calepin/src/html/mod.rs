@@ -483,7 +483,7 @@ mod tests {
     }
 
     #[test]
-    fn user_theme_loops_styles_scripts_and_includes_partials() {
+    fn user_theme_loops_css_js_and_includes_partials() {
         let dir = tempfile::tempdir().unwrap();
         let theme_dir = dir.path().join("mini");
         std::fs::create_dir_all(theme_dir.join("layouts")).unwrap();
@@ -492,7 +492,7 @@ mod tests {
         std::fs::create_dir_all(theme_dir.join("js")).unwrap();
         std::fs::write(
             theme_dir.join("layouts/notebook.html"),
-            "{{ doc.head }}{% for s in styles %}<style>{{ s.css }}</style>{% endfor %}{{ doc.body_open }}{% include \"partials/banner.html\" %}{{ doc.body }}{% for s in scripts %}<script>{{ s.content }}</script>{% endfor %}{{ doc.body_close }}",
+            "{{ doc.head }}{% for s in css %}<style>{{ s.content }}</style>{% endfor %}{{ doc.body_open }}{% include \"partials/banner.html\" %}{{ doc.body }}{% for s in js %}<script>{{ s.content }}</script>{% endfor %}{{ doc.body_close }}",
         )
         .unwrap();
         std::fs::write(
