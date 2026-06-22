@@ -467,6 +467,7 @@ fn html_title(head: &str) -> Option<String> {
 }
 
 /// Substitute the syntax-color placeholders inside a theme CSS asset.
+
 pub(crate) fn theme_css(source: &str, syntax_theme: &HtmlSyntaxTheme) -> String {
     source
         .replace(

@@ -104,6 +104,7 @@ const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
     "User-agent: *\nAllow: /\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}\n{% endif %}";
+
 fn resolve_website_asset_dir(config: &WebsiteConfig) -> Result<PathBuf> {
     let raw = match config.asset_dir.as_ref() {
         Some(value) if value.as_os_str().is_empty() => {

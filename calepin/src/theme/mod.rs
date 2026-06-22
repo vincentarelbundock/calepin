@@ -11,7 +11,7 @@ mod bundle;
 mod html;
 mod notebook;
 
-pub use bundle::{builtin_names, eject_builtin_to};
+pub(crate) use bundle::{builtin_names, eject_builtin_to};
 pub use html::{resolve_explicit_site_html_entry, resolve_html_entry, HtmlEntry, HtmlScope};
 pub use notebook::{notebook_source, NotebookSource, NotebookTemplateContext};
 
