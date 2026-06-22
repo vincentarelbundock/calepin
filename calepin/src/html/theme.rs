@@ -344,8 +344,12 @@ fn annotate_body_headings(body: &str, title_heading: Option<&str>) -> (String, V
         let close_end = close_start + close_tag.len();
         let open_tag = &body[start..open_end];
         let inner = &body[open_end..close_start];
-        let label = html_escape(&strip_html_tags(inner));
-        let base_id = slugify(&label);
+        // Derive the slug from the plain text, NOT from the re-escaped label:
+        // escaping turns a stray `&` back into `&amp;`, which slugify would then
+        // mangle into an `amp-` prefix. Keep `label` (escaped) for the TOC.
+        let text = strip_html_tags(inner);
+        let label = html_escape(&text);
+        let base_id = slugify(&text);
         let count = counts.entry(base_id.clone()).or_insert(0);
         let id = if *count == 0 {
             base_id
@@ -400,12 +404,44 @@ fn strip_html_tags(value: &str) -> String {
 }
 
 fn decode_basic_entities(value: &str) -> String {
-    value
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
+    let mut out = String::with_capacity(value.len());
+    let mut rest = value;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        let tail = &rest[amp..];
+        if let Some(semi) = tail.find(';') {
+            let entity = &tail[1..semi];
+            let decoded = match entity {
+                "amp" => Some('&'),
+                "lt" => Some('<'),
+                "gt" => Some('>'),
+                "quot" => Some('"'),
+                "apos" => Some('\''),
+                _ => decode_numeric_entity(entity),
+            };
+            if let Some(ch) = decoded {
+                out.push(ch);
+                rest = &tail[semi + 1..];
+                continue;
+            }
+        }
+        // Not a recognized entity: keep the '&' literally and move on.
+        out.push('&');
+        rest = &tail[1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Decode a numeric character reference body such as `#39`, `#x20`, or `#xE9`
+/// (the part between `&` and `;`). Returns `None` for non-numeric entities.
+fn decode_numeric_entity(entity: &str) -> Option<char> {
+    let digits = entity.strip_prefix('#')?;
+    let code = match digits.strip_prefix(['x', 'X']) {
+        Some(hex) => u32::from_str_radix(hex, 16).ok()?,
+        None => digits.parse::<u32>().ok()?,
+    };
+    char::from_u32(code)
 }
 
 fn slugify(value: &str) -> String {
@@ -488,4 +524,45 @@ fn highlight_css(syntax_theme: &HtmlSyntaxTheme) -> String {
         syntax_theme.declarations(true),
         syntax_theme.declarations(true),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn heading_id(body: &str) -> String {
+        let (out, _) = annotate_body_headings(body, None);
+        let marker = r#" id=""#;
+        let start = out.find(marker).expect("heading should get an id") + marker.len();
+        let end = out[start..].find('"').unwrap() + start;
+        out[start..end].to_string()
+    }
+
+    #[test]
+    fn plain_heading_slug_is_unchanged() {
+        assert_eq!(heading_id("<h2>Plain Research</h2>"), "plain-research");
+    }
+
+    #[test]
+    fn inline_markup_does_not_leak_into_the_slug() {
+        // An icon element plus Typst's `&#x20;` spacing span used to produce
+        // `amp-x20-iconic-research`; the slug should come from the text only.
+        let body = r#"<h2><i class="bi bi-pen"></i><span style="white-space: pre-wrap">&#x20;</span>Iconic Research</h2>"#;
+        assert_eq!(heading_id(body), "iconic-research");
+    }
+
+    #[test]
+    fn numeric_character_references_are_decoded() {
+        // `&#xE9;` decodes to `é`, which the ASCII-only slugify then drops — so
+        // the slug is a clean `caf`, not the old leaked `caf-xe9`.
+        assert_eq!(heading_id("<h2>caf&#xE9;</h2>"), "caf");
+        // The decoder itself handles decimal and hex refs.
+        assert_eq!(decode_basic_entities("a&#38;b"), "a&b");
+        assert_eq!(decode_basic_entities("&#x20;hi"), " hi");
+    }
+
+    #[test]
+    fn unrecognized_ampersands_are_preserved() {
+        assert_eq!(decode_basic_entities("Tom & Jerry"), "Tom & Jerry");
+    }
 }
