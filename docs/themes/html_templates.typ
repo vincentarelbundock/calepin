@@ -6,14 +6,53 @@
 
 For a single HTML notebook, use `layouts/notebook.html`. For websites, the default entry is `layouts/webpage.html`.
 
-Layouts are MiniJinja templates. The most common values are:
+Layouts are MiniJinja templates. The template context contains these top-level values:
 
-- `doc.head`, `doc.body_open`, `doc.body`, `doc.body_close`
-- `site.title`, `site.base_url`, `site.logo`, `site.favicon`
-- `site.sidebar`, `site.sidebar_sections`, `site.toc`, `site.menus`
-- `css`, `js`, `syntax_css`, `theme`, `target`
+- `doc`: Typst's generated HTML shell and document content.
+- `site`: website metadata, navigation, page assets, and search settings.
+- `css`: theme CSS files. Each item has `name` and `content`.
+- `js`: theme JS files. Each item has `name` and `content`.
+- `syntax_css`: standalone syntax-highlight CSS.
+- `theme`: the active theme name.
+- `target`: the render target; currently `html`.
 
-Navigation entries also expose `href`, `label`, `label_html`, and `active`.
+`doc` contains:
+
+- `doc.head`: Typst's document shell before `</head>`.
+- `doc.body_open`: `</head>` and Typst's opening `<body>` tag.
+- `doc.body`: Typst's generated body content.
+- `doc.body_close`: Typst's closing `</body>` tag and any remaining document shell.
+- `doc.title`: the document title, or an empty string.
+
+`site` contains:
+
+- `site.title`, `site.description`, `site.base_url`
+- `site.logo`, `site.logo_alt`, `site.home_url`, `site.favicon`
+- `site.current_url`, `site.page_title`
+- `site.sidebar`: flat navigation entries.
+- `site.sidebar_sections`: grouped navigation sections.
+- `site.sidebar_fold`: whether titled sidebar sections should fold.
+- `site.toc`: the current page table of contents.
+- `site.menus`: named menus, such as `site.menus.main`, `site.menus.social`, and `site.menus.footer`.
+- `site.menu_list`: all named menus as a list.
+- `site.languages`: language entries for the language picker.
+- `site.translations`: alternate-language links for the current page.
+- `site.language`: the current language code.
+- `site.stylesheet`: an optional extra stylesheet URL.
+- `site.scripts`: extra script URLs.
+- `site.theme_assets`: emitted theme asset URLs, usually for built-in website themes.
+- `site.pagefind`: Pagefind search assets and bundle path, when search is enabled.
+- `site.revealjs`: Reveal.js runtime configuration as a JSON string.
+
+Nested entries expose these fields:
+
+- Navigation entries in `site.sidebar`, `site.menus.<name>`, and section `items`: `href`, `label`, `label_html`, `active`.
+- Sidebar sections: `title`, `active`, `items`.
+- TOC entries: `level`, `href`, `label`.
+- Menu entries in `site.menu_list`: `name`, `items`.
+- Language and translation entries: `code`, `label`, `href`, `active`.
+- Theme assets: `name`, `href`, `kind`.
+- Pagefind: `css`, `js`, `bundle`.
 
 Here is a minimal `layouts/notebook.html`:
 
