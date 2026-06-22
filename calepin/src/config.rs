@@ -26,6 +26,18 @@ pub struct TocConfig {
     pub depth: Option<usize>,
 }
 
+/// Site-wide raw HTML injected into every generated page (HTML website builds
+/// only): `head` is appended inside `<head>` (analytics, Open Graph / Twitter
+/// meta, JSON-LD, `apple-touch-icon`, …) and `body` just before `</body>`
+/// (end-of-page widgets and scripts). The markup is emitted verbatim, so the
+/// author is responsible for its correctness.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
+#[serde(default)]
+pub struct HtmlConfig {
+    pub head: Option<String>,
+    pub body: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
@@ -36,6 +48,7 @@ pub struct CalepinConfig {
     /// `None` means the built-in default `.calepin`.
     pub asset_dir: Option<PathBuf>,
     pub toc: TocConfig,
+    pub html: HtmlConfig,
 }
 
 impl CalepinConfig {
@@ -77,6 +90,7 @@ impl CalepinConfig {
             vars: raw.vars,
             asset_dir,
             toc,
+            html: raw.html,
         })
     }
 
@@ -88,6 +102,7 @@ impl CalepinConfig {
             vars: BTreeMap::new(),
             asset_dir: None,
             toc: TocConfig::default(),
+            html: HtmlConfig::default(),
         }
     }
 
@@ -185,6 +200,8 @@ struct RawCalepinConfig {
     asset_dir: Option<PathBuf>,
     #[serde(default)]
     toc: TocConfig,
+    #[serde(default)]
+    html: HtmlConfig,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -668,6 +685,34 @@ credits = 3
 
         assert_eq!(config.toc.enabled, Some(false));
         assert_eq!(config.toc.depth, Some(2));
+    }
+
+    #[test]
+    fn config_parses_html_include_table() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            "[html]\nhead = \"<meta name=\\\"x\\\">\"\nbody = \"<noscript>x</noscript>\"\n",
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        assert_eq!(config.html.head.as_deref(), Some("<meta name=\"x\">"));
+        assert_eq!(config.html.body.as_deref(), Some("<noscript>x</noscript>"));
+    }
+
+    #[test]
+    fn config_html_include_defaults_to_none() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "theme = \"calepin\"\n").unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        assert_eq!(config.html.head, None);
+        assert_eq!(config.html.body, None);
     }
 
     #[test]

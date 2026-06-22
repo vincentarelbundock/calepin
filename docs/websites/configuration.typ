@@ -80,6 +80,29 @@ Bundled website themes emit a small set of page-level head tags from config:
 If you inject your own tags for these fields in a theme override, check for
 duplication with what the theme already emits.
 
+= Custom head and body HTML
+
+To add analytics, third-party scripts, social-card meta, or `schema.org`
+JSON-LD without overriding a theme, set raw HTML in an `[html]` table. `head` is
+appended inside every page's `<head>`; `body` is emitted just before the
+closing `</body>`:
+
+```toml
+# calepin.toml
+[html]
+head = """
+<script defer data-domain="example.com" src="https://plausible.io/js/script.js"></script>
+<meta property="og:image" content="https://example.com/card.png">
+"""
+body = """
+<noscript>This site works best with JavaScript enabled.</noscript>
+"""
+```
+
+The markup is emitted verbatim, so you are responsible for its validity and for
+escaping any user-derived values. These injections apply to bundled website
+themes (and local themes that extend them) on HTML builds only.
+
 = Theme customization
 
 Use a local theme when you want project CSS or template overrides. Point `theme`

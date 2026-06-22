@@ -60,6 +60,11 @@ pub(crate) struct SiteContextInput {
     pub(crate) page_url: Option<String>,
     pub(crate) page_title: Option<String>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
+    /// Raw HTML injected into every page from `[html]` in `calepin.toml`:
+    /// `head_include` is emitted inside `<head>`, `body_include` just before
+    /// `</body>`. Serialized so theme templates can render them verbatim.
+    pub(crate) head_include: Option<String>,
+    pub(crate) body_include: Option<String>,
     #[serde(skip)]
     pub(crate) vars: BTreeMap<String, toml::Value>,
     /// Resolved max heading level included in the on-page TOC: `Some(0)` means

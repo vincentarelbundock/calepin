@@ -19,6 +19,10 @@ pub(super) struct WebsiteConfig {
     // exists so `deny_unknown_fields` accepts `[toc]` in calepin.toml.
     #[serde(rename = "toc")]
     pub(super) _toc: Option<toml::Value>,
+    // Resolved from `CalepinConfig` (config.rs), not here; this field only
+    // exists so `deny_unknown_fields` accepts `[html]` in calepin.toml.
+    #[serde(rename = "html")]
+    pub(super) _html: Option<toml::Value>,
     pub(super) title: Option<String>,
     pub(super) description: Option<String>,
     pub(super) base_url: Option<String>,

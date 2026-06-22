@@ -2,3 +2,4 @@
 {% include "partials/site-head-meta.html" %}
 {% include "partials/theme-init-script.html" %}
 {% include "partials/theme-styles.html" %}
+{% if site.head_include %}{{ site.head_include }}{% endif %}

@@ -122,6 +122,8 @@ fn render_document(
         context.search,
     );
     site_context.vars = context.vars.clone();
+    site_context.head_include = context.html.head.clone();
+    site_context.body_include = context.html.body.clone();
     site_context.toc_depth = Some(crate::theme::resolve_toc_depth(
         page_meta.and_then(|meta| meta.toc.as_ref()),
         &context.toc,

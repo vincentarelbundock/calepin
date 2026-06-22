@@ -412,6 +412,68 @@ mod tests {
     }
 
     #[test]
+    fn site_head_and_body_includes_are_emitted_verbatim() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme_dir = write_theme(
+            dir.path(),
+            "site-includes",
+            "layouts/site.html",
+            r#"<head>{% if site.head_include %}{{ site.head_include }}{% endif %}</head>{{ doc.body_open }}<main>{{ doc.body }}</main>{% if site.body_include %}{{ site.body_include }}{% endif %}{{ doc.body_close }}"#,
+        );
+        let site_context = SiteContextInput {
+            head_include: Some(
+                r#"<meta property="og:title" content="A & B"><script src="https://plausible.io/js"></script>"#
+                    .to_string(),
+            ),
+            body_include: Some(r#"<noscript>enable js</noscript>"#.to_string()),
+            ..SiteContextInput::default()
+        };
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&dir_site_entry(&theme_dir)),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        // Emitted raw inside <head> (no entity-escaping of the author's markup).
+        assert!(themed
+            .contains(r#"<meta property="og:title" content="A & B">"#));
+        assert!(themed.contains(r#"<script src="https://plausible.io/js"></script>"#));
+        let head_end = themed.find("</head>").unwrap();
+        assert!(themed.find("plausible.io").unwrap() < head_end);
+        // Body include lands after the page body, before the closing markup.
+        let body_pos = themed.find("<noscript>enable js</noscript>").unwrap();
+        assert!(body_pos > head_end);
+    }
+
+    #[test]
+    fn site_includes_absent_by_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme_dir = write_theme(
+            dir.path(),
+            "site-includes-empty",
+            "layouts/site.html",
+            r#"<head>{% if site.head_include %}{{ site.head_include }}{% endif %}</head>{{ doc.body_open }}<main>{{ doc.body }}</main>{% if site.body_include %}{{ site.body_include }}{% endif %}{{ doc.body_close }}"#,
+        );
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&dir_site_entry(&theme_dir)),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&SiteContextInput::default()),
+        )
+        .unwrap();
+
+        assert!(themed.contains("<head></head>"));
+    }
+
+    #[test]
     fn no_html_theme_returns_raw_typst_html_without_calepin_css_or_template() {
         let themed = apply_html_theme(SAMPLE_HTML, None).unwrap();
 

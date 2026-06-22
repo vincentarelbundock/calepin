@@ -189,6 +189,9 @@ impl SiteModel {
                     &format!("{PAGEFIND_DIR}/"),
                 )),
             }),
+            // Filled in by `render_document` from the resolved `[html]` config.
+            head_include: None,
+            body_include: None,
             vars: Default::default(),
             toc_depth: None,
         }
