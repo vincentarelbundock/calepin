@@ -12,7 +12,7 @@ Layouts are MiniJinja templates. The template context contains these top-level v
 - `site`: website metadata, navigation, and search settings.
 - `css`: theme CSS files. Each item has `name` and `content`.
 - `js`: theme JS files. Each item has `name` and `content`.
-- `syntax_css`: standalone syntax-highlight CSS.
+- `highlight_css`: standalone syntax-highlight CSS.
 - `theme`: the active theme name.
 - `target`: the render target; currently `html`.
 

@@ -35,7 +35,7 @@ struct ThemeContext {
     site: SiteContext,
     css: Vec<CssEntry>,
     js: Vec<JsEntry>,
-    syntax_css: String,
+    highlight_css: String,
     theme: String,
     target: String,
 }
@@ -127,7 +127,7 @@ pub(super) fn apply_html_theme(
         return Ok(html.to_string());
     };
     // Rewrite Typst's inline `style="color: ..."` spans to syntax classes so
-    // the theme's syntax CSS (placeholders or `syntax_css`) can drive colors.
+    // the theme's highlight CSS (placeholders or `highlight_css`) can drive colors.
     let rewritten = syntax_theme.rewrite_classes(html);
     // Typst emits a bare HTML fragment (no <html>/<head>/<body> wrapper) when
     // the document has no explicit html.elem("html") root element. Wrap those
@@ -204,7 +204,7 @@ fn render_theme(
         site: site_context(project_root, output_path, toc, site_context_input),
         css,
         js,
-        syntax_css: syntax_css(syntax_theme),
+        highlight_css: highlight_css(syntax_theme),
         theme: name.clone(),
         target: "html".to_string(),
     };
@@ -471,10 +471,10 @@ pub(crate) fn theme_css(source: &str, syntax_theme: &HtmlSyntaxTheme) -> String 
         .replace("__CALEPIN_SYNTAX_DARK__", &syntax_theme.declarations(true))
 }
 
-/// The standalone syntax CSS exposed as `syntax_css` (inner CSS; the layout
-/// wraps it in a `<style>` element). Themes that embed the
+/// The standalone highlight CSS exposed as `highlight_css` (inner CSS; the
+/// layout wraps it in a `<style>` element). Themes that embed the
 /// `__CALEPIN_SYNTAX_*__` placeholders in their own CSS do not need it.
-fn syntax_css(syntax_theme: &HtmlSyntaxTheme) -> String {
+fn highlight_css(syntax_theme: &HtmlSyntaxTheme) -> String {
     format!(
         ":root {{\n{}}}\n\n{}\nhtml[data-theme=\"dark\"] {{\n{}}}\n\n@media (prefers-color-scheme: dark) {{\n  html:not([data-theme]) {{\n{}  }}\n}}\n",
         syntax_theme.declarations(false),
