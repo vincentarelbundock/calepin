@@ -10,19 +10,25 @@ Calepin requires Typst 0.15.0 or newer. Install or update the Typst CLI from the
 = Calepin
 <calepin-cli>
 
-
-
-MacOS and Linux:
+The simplest way to install Calepin is with the official installer script, which works on MacOS and Linux:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh
 ```
 
-Windows via powershell:
+On Windows via powershell:
 
 ```sh
 powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex"
 ```
+
+If you are a `cargo` for Rust user, you can install with:
+
+```sh
+cargo install calepin
+```
+
+
 
 == Updating Calepin
 
