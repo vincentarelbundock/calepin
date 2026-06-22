@@ -9,7 +9,7 @@ For a single HTML notebook, use `layouts/notebook.html`. For websites, the defau
 Layouts are MiniJinja templates. The template context contains these top-level values:
 
 - `doc`: Typst's generated HTML shell and document content.
-- `site`: website metadata, navigation, page assets, and search settings.
+- `site`: website metadata, navigation, and search settings.
 - `css`: theme CSS files. Each item has `name` and `content`.
 - `js`: theme JS files. Each item has `name` and `content`.
 - `syntax_css`: standalone syntax-highlight CSS.
@@ -38,8 +38,6 @@ Layouts are MiniJinja templates. The template context contains these top-level v
 - `site.languages`: language entries for the language picker.
 - `site.translations`: alternate-language links for the current page.
 - `site.language`: the current language code.
-- `site.scripts`: extra script URLs.
-- `site.theme_assets`: emitted theme asset URLs, usually for built-in website themes.
 - `site.pagefind`: Pagefind search assets and bundle path, when search is enabled.
 - `site.revealjs`: Reveal.js runtime configuration as a JSON string.
 
@@ -50,7 +48,6 @@ Nested entries expose these fields:
 - TOC entries: `level`, `href`, `label`.
 - Menu entries in `site.menu_list`: `name`, `items`.
 - Language and translation entries: `code`, `label`, `href`, `active`.
-- Theme assets: `name`, `href`, `kind`.
 - Pagefind: `css`, `js`, `bundle`.
 
 Here is a minimal `layouts/notebook.html`:

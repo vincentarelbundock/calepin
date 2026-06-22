@@ -273,203 +273,6 @@ fn watch_roots_changed_detects_theme_updates() {
 }
 
 #[test]
-fn theme_generated_assets_use_deterministic_calepin_paths() {
-    let entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Default,
-        crate::theme::HtmlScope::Site,
-    )
-    .unwrap()
-    .unwrap();
-
-    let assets = ThemeGeneratedAssets::from_entry(
-        &entry,
-        &HtmlSyntaxTheme::builtin(),
-        Path::new(".calepin"),
-    )
-    .unwrap();
-    let scripts = assets
-        .scripts
-        .iter()
-        .map(|asset| slash_path(&asset.rel_path))
-        .collect::<Vec<_>>();
-
-    assert_eq!(assets.stylesheets.len(), 6);
-    assert_eq!(
-        assets
-            .stylesheets
-            .iter()
-            .map(|asset| slash_path(&asset.rel_path))
-            .collect::<Vec<_>>(),
-        vec![
-            ".calepin/10_pico.css".to_string(),
-            ".calepin/20_theme.css".to_string(),
-            ".calepin/30_code.css".to_string(),
-            ".calepin/40_widgets.css".to_string(),
-            ".calepin/50_site.css".to_string(),
-            ".calepin/60_document.css".to_string(),
-        ]
-    );
-    assert_eq!(
-        scripts,
-        vec![
-            ".calepin/theme-toggle.js".to_string(),
-            ".calepin/language-picker.js".to_string(),
-            ".calepin/copy-code.js".to_string(),
-            ".calepin/search.js".to_string(),
-            ".calepin/theme-init.js".to_string(),
-            ".calepin/site.js".to_string(),
-        ]
-    );
-    let theme_css = slash_path(&assets.stylesheets[1].rel_path);
-    assert_eq!(theme_css, ".calepin/20_theme.css");
-    let theme_styles = &assets.stylesheets[1].content;
-    assert!(theme_styles.contains(".calepin-content math[display=\"block\"]"));
-    assert!(assets
-        .stylesheets
-        .iter()
-        .any(|stylesheet| stylesheet.content.contains(".calepin-website-shell")));
-    assert!(assets.scripts[0]
-        .content
-        .contains("data-calepin-theme-toggle"));
-}
-#[test]
-fn theme_generated_assets_use_custom_asset_dir() {
-    let entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Default,
-        crate::theme::HtmlScope::Site,
-    )
-    .unwrap()
-    .unwrap();
-
-    let assets = ThemeGeneratedAssets::from_entry(
-        &entry,
-        &HtmlSyntaxTheme::builtin(),
-        Path::new("_calepin"),
-    )
-    .unwrap();
-
-    let stylesheet_paths = assets
-        .stylesheets
-        .iter()
-        .map(|asset| slash_path(&asset.rel_path))
-        .collect::<Vec<_>>();
-    let script_paths = assets
-        .scripts
-        .iter()
-        .map(|asset| slash_path(&asset.rel_path))
-        .collect::<Vec<_>>();
-    assert_eq!(
-        stylesheet_paths,
-        vec![
-            "_calepin/10_pico.css".to_string(),
-            "_calepin/20_theme.css".to_string(),
-            "_calepin/30_code.css".to_string(),
-            "_calepin/40_widgets.css".to_string(),
-            "_calepin/50_site.css".to_string(),
-            "_calepin/60_document.css".to_string(),
-        ]
-    );
-    assert_eq!(
-        script_paths,
-        vec![
-            "_calepin/theme-toggle.js".to_string(),
-            "_calepin/language-picker.js".to_string(),
-            "_calepin/copy-code.js".to_string(),
-            "_calepin/search.js".to_string(),
-            "_calepin/theme-init.js".to_string(),
-            "_calepin/site.js".to_string(),
-        ]
-    );
-}
-
-#[test]
-fn page_asset_decision_does_not_link_academic_assets_for_calepin_page() {
-    let generated_entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Builtin("academic"),
-        crate::theme::HtmlScope::Site,
-    )
-    .unwrap()
-    .unwrap();
-    let page_entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Default,
-        crate::theme::HtmlScope::Site,
-    )
-    .unwrap();
-
-    let decision = page_asset_decision(
-        page_entry,
-        Some(&generated_entry),
-        &[
-            ".calepin/theme-toggle.js".to_string(),
-            ".calepin/language-picker.js".to_string(),
-            ".calepin/copy-code.js".to_string(),
-            ".calepin/search.js".to_string(),
-            ".calepin/theme-init.js".to_string(),
-            ".calepin/site.js".to_string(),
-        ],
-    );
-
-    assert!(decision.scripts.is_empty());
-}
-
-#[test]
-fn page_asset_decision_does_not_link_calepin_assets_for_academic_page() {
-    let generated_entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Default,
-        crate::theme::HtmlScope::Site,
-    )
-    .unwrap()
-    .unwrap();
-    let page_entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Builtin("academic"),
-        crate::theme::HtmlScope::Site,
-    )
-    .unwrap();
-
-    let decision = page_asset_decision(
-        page_entry,
-        Some(&generated_entry),
-        &[
-            ".calepin/theme-toggle.js".to_string(),
-            ".calepin/language-picker.js".to_string(),
-            ".calepin/copy-code.js".to_string(),
-            ".calepin/search.js".to_string(),
-            ".calepin/theme-init.js".to_string(),
-            ".calepin/site.js".to_string(),
-        ],
-    );
-
-    assert!(decision.scripts.is_empty());
-}
-
-#[test]
-fn page_asset_decision_reuses_generated_assets_for_matching_explicit_layout() {
-    let generated_entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Default,
-        crate::theme::HtmlScope::Site,
-    )
-    .unwrap()
-    .unwrap();
-    let page_entry = crate::theme::resolve_explicit_site_html_entry(
-        &crate::theme::ThemeSelection::Default,
-        "layouts/landing.html",
-    )
-    .unwrap();
-    let scripts = vec![
-        ".calepin/theme-toggle.js".to_string(),
-        ".calepin/language-picker.js".to_string(),
-        ".calepin/copy-code.js".to_string(),
-        ".calepin/search.js".to_string(),
-        ".calepin/theme-init.js".to_string(),
-        ".calepin/site.js".to_string(),
-    ];
-
-    let decision = page_asset_decision(page_entry, Some(&generated_entry), &scripts);
-
-    assert_eq!(decision.scripts, scripts);
-}
-
-#[test]
 fn html_theme_key_is_rejected() {
     assert!(try_website_config_from_toml(r#"html_theme = "academic""#).is_err());
 }
@@ -1989,11 +1792,11 @@ fn theme_context_marks_section_containing_current_page_active() {
 }
 
 #[test]
-fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
-    let stylesheet = ".calepin/20_theme.css";
+fn page_relative_url_rewrites_asset_paths_for_nested_pages() {
+    let asset = ".calepin/pages.json";
     assert_eq!(
-        page_relative_url("guide/usage.html", stylesheet),
-        "../.calepin/20_theme.css"
+        page_relative_url("guide/usage.html", asset),
+        "../.calepin/pages.json"
     );
     assert_eq!(
         page_relative_url("guide/usage.html", "guide/advanced.html"),
@@ -2004,13 +1807,13 @@ fn page_relative_url_rewrites_generated_stylesheet_for_nested_pages() {
         "../publications/index.html"
     );
     assert_eq!(
-        page_relative_url("index.html", stylesheet),
-        ".calepin/20_theme.css"
+        page_relative_url("index.html", asset),
+        ".calepin/pages.json"
     );
 }
 
 #[test]
-fn shared_theme_init_script_is_rendered_with_relative_asset_path() {
+fn shared_theme_init_script_is_inlined() {
     if !command_available("typst") {
         return;
     }
@@ -2055,12 +1858,10 @@ fn shared_theme_init_script_is_rendered_with_relative_asset_path() {
     let root_html = std::fs::read_to_string(root_output).unwrap();
     let nested_html = std::fs::read_to_string(nested_output).unwrap();
 
-    assert!(root_html.contains("src=\".calepin/theme-init.js\""));
-    assert!(nested_html.contains("src=\"../.calepin/theme-init.js\""));
-    assert!(
-        !nested_html.contains("src=\"../.calepin/.calepin/theme-init.js\""),
-        "theme-init script should be canonicalized"
-    );
+    assert!(root_html.contains("data-calepin-theme-storage-key"));
+    assert!(nested_html.contains("data-calepin-theme-storage-key"));
+    assert!(!root_html.contains("src=\".calepin/theme-init.js\""));
+    assert!(!nested_html.contains("src=\"../.calepin/theme-init.js\""));
 }
 
 #[test]

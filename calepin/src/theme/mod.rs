@@ -84,7 +84,6 @@ pub(crate) struct LocalThemeSharedImports {
     pub(crate) partials: Vec<String>,
     pub(crate) css: Vec<String>,
     pub(crate) js: Vec<String>,
-    pub(crate) assets: Vec<String>,
 }
 
 pub(crate) fn resolve_theme_chain(selection: &ThemeSelection) -> Result<ThemeChain> {
@@ -215,31 +214,6 @@ fn read_theme_files(dir: &Path, ext: &str) -> Result<Vec<(String, String)>> {
     Ok(files)
 }
 
-fn read_theme_files_any(dir: &Path) -> Result<Vec<(String, String)>> {
-    if !dir.is_dir() {
-        return Ok(Vec::new());
-    }
-
-    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
-        .with_context(|| format!("failed to read {}", dir.display()))?
-        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-        .filter(|path| path.is_file())
-        .collect();
-    paths.sort();
-
-    let mut files = Vec::with_capacity(paths.len());
-    for path in paths {
-        let name = path
-            .file_name()
-            .map(|name| name.to_string_lossy().to_string())
-            .unwrap_or_default();
-        let contents = std::fs::read_to_string(&path)
-            .with_context(|| format!("failed to read {}", path.display()))?;
-        files.push((name, contents));
-    }
-    Ok(files)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,21 +276,18 @@ mod tests {
         let sel = ThemeSelection::Builtin("academic");
         let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
         assert_eq!(site.theme_name, "academic");
-        assert!(!site.is_default);
         assert!(site.layout.contains("academic-page"));
 
         let document = resolve_html_entry(&sel, HtmlScope::Document)
             .unwrap()
             .unwrap();
         assert_eq!(document.theme_name, "academic");
-        assert!(!document.is_default);
         assert!(document.layout.contains("academic-document-main"));
 
         let landing = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
             .unwrap()
             .unwrap();
         assert_eq!(landing.theme_name, "academic");
-        assert!(!landing.is_default);
         assert!(landing.layout.contains("academic-landing"));
     }
 
@@ -417,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn dir_theme_extends_builtin_for_missing_entries_and_overrides_assets_by_name() {
+    fn dir_theme_extends_builtin_for_missing_entries_and_overrides_css_by_name() {
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("child");
         std::fs::create_dir_all(theme.join("css")).unwrap();
@@ -446,7 +417,7 @@ mod tests {
     }
 
     #[test]
-    fn dir_theme_imports_shared_assets_in_manifest_order() {
+    fn dir_theme_imports_shared_css_and_js_in_manifest_order() {
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("custom");
         std::fs::create_dir_all(theme.join("css")).unwrap();
@@ -542,6 +513,30 @@ scripts = ["copy-code.js"]
     }
 
     #[test]
+    fn shared_imports_reject_assets_key() {
+        let dir = tempfile::tempdir().unwrap();
+        let theme = dir.path().join("custom");
+        std::fs::create_dir_all(theme.join("layouts")).unwrap();
+        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(
+            theme.join("theme.toml"),
+            r#"extends = "typst"
+
+[shared]
+assets = ["font.woff2"]
+"#,
+        )
+        .unwrap();
+
+        let err = resolve_html_entry(&ThemeSelection::Dir(theme), HtmlScope::Document)
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("unknown field"), "{err}");
+        assert!(err.contains("assets"), "{err}");
+    }
+
+    #[test]
     fn shared_imports_reject_duplicate_entries() {
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("custom");
@@ -604,7 +599,6 @@ css = ["../theme.css"]
             .unwrap();
 
         assert_eq!(entry.layout, "landing");
-        assert!(!entry.is_default);
     }
 
     #[test]
@@ -629,7 +623,6 @@ css = ["../theme.css"]
                 .unwrap();
 
         assert!(entry.layout.contains("calepin-website-main--landing"));
-        assert!(entry.is_default);
     }
 
     #[test]

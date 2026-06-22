@@ -12,7 +12,7 @@ pub(crate) use minify::minify_html_file;
 pub(crate) use syntax::HtmlSyntaxTheme;
 pub(crate) use theme::{
     theme_css, SiteContextInput, SiteLanguageEntry, SiteMenu, SiteNavEntry, SiteNavSection,
-    SitePagefindEntry, SiteThemeAsset,
+    SitePagefindEntry,
 };
 
 /// Read `path`, transform its contents, and write the result back only when it
@@ -1239,28 +1239,11 @@ mod tests {
     }
 
     #[test]
-    fn bundled_website_theme_links_theme_stylesheet_assets() {
+    fn bundled_website_theme_inlines_theme_css() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
-        let theme_assets = entry
-            .styles
-            .iter()
-            .map(|(name, _)| {
-                let stem = std::path::Path::new(name)
-                    .file_stem()
-                    .and_then(|stem| stem.to_str())
-                    .unwrap_or(name)
-                    .to_string();
-                crate::html::SiteThemeAsset {
-                    name: name.clone(),
-                    href: format!("../.calepin/{stem}.css"),
-                    kind: "css".to_string(),
-                }
-            })
-            .collect();
         let site_context = SiteContextInput {
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
-            theme_assets,
             ..SiteContextInput::default()
         };
 
@@ -1274,56 +1257,14 @@ mod tests {
         )
         .unwrap();
 
-        let pico_css = themed
-            .find(r#"<link rel="stylesheet" href="../.calepin/10_pico.css">"#)
-            .unwrap();
-        let theme_css = themed
-            .find(r#"<link rel="stylesheet" href="../.calepin/20_theme.css">"#)
-            .unwrap();
-        let code_css = themed
-            .find(r#"<link rel="stylesheet" href="../.calepin/30_code.css">"#)
-            .unwrap();
-        let widgets_css = themed
-            .find(r#"<link rel="stylesheet" href="../.calepin/40_widgets.css">"#)
-            .unwrap();
-
-        assert!(pico_css < theme_css);
-        assert!(theme_css < code_css);
-        assert!(code_css < widgets_css);
-        assert!(
-            !themed.contains(r#"<link rel="stylesheet" href="../.calepin/calepin-website.css">"#)
-        );
-        assert!(!themed.contains("<style>"));
-        assert!(!themed.contains("--calepin-code-border"));
-        assert!(!themed.contains("--calepin-topbar-height"));
+        assert!(!themed.contains(r#"<link rel="stylesheet" href="../.calepin/10_pico.css">"#));
+        assert!(themed.contains("<style>"));
+        assert!(themed.contains("--calepin-code-border"));
+        assert!(themed.contains("--calepin-topbar-height"));
     }
 
     #[test]
-    fn bundled_website_theme_can_link_external_scripts() {
-        let site_context = SiteContextInput {
-            title: Some("Example".to_string()),
-            home_url: Some("index.html".to_string()),
-            scripts: vec!["../.calepin/theme-toggle.js".to_string()],
-            ..SiteContextInput::default()
-        };
-        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
-
-        let themed = theme::apply_html_theme(
-            SAMPLE_HTML,
-            Some(&entry),
-            &HtmlSyntaxTheme::builtin(),
-            None,
-            None,
-            Some(&site_context),
-        )
-        .unwrap();
-
-        assert!(themed.contains(r#"<script src="../.calepin/theme-toggle.js"></script>"#));
-        assert!(!themed.contains("data-calepin-theme-toggle], #calepin-theme-button"));
-    }
-
-    #[test]
-    fn bundled_website_theme_does_not_inline_theme_js_for_default_theme() {
+    fn bundled_website_theme_inlines_theme_js() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
         let themed = theme::apply_html_theme(
             SAMPLE_HTML,
@@ -1335,7 +1276,8 @@ mod tests {
         )
         .unwrap();
 
-        assert!(!themed.contains("[data-calepin-theme-toggle], #calepin-theme-button"));
+        assert!(!themed.contains(r#"<script src="../.calepin/theme-toggle.js"></script>"#));
+        assert!(themed.contains("data-calepin-theme-toggle], #calepin-theme-button"));
     }
 
     #[test]

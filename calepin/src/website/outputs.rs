@@ -20,7 +20,6 @@ pub(super) struct GeneratedOutputInputs<'a> {
     pub sitemap_path: &'a Option<PathBuf>,
     pub robots_path: &'a Option<PathBuf>,
     pub feed_paths: &'a BTreeSet<PathBuf>,
-    pub theme_asset_paths: &'a BTreeSet<PathBuf>,
     pub default_favicon_path: Option<&'a Path>,
 }
 
@@ -41,7 +40,6 @@ pub(super) fn expected_generated_outputs(inputs: GeneratedOutputInputs<'_>) -> B
         outputs.insert(path.clone());
     }
     outputs.extend(inputs.feed_paths.iter().cloned());
-    outputs.extend(inputs.theme_asset_paths.iter().cloned());
     if let Some(path) = inputs.default_favicon_path {
         outputs.insert(inputs.out_dir.join(path));
     }

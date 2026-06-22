@@ -40,13 +40,6 @@ struct ThemeContext {
     target: String,
 }
 
-#[derive(Serialize, Debug, Clone)]
-pub(crate) struct SiteThemeAsset {
-    pub(crate) name: String,
-    pub(crate) href: String,
-    pub(crate) kind: String,
-}
-
 #[derive(Serialize, Debug, Clone, Default)]
 pub(crate) struct SiteContextInput {
     pub(crate) sidebar: Vec<SiteNavEntry>,
@@ -66,8 +59,6 @@ pub(crate) struct SiteContextInput {
     pub(crate) favicon: Option<String>,
     pub(crate) current_url: Option<String>,
     pub(crate) page_title: Option<String>,
-    pub(crate) scripts: Vec<String>,
-    pub(crate) theme_assets: Vec<SiteThemeAsset>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
     /// JSON config used by themes for runtime behavior (e.g., Reveal.js options).
     pub(crate) revealjs: String,

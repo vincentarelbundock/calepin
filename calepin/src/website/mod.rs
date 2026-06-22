@@ -77,8 +77,7 @@ use paths::wildcard_match;
 use paths::{normalize_path, rel_posix, relative_or_self, slash_path};
 use preprocess::{preprocess_documents, WebsitePreprocessOptions};
 #[cfg(test)]
-use render::page_asset_decision;
-use render::{default_site_html_entry, render_documents, ThemeGeneratedAssets};
+use render::render_documents;
 pub(crate) use scaffold::scaffold_website;
 #[cfg(test)]
 use site::{language_entries, translation_entries};
@@ -329,13 +328,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let site_theme = config_theme.clone();
     let asset_dir = resolve_website_asset_dir(&config)?;
     let theme_dirs = theme_chain_dirs(&site_theme)?;
-    let site_entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?;
-    let mut external_theme_assets = site_entry.as_ref().is_some_and(|entry| {
-        entry.is_default
-            || !entry.styles.is_empty()
-            || !entry.scripts.is_empty()
-            || !entry.assets.is_empty()
-    });
     let languages = configured_languages(&src_dir, &config)?;
     let (section_plans, mut typ_files) = discover_site_pages(
         &src_dir,
@@ -395,31 +387,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         parallelism: args.parallelism,
         progress: progress.clone(),
     })?;
-    if !external_theme_assets
-        && preprocessed.values().any(|output| {
-            crate::theme::resolve_html_entry(&output.theme, crate::theme::HtmlScope::Site)
-                .ok()
-                .flatten()
-                .is_some_and(|entry| {
-                    entry.is_default
-                        || !entry.styles.is_empty()
-                        || !entry.scripts.is_empty()
-                        || !entry.assets.is_empty()
-                })
-        })
-    {
-        external_theme_assets = true;
-    }
-    let theme_asset_entry = if external_theme_assets {
-        Some(site_entry.clone().unwrap_or_else(default_site_html_entry))
-    } else {
-        None
-    };
-    let theme_assets = if let Some(entry) = theme_asset_entry.as_ref() {
-        ThemeGeneratedAssets::from_entry(entry, &html_syntax_theme, &asset_dir)?
-    } else {
-        ThemeGeneratedAssets::default()
-    };
     let page_meta = load_page_meta(&src_dir, &typ_files);
     let metadata = SiteMetadata::from_config(
         &config,
@@ -460,7 +427,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
     let pages_signature = xxh3_64(pages_index_json.as_bytes());
     write_pages_index(&typ_files, &pages_index_json, &asset_dir)?;
-    let theme_asset_paths = theme_assets.output_paths(&out_dir);
     let expected_outputs = expected_generated_outputs(GeneratedOutputInputs {
         out_dir: &out_dir,
         typ_files: &typ_files,
@@ -468,7 +434,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         sitemap_path: &sitemap_path,
         robots_path: &robots_path,
         feed_paths: &feed_paths,
-        theme_asset_paths: &theme_asset_paths,
         default_favicon_path: default_favicon_path.as_deref(),
     });
     let mut expected_outputs = if out_dir == src_dir {
@@ -509,7 +474,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     output_progress.finish("[done] prepare output");
 
     let asset_progress = progress.spinner("[site] write assets");
-    theme_assets.write(&out_dir)?;
     if let Some(path) = default_favicon_path.as_deref() {
         write_default_favicon(&out_dir, path)?;
     }
@@ -544,21 +508,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             page_info: page_info.clone(),
             languages: languages.clone(),
 
-            theme_scripts: theme_assets
-                .scripts
-                .iter()
-                .map(|asset| slash_path(&asset.rel_path))
-                .collect(),
-            generated_theme_entry: theme_asset_entry,
-            theme_assets: theme_assets
-                .theme_assets()
-                .iter()
-                .map(|asset| crate::html::SiteThemeAsset {
-                    name: asset.name.clone(),
-                    href: slash_path(&asset.rel_path),
-                    kind: asset.kind.clone(),
-                })
-                .collect(),
             syntax_theme: html_syntax_theme,
             revealjs_options: calepin_config.revealjs,
             parallelism: args.parallelism,
@@ -909,9 +858,6 @@ struct BuildContext {
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
 
-    theme_scripts: Vec<String>,
-    generated_theme_entry: Option<crate::theme::HtmlEntry>,
-    theme_assets: Vec<crate::html::SiteThemeAsset>,
     syntax_theme: HtmlSyntaxTheme,
     revealjs_options: String,
     parallelism: Option<usize>,

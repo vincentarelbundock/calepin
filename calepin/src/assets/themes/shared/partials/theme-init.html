@@ -1,10 +1,11 @@
     <meta name="color-scheme" content="light dark">
-    {# Discover the generated theme-init URL from rendered context and load it as an external asset. #}
-    {% for script in site.scripts %}
-      {% if "theme-init.js" in script %}
+    {# Inline theme-init.js with runtime configuration. #}
+    {% for file in js %}
+      {% if file.name == "theme-init.js" %}
     <script
-      src="{{ script }}"
       data-calepin-theme-storage-key="{{ calepin_theme_storage_key | default("calepin-website-theme") }}"
-      data-calepin-theme-param="{{ calepin_theme_param | default("theme") }}"></script>
+      data-calepin-theme-param="{{ calepin_theme_param | default("theme") }}">
+{{ file.content }}
+    </script>
       {% endif %}
     {% endfor %}

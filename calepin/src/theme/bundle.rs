@@ -102,7 +102,6 @@ struct SharedImports {
     partials: Vec<String>,
     css: Vec<String>,
     js: Vec<String>,
-    assets: Vec<String>,
 }
 
 fn write_resolved_shared_files(bundle: &BundleDef, dest: &Path) -> Result<()> {
@@ -115,9 +114,6 @@ fn write_resolved_shared_files(bundle: &BundleDef, dest: &Path) -> Result<()> {
     }
     for name in manifest.shared.js {
         write_resolved_shared_file(bundle, dest, "js", &name, Some("js"))?;
-    }
-    for name in manifest.shared.assets {
-        write_resolved_shared_file(bundle, dest, "assets", &name, None)?;
     }
     Ok(())
 }

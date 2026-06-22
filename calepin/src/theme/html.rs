@@ -2,8 +2,8 @@ use std::path::Path;
 
 use super::bundle::{require_builtin, shared_file, BundleDef};
 use super::{
-    dir_theme_name, read_local_theme_manifest, read_theme_files, read_theme_files_any,
-    resolve_theme_chain, ThemeLayer, ThemeSelection, DEFAULT_THEME_NAME,
+    dir_theme_name, read_local_theme_manifest, read_theme_files, resolve_theme_chain, ThemeLayer,
+    ThemeSelection,
 };
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
@@ -35,11 +35,6 @@ pub struct HtmlEntry {
     pub styles: Vec<(String, String)>,
     /// (file name, js), shared imports first, then theme-local files.
     pub scripts: Vec<(String, String)>,
-    /// (file name, text), shared imports first, then theme-local files.
-    pub assets: Vec<(String, String)>,
-    /// True when the layout came from the builtin default bundle (either
-    /// because it was selected or via fallback).
-    pub is_default: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -56,7 +51,6 @@ struct SharedImports {
     partials: Vec<String>,
     css: Vec<String>,
     js: Vec<String>,
-    assets: Vec<String>,
 }
 
 /// Resolve the layout for `scope`. `None` means raw Typst output.
@@ -128,12 +122,10 @@ fn chain_html_entry(
     let mut partials = Vec::new();
     let mut styles = Vec::new();
     let mut scripts = Vec::new();
-    let mut assets = Vec::new();
     for layer in layers {
         merge_named_assets(&mut partials, layer_partials(layer)?);
         merge_named_assets(&mut styles, layer_styles(layer)?);
         merge_named_assets(&mut scripts, layer_scripts(layer)?);
-        merge_named_assets(&mut assets, layer_assets_any(layer)?);
     }
     Ok(Some(HtmlEntry {
         theme_name: layer_name(layers.last().unwrap()),
@@ -141,8 +133,6 @@ fn chain_html_entry(
         partials,
         styles,
         scripts,
-        assets,
-        is_default: matches!(layers.last(), Some(ThemeLayer::Builtin(DEFAULT_THEME_NAME))),
     }))
 }
 
@@ -247,20 +237,6 @@ fn layer_scripts(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
     }
 }
 
-fn layer_assets_any(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
-    match layer {
-        ThemeLayer::Builtin(name) => {
-            let bundle = require_builtin(name)?;
-            let manifest = bundle_manifest(bundle)?;
-            bundle_assets_any(bundle, &manifest.shared.assets, "assets/")
-        }
-        ThemeLayer::Dir(dir) => {
-            let manifest = read_local_theme_manifest(dir)?;
-            dir_assets_any(dir, &manifest.shared.assets, "assets")
-        }
-    }
-}
-
 fn bundle_manifest(bundle: &BundleDef) -> Result<ThemeManifest> {
     let Some(source) = bundle.file("theme.toml") else {
         return Ok(ThemeManifest::default());
@@ -319,21 +295,6 @@ fn bundle_assets(
     })
 }
 
-fn bundle_assets_any(
-    bundle: &BundleDef,
-    imports: &[String],
-    prefix: &str,
-) -> Result<Vec<(String, String)>> {
-    let local_files = bundle_files(bundle, prefix, None);
-    collect_shared_assets(local_files, imports, "asset", None, |name| {
-        let path = format!("{prefix}{name}");
-        Ok(bundle
-            .file(&path)
-            .or_else(|| shared_file(&path))
-            .map(str::to_string))
-    })
-}
-
 fn bundle_files(bundle: &BundleDef, prefix: &str, ext: Option<&str>) -> Vec<(String, String)> {
     let mut files: Vec<(String, String)> = bundle
         .files
@@ -368,14 +329,6 @@ fn dir_assets(
 ) -> Result<Vec<(String, String)>> {
     let local_files = read_theme_files(&dir.join(subdir), ext)?;
     collect_shared_assets(local_files, imports, ext, Some(ext), |name| {
-        let path = format!("{subdir}/{name}");
-        Ok(dir_shared_file(dir, &path)?.or_else(|| shared_file(&path).map(str::to_string)))
-    })
-}
-
-fn dir_assets_any(dir: &Path, imports: &[String], subdir: &str) -> Result<Vec<(String, String)>> {
-    let local_files = read_theme_files_any(&dir.join(subdir))?;
-    collect_shared_assets(local_files, imports, "asset", None, |name| {
         let path = format!("{subdir}/{name}");
         Ok(dir_shared_file(dir, &path)?.or_else(|| shared_file(&path).map(str::to_string)))
     })

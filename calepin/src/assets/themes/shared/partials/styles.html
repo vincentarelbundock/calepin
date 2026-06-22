@@ -1,7 +1,7 @@
-{% for asset in site.theme_assets %}
-{% if asset.kind == "css" %}
-    <link rel="stylesheet" href="{{ asset.href }}">
-{% endif %}
+{% for file in css %}
+    <style>
+{{ file.content }}
+    </style>
 {% endfor %}
 
 {% if site.pagefind %}
