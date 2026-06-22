@@ -47,7 +47,6 @@ pub(super) fn notebook_template_context(
 pub(super) fn write_render_wrapper(
     layout: &LayoutPaths,
     runtime_import: &str,
-    include_input: &Path,
     jupyter_kernels: &[&str],
     notebook_theme: Option<&crate::theme::NotebookSource>,
 ) -> Result<PathBuf> {
