@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "calepin_version": "0.0.24",
+  "input": "notebooks/parameters.typ",
+  "chunks": {
+    "inline-1": {
+      "label": "inline-1",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "versicolor"
+        }
+      ]
+    },
+    "chunk-1": {
+      "label": "chunk-1",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Iris rows selected by document variables",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/parameters/figures/chunk-1.svg"
+            }
+          }
+        }
+      ]
+    },
+    "chunk-2": {
+      "label": "chunk-2",
+      "engine": "sh",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    }
+  }
+}

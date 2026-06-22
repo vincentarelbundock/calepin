@@ -1,0 +1,376 @@
+{
+  "schema": 1,
+  "images": {
+    "../assets/calepin_vscode-thumb.png": {
+      "path": "assets/calepin_vscode-thumb.png",
+      "xxh3": "100cb8f7a64ba31c",
+      "bytes": 350981,
+      "width": 1280,
+      "height": 804
+    },
+    "../assets/flowers_01.jpg": {
+      "path": "assets/flowers_01.jpg",
+      "xxh3": "69358cbce0a9ceaa",
+      "bytes": 2983404,
+      "width": 5184,
+      "height": 3456
+    },
+    "../assets/flowers_02.jpg": {
+      "path": "assets/flowers_02.jpg",
+      "xxh3": "b5aa0848d11275a7",
+      "bytes": 448138,
+      "width": 1920,
+      "height": 1280
+    },
+    "../assets/flowers_03.jpg": {
+      "path": "assets/flowers_03.jpg",
+      "xxh3": "88745ef6fedd76d4",
+      "bytes": 916111,
+      "width": 2640,
+      "height": 1760
+    },
+    "../assets/flowers_04.jpg": {
+      "path": "assets/flowers_04.jpg",
+      "xxh3": "52d00198fff86188",
+      "bytes": 3563474,
+      "width": 3531,
+      "height": 5295
+    },
+    "../assets/flowers_05.jpg": {
+      "path": "assets/flowers_05.jpg",
+      "xxh3": "73567628d06cadcd",
+      "bytes": 507166,
+      "width": 2001,
+      "height": 3000
+    },
+    "../assets/screenshot_notebook.png": {
+      "path": "assets/screenshot_notebook.png",
+      "xxh3": "dca0e15c967aefa9",
+      "bytes": 241790,
+      "width": 1638,
+      "height": 1484
+    },
+    "/assets/calepin_vscode-thumb.png": {
+      "path": "assets/calepin_vscode-thumb.png",
+      "xxh3": "100cb8f7a64ba31c",
+      "bytes": 350981,
+      "width": 1280,
+      "height": 804
+    },
+    "/assets/default-favicon.svg": {
+      "path": "assets/default-favicon.svg",
+      "xxh3": "c517d8f2f89ca85f",
+      "bytes": 10609,
+      "width": 256,
+      "height": 256
+    },
+    "/assets/flowers_01.jpg": {
+      "path": "assets/flowers_01.jpg",
+      "xxh3": "69358cbce0a9ceaa",
+      "bytes": 2983404,
+      "width": 5184,
+      "height": 3456
+    },
+    "/assets/flowers_02.jpg": {
+      "path": "assets/flowers_02.jpg",
+      "xxh3": "b5aa0848d11275a7",
+      "bytes": 448138,
+      "width": 1920,
+      "height": 1280
+    },
+    "/assets/flowers_03.jpg": {
+      "path": "assets/flowers_03.jpg",
+      "xxh3": "88745ef6fedd76d4",
+      "bytes": 916111,
+      "width": 2640,
+      "height": 1760
+    },
+    "/assets/flowers_04.jpg": {
+      "path": "assets/flowers_04.jpg",
+      "xxh3": "52d00198fff86188",
+      "bytes": 3563474,
+      "width": 3531,
+      "height": 5295
+    },
+    "/assets/flowers_05.jpg": {
+      "path": "assets/flowers_05.jpg",
+      "xxh3": "73567628d06cadcd",
+      "bytes": 507166,
+      "width": 2001,
+      "height": 3000
+    },
+    "/assets/logo_long_text.png": {
+      "path": "assets/logo_long_text.png",
+      "xxh3": "82621be734d8b85d",
+      "bytes": 7688,
+      "width": 396,
+      "height": 119
+    },
+    "/assets/logo_short.png": {
+      "path": "assets/logo_short.png",
+      "xxh3": "ffd87ba34b35e305",
+      "bytes": 7808,
+      "width": 256,
+      "height": 256
+    },
+    "/assets/logo_typst.svg": {
+      "path": "assets/logo_typst.svg",
+      "xxh3": "8a8cff2cc0cd2637",
+      "bytes": 4654,
+      "width": 100,
+      "height": 40
+    },
+    "/assets/screenshot_academic.png": {
+      "path": "assets/screenshot_academic.png",
+      "xxh3": "9e075a60c254de9e",
+      "bytes": 99429,
+      "width": 1440,
+      "height": 1100
+    },
+    "/assets/screenshot_academic_dark.png": {
+      "path": "assets/screenshot_academic_dark.png",
+      "xxh3": "2f75ab14378d9c1c",
+      "bytes": 169331,
+      "width": 1440,
+      "height": 1000
+    },
+    "/assets/screenshot_academic_light.png": {
+      "path": "assets/screenshot_academic_light.png",
+      "xxh3": "bf466bca5d5626e8",
+      "bytes": 145209,
+      "width": 1440,
+      "height": 913
+    },
+    "/assets/screenshot_notebook.png": {
+      "path": "assets/screenshot_notebook.png",
+      "xxh3": "dca0e15c967aefa9",
+      "bytes": 241790,
+      "width": 1638,
+      "height": 1484
+    },
+    "/assets/screenshot_website.png": {
+      "path": "assets/screenshot_website.png",
+      "xxh3": "09301aec5a045f2d",
+      "bytes": 296327,
+      "width": 2310,
+      "height": 1380
+    },
+    "/assets/screenshot_website_dark.png": {
+      "path": "assets/screenshot_website_dark.png",
+      "xxh3": "7604e5c61f3f183e",
+      "bytes": 182305,
+      "width": 1440,
+      "height": 1000
+    },
+    "/assets/screenshot_website_light.png": {
+      "path": "assets/screenshot_website_light.png",
+      "xxh3": "aaedc75611199eb6",
+      "bytes": 179920,
+      "width": 1440,
+      "height": 1000
+    },
+    "/themes/screenshots/academic_website_dark.png": {
+      "path": "themes/screenshots/academic_website_dark.png",
+      "xxh3": "c40acd64fd8cc43a",
+      "bytes": 439391,
+      "width": 3024,
+      "height": 1674
+    },
+    "/themes/screenshots/academic_website_light.png": {
+      "path": "themes/screenshots/academic_website_light.png",
+      "xxh3": "7ab63ec30c36a4b3",
+      "bytes": 404420,
+      "width": 3024,
+      "height": 1674
+    },
+    "/themes/screenshots/calepin_website_dark.png": {
+      "path": "themes/screenshots/calepin_website_dark.png",
+      "xxh3": "5e49725bc6386cb0",
+      "bytes": 240033,
+      "width": 3024,
+      "height": 1673
+    },
+    "/themes/screenshots/calepin_website_light.png": {
+      "path": "themes/screenshots/calepin_website_light.png",
+      "xxh3": "c1526546c4ac2712",
+      "bytes": 357247,
+      "width": 3024,
+      "height": 1673
+    },
+    "/themes/screenshots/tufte_notebook_dark.png": {
+      "path": "themes/screenshots/tufte_notebook_dark.png",
+      "xxh3": "c795d9626b80fb36",
+      "bytes": 327629,
+      "width": 3023,
+      "height": 1672
+    },
+    "/themes/screenshots/tufte_notebook_light.png": {
+      "path": "themes/screenshots/tufte_notebook_light.png",
+      "xxh3": "0e0676c570890895",
+      "bytes": 301986,
+      "width": 3023,
+      "height": 1672
+    },
+    "assets/calepin_vscode-thumb.png": {
+      "path": "assets/calepin_vscode-thumb.png",
+      "xxh3": "100cb8f7a64ba31c",
+      "bytes": 350981,
+      "width": 1280,
+      "height": 804
+    },
+    "assets/default-favicon.svg": {
+      "path": "assets/default-favicon.svg",
+      "xxh3": "c517d8f2f89ca85f",
+      "bytes": 10609,
+      "width": 256,
+      "height": 256
+    },
+    "assets/flowers_01.jpg": {
+      "path": "assets/flowers_01.jpg",
+      "xxh3": "69358cbce0a9ceaa",
+      "bytes": 2983404,
+      "width": 5184,
+      "height": 3456
+    },
+    "assets/flowers_02.jpg": {
+      "path": "assets/flowers_02.jpg",
+      "xxh3": "b5aa0848d11275a7",
+      "bytes": 448138,
+      "width": 1920,
+      "height": 1280
+    },
+    "assets/flowers_03.jpg": {
+      "path": "assets/flowers_03.jpg",
+      "xxh3": "88745ef6fedd76d4",
+      "bytes": 916111,
+      "width": 2640,
+      "height": 1760
+    },
+    "assets/flowers_04.jpg": {
+      "path": "assets/flowers_04.jpg",
+      "xxh3": "52d00198fff86188",
+      "bytes": 3563474,
+      "width": 3531,
+      "height": 5295
+    },
+    "assets/flowers_05.jpg": {
+      "path": "assets/flowers_05.jpg",
+      "xxh3": "73567628d06cadcd",
+      "bytes": 507166,
+      "width": 2001,
+      "height": 3000
+    },
+    "assets/logo_long_text.png": {
+      "path": "assets/logo_long_text.png",
+      "xxh3": "82621be734d8b85d",
+      "bytes": 7688,
+      "width": 396,
+      "height": 119
+    },
+    "assets/logo_short.png": {
+      "path": "assets/logo_short.png",
+      "xxh3": "ffd87ba34b35e305",
+      "bytes": 7808,
+      "width": 256,
+      "height": 256
+    },
+    "assets/logo_typst.svg": {
+      "path": "assets/logo_typst.svg",
+      "xxh3": "8a8cff2cc0cd2637",
+      "bytes": 4654,
+      "width": 100,
+      "height": 40
+    },
+    "assets/screenshot_academic.png": {
+      "path": "assets/screenshot_academic.png",
+      "xxh3": "9e075a60c254de9e",
+      "bytes": 99429,
+      "width": 1440,
+      "height": 1100
+    },
+    "assets/screenshot_academic_dark.png": {
+      "path": "assets/screenshot_academic_dark.png",
+      "xxh3": "2f75ab14378d9c1c",
+      "bytes": 169331,
+      "width": 1440,
+      "height": 1000
+    },
+    "assets/screenshot_academic_light.png": {
+      "path": "assets/screenshot_academic_light.png",
+      "xxh3": "bf466bca5d5626e8",
+      "bytes": 145209,
+      "width": 1440,
+      "height": 913
+    },
+    "assets/screenshot_notebook.png": {
+      "path": "assets/screenshot_notebook.png",
+      "xxh3": "dca0e15c967aefa9",
+      "bytes": 241790,
+      "width": 1638,
+      "height": 1484
+    },
+    "assets/screenshot_website.png": {
+      "path": "assets/screenshot_website.png",
+      "xxh3": "09301aec5a045f2d",
+      "bytes": 296327,
+      "width": 2310,
+      "height": 1380
+    },
+    "assets/screenshot_website_dark.png": {
+      "path": "assets/screenshot_website_dark.png",
+      "xxh3": "7604e5c61f3f183e",
+      "bytes": 182305,
+      "width": 1440,
+      "height": 1000
+    },
+    "assets/screenshot_website_light.png": {
+      "path": "assets/screenshot_website_light.png",
+      "xxh3": "aaedc75611199eb6",
+      "bytes": 179920,
+      "width": 1440,
+      "height": 1000
+    },
+    "themes/screenshots/academic_website_dark.png": {
+      "path": "themes/screenshots/academic_website_dark.png",
+      "xxh3": "c40acd64fd8cc43a",
+      "bytes": 439391,
+      "width": 3024,
+      "height": 1674
+    },
+    "themes/screenshots/academic_website_light.png": {
+      "path": "themes/screenshots/academic_website_light.png",
+      "xxh3": "7ab63ec30c36a4b3",
+      "bytes": 404420,
+      "width": 3024,
+      "height": 1674
+    },
+    "themes/screenshots/calepin_website_dark.png": {
+      "path": "themes/screenshots/calepin_website_dark.png",
+      "xxh3": "5e49725bc6386cb0",
+      "bytes": 240033,
+      "width": 3024,
+      "height": 1673
+    },
+    "themes/screenshots/calepin_website_light.png": {
+      "path": "themes/screenshots/calepin_website_light.png",
+      "xxh3": "c1526546c4ac2712",
+      "bytes": 357247,
+      "width": 3024,
+      "height": 1673
+    },
+    "themes/screenshots/tufte_notebook_dark.png": {
+      "path": "themes/screenshots/tufte_notebook_dark.png",
+      "xxh3": "c795d9626b80fb36",
+      "bytes": 327629,
+      "width": 3023,
+      "height": 1672
+    },
+    "themes/screenshots/tufte_notebook_light.png": {
+      "path": "themes/screenshots/tufte_notebook_light.png",
+      "xxh3": "0e0676c570890895",
+      "bytes": 301986,
+      "width": 3023,
+      "height": 1672
+    }
+  }
+}
