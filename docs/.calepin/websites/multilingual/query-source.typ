@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin
 #set document(title: [Multilingual sites])
 #metadata((title: "Multilingual")) <website-metadata>
 

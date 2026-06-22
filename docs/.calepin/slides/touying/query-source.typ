@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin
 #set document(title: [Touying slides])
 #metadata((title: "Touying", pdf: false)) <website-metadata>
 

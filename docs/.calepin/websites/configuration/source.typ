@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin
 #set document(title: [Site configuration])
 #metadata((title: "Configuration")) <website-metadata>
 

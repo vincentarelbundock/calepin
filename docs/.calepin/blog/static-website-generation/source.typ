@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin
 #import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Calepin is now a static website generator])
 #metadata((

@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin
 #set document(title: [Pages and metadata])
 #metadata((title: "Pages")) <website-metadata>
 

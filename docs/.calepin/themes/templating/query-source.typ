@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Templating])
 #import "/.calepin/calepin.typ" as calepin
 #title()
@@ -40,26 +41,22 @@ Includes pull in another template file, which is how themes share partials:
 
 The #link("https://docs.rs/minijinja/latest/minijinja/syntax/index.html")[MiniJinja syntax reference] covers the rest: filters, tests, macros, and more.
 
-= The template context
+= Context
 
 Each layout receives a context: a set of named values you reference with `{{ }}`. The available names depend on the target.
 
-- HTML layouts receive `doc`, `site`, `css`, `js`, `vars`, and more. See #link("html_templates.html")[HTML templates].
+- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `vars`, and more. See #link("html_templates.html")[HTML templates].
 - The paged layout receives `doc`, `theme`, `target`, and `vars`. See #link("pdf_templates.html")[PDF templates].
 
 Both targets receive `theme`, `target`, and `vars`.
 
-= Custom variables
+= Variables
 
-Add a `[vars]` table to `calepin.toml` for project-specific values you want to use in templates:
+Pass project-specific template values with `--set vars.<name>=...`:
 
-```toml
-[vars]
-course = "Econ 101"
-semester = "Fall 2026"
-```
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile notebook.typ --set vars.course=\"Econ 101\" --set vars.semester=\"Fall 2026\"\n", block: true, lang: "sh"))
 
-These values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values and CLI `--var` overrides are merged into the same map. In HTML templates, `vars` sits at the top level, not under `site`:
+These values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values are merged into the same map, and CLI `--set vars.<name>=...` values take precedence. In HTML templates, `vars` sits at the top level, not under `site`:
 
 ```html
 <p>{{ vars.course }}, {{ vars.semester }}</p>

@@ -257,8 +257,8 @@ pub(crate) fn read_local_theme_manifest(dir: &Path) -> Result<LocalThemeManifest
     }
     let source = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read {}", path.display()))?;
-    let value: toml::Value = toml::from_str(&source)
-        .with_context(|| format!("failed to parse {}", path.display()))?;
+    let value: toml::Value =
+        toml::from_str(&source).with_context(|| format!("failed to parse {}", path.display()))?;
     reject_unknown_manifest_top_level_keys(&value)?;
     reject_unknown_shared_keys(&value)?;
     value
@@ -289,10 +289,14 @@ fn reject_unknown_shared_keys(value: &toml::Value) -> Result<()> {
     };
 
     if shared.contains_key("styles") {
-        return Err(anyhow!("unknown field `styles`; use `css` for shared css assets"));
+        return Err(anyhow!(
+            "unknown field `styles`; use `css` for shared css assets"
+        ));
     }
     if shared.contains_key("scripts") {
-        return Err(anyhow!("unknown field `scripts`; use `js` for shared scripts"));
+        return Err(anyhow!(
+            "unknown field `scripts`; use `js` for shared scripts"
+        ));
     }
     if shared.contains_key("assets") {
         return Err(anyhow!("unknown field `assets`; remove this legacy key"));
@@ -522,7 +526,10 @@ mod tests {
         .unwrap()
         .unwrap();
 
-        assert_eq!(entry.theme_name, dir.path().file_name().unwrap().to_string_lossy());
+        assert_eq!(
+            entry.theme_name,
+            dir.path().file_name().unwrap().to_string_lossy()
+        );
     }
 
     #[test]
@@ -858,6 +865,39 @@ css = ["../theme.css"]
         assert_eq!(
             source.source,
             "#let title = \"Iris Report\"\n#let meta_title = \"Iris Report\"\n#let species = \"setosa\"\n#let course = \"Econ 101\""
+        );
+    }
+
+    #[test]
+    fn document_body_is_not_re_evaluated_as_a_template() {
+        // The document body is inlined at the theme's `{{ doc.body }}` seam as a
+        // render-context variable, so Typst source that happens to contain Jinja
+        // delimiters must survive verbatim rather than being interpreted.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
+        std::fs::write(dir.path().join("layouts/pdf.typ"), "{{ doc.body }}\n").unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
+        let sel = ThemeSelection::Dir(dir.path().to_path_buf());
+        let context = NotebookTemplateContext {
+            body: "Value: {{ vars.Species }} and {% if x %}y{% endif %}".to_string(),
+            vars: serde_json::json!({"Species": "setosa"}),
+            ..NotebookTemplateContext::default()
+        };
+        let source = notebook_source(&sel, &context).unwrap().unwrap();
+        assert!(
+            source.source.contains("{{ vars.Species }}"),
+            "body Jinja delimiters must survive verbatim: {}",
+            source.source
+        );
+        assert!(
+            source.source.contains("{% if x %}"),
+            "body Jinja statements must survive verbatim: {}",
+            source.source
+        );
+        assert!(
+            !source.source.contains("setosa"),
+            "body must not be re-evaluated against vars: {}",
+            source.source
         );
     }
 

@@ -1119,3 +1119,59 @@ Body text in between.
         "expected hidden output to appear once at the relocation: {extracted}"
     );
 }
+
+#[test]
+fn document_body_can_call_theme_exported_helpers() {
+    if !has_command("typst") || !has_pdftotext() {
+        return;
+    }
+
+    // A theme that hands the author a vocabulary: a `#let` defined in the theme
+    // preamble. The body inlines at the theme's `{{ doc.body }}` seam and shares
+    // its file scope, so it can call the helper. The body is evaluated in both
+    // the query and render passes, so this only works because both passes use
+    // the same themed wrapper.
+    let dir = typst_accessible_tempdir();
+    std::fs::create_dir_all(dir.path().join("mytheme/layouts")).unwrap();
+    std::fs::write(
+        dir.path().join("mytheme/theme.toml"),
+        "extends = \"typst\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("mytheme/layouts/pdf.typ"),
+        "#let theme-badge(body) = [BADGE: #body]\n\n{{ doc.body }}\n",
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("paper.toml"), "theme = \"mytheme/\"\n").unwrap();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import "/.calepin/calepin.typ" as calepin
+
+#theme-badge[VOCAB_OK]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "--config", "paper.toml", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8(text.stdout).unwrap();
+    assert!(
+        extracted.contains("BADGE: VOCAB_OK"),
+        "body should be able to call a theme-exported helper: {extracted}"
+    );
+}

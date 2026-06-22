@@ -2,7 +2,7 @@
 
 
 
-#let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2", "html", "toml")
+#let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2", "html", "sh")
 #show raw.where(block: true, lang: "typ", theme: auto): it => _without-raw-chunk-transforms(() => _html-themed-raw-block(it))
 #show raw.where(block: true, lang: "typst", theme: auto): it => _without-raw-chunk-transforms(() => _html-themed-raw-block(it))
 #show raw.where(block: true, lang: "python", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("python", it) }
@@ -12,7 +12,7 @@
 #show raw.where(block: true, lang: "tikz", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("tikz", it) }
 #show raw.where(block: true, lang: "d2", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("d2", it) }
 #show raw.where(block: true, lang: "html", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("html", it) }
-#show raw.where(block: true, lang: "toml", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("toml", it) }
+#show raw.where(block: true, lang: "sh", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("sh", it) }
 
 #show raw.where(block: true, theme: auto): it => {
   if _is-query() {
@@ -47,4 +47,72 @@
   }
 }
 
-#include "/.calepin/themes/templating/source.typ"
+#import "/.calepin/calepin.typ" as calepin_runtime
+#set document(title: [Templating])
+#import "/.calepin/calepin.typ" as calepin
+#title()
+
+Theme layouts are #link("https://docs.rs/minijinja/latest/minijinja/syntax/index.html")[MiniJinja] templates. The HTML layouts (`layouts/site.html` and `layouts/document.html`) and the paged layout (`layouts/pdf.typ`) all use the same engine, so the syntax on this page applies to both. The #link("html_templates.html")[HTML templates] and #link("pdf_templates.html")[PDF templates] pages document the values each layout receives.
+
+= Syntax
+
+MiniJinja has two kinds of tags.
+
+Interpolation prints a value:
+
+```html
+<title>{{ doc.title }}</title>
+```
+
+Statements control flow. Loops repeat a block:
+
+```html
+{% for file in css %}
+<style>
+{{ file.content }}
+</style>
+{% endfor %}
+```
+
+Conditionals show a block only when a value is set:
+
+```html
+{% if site.logo %}
+<img src="{{ site.logo }}" alt="{{ site.logo_alt }}">
+{% endif %}
+```
+
+Includes pull in another template file, which is how themes share partials:
+
+```html
+{% include "partials/site-footer.html" %}
+```
+
+The #link("https://docs.rs/minijinja/latest/minijinja/syntax/index.html")[MiniJinja syntax reference] covers the rest: filters, tests, macros, and more.
+
+= Context
+
+Each layout receives a context: a set of named values you reference with `{{ }}`. The available names depend on the target.
+
+- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `vars`, and more. See #link("html_templates.html")[HTML templates].
+- The paged layout receives `doc`, `theme`, `target`, and `vars`. See #link("pdf_templates.html")[PDF templates].
+
+Both targets receive `theme`, `target`, and `vars`.
+
+= Variables
+
+Pass project-specific template values with `--set vars.<name>=...`:
+
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile notebook.typ --set vars.course=\"Econ 101\" --set vars.semester=\"Fall 2026\"\n", block: true, lang: "sh"))
+
+These values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values are merged into the same map, and CLI `--set vars.<name>=...` values take precedence. In HTML templates, `vars` sits at the top level, not under `site`:
+
+```html
+<p>{{ vars.course }}, {{ vars.semester }}</p>
+```
+
+In a `layouts/pdf.typ` paged layout, read the same values and emit Typst:
+
+```typ
+#let course = "{{ vars.course }}"
+```

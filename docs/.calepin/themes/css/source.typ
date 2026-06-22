@@ -90,15 +90,9 @@ Edit `raw/layouts/document.html` to wrap Typst's generated HTML and inline the t
 
 The important pieces are `doc.head`, `doc.body_open`, `doc.body`, and `doc.body_close`, which preserve the HTML shell Typst produced. The `css` loop loads files from the theme's `css/` directory, including `raw.css`.
 
-Edit the project config file `calepin.toml`:
-
-```toml
-theme = "raw"
-```
-
 Compile the notebook:
 
-#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile notebook.typ --config calepin.toml --format html\n", block: true, lang: "sh"))
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile notebook.typ --format html --set theme=raw\n", block: true, lang: "sh"))
 
 = List of tokens
 

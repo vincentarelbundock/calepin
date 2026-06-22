@@ -1,3 +1,4 @@
+#import "/.calepin/calepin.typ" as calepin
 #set document(title: [Page not found])
 
 #let target = sys.inputs.at("calepin-target", default: "paged")

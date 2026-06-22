@@ -169,6 +169,20 @@
       "width": 1440,
       "height": 1000
     },
+    "/themes/examples/fonts/assets/flowers_01.jpg": {
+      "path": "themes/examples/fonts/assets/flowers_01.jpg",
+      "xxh3": "69358cbce0a9ceaa",
+      "bytes": 2983404,
+      "width": 5184,
+      "height": 3456
+    },
+    "/themes/examples/fonts/assets/portrait.jpg": {
+      "path": "themes/examples/fonts/assets/portrait.jpg",
+      "xxh3": "46c2764d46bdc289",
+      "bytes": 169842,
+      "width": 1280,
+      "height": 1920
+    },
     "/themes/screenshots/academic_website_dark.png": {
       "path": "themes/screenshots/academic_website_dark.png",
       "xxh3": "c40acd64fd8cc43a",
@@ -329,6 +343,20 @@
       "bytes": 179920,
       "width": 1440,
       "height": 1000
+    },
+    "themes/examples/fonts/assets/flowers_01.jpg": {
+      "path": "themes/examples/fonts/assets/flowers_01.jpg",
+      "xxh3": "69358cbce0a9ceaa",
+      "bytes": 2983404,
+      "width": 5184,
+      "height": 3456
+    },
+    "themes/examples/fonts/assets/portrait.jpg": {
+      "path": "themes/examples/fonts/assets/portrait.jpg",
+      "xxh3": "46c2764d46bdc289",
+      "bytes": 169842,
+      "width": 1280,
+      "height": 1920
     },
     "themes/screenshots/academic_website_dark.png": {
       "path": "themes/screenshots/academic_website_dark.png",

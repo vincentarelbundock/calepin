@@ -159,12 +159,36 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     // staged source directly; document-level HTML must be guarded by target
     // checks so paged/query passes never evaluate `html.*` calls.
     let query_source = write_query_source(&layout, &staged_input)?;
+    // Theme the query pass with the same theme + inlined body as render, so the
+    // document body shares the theme's scope during metadata extraction too (it
+    // is evaluated in both passes). The theme must be knowable before the query:
+    // CLI > config > fallback. In-document `setup(theme:)` cannot participate
+    // here because it is itself extracted by this pass, so a theme that exports
+    // a vocabulary for the body must be selected via config or the CLI.
+    let pre_query_theme = options
+        .theme
+        .clone()
+        .or_else(|| config_theme.clone())
+        .unwrap_or_else(|| options.fallback_theme.clone());
+    // Title and vars are render concerns and irrelevant to metadata extraction,
+    // so the query context leaves them empty.
+    let query_context = notebook_template_context(
+        &layout,
+        &staged_input,
+        None,
+        serde_json::Value::Object(serde_json::Map::new()),
+    )?;
+    let query_theme = crate::theme::notebook_source(&pre_query_theme, &query_context)?;
     let query_input = write_render_wrapper(
         &layout,
         &runtime_import,
-        Some(&query_source),
+        if query_theme.is_some() {
+            None
+        } else {
+            Some(&query_source)
+        },
         &[],
-        None,
+        query_theme.as_ref(),
     )?;
     let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let metadata = preprocess_metadata(
@@ -218,7 +242,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &staged_input,
         metadata.page_meta.clone(),
         vars.clone(),
-    );
+    )?;
     let notebook_theme = crate::theme::notebook_source(&effective_theme, &notebook_context)?;
     if !jupyter_kernels.is_empty() {
         let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();

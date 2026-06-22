@@ -12,10 +12,10 @@ const BUILTIN_RAW_CHUNK_LANGS: &[&str] = &["python", "r", "mermaid", "dot", "tik
 
 pub(super) fn notebook_template_context(
     layout: &LayoutPaths,
-    include_input: &Path,
+    staged_input: &Path,
     page_meta: Option<serde_json::Value>,
     vars: serde_json::Value,
-) -> crate::theme::NotebookTemplateContext {
+) -> Result<crate::theme::NotebookTemplateContext> {
     let input_dir = layout
         .input_rel
         .parent()
@@ -33,15 +33,23 @@ pub(super) fn notebook_template_context(
         .and_then(|value| value.as_str())
         .unwrap_or_default()
         .to_string();
-    crate::theme::NotebookTemplateContext {
+    // Inline the staged source directly at the theme's `{{ doc.body }}` seam
+    // (rather than `#include`-ing it) so the body shares a file scope with the
+    // theme preamble and can call its `#let`/`#import`ed helpers. The body is a
+    // render-context variable, so minijinja substitutes it literally without
+    // re-evaluating any `{{ }}`/`{% %}` it may contain.
+    let staged_input_abs = layout.root.join(staged_input);
+    let body = fs::read_to_string(&staged_input_abs)
+        .with_context(|| format!("failed to read {}", staged_input_abs.display()))?;
+    Ok(crate::theme::NotebookTemplateContext {
         input_path: slash_path(&layout.input_rel),
         input_dir,
         input_stem,
         title,
-        body: format!("#include \"/{}\"", slash_path(include_input)),
+        body,
         page_meta,
         vars,
-    }
+    })
 }
 
 pub(super) fn write_render_wrapper(
