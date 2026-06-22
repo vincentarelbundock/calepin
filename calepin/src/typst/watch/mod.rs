@@ -16,9 +16,8 @@ use anyhow::{Context, Result};
 use crate::cli::WatchArgs;
 use crate::html::SiteContextInput;
 use crate::typst::compile::{
-    postprocess_html_output, resolve_html_entry_with_styles, resolve_output_format,
-    resolve_output_path, typst_watch_args, validate_forwarded_typst_args, OutputFormat,
-    ReservedInputs,
+    postprocess_html_output, resolve_output_format, resolve_output_path, typst_watch_args,
+    validate_forwarded_typst_args, OutputFormat, ReservedInputs,
 };
 use crate::typst::preprocess::{
     prepare_preprocess_plan, preprocess_cached, preprocess_cached_plan, PreprocessOptions,
@@ -155,11 +154,8 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         let config = crate::config::CalepinConfig::load(&root, args.common.config.as_deref())?;
         let mut site_context = SiteContextInput::default();
         site_context.revealjs = config.revealjs;
-        let html_entry = resolve_html_entry_with_styles(
-            &initial.theme,
-            crate::theme::HtmlScope::Document,
-            &config.styles,
-        )?;
+        let html_entry =
+            crate::theme::resolve_html_entry(&initial.theme, crate::theme::HtmlScope::Document)?;
         let (sender, receiver) = mpsc::channel();
         write_events = Some(sender);
         html_postprocessor = Some(start_html_output_postprocessor(

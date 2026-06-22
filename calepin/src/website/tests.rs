@@ -11,7 +11,6 @@ fn test_build_result(root: &Path, pages: &[PathBuf]) -> WebsiteBuildResult {
         asset_dir: PathBuf::from(".calepin"),
         config_path: root.join("calepin.toml"),
         theme_dirs: Vec::new(),
-        style_paths: Vec::new(),
         page_fingerprints: fingerprint_files(pages).unwrap(),
         nav_signature: 0,
         pages_signature: 0,
@@ -73,18 +72,6 @@ fn missing_theme_key_is_default() {
 }
 
 #[test]
-fn website_config_accepts_shared_styles_key() {
-    let config = website_config_from_toml(
-        r#"
-theme = "academic"
-styles = ["styles/site.css"]
-"#,
-    );
-
-    assert_eq!(config.title, None);
-}
-
-#[test]
 fn website_config_defaults_asset_dir_to_dot_calepin() {
     let config = website_config_from_toml("");
 
@@ -114,89 +101,6 @@ fn website_config_rejects_invalid_asset_dir() {
         Path::new("/tmp/assets").display()
     ));
     assert!(resolve_website_asset_dir(&absolute).is_err());
-}
-
-#[test]
-fn website_build_result_tracks_config_style_paths() {
-    if !command_available("typst") {
-        return;
-    }
-
-    let dir = tempdir_in_manifest("calepin-website-test-");
-    let root = dir.path();
-    std::fs::create_dir_all(root.join("styles")).unwrap();
-    std::fs::write(root.join("styles/site.css"), "body { color: red; }").unwrap();
-    std::fs::write(
-        root.join("calepin.toml"),
-        r#"
-theme = "calepin"
-styles = ["styles/site.css"]
-"#,
-    )
-    .unwrap();
-    std::fs::write(root.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
-
-    let result = build_site(WebsiteBuildOptions {
-        config: root.join("calepin.toml"),
-        src: Some(root.to_path_buf()),
-        out: Some(root.join("out")),
-        parallelism: Some(1),
-        render_pdf: Some(false),
-        quiet: true,
-        timeout: None,
-        params: Vec::new(),
-        typst_args: Vec::new(),
-        incremental_inputs: None,
-        clean: true,
-        minify_html: false,
-    })
-    .unwrap();
-
-    assert_eq!(result.style_paths, vec![root.join("styles/site.css")]);
-}
-
-#[test]
-fn website_build_result_canonicalizes_config_style_paths() {
-    if !command_available("typst") {
-        return;
-    }
-
-    let dir = tempdir_in_manifest("calepin-website-test-");
-    let root = dir.path();
-    let src = root.join("docs");
-    std::fs::create_dir_all(&src).unwrap();
-    std::fs::create_dir_all(root.join("config")).unwrap();
-    std::fs::create_dir_all(root.join("styles")).unwrap();
-    std::fs::write(root.join("styles/site.css"), "body { color: red; }").unwrap();
-    std::fs::write(
-        root.join("config/calepin.toml"),
-        r#"
-theme = "calepin"
-styles = ["../styles/site.css"]
-"#,
-    )
-    .unwrap();
-    std::fs::write(src.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
-
-    let result = build_site(WebsiteBuildOptions {
-        config: root.join("config/calepin.toml"),
-        src: Some(src),
-        out: Some(root.join("out")),
-        parallelism: Some(1),
-        render_pdf: Some(false),
-        quiet: true,
-        timeout: None,
-        params: Vec::new(),
-        typst_args: Vec::new(),
-        incremental_inputs: None,
-        clean: true,
-        minify_html: false,
-    })
-    .unwrap();
-
-    let canonical_style = root.join("styles/site.css").canonicalize().unwrap();
-    assert_eq!(result.style_paths, vec![canonical_style.clone()]);
-    assert!(should_rebuild_for_path(&result, &canonical_style));
 }
 
 #[test]
@@ -334,14 +238,12 @@ fn website_build_result_normalizes_created_output_dir_inside_source() {
 }
 
 #[test]
-fn watch_roots_include_configured_styles() {
+fn watch_roots_include_configured_theme_dirs() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path().join("docs");
     let theme = temp.path().join("theme");
-    let style = temp.path().join("styles/site.css");
     let mut current = test_build_result(&src, &[]);
     current.theme_dirs = vec![theme.clone()];
-    current.style_paths = vec![style.clone()];
 
     assert_eq!(
         watch_roots(&current),
@@ -352,28 +254,22 @@ fn watch_roots_include_configured_styles() {
                 RecursiveMode::NonRecursive
             ),
             (theme, RecursiveMode::Recursive),
-            (style, RecursiveMode::NonRecursive),
         ]
     );
 }
 
 #[test]
-fn watch_roots_changed_detects_style_and_theme_updates() {
+fn watch_roots_changed_detects_theme_updates() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path().join("docs");
-    let style = temp.path().join("styles/site.css");
     let theme = temp.path().join("theme");
     let current = test_build_result(&src, &[]);
-
-    let mut style_next = current.clone();
-    style_next.style_paths = vec![style];
-    assert!(watch_roots_changed(&current, &style_next));
 
     let mut theme_next = current.clone();
     theme_next.theme_dirs = vec![theme];
     assert!(watch_roots_changed(&current, &theme_next));
 
-    assert!(!watch_roots_changed(&style_next, &style_next));
+    assert!(!watch_roots_changed(&theme_next, &theme_next));
 }
 
 #[test]
@@ -487,132 +383,13 @@ fn theme_generated_assets_use_custom_asset_dir() {
 }
 
 #[test]
-fn config_style_assets_preserve_imports_in_separate_stylesheets() {
-    let styles = vec![crate::config::CssOverride {
-        name: "site.css".to_string(),
-        path: PathBuf::from("/project/styles/site.css"),
-        css: "@import url(\"https://example.test/icons.css\");\n:root { --site: yes; }".to_string(),
-    }];
-
-    let assets = ConfigStyleAssets::from_styles(&styles, Path::new(".calepin")).unwrap();
-
-    assert_eq!(assets.stylesheets.len(), 1);
-    let stylesheet = &assets.stylesheets[0];
-    let stylesheet_path = slash_path(&stylesheet.rel_path);
-    assert_eq!(stylesheet_path, ".calepin/site.css");
-    assert!(stylesheet_path.ends_with(".css"));
-    assert!(stylesheet.content.trim_start().starts_with("@import "));
-    assert!(stylesheet.content.contains("--site: yes"));
-}
-
-#[test]
-fn config_style_assets_keep_config_order_even_when_contents_match() {
-    let styles = vec![
-        crate::config::CssOverride {
-            name: "first.css".to_string(),
-            path: PathBuf::from("/project/styles/first.css"),
-            css: ":root { --site: yes; }".to_string(),
-        },
-        crate::config::CssOverride {
-            name: "second.css".to_string(),
-            path: PathBuf::from("/project/styles/second.css"),
-            css: ":root { --site: yes; }".to_string(),
-        },
-    ];
-
-    let assets = ConfigStyleAssets::from_styles(&styles, Path::new(".calepin")).unwrap();
-
-    assert_eq!(assets.stylesheets.len(), 2);
-    assert_eq!(
-        slash_path(&assets.stylesheets[0].rel_path),
-        ".calepin/first.css"
-    );
-    assert_eq!(
-        slash_path(&assets.stylesheets[1].rel_path),
-        ".calepin/second.css"
-    );
-}
-
-#[test]
-fn page_asset_decision_links_config_stylesheets_for_shared_partial() {
-    let page_entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Default,
-        crate::theme::HtmlScope::Site,
-    )
-    .unwrap();
+fn page_asset_decision_does_not_link_academic_assets_for_calepin_page() {
     let generated_entry = crate::theme::resolve_html_entry(
-        &crate::theme::ThemeSelection::Default,
+        &crate::theme::ThemeSelection::Builtin("academic"),
         crate::theme::HtmlScope::Site,
     )
     .unwrap()
     .unwrap();
-    let config_stylesheets = vec![".calepin/site.css".to_string()];
-
-    let decision = page_asset_decision(
-        page_entry,
-        &[test_css_override()],
-        Some(&generated_entry),
-        &[
-            ".calepin/theme-toggle.js".to_string(),
-            ".calepin/language-picker.js".to_string(),
-            ".calepin/copy-code.js".to_string(),
-            ".calepin/search.js".to_string(),
-            ".calepin/theme-init.js".to_string(),
-            ".calepin/site.js".to_string(),
-        ],
-        &config_stylesheets,
-    );
-
-    assert_eq!(decision.config_stylesheets, config_stylesheets);
-    assert_config_style_count(decision.html_entry.as_ref().unwrap(), 0);
-}
-
-#[test]
-fn config_style_assets_reject_duplicate_names() {
-    let styles = vec![
-        crate::config::CssOverride {
-            name: "shared.css".to_string(),
-            path: PathBuf::from("/project/styles/one.css"),
-            css: ":root { --site: yes; }".to_string(),
-        },
-        crate::config::CssOverride {
-            name: "shared.css".to_string(),
-            path: PathBuf::from("/project/styles/two.css"),
-            css: ":root { --site: yes; }".to_string(),
-        },
-    ];
-
-    let err = ConfigStyleAssets::from_styles(&styles, Path::new(".calepin")).unwrap_err();
-    assert!(err
-        .to_string()
-        .contains("configured styles must use unique basenames"));
-}
-
-#[test]
-fn page_asset_decision_links_config_stylesheets_when_theme_disabled() {
-    let config_stylesheets = vec![".calepin/site.css".to_string()];
-
-    let decision =
-        page_asset_decision(None, &[test_css_override()], None, &[], &config_stylesheets);
-
-    assert_eq!(decision.config_stylesheets, config_stylesheets);
-    let html_entry = decision.html_entry.as_ref().unwrap();
-    assert_eq!(html_entry.theme_name, "styles");
-    assert_config_style_count(html_entry, 0);
-}
-
-#[test]
-fn page_asset_decision_does_not_link_academic_assets_for_calepin_page() {
-    let styles = vec![test_css_override()];
-    let generated_entry = html_entry_with_config_styles(
-        crate::theme::resolve_html_entry(
-            &crate::theme::ThemeSelection::Builtin("academic"),
-            crate::theme::HtmlScope::Site,
-        )
-        .unwrap(),
-        &styles,
-    )
-    .unwrap();
     let page_entry = crate::theme::resolve_html_entry(
         &crate::theme::ThemeSelection::Default,
         crate::theme::HtmlScope::Site,
@@ -621,7 +398,6 @@ fn page_asset_decision_does_not_link_academic_assets_for_calepin_page() {
 
     let decision = page_asset_decision(
         page_entry,
-        &styles,
         Some(&generated_entry),
         &[
             ".calepin/theme-toggle.js".to_string(),
@@ -631,16 +407,13 @@ fn page_asset_decision_does_not_link_academic_assets_for_calepin_page() {
             ".calepin/theme-init.js".to_string(),
             ".calepin/site.js".to_string(),
         ],
-        &[],
     );
 
     assert!(decision.scripts.is_empty());
-    assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
 }
 
 #[test]
 fn page_asset_decision_does_not_link_calepin_assets_for_academic_page() {
-    let styles = vec![test_css_override()];
     let generated_entry = crate::theme::resolve_html_entry(
         &crate::theme::ThemeSelection::Default,
         crate::theme::HtmlScope::Site,
@@ -655,7 +428,6 @@ fn page_asset_decision_does_not_link_calepin_assets_for_academic_page() {
 
     let decision = page_asset_decision(
         page_entry,
-        &styles,
         Some(&generated_entry),
         &[
             ".calepin/theme-toggle.js".to_string(),
@@ -665,105 +437,13 @@ fn page_asset_decision_does_not_link_calepin_assets_for_academic_page() {
             ".calepin/theme-init.js".to_string(),
             ".calepin/site.js".to_string(),
         ],
-        &[],
     );
 
     assert!(decision.scripts.is_empty());
-    assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
-}
-
-#[test]
-fn page_asset_decision_keeps_config_style_for_local_layout_that_loops_styles() {
-    let styles = vec![test_css_override()];
-    let local_entry = crate::theme::HtmlEntry {
-            theme_name: "local".to_string(),
-            layout: "{{ doc.head }}{% for style in styles %}<style>{{ style.css }}</style>{% endfor %}{{ doc.body }}".to_string(),
-            partials: Vec::new(),
-            styles: Vec::new(),
-            scripts: Vec::new(),
-            assets: Vec::new(),
-            is_default: false,
-        };
-    let generated_entry =
-        html_entry_with_config_styles(Some(local_entry.clone()), &styles).unwrap();
-
-    let decision =
-        page_asset_decision(Some(local_entry), &styles, Some(&generated_entry), &[], &[]);
-
-    assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
-}
-
-#[test]
-fn page_asset_decision_ignores_unused_stylesheet_partial() {
-    let styles = vec![test_css_override()];
-    let local_entry = crate::theme::HtmlEntry {
-            theme_name: "local".to_string(),
-            layout: "{{ doc.head }}{% for style in styles %}<style>{{ style.css }}</style>{% endfor %}{{ doc.body }}".to_string(),
-            partials: vec![(
-                "partials/styles.html".to_string(),
-                "{% if site.stylesheet %}<link rel=\"stylesheet\" href=\"{{ site.stylesheet }}\">{% endif %}".to_string(),
-            )],
-            styles: Vec::new(),
-            scripts: Vec::new(),
-            assets: Vec::new(),
-            is_default: false,
-        };
-    let generated_entry =
-        html_entry_with_config_styles(Some(local_entry.clone()), &styles).unwrap();
-
-    let decision =
-        page_asset_decision(Some(local_entry), &styles, Some(&generated_entry), &[], &[]);
-
-    assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
-}
-
-#[test]
-fn page_asset_decision_follows_whitespace_control_static_includes() {
-    let styles = vec![test_css_override()];
-    let local_entry = crate::theme::HtmlEntry {
-            theme_name: "local".to_string(),
-            layout: r#"{{ doc.head }}{%- include "partials/wrapper.html" -%}{{ doc.body }}"#
-                .to_string(),
-            partials: vec![
-                (
-                    "partials/wrapper.html".to_string(),
-                    r#"{%- include 'partials/styles.html' -%}"#.to_string(),
-                ),
-                (
-                    "partials/styles.html".to_string(),
-                    "{% if site.stylesheet %}<link rel=\"stylesheet\" href=\"{{ site.stylesheet }}\">{% endif %}".to_string(),
-                ),
-            ],
-            styles: Vec::new(),
-            scripts: Vec::new(),
-            assets: Vec::new(),
-            is_default: false,
-        };
-    let generated_entry = local_entry.clone();
-    let scripts = vec![
-        ".calepin/theme-toggle.js".to_string(),
-        ".calepin/language-picker.js".to_string(),
-        ".calepin/copy-code.js".to_string(),
-        ".calepin/search.js".to_string(),
-        ".calepin/theme-init.js".to_string(),
-        ".calepin/site.js".to_string(),
-    ];
-
-    let decision = page_asset_decision(
-        Some(local_entry),
-        &styles,
-        Some(&generated_entry),
-        &scripts,
-        &[],
-    );
-
-    assert_eq!(decision.scripts, scripts);
-    assert_config_style_count(decision.html_entry.as_ref().unwrap(), 1);
 }
 
 #[test]
 fn page_asset_decision_reuses_generated_assets_for_matching_explicit_layout() {
-    let styles = vec![test_css_override()];
     let generated_entry = crate::theme::resolve_html_entry(
         &crate::theme::ThemeSelection::Default,
         crate::theme::HtmlScope::Site,
@@ -783,36 +463,10 @@ fn page_asset_decision_reuses_generated_assets_for_matching_explicit_layout() {
         ".calepin/theme-init.js".to_string(),
         ".calepin/site.js".to_string(),
     ];
-    let config_stylesheets = vec![".calepin/site.css".to_string()];
 
-    let decision = page_asset_decision(
-        page_entry,
-        &styles,
-        Some(&generated_entry),
-        &scripts,
-        &config_stylesheets,
-    );
+    let decision = page_asset_decision(page_entry, Some(&generated_entry), &scripts);
 
-    assert_eq!(decision.config_stylesheets, config_stylesheets);
     assert_eq!(decision.scripts, scripts);
-    assert_config_style_count(decision.html_entry.as_ref().unwrap(), 0);
-}
-
-fn test_css_override() -> crate::config::CssOverride {
-    crate::config::CssOverride {
-        name: "site.css".to_string(),
-        path: PathBuf::from("/project/styles/site.css"),
-        css: ":root { --site: yes; }".to_string(),
-    }
-}
-
-fn assert_config_style_count(entry: &crate::theme::HtmlEntry, expected: usize) {
-    let count = entry
-        .styles
-        .iter()
-        .filter(|(_, css)| css.contains("--site: yes"))
-        .count();
-    assert_eq!(count, expected);
 }
 
 #[test]
@@ -3637,38 +3291,6 @@ fn should_rebuild_for_path_ignores_distinct_output_directory() {
     assert!(!should_rebuild_for_path(&current, &out.join("index.typ")));
     assert!(!should_rebuild_for_path(&current, &out.join("style.css")));
     assert!(should_rebuild_for_path(&current, &src.join("index.typ")));
-}
-
-#[test]
-fn should_rebuild_for_path_tracks_config_style_outside_source_dir() {
-    let temp = tempfile::tempdir().unwrap();
-    let src = temp.path().join("docs");
-    let style = temp.path().join("config/styles/site.css");
-    fs::create_dir_all(&src).unwrap();
-    fs::create_dir_all(style.parent().unwrap()).unwrap();
-    fs::write(&style, "body { color: red; }").unwrap();
-
-    let mut current = test_build_result(&src, &[]);
-    current.style_paths = vec![style.clone()];
-
-    assert!(should_rebuild_for_path(&current, &style));
-}
-
-#[test]
-fn should_rebuild_for_path_ignores_config_style_in_distinct_output_directory() {
-    let temp = tempfile::tempdir().unwrap();
-    let src = temp.path().join("docs");
-    let out = temp.path().join("site");
-    let style = out.join("style.css");
-    fs::create_dir_all(&src).unwrap();
-    fs::create_dir_all(&out).unwrap();
-    fs::write(&style, "body { color: red; }").unwrap();
-
-    let mut current = test_build_result(&src, &[]);
-    current.out_dir = out;
-    current.style_paths = vec![style.clone()];
-
-    assert!(!should_rebuild_for_path(&current, &style));
 }
 
 #[test]

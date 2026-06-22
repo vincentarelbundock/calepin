@@ -26,10 +26,6 @@ base_url = "https://example.com"
 # Default: "calepin".
 theme = "calepin"
 
-# CSS files to append after the selected theme's CSS.
-# Default: [].
-styles = ["styles/site.css"]
-
 # Render .pdf files for every page.
 # Default: false.
 pdf = false
@@ -69,7 +65,7 @@ Use `--format html` for a one-time HTML-only build, regardless of `pdf`. Use `--
 
 Set `search = "pagefind"` to add static search to bundled website themes. _Calepin_ writes the Pagefind search bundle to `pagefind/` after rendering the site and links the bundled themes to the generated component script and stylesheet. Bundled themes mark the main page content with `data-pagefind-body`, so navigation, toolbars, and footers are excluded from the search index.
 
-Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, `styles`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
+Paths in `calepin.toml` are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit `--config`. This includes `logo`, `favicon`, page `target` values ending in `.typ`, page `glob` patterns, page and static `include` and `exclude` patterns, and local theme paths. During the build, _Calepin_ rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as `https://example.com` are left unchanged.
 
 = Auto-generated metadata
 
@@ -84,18 +80,26 @@ Bundled website themes emit a small set of page-level head tags from config:
 If you inject your own tags for these fields in a theme override, check for
 duplication with what the theme already emits.
 
-= CSS styles
+= Theme customization
 
-Use `styles` for project CSS that should load after the selected theme:
+Use a local theme when you want project CSS or template overrides. Point `theme`
+at the local theme directory and declare the bundled theme you want to extend in
+`theme.toml`:
 
 ```toml
-theme = "academic"
-styles = ["styles/site.css", "styles/figures.css"]
+# calepin.toml
+theme = "themes/my-site"
 ```
 
-Each file must be a `.css` file. Styles load in the listed order, after the
-theme's shared and local styles. This is the lightest way to adjust colors,
-fonts, spacing, or small component rules without ejecting a full theme.
+```toml
+# themes/my-site/theme.toml
+extends = "academic"
+```
+
+Place project CSS in `themes/my-site/css/`. Local theme styles load after the
+parent theme's shared and local styles, so they can adjust colors, fonts,
+spacing, or component rules. The same theme directory can override HTML
+layouts, partials, scripts, assets, and `notebook.typ.jinja`.
 
 See #link("../themes/customize.html")[Customize themes] for the stable
 `--calepin-*` CSS tokens exposed by bundled themes.

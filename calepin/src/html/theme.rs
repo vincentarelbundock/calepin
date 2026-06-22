@@ -67,7 +67,6 @@ pub(crate) struct SiteContextInput {
     pub(crate) current_url: Option<String>,
     pub(crate) page_title: Option<String>,
     pub(crate) stylesheet: Option<String>,
-    pub(crate) config_stylesheets: Vec<String>,
     pub(crate) scripts: Vec<String>,
     pub(crate) theme_assets: Vec<SiteThemeAsset>,
     pub(crate) pagefind: Option<SitePagefindEntry>,

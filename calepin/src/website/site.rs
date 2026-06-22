@@ -210,7 +210,6 @@ impl SiteModel {
             }),
             page_title,
             stylesheet: None,
-            config_stylesheets: Vec::new(),
             scripts: Vec::new(),
             theme_assets: theme_assets.to_vec(),
             pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {

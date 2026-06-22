@@ -194,7 +194,6 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     let current_dir = std::env::current_dir()?;
     let calepin_config =
         crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
-    let config_styles = calepin_config.styles.clone();
     let site_context = SiteContextInput {
         revealjs: calepin_config.revealjs.clone(),
         ..Default::default()
@@ -225,7 +224,6 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             theme: &output.theme,
             html_scope: crate::theme::HtmlScope::Document,
             html_entry: None,
-            config_styles: &config_styles,
             html_syntax_theme: None,
             site_context: Some(&site_context),
             pages_input: None,

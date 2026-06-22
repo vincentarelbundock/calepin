@@ -1261,7 +1261,6 @@ mod tests {
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
             theme_assets,
-            config_stylesheets: vec!["../.calepin/site.css".to_string()],
             ..SiteContextInput::default()
         };
 
@@ -1287,14 +1286,10 @@ mod tests {
         let widgets_css = themed
             .find(r#"<link rel="stylesheet" href="../.calepin/40_widgets.css">"#)
             .unwrap();
-        let config_stylesheet = themed
-            .find(r#"<link rel="stylesheet" href="../.calepin/site.css">"#)
-            .unwrap();
 
         assert!(pico_css < theme_css);
         assert!(theme_css < code_css);
         assert!(code_css < widgets_css);
-        assert!(widgets_css < config_stylesheet);
         assert!(
             !themed.contains(r#"<link rel="stylesheet" href="../.calepin/calepin-website.css">"#)
         );

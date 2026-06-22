@@ -76,9 +76,9 @@ use pagefind::{
 use paths::wildcard_match;
 use paths::{normalize_path, rel_posix, relative_or_self, slash_path};
 use preprocess::{preprocess_documents, WebsitePreprocessOptions};
-use render::{default_site_html_entry, render_documents, ConfigStyleAssets, ThemeGeneratedAssets};
 #[cfg(test)]
-use render::{html_entry_with_config_styles, page_asset_decision};
+use render::page_asset_decision;
+use render::{default_site_html_entry, render_documents, ThemeGeneratedAssets};
 pub(crate) use scaffold::scaffold_website;
 #[cfg(test)]
 use site::{language_entries, translation_entries};
@@ -274,7 +274,6 @@ struct WebsiteBuildResult {
     asset_dir: PathBuf,
     config_path: PathBuf,
     theme_dirs: Vec<PathBuf>,
-    style_paths: Vec<PathBuf>,
     page_fingerprints: BTreeMap<PathBuf, u64>,
     nav_signature: u64,
     /// Hash of the pages index; when it changes, every page may render
@@ -367,17 +366,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config.highlight_light.as_deref(),
         config.highlight_dark.as_deref(),
     )?;
-    let style_paths = calepin_config
-        .styles
-        .iter()
-        .map(|style| {
-            style
-                .path
-                .canonicalize()
-                .with_context(|| format!("failed to resolve {}", style.path.display()))
-        })
-        .collect::<Result<Vec<_>>>()?;
-
     let build_set = match &args.incremental_inputs {
         Some(inputs) => {
             let wanted = inputs.iter().cloned().collect::<BTreeSet<_>>();
@@ -432,8 +420,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     } else {
         ThemeGeneratedAssets::default()
     };
-    let config_style_assets = ConfigStyleAssets::from_styles(&calepin_config.styles, &asset_dir)?;
-
     let page_meta = load_page_meta(&src_dir, &typ_files);
     let metadata = SiteMetadata::from_config(
         &config,
@@ -475,7 +461,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let pages_signature = xxh3_64(pages_index_json.as_bytes());
     write_pages_index(&typ_files, &pages_index_json, &asset_dir)?;
     let mut theme_asset_paths = theme_assets.output_paths(&out_dir);
-    theme_asset_paths.extend(config_style_assets.output_paths(&out_dir));
     let expected_outputs = expected_generated_outputs(GeneratedOutputInputs {
         out_dir: &out_dir,
         typ_files: &typ_files,
@@ -525,7 +510,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
 
     let asset_progress = progress.spinner("[site] write assets");
     theme_assets.write(&out_dir)?;
-    config_style_assets.write(&out_dir)?;
     if let Some(path) = default_favicon_path.as_deref() {
         write_default_favicon(&out_dir, path)?;
     }
@@ -560,11 +544,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             page_info: page_info.clone(),
             languages: languages.clone(),
 
-            config_stylesheets: config_style_assets
-                .stylesheets
-                .iter()
-                .map(|asset| slash_path(&asset.rel_path))
-                .collect(),
             theme_scripts: theme_assets
                 .scripts
                 .iter()
@@ -580,7 +559,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
                     kind: asset.kind.clone(),
                 })
                 .collect(),
-            config_styles: calepin_config.styles.clone(),
             syntax_theme: html_syntax_theme,
             revealjs_options: calepin_config.revealjs,
             parallelism: args.parallelism,
@@ -650,7 +628,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         asset_dir,
         config_path,
         theme_dirs,
-        style_paths,
         page_fingerprints,
         nav_signature,
         pages_signature,
@@ -734,9 +711,6 @@ fn watch_roots(current: &WebsiteBuildResult) -> Vec<(PathBuf, RecursiveMode)> {
     for theme_dir in &current.theme_dirs {
         watches.push((theme_dir.to_path_buf(), RecursiveMode::Recursive));
     }
-    for style_path in &current.style_paths {
-        watches.push((style_path.clone(), RecursiveMode::NonRecursive));
-    }
     watches
 }
 
@@ -759,13 +733,6 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     // to them would re-trigger the build that produced them.
     if initial.out_dir != initial.src_dir && path.starts_with(&initial.out_dir) {
         return false;
-    }
-    if initial
-        .style_paths
-        .iter()
-        .any(|style_path| path == style_path)
-    {
-        return true;
     }
     if !path.starts_with(&initial.src_dir) {
         return false;
@@ -942,11 +909,9 @@ struct BuildContext {
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
 
-    config_stylesheets: Vec<String>,
     theme_scripts: Vec<String>,
     generated_theme_entry: Option<crate::theme::HtmlEntry>,
     theme_assets: Vec<crate::html::SiteThemeAsset>,
-    config_styles: Vec<crate::config::CssOverride>,
     syntax_theme: HtmlSyntaxTheme,
     revealjs_options: String,
     parallelism: Option<usize>,

@@ -72,7 +72,6 @@ pub struct CompileOptions<'a> {
     /// Pre-resolved HTML layout to use instead of resolving `theme` +
     /// `html_scope`.
     pub html_entry: Option<&'a crate::theme::HtmlEntry>,
-    pub config_styles: &'a [crate::config::CssOverride],
     pub html_syntax_theme: Option<&'a HtmlSyntaxTheme>,
     pub site_context: Option<&'a SiteContextInput>,
     /// Root-relative path to the website pages index, exposed to the runtime
@@ -330,29 +329,6 @@ fn resolve_output_arg_path(
     }
 }
 
-pub(crate) fn resolve_html_entry_with_styles(
-    theme: &crate::theme::ThemeSelection,
-    scope: crate::theme::HtmlScope,
-    config_styles: &[crate::config::CssOverride],
-) -> Result<Option<crate::theme::HtmlEntry>> {
-    let mut resolved_entry = crate::theme::resolve_html_entry(theme, scope)?;
-
-    if let Some(entry) = resolved_entry.as_mut() {
-        if !config_styles.is_empty() {
-            entry.append_styles(config_styles.to_vec());
-        }
-        return Ok(Some(entry.clone()));
-    }
-
-    if !config_styles.is_empty() {
-        Ok(Some(crate::theme::style_only_html_entry(
-            config_styles.to_vec(),
-        )))
-    } else {
-        Ok(None)
-    }
-}
-
 pub(crate) fn postprocess_html_output(
     output: &Path,
     layout: &LayoutPaths,
@@ -413,17 +389,9 @@ pub fn compile_with_typst(
     let output_path = &output.path;
     let html_entry = if output.is_html() {
         if let Some(entry) = options.html_entry.cloned() {
-            let mut owned_entry = entry.clone();
-            if !options.config_styles.is_empty() {
-                owned_entry.append_styles(options.config_styles.to_vec());
-            }
-            Some(owned_entry)
+            Some(entry.clone())
         } else {
-            resolve_html_entry_with_styles(
-                options.theme,
-                options.html_scope,
-                options.config_styles,
-            )?
+            crate::theme::resolve_html_entry(options.theme, options.html_scope)?
         }
     } else {
         None

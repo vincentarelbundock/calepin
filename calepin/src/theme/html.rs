@@ -42,43 +42,6 @@ pub struct HtmlEntry {
     pub is_default: bool,
 }
 
-impl HtmlEntry {
-    pub fn append_styles(&mut self, styles: Vec<crate::config::CssOverride>) {
-        self.styles
-            .extend(styles.into_iter().map(|style| (style.name, style.css)));
-    }
-}
-
-pub fn style_only_html_entry(styles: Vec<crate::config::CssOverride>) -> HtmlEntry {
-    let mut entry = HtmlEntry {
-        theme_name: "styles".to_string(),
-        layout: r#"{{ doc.head }}
-{% if site.stylesheet %}
-  <link rel="stylesheet" href="{{ site.stylesheet }}">
-{% else %}
-  {% for style in styles %}
-  <style>
-{{ style.css }}
-  </style>
-  {% endfor %}
-{% endif %}
-{% for stylesheet in site.config_stylesheets %}
-  <link rel="stylesheet" href="{{ stylesheet }}">
-{% endfor %}
-{{ doc.body_open }}
-{{ doc.body }}
-{{ doc.body_close }}"#
-            .to_string(),
-        partials: Vec::new(),
-        styles: Vec::new(),
-        scripts: Vec::new(),
-        assets: Vec::new(),
-        is_default: false,
-    };
-    entry.append_styles(styles);
-    entry
-}
-
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub(crate) struct ThemeManifest {

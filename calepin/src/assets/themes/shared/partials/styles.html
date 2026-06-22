@@ -4,9 +4,6 @@
 {% endif %}
 {% endfor %}
 
-{% for stylesheet in site.config_stylesheets -%}
-    <link rel="stylesheet" href="{{ stylesheet }}">
-{% endfor -%}
 {% if site.pagefind %}
     <link rel="stylesheet" href="{{ site.pagefind.css }}">
     <pagefind-config bundle-path="{{ site.pagefind.bundle }}"></pagefind-config>

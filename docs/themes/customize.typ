@@ -2,42 +2,72 @@
 
 #title()
 
-For CSS-only changes, keep a built-in theme and append project CSS with
-`styles` in `calepin.toml`:
+Customize a built-in theme by creating a local theme that extends it. The
+project config points to your theme directory:
 
 ```toml
-theme = "academic"
-styles = [
-  "styles/site.css",
-  "styles/figures.css",
-]
+# calepin.toml
+theme = "themes/my-theme"
 ```
 
-Configured CSS files load after the selected theme's CSS, in the order listed.
-Paths are resolved relative to `calepin.toml`, and each file must have a `.css`
-extension. The setting affects HTML output only.
+The local theme declares its base in `theme.toml`:
+
+```toml
+# themes/my-theme/theme.toml
+extends = "academic"
+```
+
+Put CSS in the local theme's `css/` or `styles/` directory:
+
+```text
+themes/my-theme/
+  theme.toml
+  css/
+    site.css
+    figures.css
+```
+
+Theme CSS files load after inherited CSS files. A local CSS file with the same
+filename as an inherited CSS file replaces the inherited file; new filenames are
+appended in sorted order.
 
 In Calepin HTML output, `#title()` is rendered as the page `<h1>`, so the first Typst heading `=` becomes `<h2>`, `==` as `<h3>`, and so on. If you target heading selectors in CSS, use this mapping unless your theme remaps heading markup.
 
 = Style raw HTML with CSS
 
-In some contexts, it can be useful to generate very simple HTML documents, and to define CSS to style raw classless HTML elements directly. One way to achieve this is to use the `typst` theme, which creates unstyled HTML that leaves styling fully in your project CSS. Set `theme = "typst"` when you do not want a bundled base theme. Configured styles still apply to HTML output:
+In some contexts, it can be useful to generate very simple HTML documents, and to define CSS to style raw classless HTML elements directly. Use a local theme that extends `typst` when you do not want a bundled base theme:
 
 ```toml
-theme = "typst"
-styles = ["styles/raw.css"]
+# calepin.toml
+theme = "themes/raw"
+```
+
+```toml
+# themes/raw/theme.toml
+extends = "typst"
+```
+
+Then add the raw HTML layout and CSS to the local theme:
+
+```text
+themes/raw/
+  theme.toml
+  layouts/
+    notebook.html
+  css/
+    raw.css
 ```
 
 = Override theme tokens
 
 Built-in HTML themes expose stable CSS custom properties in the `--calepin-*`
-namespace. The recommended best practice is to override these tokens from project CSS
-rather than try to target the internals directly.
+namespace. The recommended best practice is to override these tokens from local
+theme CSS rather than try to target the internals directly.
 
 This override uses token variables for major surfaces and then applies your own typography and border styles, while leaving all Calepin component structure intact.
 
 ```css
-/* styles/custom.css */
+/* themes/my-theme/css/custom.css */
 :root {
   --calepin-color-background: #f6f7f9;
   --calepin-color-text: #111827;
@@ -60,7 +90,7 @@ pre {
 = Light and dark themes
 
 To define distinct values for light and dark mode, use `html[data-theme="light"]`
-and `html[data-theme="dark"]` selectors in your project stylesheet:
+and `html[data-theme="dark"]` selectors in your local theme stylesheet:
 
 ```css
 html[data-theme="light"] {
@@ -91,7 +121,7 @@ that match the page.
 Reference files and rendered output can be viewed here:
 
 - #link("examples/tufte/calepin.toml")[calepin.toml]
-- #link("examples/tufte/tufte.css")[tufte.css]
+- #link("examples/tufte/themes/tufte/css/tufte.css")[tufte.css]
 - #link("examples/tufte/tufte.typ")[tufte.typ]
 - #link("examples/tufte/tufte.html")[HTML]
 - #link("examples/tufte/tufte.pdf")[PDF]
@@ -99,18 +129,21 @@ Reference files and rendered output can be viewed here:
 Start with a small `calepin.toml` next to the document:
 
 ```toml
-theme = "academic"
-styles = ["tufte.css"]
+theme = "themes/tufte"
 ```
 
-The first line keeps all of the built-in `academic` theme structure: the
-single-document HTML wrapper, the theme toggle, sidenotes, side figures, code
-styling, and dark-mode support. The second line appends a local stylesheet after
-the academic theme CSS, so the case study can customize tokens without copying
-or ejecting a full theme.
+The local theme extends `academic`:
 
-The local `tufte.css` file is intentionally small. It overrides the public
-`--calepin-*` tokens instead of targeting private theme internals:
+```toml
+# themes/tufte/theme.toml
+extends = "academic"
+```
+
+That keeps all of the built-in `academic` theme structure: the single-document
+HTML wrapper, the theme toggle, sidenotes, side figures, code styling, and
+dark-mode support. The local `themes/tufte/css/tufte.css` file is intentionally
+small. It overrides the public `--calepin-*` tokens instead of targeting private
+theme internals:
 
 ```css
 :root, html[data-theme="light"] {
@@ -158,8 +191,8 @@ calepin compile tufte.typ --config calepin.toml --format html
 calepin compile tufte.typ --config calepin.toml --format pdf
 ```
 
-The config path matters because `styles = ["tufte.css"]` is resolved relative to
-`calepin.toml`. Keeping the config, stylesheet, and document together makes the
+The config path matters because `theme = "themes/tufte"` is resolved relative to
+`calepin.toml`. Keeping the config, local theme, and document together makes the
 example portable: copy the directory, run the same commands, and the academic
 theme plus Tufte overlay are applied in both rendered outputs.
 

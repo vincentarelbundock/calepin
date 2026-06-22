@@ -50,20 +50,6 @@ pub(super) fn default_site_html_entry() -> crate::theme::HtmlEntry {
     .expect("default theme must provide a site entry")
 }
 
-pub(super) fn html_entry_with_config_styles(
-    entry: Option<crate::theme::HtmlEntry>,
-    styles: &[crate::config::CssOverride],
-) -> Option<crate::theme::HtmlEntry> {
-    match entry {
-        Some(mut entry) => {
-            entry.append_styles(styles.to_vec());
-            Some(entry)
-        }
-        None if !styles.is_empty() => Some(crate::theme::style_only_html_entry(styles.to_vec())),
-        None => None,
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct HtmlEntryAssetKey {
     styles: Vec<(String, String)>,
@@ -81,32 +67,14 @@ impl From<&crate::theme::HtmlEntry> for HtmlEntryAssetKey {
 
 pub(super) struct PageAssetDecision {
     pub(super) html_entry: Option<crate::theme::HtmlEntry>,
-    pub(super) config_stylesheets: Vec<String>,
     pub(super) scripts: Vec<String>,
 }
 
 pub(super) fn page_asset_decision(
     page_entry: Option<crate::theme::HtmlEntry>,
-    config_styles: &[crate::config::CssOverride],
     generated_entry: Option<&crate::theme::HtmlEntry>,
     generated_scripts: &[String],
-    generated_config_stylesheets: &[String],
 ) -> PageAssetDecision {
-    let page_references_config_stylesheets = page_entry
-        .as_ref()
-        .is_some_and(html_entry_references_config_stylesheets)
-        || (page_entry.is_none() && !generated_config_stylesheets.is_empty());
-    let links_config_styles = !config_styles.is_empty()
-        && !generated_config_stylesheets.is_empty()
-        && page_references_config_stylesheets;
-    let linked_page_entry = page_entry
-        .clone()
-        .or_else(|| Some(crate::theme::style_only_html_entry(Vec::new())));
-    let styled_page_entry = if links_config_styles {
-        linked_page_entry.clone()
-    } else {
-        html_entry_with_config_styles(page_entry.clone(), config_styles)
-    };
     let matches_generated_entry =
         page_entry
             .as_ref()
@@ -114,16 +82,7 @@ pub(super) fn page_asset_decision(
             .is_some_and(|(page, generated)| {
                 HtmlEntryAssetKey::from(page) == HtmlEntryAssetKey::from(generated)
             });
-    let config_stylesheets = if links_config_styles {
-        generated_config_stylesheets.to_vec()
-    } else {
-        Vec::new()
-    };
-    let html_entry = if links_config_styles {
-        linked_page_entry
-    } else {
-        styled_page_entry
-    };
+    let html_entry = page_entry;
     let scripts = if matches_generated_entry {
         generated_scripts.to_vec()
     } else {
@@ -132,161 +91,8 @@ pub(super) fn page_asset_decision(
 
     PageAssetDecision {
         html_entry,
-        config_stylesheets,
         scripts,
     }
-}
-
-fn html_entry_references_config_stylesheets(entry: &crate::theme::HtmlEntry) -> bool {
-    html_entry_references_template_token(entry, b"site.config_stylesheets")
-}
-
-fn html_entry_references_template_token(entry: &crate::theme::HtmlEntry, target: &[u8]) -> bool {
-    let partials = entry.partials.iter().cloned().collect::<BTreeMap<_, _>>();
-    let mut visited = BTreeSet::new();
-    html_source_references_template_token(&entry.layout, &partials, &mut visited, target)
-}
-
-fn html_source_references_template_token(
-    source: &str,
-    partials: &BTreeMap<String, String>,
-    visited: &mut BTreeSet<String>,
-    target: &[u8],
-) -> bool {
-    if html_source_references_template_token_direct(source, target) {
-        return true;
-    }
-    static_html_includes(source).into_iter().any(|name| {
-        visited.insert(name.clone())
-            && partials.get(&name).is_some_and(|partial| {
-                html_source_references_template_token(partial, partials, visited, target)
-            })
-    })
-}
-
-fn html_source_references_template_token_direct(source: &str, target: &[u8]) -> bool {
-    template_tag_references_token(source, "{{", "}}", target)
-        || template_tag_references_token(source, "{%", "%}", target)
-}
-
-fn template_tag_references_token(source: &str, open: &str, close: &str, target: &[u8]) -> bool {
-    let mut rest = source;
-    while let Some(start) = rest.find(open) {
-        let after_open = &rest[start + open.len()..];
-        let Some(end) = after_open.find(close) else {
-            break;
-        };
-        let block = &after_open[..end];
-        if template_tag_has_token(block, target) {
-            return true;
-        }
-        rest = &after_open[end + close.len()..];
-    }
-    false
-}
-
-fn template_tag_has_token(block: &str, target: &[u8]) -> bool {
-    let mut in_single = false;
-    let mut in_double = false;
-    let bytes = block.as_bytes();
-
-    let mut index = 0;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if in_single {
-            if byte == b'\'' && !is_template_token_escaped(bytes, index) {
-                in_single = false;
-            } else if byte == b'\\' && index + 1 < bytes.len() {
-                index += 1;
-            }
-            index += 1;
-            continue;
-        }
-        if in_double {
-            if byte == b'"' && !is_template_token_escaped(bytes, index) {
-                in_double = false;
-            } else if byte == b'\\' && index + 1 < bytes.len() {
-                index += 1;
-            }
-            index += 1;
-            continue;
-        }
-
-        if byte == b'\'' {
-            in_single = true;
-            index += 1;
-            continue;
-        }
-        if byte == b'"' {
-            in_double = true;
-            index += 1;
-            continue;
-        }
-        if bytes.len() >= index + target.len()
-            && bytes_is_ascii_equal_ignore_case(&bytes[index..index + target.len()], target)
-            && (index == 0 || is_template_token_separator_byte(bytes[index - 1]))
-            && (index + target.len() == bytes.len()
-                || is_template_token_separator_byte(bytes[index + target.len()]))
-        {
-            return true;
-        }
-        index += 1;
-    }
-    false
-}
-
-fn is_template_token_escaped(bytes: &[u8], index: usize) -> bool {
-    let mut i = index;
-    let mut backslashes = 0;
-    while i > 0 {
-        i -= 1;
-        if bytes[i] == b'\\' {
-            backslashes += 1;
-        } else {
-            break;
-        }
-    }
-    backslashes % 2 == 1
-}
-
-fn is_template_token_separator_byte(byte: u8) -> bool {
-    !byte.is_ascii_alphanumeric() && byte != b'.' && byte != b'_'
-}
-
-fn static_html_includes(source: &str) -> Vec<String> {
-    let mut includes = Vec::new();
-    let mut rest = source;
-    while let Some(start) = rest.find("{%") {
-        let rest_after_start = &rest[start + 2..];
-        let Some(end) = rest_after_start.find("%}") else {
-            break;
-        };
-        let block = trim_template_tokens(&rest_after_start[..end]);
-        if let Some(include) = static_include_name(block) {
-            includes.push(include);
-        }
-        rest = &rest_after_start[end + 2..];
-    }
-    includes
-}
-
-fn trim_template_tokens(block: &str) -> &str {
-    block
-        .trim()
-        .trim_start_matches(|char| char == '-' || char == '+')
-        .trim_end_matches(|char| char == '-' || char == '+')
-        .trim()
-}
-
-fn static_include_name(block: &str) -> Option<String> {
-    let rest = block.strip_prefix("include")?.trim_start();
-    let quote = rest.chars().next()?;
-    if quote != '"' && quote != '\'' {
-        return None;
-    }
-    let quoted = &rest[quote.len_utf8()..];
-    let end = quoted.find(quote)?;
-    Some(quoted[..end].to_string())
 }
 
 fn ensure_parent_directory(path: &Path) -> Result<()> {
@@ -380,17 +186,10 @@ fn render_document(
     };
     let asset_decision = page_asset_decision(
         page_site_entry,
-        &context.config_styles,
         context.generated_theme_entry.as_ref(),
         &context.theme_scripts,
-        &context.config_stylesheets,
     );
     let page_site_entry = asset_decision.html_entry;
-    site_context.config_stylesheets = asset_decision
-        .config_stylesheets
-        .iter()
-        .map(|stylesheet| html_escape(&page_relative_url(&current_href, stylesheet)))
-        .collect();
     site_context.scripts = asset_decision
         .scripts
         .iter()
@@ -415,7 +214,6 @@ fn render_document(
                 theme: &preprocessed.theme,
                 html_scope: crate::theme::HtmlScope::Site,
                 html_entry,
-                config_styles: &[],
                 html_syntax_theme,
                 site_context,
                 pages_input: Some(&context.pages_index_ref),
@@ -489,11 +287,6 @@ pub(crate) struct ThemeAssetInfo {
     pub(crate) name: String,
     pub(crate) rel_path: PathBuf,
     pub(crate) kind: String,
-}
-
-#[derive(Debug, Clone, Default)]
-pub(super) struct ConfigStyleAssets {
-    pub(super) stylesheets: Vec<GeneratedThemeAsset>,
 }
 
 #[derive(Debug, Clone)]
@@ -589,47 +382,6 @@ impl ThemeGeneratedAssets {
     }
 }
 
-impl ConfigStyleAssets {
-    pub(super) fn from_styles(
-        styles: &[crate::config::CssOverride],
-        asset_dir: &Path,
-    ) -> Result<Self> {
-        let mut used: BTreeSet<String> = BTreeSet::new();
-        let mut stylesheets = Vec::new();
-
-        for style in styles {
-            if !used.insert(style.name.clone()) {
-                return Err(anyhow!(
-                    "configured styles must use unique basenames to avoid collisions; duplicate `{}`",
-                    style.name
-                ));
-            }
-            stylesheets.push(GeneratedThemeAsset::new_with_name(
-                asset_dir,
-                &style.name,
-                "css",
-                style.css.clone(),
-            ));
-        }
-
-        Ok(Self { stylesheets })
-    }
-
-    pub(super) fn output_paths(&self, out_dir: &Path) -> BTreeSet<PathBuf> {
-        self.stylesheets
-            .iter()
-            .map(|asset| out_dir.join(&asset.rel_path))
-            .collect()
-    }
-
-    pub(super) fn write(&self, out_dir: &Path) -> Result<()> {
-        for asset in &self.stylesheets {
-            asset.write(out_dir)?;
-        }
-        Ok(())
-    }
-}
-
 impl GeneratedThemeAsset {
     fn new_with_name(asset_dir: &Path, name: &str, extension: &str, content: String) -> Self {
         let stem = Path::new(name)
@@ -660,21 +412,6 @@ impl GeneratedThemeAsset {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-
-    #[test]
-    fn static_html_includes_parses_whitespace_control_markers() {
-        let includes = static_html_includes(
-            r#"{%+ include 'partials/wrapper.html' +%}{%- include "partials/styles.html" -%}"#,
-        );
-
-        assert_eq!(
-            includes,
-            vec![
-                "partials/wrapper.html".to_string(),
-                "partials/styles.html".to_string(),
-            ]
-        );
-    }
 
     #[test]
     fn embed_source_blob_inserts_source_data_before_head_and_escapes_script_end_tag_case_insensitive(
