@@ -1,4 +1,4 @@
-#set document(title: [PDF templates])
+#set document(title: [PDF])
 #import "/.calepin/calepin.typ" as calepin
 #title()
 
