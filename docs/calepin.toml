@@ -117,15 +117,6 @@ title = "Themes"
   [[sidebar.section.item]]
   target = "themes/themes.typ"
 
-  [[sidebar.section.item]]
-  target = "themes/builtin.typ"
-
-  [[sidebar.section.item]]
-  target = "themes/customize.typ"
-
-  [[sidebar.section.item]]
-  target = "themes/create.typ"
-
 [[sidebar.section]]
 title = "More"
 

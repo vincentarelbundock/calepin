@@ -101,8 +101,8 @@ parent theme's shared and local styles, so they can adjust colors, fonts,
 spacing, or component rules. The same theme directory can override HTML
 layouts, partials, scripts, assets, and `notebook.typ.jinja`.
 
-See #link("../themes/customize.html")[Customize themes] for the stable
-`--calepin-*` CSS tokens exposed by bundled themes.
+See #link("../themes/themes.html")[Themes] for the stable `--calepin-*`
+CSS tokens exposed by bundled themes.
 
 Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image("assets/diagram.svg")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `asset-dir`/favicon.svg; if no logo is set, bundled themes use `title` as the site name.
 
