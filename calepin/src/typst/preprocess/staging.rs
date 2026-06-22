@@ -14,7 +14,7 @@ pub(super) fn notebook_template_context(
     layout: &LayoutPaths,
     include_input: &Path,
     page_meta: Option<serde_json::Value>,
-    params: serde_json::Value,
+    vars: serde_json::Value,
 ) -> crate::theme::NotebookTemplateContext {
     let input_dir = layout
         .input_rel
@@ -26,13 +26,21 @@ pub(super) fn notebook_template_context(
         .file_stem()
         .map(|stem| stem.to_string_lossy().to_string())
         .unwrap_or_default();
+    let page_meta = page_meta.unwrap_or(serde_json::Value::Null);
+    // Best-available title before Typst runs: the `<website-metadata>` title.
+    let title = page_meta
+        .get("title")
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
     crate::theme::NotebookTemplateContext {
         input_path: slash_path(&layout.input_rel),
         input_dir,
         input_stem,
+        title,
         body: format!("#include \"/{}\"", slash_path(include_input)),
-        page_meta: page_meta.unwrap_or(serde_json::Value::Null),
-        params,
+        page_meta,
+        vars,
     }
 }
 

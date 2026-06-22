@@ -836,8 +836,10 @@ css = ["../theme.css"]
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
             dir.path().join("layouts/pdf.typ"),
-            r#"#let title = "{{ document.meta.title }}"
-#let species = "{{ params.Species }}"
+            r#"#let title = "{{ doc.title }}"
+#let meta_title = "{{ doc.meta.title }}"
+#let species = "{{ vars.Species }}"
+#let course = "{{ vars.course }}"
 "#,
         )
         .unwrap();
@@ -847,15 +849,16 @@ css = ["../theme.css"]
             input_path: "reports/iris.typ".to_string(),
             input_dir: "reports".to_string(),
             input_stem: "iris".to_string(),
+            title: "Iris Report".to_string(),
             body: "#include \"/.calepin/reports/iris/source.typ\"".to_string(),
             page_meta: serde_json::json!({"title": "Iris Report"}),
-            params: serde_json::json!({"Species": "setosa"}),
+            vars: serde_json::json!({"Species": "setosa", "course": "Econ 101"}),
         };
 
         let source = notebook_source(&sel, &context).unwrap().unwrap();
         assert_eq!(
             source.source,
-            "#let title = \"Iris Report\"\n#let species = \"setosa\""
+            "#let title = \"Iris Report\"\n#let meta_title = \"Iris Report\"\n#let species = \"setosa\"\n#let course = \"Econ 101\""
         );
         assert!(!source.owns_body);
     }
@@ -867,7 +870,7 @@ css = ["../theme.css"]
         std::fs::write(
             dir.path().join("layouts/pdf.typ"),
             r#"#set text(size: 11pt)
-{{ document.body }}
+{{ doc.body }}
 [#emph[Generated footer]]
 "#,
         )
@@ -878,9 +881,10 @@ css = ["../theme.css"]
             input_path: "paper.typ".to_string(),
             input_dir: String::new(),
             input_stem: "paper".to_string(),
+            title: String::new(),
             body: "#include \"/.calepin/paper/source.typ\"".to_string(),
             page_meta: serde_json::Value::Null,
-            params: serde_json::json!({}),
+            vars: serde_json::json!({}),
         };
 
         let source = notebook_source(&sel, &context).unwrap().unwrap();

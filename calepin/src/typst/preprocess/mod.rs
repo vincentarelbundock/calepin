@@ -55,8 +55,8 @@ pub struct PreprocessOptions {
     pub html_syntax_theme: Option<crate::html::HtmlSyntaxTheme>,
     /// Optional custom generated asset directory relative to the input root.
     pub asset_dir: Option<PathBuf>,
-    /// `key=value` document-parameter overrides from the CLI (`-P`).
-    pub param_overrides: Vec<String>,
+    /// `key=value` document-variable overrides from the CLI (`--var`).
+    pub var_overrides: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -64,6 +64,9 @@ pub struct PreprocessOutput {
     pub layout: LayoutPaths,
     pub executables: ExecutablePaths,
     pub theme: crate::theme::ThemeSelection,
+    /// Resolved document variables (`[vars]` config < `setup(vars:)` < CLI),
+    /// reused as the `vars` context for the single-document HTML theme step.
+    pub vars: serde_json::Value,
 }
 
 #[derive(Debug)]
@@ -79,7 +82,7 @@ pub struct PreprocessPlan {
     progress: bool,
     sync_pages: bool,
     display_root: Option<PathBuf>,
-    params: serde_json::Value,
+    vars: serde_json::Value,
     theme: crate::theme::ThemeSelection,
 }
 
@@ -108,6 +111,7 @@ pub fn preprocess_cached_output(plan: PreprocessPlan) -> PreprocessOutput {
         layout: plan.layout,
         executables: plan.executables,
         theme: plan.theme,
+        vars: plan.vars,
     }
 }
 
@@ -187,7 +191,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
             }
         })
         .collect();
-    let params = resolve_params(&setup_config.defaults.params, &options.param_overrides)?;
+    let vars = resolve_vars(
+        &config.vars,
+        &setup_config.defaults.vars,
+        &options.var_overrides,
+    )?;
 
     let effective_theme = options
         .theme
@@ -199,7 +207,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &layout,
         &staged_input,
         metadata.page_meta.clone(),
-        params.clone(),
+        vars.clone(),
     );
     let notebook_theme = crate::theme::notebook_source(&effective_theme, &notebook_context)?;
     if !jupyter_kernels.is_empty() {
@@ -229,7 +237,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &chunks,
         &cwd,
         timeout,
-        &params,
+        &vars,
         &effective_theme,
         asset_dir,
         image_meta.signature()?,
@@ -247,7 +255,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         progress: options.progress,
         sync_pages: options.sync_pages,
         display_root: options.display_root,
-        params,
+        vars,
         theme: effective_theme,
     })
 }
@@ -309,17 +317,17 @@ pub fn execute_preprocess_plan_with_chunk_progress(
     std::fs::create_dir_all(&staged_figures_dir)
         .with_context(|| format!("failed to create {}", staged_figures_dir.display()))?;
 
-    // Always write params.json when there are parameters: it is the universal
+    // Always write vars.json when there are variables: it is the universal
     // transport for Jupyter kernels Calepin cannot auto-bind, and a useful
     // reproducibility record. Native R/Python read their literal prelude instead.
-    let params_path = write_params_file(&plan.layout, &plan.params)?;
+    let vars_path = write_vars_file(&plan.layout, &plan.vars)?;
 
     let execution_config = ExecutionConfig {
         cwd: plan.cwd.clone(),
         executables: plan.executables.clone(),
         timeout: plan.timeout,
-        params: plan.params.clone(),
-        params_path,
+        vars: plan.vars.clone(),
+        vars_path,
     };
     let mut pool = EnginePool::new(execution_config);
     let mut chunk_results: Vec<Option<ChunkResultDocument>> = vec![None; plan.chunks.len()];
@@ -385,6 +393,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         layout: plan.layout,
         executables: plan.executables,
         theme: plan.theme,
+        vars: plan.vars,
     })
 }
 
@@ -517,32 +526,43 @@ fn publish_staged_file(source: &Path, target: &Path) -> Result<()> {
     write_if_changed(target, bytes)
 }
 
-/// Write `params.json` next to `results.json` when there are parameters, and
+/// Write `vars.json` next to `results.json` when there are variables, and
 /// return its path. Returns `None` (and removes any stale file) when empty.
-fn write_params_file(layout: &LayoutPaths, params: &serde_json::Value) -> Result<Option<PathBuf>> {
-    let path = layout.artifact_path("params.json");
-    let is_empty = params.as_object().is_none_or(|map| map.is_empty());
+fn write_vars_file(layout: &LayoutPaths, vars: &serde_json::Value) -> Result<Option<PathBuf>> {
+    let path = layout.artifact_path("vars.json");
+    let is_empty = vars.as_object().is_none_or(|map| map.is_empty());
     if is_empty {
         let _ = fs::remove_file(&path);
         return Ok(None);
     }
     ensure_parent(&path)?;
-    let json = serde_json::to_string_pretty(params)?;
+    let json = serde_json::to_string_pretty(vars)?;
     write_if_changed(&path, json)?;
     Ok(Some(path))
 }
 
-/// Merge `-P key=value` CLI overrides onto the document's `setup(params: ...)`.
-/// CLI values win, and inherit the same scalar typing as `#|` option values.
-fn resolve_params(base: &serde_json::Value, overrides: &[String]) -> Result<serde_json::Value> {
-    let mut map = match base {
-        serde_json::Value::Object(map) => map.clone(),
-        _ => serde_json::Map::new(),
-    };
+/// Resolve the document's variable map by merging three sources in increasing
+/// precedence: `[vars]` from `calepin.toml`, then `calepin.setup(vars: ...)`,
+/// then `--var key=value` CLI overrides. CLI values inherit the same scalar
+/// typing as `#|` option values.
+fn resolve_vars(
+    config_vars: &std::collections::BTreeMap<String, toml::Value>,
+    setup_vars: &serde_json::Value,
+    overrides: &[String],
+) -> Result<serde_json::Value> {
+    let mut map = serde_json::Map::new();
+    if let Ok(serde_json::Value::Object(config_map)) = serde_json::to_value(config_vars) {
+        map.extend(config_map);
+    }
+    if let serde_json::Value::Object(setup_map) = setup_vars {
+        for (key, value) in setup_map {
+            map.insert(key.clone(), value.clone());
+        }
+    }
     for entry in overrides {
         let (key, raw_value) = entry
             .split_once('=')
-            .ok_or_else(|| anyhow!("invalid --param `{entry}` (expected `key=value`)"))?;
+            .ok_or_else(|| anyhow!("invalid --var `{entry}` (expected `key=value`)"))?;
         let value = crate::typst::chunk_options::parse_qmd_value(raw_value.trim())?;
         map.insert(key.trim().to_string(), value);
     }
@@ -585,10 +605,11 @@ mod tests {
     }
 
     #[test]
-    fn cli_params_override_setup_params() {
-        let base = serde_json::json!({"region": "NY", "min_count": 10});
-        let resolved = resolve_params(
-            &base,
+    fn cli_vars_override_setup_vars() {
+        let setup = serde_json::json!({"region": "NY", "min_count": 10});
+        let resolved = resolve_vars(
+            &std::collections::BTreeMap::new(),
+            &setup,
             &[
                 "region=CA".to_string(),
                 "alpha=0.5".to_string(),
@@ -599,6 +620,20 @@ mod tests {
         assert_eq!(
             resolved,
             serde_json::json!({"region":"CA","min_count":10,"alpha":0.5,"active":true})
+        );
+    }
+
+    #[test]
+    fn vars_merge_config_then_setup_then_cli() {
+        let config = std::collections::BTreeMap::from([
+            ("region".to_string(), toml::Value::String("config".to_string())),
+            ("source".to_string(), toml::Value::String("config".to_string())),
+        ]);
+        let setup = serde_json::json!({"region": "setup", "doc": "setup"});
+        let resolved = resolve_vars(&config, &setup, &["region=cli".to_string()]).unwrap();
+        assert_eq!(
+            resolved,
+            serde_json::json!({"region":"cli","source":"config","doc":"setup"})
         );
     }
 
@@ -627,7 +662,7 @@ mod tests {
             fallback_theme: crate::theme::ThemeSelection::Default,
             html_syntax_theme: None,
             asset_dir: None,
-            param_overrides: Vec::new(),
+            var_overrides: Vec::new(),
         })
         .unwrap();
 
@@ -662,7 +697,7 @@ mod tests {
             fallback_theme: crate::theme::ThemeSelection::Default,
             html_syntax_theme: None,
             asset_dir: None,
-            param_overrides: Vec::new(),
+            var_overrides: Vec::new(),
         })
         .unwrap();
 
@@ -681,17 +716,24 @@ mod tests {
     }
 
     #[test]
-    fn cli_param_without_equals_is_rejected() {
-        let err = resolve_params(&serde_json::json!({}), &["bad".to_string()])
-            .unwrap_err()
-            .to_string();
+    fn cli_var_without_equals_is_rejected() {
+        let err = resolve_vars(
+            &std::collections::BTreeMap::new(),
+            &serde_json::json!({}),
+            &["bad".to_string()],
+        )
+        .unwrap_err()
+        .to_string();
         assert!(err.contains("bad"), "{err}");
     }
 
     #[test]
-    fn resolve_params_with_no_overrides_returns_base() {
-        let base = serde_json::json!({"a": 1});
-        assert_eq!(resolve_params(&base, &[]).unwrap(), base);
+    fn resolve_vars_with_no_overrides_returns_setup() {
+        let setup = serde_json::json!({"a": 1});
+        assert_eq!(
+            resolve_vars(&std::collections::BTreeMap::new(), &setup, &[]).unwrap(),
+            setup
+        );
     }
 
     #[test]
@@ -760,7 +802,7 @@ mod tests {
     }
 
     #[test]
-    fn preprocess_fingerprint_tracks_params() {
+    fn preprocess_fingerprint_tracks_vars() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
         let executables = ExecutablePaths::defaults();
@@ -1045,7 +1087,7 @@ mod tests {
             progress: false,
             sync_pages: false,
             display_root: None,
-            params: serde_json::json!({}),
+            vars: serde_json::json!({}),
             theme: crate::theme::ThemeSelection::Default,
         })
         .unwrap();

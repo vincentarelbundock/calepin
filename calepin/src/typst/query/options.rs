@@ -112,12 +112,12 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         fig_align: raw_option(value, "fig-align").or_else(|| base.fig_align.clone()),
         fig_responsive: opt_bool_option(value, "fig-responsive")?.or(base.fig_responsive),
         fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
-        params: params_option(value, "params", &base.params)?,
+        vars: vars_option(value, "vars", &base.vars)?,
         theme: raw_option(value, "theme").or_else(|| base.theme.clone()),
     })
 }
 
-fn params_option(value: &Value, key: &str, base: &Value) -> Result<Value> {
+fn vars_option(value: &Value, key: &str, base: &Value) -> Result<Value> {
     match value.get(key) {
         None | Some(Value::Null) => Ok(base.clone()),
         Some(Value::Object(map)) if map.is_empty() => Ok(base.clone()),

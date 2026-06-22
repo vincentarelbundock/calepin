@@ -46,4 +46,4 @@
   }
 }
 
-{{ document.body }}
+{{ doc.body }}

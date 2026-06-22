@@ -958,7 +958,7 @@ print(42)
 }
 
 #[test]
-fn compile_injects_setup_params_into_python() {
+fn compile_injects_setup_vars_into_python() {
     if !has_command("typst") || !has_command("python3") {
         return;
     }
@@ -968,10 +968,10 @@ fn compile_injects_setup_params_into_python() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(params: (region: "NY", min_count: 25))
+#calepin.setup(vars: (region: "NY", min_count: 25))
 
 #calepin.chunk("python", echo: false)[```
-print(params["region"], params["min_count"])
+print(vars["region"], vars["min_count"])
 ```]
 "##,
     )
@@ -993,12 +993,12 @@ print(params["region"], params["min_count"])
     )
     .unwrap();
     assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "NY 25");
-    // params.json is written as the universal transport / reproducibility record.
-    assert!(dir.path().join(".calepin/paper/params.json").exists());
+    // vars.json is written as the universal transport / reproducibility record.
+    assert!(dir.path().join(".calepin/paper/vars.json").exists());
 }
 
 #[test]
-fn compile_param_override_beats_setup_params() {
+fn compile_var_override_beats_setup_vars() {
     if !has_command("typst") || !has_command("python3") {
         return;
     }
@@ -1008,10 +1008,10 @@ fn compile_param_override_beats_setup_params() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(params: (region: "NY"))
+#calepin.setup(vars: (region: "NY"))
 
 #calepin.chunk("python", echo: false)[```
-print(params["region"])
+print(vars["region"])
 ```]
 "##,
     )
@@ -1022,7 +1022,7 @@ print(params["region"])
             "compile",
             "paper.typ",
             "paper.pdf",
-            "-P",
+            "--var",
             "region=CA",
             "--quiet",
         ])
@@ -1043,7 +1043,7 @@ print(params["region"])
 }
 
 #[test]
-fn compile_rejects_unsupported_param_type() {
+fn compile_rejects_unsupported_var_type() {
     if !has_command("typst") {
         return;
     }
@@ -1053,7 +1053,7 @@ fn compile_rejects_unsupported_param_type() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(params: (bad: red))
+#calepin.setup(vars: (bad: red))
 
 Body text.
 "##,
@@ -1069,7 +1069,7 @@ Body text.
     assert!(!output.status.success(), "compile unexpectedly succeeded");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("unsupported parameter") && stderr.contains("bad"),
+        stderr.contains("unsupported variable") && stderr.contains("bad"),
         "{stderr}"
     );
 }

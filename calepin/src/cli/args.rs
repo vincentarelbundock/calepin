@@ -242,12 +242,13 @@ pub struct CommonArgs {
     #[arg(long)]
     pub timeout: Option<u64>,
 
-    /// Override a document parameter as `key=value` (repeatable).
+    /// Override a document variable as `key=value` (repeatable).
     ///
-    /// Takes precedence over `calepin.setup(params: ...)`, so the same document
-    /// can render with different values without editing the source.
-    #[arg(short = 'P', long = "param", value_name = "KEY=VALUE")]
-    pub params: Vec<String>,
+    /// Takes precedence over `[vars]` config and `calepin.setup(vars: ...)`, so
+    /// the same document can render with different values without editing the
+    /// source.
+    #[arg(long = "var", value_name = "KEY=VALUE")]
+    pub vars: Vec<String>,
 }
 
 /// Print a yellow warning to stderr.
@@ -376,33 +377,33 @@ mod tests {
     }
 
     #[test]
-    fn test_compile_param_overrides() {
+    fn test_compile_var_overrides() {
         let cli = Cli::try_parse_from([
             "calepin",
             "compile",
             "paper.typ",
-            "-P",
+            "--var",
             "region=NY",
-            "--param",
+            "--var",
             "min_count=25",
         ])
         .unwrap();
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.common.params, vec!["region=NY", "min_count=25"]);
+                assert_eq!(args.common.vars, vec!["region=NY", "min_count=25"]);
             }
             other => panic!("expected compile command, got {other:?}"),
         }
     }
 
     #[test]
-    fn test_watch_param_overrides() {
+    fn test_watch_var_overrides() {
         let cli =
-            Cli::try_parse_from(["calepin", "watch", "paper.typ", "-P", "region=CA"]).unwrap();
+            Cli::try_parse_from(["calepin", "watch", "paper.typ", "--var", "region=CA"]).unwrap();
         match cli.command {
             Command::Watch(args) => {
-                assert_eq!(args.common.params, vec!["region=CA"]);
+                assert_eq!(args.common.vars, vec!["region=CA"]);
             }
             other => panic!("expected watch command, got {other:?}"),
         }

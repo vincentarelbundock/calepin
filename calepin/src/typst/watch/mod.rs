@@ -118,7 +118,7 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
         fallback_theme: crate::theme::ThemeSelection::Default,
         html_syntax_theme: None,
         asset_dir: None,
-        param_overrides: args.common.params.clone(),
+        var_overrides: args.common.vars.clone(),
     }
 }
 
@@ -151,9 +151,8 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let mut html_postprocessor = None;
     let mut write_events = None;
     if is_html {
-        let config = crate::config::CalepinConfig::load(&root, args.common.config.as_deref())?;
         let mut site_context = SiteContextInput::default();
-        site_context.vars = config.vars.clone();
+        site_context.vars = initial.vars.clone();
         let html_entry =
             crate::theme::resolve_html_entry(&initial.theme, crate::theme::HtmlScope::Document)?;
         let (sender, receiver) = mpsc::channel();

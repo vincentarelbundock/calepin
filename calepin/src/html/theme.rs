@@ -33,7 +33,7 @@ struct DocContext {
 struct ThemeContext {
     doc: DocContext,
     site: SiteContext,
-    vars: BTreeMap<String, toml::Value>,
+    vars: serde_json::Value,
     css: Vec<CssEntry>,
     js: Vec<JsEntry>,
     highlight_css: String,
@@ -61,7 +61,7 @@ pub(crate) struct SiteContextInput {
     pub(crate) page_title: Option<String>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
     #[serde(skip)]
-    pub(crate) vars: BTreeMap<String, toml::Value>,
+    pub(crate) vars: serde_json::Value,
     /// Resolved max heading level included in the on-page TOC: `Some(0)` means
     /// no TOC, `Some(n)` includes headings up to level `n`. `None` (the
     /// default, used when no caller resolves it) falls back to the original

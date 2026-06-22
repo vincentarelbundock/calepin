@@ -496,17 +496,11 @@ mod tests {
             styles: Vec::new(),
             scripts: Vec::new(),
         };
-        let mut vars = BTreeMap::new();
-        vars.insert(
-            "course".to_string(),
-            toml::Value::String("Econ 101".to_string()),
-        );
-        vars.insert(
-            "semester".to_string(),
-            toml::Value::String("Fall 2026".to_string()),
-        );
         let site_context = SiteContextInput {
-            vars,
+            vars: serde_json::json!({
+                "course": "Econ 101",
+                "semester": "Fall 2026",
+            }),
             ..SiteContextInput::default()
         };
 

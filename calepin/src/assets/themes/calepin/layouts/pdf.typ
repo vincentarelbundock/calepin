@@ -15,4 +15,4 @@
   }
 }
 
-{{ document.body }}
+{{ doc.body }}

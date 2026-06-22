@@ -24,18 +24,18 @@ pub struct ExecutionConfig {
     pub cwd: PathBuf,
     pub executables: ExecutablePaths,
     pub timeout: Option<Duration>,
-    /// Document-level parameters, injected once per engine at session startup.
-    pub params: Value,
-    /// Path to the on-disk `params.json`, exposed to Jupyter kernels via
-    /// `CALEPIN_PARAMS_PATH` for kernels Calepin cannot auto-bind.
-    pub params_path: Option<PathBuf>,
+    /// Document-level variables, injected once per engine at session startup.
+    pub vars: Value,
+    /// Path to the on-disk `vars.json`, exposed to Jupyter kernels via
+    /// `CALEPIN_VARS_PATH` for kernels Calepin cannot auto-bind.
+    pub vars_path: Option<PathBuf>,
 }
 
 impl ExecutionConfig {
-    fn has_params(&self) -> bool {
-        self.params
+    fn has_vars(&self) -> bool {
+        self.vars
             .as_object()
-            .is_some_and(|params| !params.is_empty())
+            .is_some_and(|vars| !vars.is_empty())
     }
 }
 
@@ -173,8 +173,8 @@ impl EnginePool {
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?;
-            if self.config.has_params() {
-                inject_r_params(&mut session, &self.config.params)?;
+            if self.config.has_vars() {
+                inject_r_vars(&mut session, &self.config.vars)?;
             }
             self.r = Some(session);
         }
@@ -188,8 +188,8 @@ impl EnginePool {
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?;
-            if self.config.has_params() {
-                inject_python_params(&mut session, &self.config.params)?;
+            if self.config.has_vars() {
+                inject_python_vars(&mut session, &self.config.vars)?;
             }
             self.python = Some(session);
         }
@@ -202,7 +202,7 @@ impl EnginePool {
                 &self.config.executables.python,
                 Some(&self.config.cwd),
                 self.config.timeout,
-                self.config.params_path.as_deref(),
+                self.config.vars_path.as_deref(),
             )?);
         }
         Ok(())
@@ -264,8 +264,8 @@ fn is_unavailable_engine_error(error: &anyhow::Error) -> bool {
     })
 }
 
-fn inject_r_params(session: &mut RSession, params: &Value) -> Result<()> {
-    let code = engines::prelude::r_prelude("params", params);
+fn inject_r_vars(session: &mut RSession, vars: &Value) -> Result<()> {
+    let code = engines::prelude::r_prelude("vars", vars);
     let raw = session.capture(
         &code,
         "",
@@ -277,8 +277,8 @@ fn inject_r_params(session: &mut RSession, params: &Value) -> Result<()> {
     check_prelude_output(&raw, "R")
 }
 
-fn inject_python_params(session: &mut PythonSession, params: &Value) -> Result<()> {
-    let code = engines::prelude::python_prelude("params", params);
+fn inject_python_vars(session: &mut PythonSession, vars: &Value) -> Result<()> {
+    let code = engines::prelude::python_prelude("vars", vars);
     let raw = session.capture(
         &code,
         "",
@@ -855,8 +855,8 @@ mod tests {
             cwd: dir.path().to_path_buf(),
             executables,
             timeout: Some(std::time::Duration::from_secs(5)),
-            params: Value::Object(serde_json::Map::new()),
-            params_path: None,
+            vars: Value::Object(serde_json::Map::new()),
+            vars_path: None,
         };
         let mut pool = EnginePool::new(config);
         let mut octave_chunk = chunk(ResultsMode::Verbatim);
@@ -880,8 +880,8 @@ mod tests {
             cwd: dir.path().to_path_buf(),
             executables,
             timeout: Some(std::time::Duration::from_secs(5)),
-            params: Value::Object(serde_json::Map::new()),
-            params_path: None,
+            vars: Value::Object(serde_json::Map::new()),
+            vars_path: None,
         };
         let mut pool = EnginePool::new(config);
         let mut python_chunk = chunk(ResultsMode::Verbatim);
@@ -910,8 +910,8 @@ mod tests {
             cwd: dir.path().to_path_buf(),
             executables,
             timeout: Some(std::time::Duration::from_secs(5)),
-            params: Value::Object(serde_json::Map::new()),
-            params_path: None,
+            vars: Value::Object(serde_json::Map::new()),
+            vars_path: None,
         };
         let mut pool = EnginePool::new(config);
         let mut python_chunk = chunk(ResultsMode::Verbatim);
@@ -928,20 +928,20 @@ mod tests {
         assert!(err.contains("boom"), "{err}");
     }
 
-    fn pool_with_params(dir: &Path, params: Value) -> EnginePool {
+    fn pool_with_vars(dir: &Path, vars: Value) -> EnginePool {
         EnginePool::new(ExecutionConfig {
             cwd: dir.to_path_buf(),
             executables: ExecutablePaths::defaults(),
             timeout: Some(std::time::Duration::from_secs(20)),
-            params,
-            params_path: None,
+            vars,
+            vars_path: None,
         })
     }
 
     fn run_chunk(pool: &mut EnginePool, dir: &Path, engine: EngineName, code: &str) -> String {
         let mut chunk = chunk(ResultsMode::Verbatim);
         chunk.engine = engine;
-        chunk.label = "params-chunk".to_string();
+        chunk.label = "vars-chunk".to_string();
         chunk.code = code.to_string();
         let result = pool
             .execute_chunk(&chunk, dir, unused_artifact_path)
@@ -955,12 +955,12 @@ mod tests {
     }
 
     #[test]
-    fn r_engine_reads_injected_params() {
+    fn r_engine_reads_injected_vars() {
         if !command_available("Rscript") {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
-        let mut pool = pool_with_params(
+        let mut pool = pool_with_vars(
             dir.path(),
             serde_json::json!({"label": "baseline", "alpha": 0.1, "n": 3, "flag": true}),
         );
@@ -968,7 +968,7 @@ mod tests {
             &mut pool,
             dir.path(),
             EngineName::R,
-            "cat(params$label, params$alpha, params$n, params$flag)",
+            "cat(vars$label, vars$alpha, vars$n, vars$flag)",
         );
         assert!(out.contains("baseline"), "{out:?}");
         assert!(out.contains("0.1"), "{out:?}");
@@ -977,23 +977,23 @@ mod tests {
     }
 
     #[test]
-    fn r_params_with_quotes_do_not_break_injection() {
+    fn r_vars_with_quotes_do_not_break_injection() {
         if !command_available("Rscript") {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
-        let mut pool = pool_with_params(dir.path(), serde_json::json!({"q": "a\"b"}));
-        let out = run_chunk(&mut pool, dir.path(), EngineName::R, "cat(params$q)");
+        let mut pool = pool_with_vars(dir.path(), serde_json::json!({"q": "a\"b"}));
+        let out = run_chunk(&mut pool, dir.path(), EngineName::R, "cat(vars$q)");
         assert!(out.contains("a\"b"), "{out:?}");
     }
 
     #[test]
-    fn python_engine_reads_injected_params() {
+    fn python_engine_reads_injected_vars() {
         if !command_available("python3") {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
-        let mut pool = pool_with_params(
+        let mut pool = pool_with_vars(
             dir.path(),
             serde_json::json!({"label": "baseline", "years": [2020, 2021], "active": true}),
         );
@@ -1001,7 +1001,7 @@ mod tests {
             &mut pool,
             dir.path(),
             EngineName::Python,
-            "print(params['label'], params['years'][1], params['active'])",
+            "print(vars['label'], vars['years'][1], vars['active'])",
         );
         assert!(out.contains("baseline"), "{out:?}");
         assert!(out.contains("2021"), "{out:?}");
@@ -1009,22 +1009,22 @@ mod tests {
     }
 
     #[test]
-    fn empty_params_inject_nothing() {
+    fn empty_vars_inject_nothing() {
         if !command_available("python3") {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
-        // No params: a chunk referencing `params` should raise a NameError,
+        // No vars: a chunk referencing `vars` should raise a NameError,
         // proving nothing was injected.
-        let mut pool = pool_with_params(dir.path(), serde_json::json!({}));
+        let mut pool = pool_with_vars(dir.path(), serde_json::json!({}));
         let mut chunk = chunk(ResultsMode::Verbatim);
         chunk.engine = EngineName::Python;
-        chunk.label = "no-params".to_string();
-        chunk.code = "print(params)".to_string();
+        chunk.label = "no-vars".to_string();
+        chunk.code = "print(vars)".to_string();
         let err = pool
             .execute_chunk(&chunk, dir.path(), unused_artifact_path)
             .unwrap_err()
             .to_string();
-        assert!(err.contains("NameError") || err.contains("params"), "{err}");
+        assert!(err.contains("NameError") || err.contains("vars"), "{err}");
     }
 }

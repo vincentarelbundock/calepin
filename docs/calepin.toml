@@ -118,10 +118,13 @@ title = "Themes"
   target = "themes/themes.typ"
 
   [[sidebar.section.item]]
-  target = "themes/pdf_templates.typ"
+  target = "themes/templating.typ"
 
   [[sidebar.section.item]]
   target = "themes/html_templates.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/pdf_templates.typ"
 
   [[sidebar.section.item]]
   target = "themes/css.typ"
