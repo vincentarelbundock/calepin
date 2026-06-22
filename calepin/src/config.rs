@@ -47,6 +47,8 @@ impl CalepinConfig {
             .with_context(|| format!("failed to parse {}", path.display()))?;
         reject_removed_asset_dir_keys(&raw_value)?;
         reject_removed_styles_key(&raw_value)?;
+        reject_disallowed_config_keys(&raw_value)?;
+        reject_non_table_vars(&raw_value)?;
         let raw: RawCalepinConfig = raw_value
             .try_into()
             .with_context(|| format!("failed to parse {}", path.display()))?;
@@ -160,6 +162,7 @@ impl ExecutablePaths {
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 struct RawCalepinConfig {
+    #[serde(default)]
     executables: RawExecutablePaths,
     theme: Option<String>,
     vars: BTreeMap<String, toml::Value>,
@@ -243,6 +246,22 @@ fn reject_removed_styles_key(value: &toml::Value) -> Result<()> {
         return Err(anyhow!(
             "`styles` is not a supported config key; customize CSS through a local theme with `extends`"
         ));
+    }
+    Ok(())
+}
+
+fn reject_non_table_vars(value: &toml::Value) -> Result<()> {
+    if let Some(vars) = value.get("vars") {
+        if !vars.is_table() {
+            return Err(anyhow!("invalid type for `vars`: expected a table"));
+        }
+    }
+    Ok(())
+}
+
+fn reject_disallowed_config_keys(value: &toml::Value) -> Result<()> {
+    if value.get("revealjs").is_some() {
+        return Err(anyhow!("unknown field `revealjs`"));
     }
     Ok(())
 }

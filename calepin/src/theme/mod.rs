@@ -110,13 +110,10 @@ pub(crate) fn resolve_theme_chain(selection: &ThemeSelection) -> Result<ThemeCha
 fn resolve_dir_theme_chain(dir: &Path) -> Result<ThemeChain> {
     let manifest = read_local_theme_manifest(dir)?;
     let mut chain = match manifest.extends.as_deref() {
-        None => {
-            return Err(anyhow!(
-                "local theme {} must declare `extends` in theme.toml; use `extends = \"typst\"` for a bare theme or a built-in theme: {}",
-                dir.display(),
-                bundle::builtin_names().join(", ")
-            ))
-        }
+        None => ThemeChain {
+            layers: vec![ThemeLayer::Builtin(DEFAULT_THEME_NAME)],
+            terminal_typst: false,
+        },
         Some("typst") => ThemeChain {
             layers: Vec::new(),
             terminal_typst: true,
@@ -148,7 +145,54 @@ pub(crate) fn read_local_theme_manifest(dir: &Path) -> Result<LocalThemeManifest
     }
     let source = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read {}", path.display()))?;
-    toml::from_str(&source).with_context(|| format!("failed to parse {}", path.display()))
+    let value: toml::Value = toml::from_str(&source)
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+    reject_unknown_manifest_top_level_keys(&value)?;
+    reject_unknown_shared_keys(&value)?;
+    value
+        .try_into()
+        .with_context(|| format!("failed to parse {}", path.display()))
+}
+
+fn reject_unknown_manifest_top_level_keys(value: &toml::Value) -> Result<()> {
+    let Some(table) = value.as_table() else {
+        return Ok(());
+    };
+    for key in table.keys() {
+        match key.as_str() {
+            "extends" | "shared" => continue,
+            _ => return Err(anyhow!("unknown field `{key}`")),
+        }
+    }
+    Ok(())
+}
+
+fn reject_unknown_shared_keys(value: &toml::Value) -> Result<()> {
+    let Some(shared) = value
+        .as_table()
+        .and_then(|table| table.get("shared"))
+        .and_then(|value| value.as_table())
+    else {
+        return Ok(());
+    };
+
+    if shared.contains_key("styles") {
+        return Err(anyhow!("unknown field `styles`; use `css` for shared css assets"));
+    }
+    if shared.contains_key("scripts") {
+        return Err(anyhow!("unknown field `scripts`; use `js` for shared scripts"));
+    }
+    if shared.contains_key("assets") {
+        return Err(anyhow!("unknown field `assets`; remove this legacy key"));
+    }
+
+    for key in shared.keys() {
+        match key.as_str() {
+            "partials" | "css" | "js" => continue,
+            _ => return Err(anyhow!("unknown field `{key}`")),
+        }
+    }
+    Ok(())
 }
 
 /// Same heuristic the old html theme used: anything that looks like a path
@@ -218,7 +262,7 @@ fn read_theme_files(dir: &Path, ext: &str) -> Result<Vec<(String, String)>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
     #[test]
     fn parse_builtin_names() {
@@ -350,7 +394,7 @@ mod tests {
     }
 
     #[test]
-    fn dir_theme_without_extends_is_rejected() {
+    fn dir_theme_without_extends_defaults_to_typst() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
@@ -359,15 +403,14 @@ mod tests {
         )
         .unwrap();
 
-        let err = resolve_html_entry(
+        let entry = resolve_html_entry(
             &ThemeSelection::Dir(dir.path().to_path_buf()),
             HtmlScope::Site,
         )
-        .unwrap_err()
-        .to_string();
+        .unwrap()
+        .unwrap();
 
-        assert!(err.contains("must declare `extends`"), "{err}");
-        assert!(err.contains("extends = \"typst\""), "{err}");
+        assert_eq!(entry.theme_name, dir.path().file_name().unwrap().to_string_lossy());
     }
 
     #[test]

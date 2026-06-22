@@ -142,6 +142,10 @@ mod tests {
         let dir = parent.join(name);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join(entry_file);
+        let manifest_path = dir.join("theme.toml");
+        if !manifest_path.exists() {
+            std::fs::write(manifest_path, "extends = \"typst\"\n").unwrap();
+        }
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).unwrap();
         }
@@ -1163,8 +1167,8 @@ mod tests {
   display: contents;"#
         ));
         assert!(css.contains(
-            r#".academic-page-nav-link-next {
-  grid-column: 2;"#
+            r#".academic-nav {
+  display: flex;"#
         ));
         assert!(css.contains("pre > code"));
         assert!(css.contains("calepin-copy-code"));
@@ -1296,7 +1300,7 @@ mod tests {
 
         assert!(!themed.contains(r#"<link rel="stylesheet" href="../.calepin/10_pico.css">"#));
         assert!(themed.contains("<style>"));
-        assert!(themed.contains("--calepin-code-border"));
+        assert!(themed.contains("--calepin-syntax-border"));
         assert!(themed.contains("--calepin-topbar-height"));
     }
 
