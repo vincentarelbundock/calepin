@@ -349,7 +349,11 @@ fn annotate_body_headings(body: &str, title_heading: Option<&str>) -> (String, V
         // mangle into an `amp-` prefix. Keep `label` (escaped) for the TOC.
         let text = strip_html_tags(inner);
         let label = html_escape(&text);
-        let base_id = slugify(&text);
+        // An explicit Typst label is ferried in by the runtime as a marker
+        // element just before the heading (see `heading_anchor_show_rule`).
+        // When present it takes precedence over the slugified text.
+        let explicit_id = trailing_heading_anchor_label(&body[cursor..start]);
+        let base_id = explicit_id.unwrap_or_else(|| slugify(&text));
         let count = counts.entry(base_id.clone()).or_insert(0);
         let id = if *count == 0 {
             base_id
@@ -386,7 +390,50 @@ fn annotate_body_headings(body: &str, title_heading: Option<&str>) -> (String, V
     }
 
     out.push_str(&body[cursor..]);
+    // Markers consumed above sit just before their heading and are removed
+    // here; any left over (e.g. before a level-6 heading, which Typst renders
+    // as a <div> rather than an <h*>) are stripped so they never reach output.
+    let out = if out.contains(HEADING_ANCHOR_OPEN) {
+        strip_heading_anchor_markers(&out)
+    } else {
+        out
+    };
     (out, toc)
+}
+
+const HEADING_ANCHOR_OPEN: &str = r#"<calepin-heading-anchor data-id=""#;
+const HEADING_ANCHOR_CLOSE: &str = "</calepin-heading-anchor>";
+
+/// Reads the label from a heading-anchor marker that immediately precedes a
+/// heading (trailing whitespace allowed). Returns `None` when `gap` does not
+/// end with a well-formed, non-empty marker.
+fn trailing_heading_anchor_label(gap: &str) -> Option<String> {
+    let before_close = gap.trim_end().strip_suffix(HEADING_ANCHOR_CLOSE)?;
+    let open = before_close.rfind(HEADING_ANCHOR_OPEN)?;
+    let rest = &before_close[open + HEADING_ANCHOR_OPEN.len()..];
+    let value_end = rest.find('"')?;
+    // The marker is an empty element, so the attribute value is followed only
+    // by the tag's closing `>`.
+    if &rest[value_end + 1..] != ">" {
+        return None;
+    }
+    let label = decode_basic_entities(rest[..value_end].trim());
+    (!label.is_empty()).then_some(label)
+}
+
+fn strip_heading_anchor_markers(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut cursor = 0;
+    while let Some(rel) = html[cursor..].find(HEADING_ANCHOR_OPEN) {
+        let open = cursor + rel;
+        let Some(close_rel) = html[open..].find(HEADING_ANCHOR_CLOSE) else {
+            break;
+        };
+        out.push_str(&html[cursor..open]);
+        cursor = open + close_rel + HEADING_ANCHOR_CLOSE.len();
+    }
+    out.push_str(&html[cursor..]);
+    out
 }
 
 fn strip_html_tags(value: &str) -> String {
@@ -564,5 +611,73 @@ mod tests {
     #[test]
     fn unrecognized_ampersands_are_preserved() {
         assert_eq!(decode_basic_entities("Tom & Jerry"), "Tom & Jerry");
+    }
+
+    fn anchor(label: &str) -> String {
+        format!(r#"<calepin-heading-anchor data-id="{label}"></calepin-heading-anchor>"#)
+    }
+
+    #[test]
+    fn explicit_label_marker_sets_the_id() {
+        let body = format!("{}<h3>Labeled Plain</h3>", anchor("plainlabel"));
+        assert_eq!(heading_id(&body), "plainlabel");
+    }
+
+    #[test]
+    fn explicit_label_wins_over_inline_content() {
+        // The label is honored even when inline markup would otherwise drive
+        // the slug — this is the case the workaround in #70 worked around.
+        let body = format!(
+            r#"{}<h3><i class="bi bi-pen"></i><span style="white-space: pre-wrap">&#x20;</span>Iconic Research</h3>"#,
+            anchor("myresearch")
+        );
+        assert_eq!(heading_id(&body), "myresearch");
+    }
+
+    #[test]
+    fn label_marker_is_stripped_and_toc_points_at_the_label_id() {
+        let body = format!("{}<h2>Intro</h2>", anchor("sec:intro"));
+        let (out, toc) = annotate_body_headings(&body, None);
+        assert!(!out.contains("calepin-heading-anchor"), "{out}");
+        // Colon labels are kept verbatim (valid in HTML ids and URL fragments).
+        assert!(out.contains(r#"<h2 id="sec:intro">Intro</h2>"#), "{out}");
+        assert_eq!(toc.len(), 1);
+        assert_eq!(toc[0].href, "#sec:intro");
+        assert_eq!(toc[0].label, "Intro");
+    }
+
+    #[test]
+    fn labeled_and_slugged_ids_share_one_dedup_space() {
+        let body = format!(
+            "{}<h2>One</h2><h2>One</h2>",
+            anchor("one") // explicit "one" collides with the slug of "One"
+        );
+        let (out, _) = annotate_body_headings(&body, None);
+        assert!(out.contains(r#"<h2 id="one">One</h2>"#), "{out}");
+        assert!(out.contains(r#"<h2 id="one-2">One</h2>"#), "{out}");
+    }
+
+    #[test]
+    fn orphan_marker_before_non_heading_is_stripped() {
+        // Typst renders a level-6 heading as a <div>, which is not annotated;
+        // the stray marker must still be removed from the output.
+        let body = format!(
+            r#"{}<div role="heading" aria-level="7">Deep</div>"#,
+            anchor("deep")
+        );
+        let (out, _) = annotate_body_headings(&body, None);
+        assert!(!out.contains("calepin-heading-anchor"), "{out}");
+        assert!(
+            out.contains(r#"<div role="heading" aria-level="7">Deep</div>"#),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn unlabeled_heading_falls_back_to_the_slug() {
+        assert_eq!(heading_id("<h2>Plain Research</h2>"), "plain-research");
+        // A malformed marker (no closing tag) is ignored, not used as an id.
+        let body = r#"<calepin-heading-anchor data-id="x"><h2>Fallback Here</h2>"#;
+        assert_eq!(heading_id(body), "fallback-here");
     }
 }
