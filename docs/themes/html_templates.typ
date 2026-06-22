@@ -1,21 +1,19 @@
-#set document(title: [HTML templates])
+#set document(title: [HTML])
 #import "/.calepin/calepin.typ" as calepin
 #title()
 
-= HTML templates
+= Context
 
-HTML layouts are MiniJinja templates; see #link("templating.html")[Templating] for the syntax. For a single HTML notebook, use `layouts/document.html`. For websites, the default entry is `layouts/site.html`.
-
-The template context contains these top-level values:
+Templates can access a variety of "contexts" and "variables" to build a document:
 
 - `doc`: Typst's generated HTML shell and document content.
 - `site`: website metadata, navigation, and search settings.
 - `css`: theme CSS files. Each item has `name` and `content`.
 - `js`: theme JS files. Each item has `name` and `content`.
-- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--var` overrides.
 - `highlight_css`: standalone syntax-highlight CSS.
 - `theme`: the active theme name.
 - `target`: the render target; currently `html`.
+- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--var` overrides.
 
 `doc` contains:
 
@@ -45,10 +43,12 @@ Nested entries expose these fields:
 - Navigation entries in `site.sidebar`, `site.menus.<name>`, and section `items`: `href`, `label`, `label_html`, `active`.
 - Sidebar sections: `title`, `active`, `items`.
 - TOC entries: `level`, `href`, `label`.
-- Language and translation entries: `code`, `label`, `href`, `active`.
+- Language and translation entries: `c de`, `label`, `href`, `active`.
 - Pagefind: `css`, `js`, `bundle`.
 
-= Minimal template
+= Layouts
+
+HTML layouts are MiniJinja templates; see #link("templating.html")[Templating] for the syntax. For a single HTML notebook, use `layouts/document.html`. For websites, the default entry is `layouts/site.html`.
 
 Here is a minimal `layouts/document.html`:
 
@@ -79,19 +79,15 @@ Here is a minimal `layouts/document.html`:
 
 Keep `doc.head`, `doc.body_open`, and `doc.body_close` unless you are intentionally replacing the entire HTML shell.
 
-For project-specific values such as a course code or semester, add a `[vars]` table to `calepin.toml` and read the resolved map as top-level `vars` in your templates. See #link("templating.html")[Templating].
-
 = Partials
 
-Keep repeated HTML in partials under `partials/` and include them from layouts with the `{% include %}` tag.
+Instead of maintainng large monolithic templates, it is useful to split templates into different "partials", that is, templates that handle a specific part of  a web page. This allows re-useability and makes the codebase more maintainable. These templates are hosted under `partials/`, and we include them in a layout with the `{% include %}` tag.
 
 ```html
 {% include "partials/header.html" %}
 ```
 
 Partials receive the same template context as the file that includes them. Shared partials from the bundled base layer are included by both built-in themes; a theme-local partial with the same path overrides the shared one. To customize one component, copy that partial into your local theme and edit it there.
-
-== Built-in partials
 
 The bundled themes currently provide these partials. This list is descriptive; the #link("https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/assets/themes")[theme source code on GitHub] is canonical.
 

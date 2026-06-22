@@ -84,7 +84,7 @@ It includes a centered narrow text column, margin-note support, top navigation, 
 
 `typst` disables the website and notebook themed wrappers and uses raw Typst output. Use this when you want unstyled HTML or PDF output.
 
-= How to build or customize a theme
+= Build or customize
 
 A theme is a directory with templates, resources, and a manifest.  A minimal theme could look like this, with only a `theme.toml` manifest and one CSS stylesheet:
 
@@ -122,8 +122,6 @@ my-theme/
 ```
 
 All the files in your custom theme are optional, except for the `theme.toml` manifest. When a file is present, it overrides the built-in theme file of the same name. When a file absent, it falls back to the built-in theme. New CSS and JavaScript files are appended in sorted order after inherited files.
-
-= Get started
 
 A good way to start building a theme is to "eject" one of the built-in themes into your project. This copies all of the built-in theme's files into a local directory where you can modify or delete them. To start a new theme based on `academic`, run:
 
