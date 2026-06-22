@@ -76,7 +76,19 @@ Here is a minimal `layouts/notebook.html`:
 
 Keep `doc.head`, `doc.body_open`, and `doc.body_close` unless you are intentionally replacing the entire HTML shell.
 
-== Website layouts
+= Partials
+
+Keep repeated HTML in partials under `partials/` and include them from layouts.
+
+```html
+{% include "partials/header.html" %}
+```
+
+Partials receive the same template context as the file that includes them.
+
+= Page-specific layouts
+
+Sometimes, we would like a specific page of a website to use a different layout than the default. For instance, the landing page is often very different than the other pages of a site.
 
 You can switch layouts per page with `<website-metadata>`:
 
@@ -88,28 +100,3 @@ You can switch layouts per page with `<website-metadata>`:
 ```
 
 The `layout` value must be a relative `.html` path inside the active theme. Calepin does not add `layouts/` or `.html` for you and does not fall back to `layouts/webpage.html` if the file is missing.
-
-= Partials
-
-Keep repeated HTML in partials under `partials/` and include them from layouts.
-
-```html
-{% include "partials/header.html" %}
-```
-
-Partials receive the same template context as the file that includes them.
-
-= Shared imports
-
-`theme.toml` can request shared partials, CSS, and JS so a theme uses common pieces from the built-in stack.
-
-```toml
-[shared]
-partials = ["site-meta.html", "theme-init.html", "styles.html", "scripts.html", "pagefind-modal.html", "theme-toggle.html"]
-css = ["theme.css", "code.css", "widgets.css"]
-js = ["theme-toggle.js", "language-picker.js", "copy-code.js"]
-```
-
-Shared items load first, then local files in `partials/`, `css/`, and `js/` override by filename if they exist.
-
-Use filenames only (`theme.css`, not `css/theme.css`, and not `../theme.css`).
