@@ -25,16 +25,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag && format('refs/tags/{0}', github.event.inputs.tag) || github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
       - id: resolve
         env:
           DISPATCH_TAG: ${{ github.event.inputs.tag }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
           RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         shell: bash
         run: |
-          SHA=$(git rev-parse HEAD)
+          SHA="${RELEASE_SHA:-}"
+          if [ -z "$SHA" ]; then
+            SHA=$(git rev-parse HEAD)
+          fi
 
           if [ -n "$DISPATCH_TAG" ]; then
             TAG="$DISPATCH_TAG"
