@@ -86,9 +86,14 @@ It includes a centered narrow text column, margin-note support, top navigation, 
 
 `typst` disables the website and notebook themed wrappers and uses raw Typst output. Use this when you want unstyled HTML or output unchanged from the Typst source.
 
-= Create a local theme
+= What is a theme?
 
-A local theme can be as small as two files:
+A theme is a directory of optional files. The only special file is `theme.toml`,
+which identifies what the theme inherits and which shared pieces it imports. All
+other files are ordinary templates, styles, scripts, or Typst source wrappers
+that Calepin discovers by name.
+
+A tiny local theme can contain only a manifest and one stylesheet:
 
 ```text
 themes/my-theme/
@@ -97,21 +102,21 @@ themes/my-theme/
     site.css
 ```
 
-Point Calepin at the local theme:
+Point Calepin at that directory from `calepin.toml`:
 
 ```toml
 # calepin.toml
 theme = "themes/my-theme"
 ```
 
-Declare the base theme in `theme.toml`:
+The manifest declares the base theme explicitly:
 
 ```toml
 # themes/my-theme/theme.toml
 extends = "academic"
 ```
 
-Local `extends` paths are relative to the current theme directory and must stay inside the project. A local theme with no `extends` is standalone; it does not fall back to a built-in theme.
+`extends` can name a built-in theme, another local theme, or `typst`:
 
 ```toml
 extends = "academic"      # inherit from a built-in theme
@@ -119,9 +124,35 @@ extends = "../base-theme" # inherit from another local theme in the project
 extends = "typst"         # inherit from no Calepin theme
 ```
 
-Theme CSS files load after inherited CSS files. A local CSS file with the same filename as an inherited CSS file replaces the inherited file; new filenames are appended in sorted order.
+Local `extends` paths are relative to the current theme directory and must stay
+inside the project. A local theme with no `extends` is standalone; it does not
+fall back to a built-in theme.
 
-If you want a full copy of a built-in theme as a starting point, eject it with `calepin new theme`:
+A fuller theme can provide any of these files:
+
+```text
+themes/my-theme/
+  theme.toml            # theme metadata, inheritance, and shared imports
+  layouts/
+    webpage.html        # website page wrapper
+    notebook.html       # standalone notebook HTML wrapper
+    landing.html        # optional page-specific website layout
+  partials/
+    ...                 # reusable MiniJinja fragments
+  css/                  # or styles/
+    ...                 # theme CSS
+  js/                   # or scripts/
+    ...                 # theme JavaScript
+  notebook.typ.jinja    # Typst template around notebook source
+```
+
+A child theme can override only the files it needs. Supporting files are
+inherited from parent to child, and a child file with the same filename replaces
+the parent file in place. New CSS and JavaScript files are appended in sorted
+order after inherited files.
+
+If you want a full copy of a built-in theme as a starting point, eject it with
+`calepin new theme`:
 
 ```sh
 calepin new theme                            # eject the default `calepin` theme to calepin_theme/
@@ -129,39 +160,8 @@ calepin new theme --theme academic           # eject the `academic` theme to cal
 calepin new theme --theme calepin themes/my  # copy into a custom directory
 ```
 
-Once copied, the theme is project-owned: edit its templates, styles, scripts, and `theme.toml` freely and keep it in version control.
-
-= What can be customized
-
-Use this map when you want to choose the right file first:
-
-```text
-themes/my-theme/
-  theme.toml            # theme metadata and shared imports
-  layouts/
-    webpage.html        # website page wrapper
-    notebook.html       # standalone notebook HTML wrapper
-    landing.html        # optional page-specific override
-  partials/
-    ...                 # reusable template fragments
-  css/
-    ...                 # theme CSS
-  js/
-    ...                 # theme JavaScript
-  notebook.typ.jinja    # Typst template around notebook source
-```
-
-A child theme can override only the files it needs:
-
-- `layouts/webpage.html`
-- `layouts/notebook.html`
-- `layouts/landing.html` or another explicit page layout
-- partials in `partials/`
-- styles in `styles/` or `css/`
-- scripts in `scripts/` or `js/`
-- `notebook.typ.jinja`
-
-Supporting assets (`partials`, `styles`, `scripts`) are inherited from parent to child. A child file with the same filename replaces the parent file in place.
+Once copied, the theme is project-owned: edit its templates, styles, scripts,
+and `theme.toml` freely and keep it in version control.
 
 = CSS customization
 
