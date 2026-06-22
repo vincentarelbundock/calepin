@@ -98,40 +98,116 @@ The config path matters because `theme = "tufte"` is resolved relative to
 example portable: copy the directory, run the same commands, and the academic
 theme plus Tufte overlay are applied in both rendered outputs.
 
-= Website fonts
+= Classicthesis
 
-This second case study starts from `calepin new website --theme calepin` and
-shows the smallest possible local theme that changes the website fonts without
-touching the layouts.
+This case study shows how to use a local theme with `layouts/pdf.typ` to wrap a
+Typst document in the `classicthesis` template.
 
-The source tree is flat and easy to copy:
+The project can stay small:
 
 ```text
 project/
   calepin.toml
-  docs/
-    index.typ
-  themes/
-    fonts/
-      theme.toml
-      css/
-        fonts.css
+  book.typ
+  theme/
+    theme.toml
+    layouts/
+      pdf.typ
 ```
 
-`calepin.toml` points at the local theme:
+`calepin.toml` points Calepin at the local theme directory:
 
 ```toml
-theme = "themes/fonts"
+theme = "./theme"
 ```
 
-The theme manifest inherits from the built-in `calepin` theme:
+The theme manifest disables inherited Calepin styling so the PDF layout comes
+entirely from the template:
 
 ```toml
-# themes/fonts/theme.toml
+# theme/theme.toml
+extends = "typst"
+```
+
+Then put the `classicthesis` template in `theme/layouts/pdf.typ`:
+
+```typ
+#import "@preview/classicthesis:0.1.0": *
+
+#show: classicthesis.with(
+  title: "My Book Title",
+  subtitle: "A Subtitle",
+  author: "Author Name",
+  date: "2025",
+  dedication: [To my readers.],
+  abstract: [This book explores...],
+)
+
+#part("Part One", preamble: [Introduction to the topic.])
+
+= Chapter One
+
+Your content here...
+
+== Section
+
+More content...
+```
+
+`layouts/pdf.typ` is rendered before Typst compiles the notebook, so `doc.body`
+is where Calepin injects the document source. Here, the `classicthesis`
+template provides the page design and chapter structure, while the notebook body
+still comes from your `.typ` file.
+
+From the project root, render the PDF with:
+
+```sh
+calepin compile book.typ --config calepin.toml --format pdf
+```
+
+If you want the same document to use a different PDF layout later, swap the
+contents of `theme/layouts/pdf.typ` without changing the document itself.
+
+= Website fonts
+
+This case study shows how to override a website's fonts using Google Fonts API. We start by creating an example website scaffold based on the default `calepin` theme. The following command will create a new directory called `calepin_website`:
+
+
+```sh
+calepin new website --theme calepin
+```
+
+Then, we add simple local theme directory with a manifest `theme.toml` and a single `fonts.css` file:
+
+```text
+calepin_website/
+
+  theme/            # theme directory
+    theme.toml
+    css/
+      fonts.css
+
+  calepin.toml      # configuration file
+
+  index.typ         # website content
+  404.typ
+  assets/
+  posts/
+```
+
+The configuration file, `calepin_website/calepin.toml`, must point to the local theme:
+
+```toml
+theme = "./theme"
+```
+
+The theme manifest, `calepin_website/theme/theme.toml`, inherits from the built-in `calepin` theme:
+
+```toml
 extends = "calepin"
 ```
 
-The only CSS file imports Google Fonts and overrides the public font tokens:
+We add a single CSS file which imports Google Fonts and overrides the public font tokens:
 
 ```css
 @import url("https://fonts.googleapis.com/css2?family=Rubik+Moonrocks&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
@@ -143,18 +219,11 @@ The only CSS file imports Google Fonts and overrides the public font tokens:
 }
 ```
 
-This keeps the layout, navigation, and page behavior from the built-in
-`calepin` theme. The local theme only changes typography, so the result is easy
-to reason about: same site structure, different font stack.
+This keeps the layout, navigation, and page behavior from the built-in `calepin` theme. The local theme only changes typography, so the result is easy to reason about: same site structure, different font stack.
 
-Render it from the project root with:
+Finally, we eender and serve the website:
 
 ```sh
-calepin compile docs/index.typ --config calepin.toml --format html
-calepin compile docs/index.typ --config calepin.toml --format pdf
+calepin compile calepin_website
+calepin serve calepin_website --open
 ```
-
-If you want the font change to be more subtle, swap `Rubik Moonrocks` for a
-less aggressive heading font and keep the body/mono families as-is. The only
-thing this theme changes is the type system, so font experimentation stays
-isolated from the rest of the site.
