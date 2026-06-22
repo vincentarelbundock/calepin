@@ -76,7 +76,6 @@ use pagefind::{
 use paths::wildcard_match;
 use paths::{normalize_path, rel_posix, relative_or_self, slash_path};
 use preprocess::{preprocess_documents, WebsitePreprocessOptions};
-#[cfg(test)]
 use render::render_documents;
 pub(crate) use scaffold::scaffold_website;
 #[cfg(test)]

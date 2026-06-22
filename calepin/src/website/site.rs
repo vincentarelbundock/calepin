@@ -189,6 +189,7 @@ impl SiteModel {
                     &format!("{PAGEFIND_DIR}/"),
                 )),
             }),
+            vars: Default::default(),
         }
     }
 }

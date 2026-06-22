@@ -10,9 +10,10 @@ use std::path::PathBuf;
 
 pub(crate) use minify::minify_html_file;
 pub(crate) use syntax::HtmlSyntaxTheme;
+#[cfg(test)]
+pub(crate) use theme::theme_css;
 pub(crate) use theme::{
-    theme_css, SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection,
-    SitePagefindEntry,
+    SiteContextInput, SiteLanguageEntry, SiteNavEntry, SiteNavSection, SitePagefindEntry,
 };
 
 /// Read `path`, transform its contents, and write the result back only when it

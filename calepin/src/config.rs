@@ -15,7 +15,7 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
 #[cfg(not(windows))]
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
     pub config_dir: PathBuf,
