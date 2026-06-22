@@ -38,6 +38,6 @@ Useful `layouts/pdf.typ` values:
 - `doc.meta`: values from `#metadata(...) <website-metadata>`
 - `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--var` overrides
 
-If `doc.body` is not referenced, Calepin appends the notebook body after the rendered layout.
+`doc.body` must be included explicitly if you want the notebook body in the rendered output.
 
-`theme = "typst"` disables notebook-specific theming, and `extends = "typst"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout. `notebook.typ.jinja` and `paged.typ.jinja` are not supported.
+`theme = "typst"` disables notebook-specific theming, and `extends = "typst"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout.

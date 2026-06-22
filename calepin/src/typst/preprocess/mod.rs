@@ -1102,7 +1102,6 @@ mod tests {
         let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#import \"/.calepin/calepin.typ\": _html-themed-raw-block\n".to_string(),
-            owns_body: false,
         };
 
         let wrapper = write_render_wrapper(
@@ -1126,7 +1125,6 @@ mod tests {
         let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#let notebook-theme-marker = true\n".to_string(),
-            owns_body: false,
         };
 
         let wrapper = write_render_wrapper(
@@ -1153,7 +1151,6 @@ mod tests {
         let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#include \"/.calepin/paper/source.typ\"\n[#emph[Appendix]]\n".to_string(),
-            owns_body: true,
         };
 
         let wrapper = write_render_wrapper(

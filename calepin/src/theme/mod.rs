@@ -825,7 +825,6 @@ css = ["../theme.css"]
             notebook_source(&sel, &NotebookTemplateContext::default()).unwrap(),
             Some(NotebookSource {
                 source: String::new(),
-                owns_body: false,
             })
         );
     }
@@ -860,7 +859,6 @@ css = ["../theme.css"]
             source.source,
             "#let title = \"Iris Report\"\n#let meta_title = \"Iris Report\"\n#let species = \"setosa\"\n#let course = \"Econ 101\""
         );
-        assert!(!source.owns_body);
     }
 
     #[test]
@@ -892,7 +890,6 @@ css = ["../theme.css"]
             source.source,
             "#set text(size: 11pt)\n#include \"/.calepin/paper/source.typ\"\n[#emph[Generated footer]]"
         );
-        assert!(source.owns_body);
     }
 
     #[test]

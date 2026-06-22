@@ -39,7 +39,6 @@ impl Default for NotebookTemplateContext {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NotebookSource {
     pub source: String,
-    pub owns_body: bool,
 }
 
 #[derive(Serialize)]
@@ -81,9 +80,8 @@ pub fn notebook_source(
             "theme `{theme}` does not contain {NOTEBOOK_TEMPLATE}"
         ));
     };
-    let owns_body = source.contains("doc.body");
     render_notebook_template(&name, NOTEBOOK_TEMPLATE, "paged", source, context)
-        .map(|source| Some(NotebookSource { source, owns_body }))
+        .map(|source| Some(NotebookSource { source }))
 }
 
 fn find_notebook_template(layers: &[ThemeLayer]) -> Result<Option<(String, String)>> {

@@ -93,10 +93,6 @@ pub(super) fn write_render_wrapper(
         }
     }
 
-    if !notebook_theme.is_some_and(|theme| theme.owns_body) {
-        lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
-    }
-
     write_if_changed(&wrapper, lines)?;
     Ok(wrapper_relative)
 }
