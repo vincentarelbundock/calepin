@@ -155,7 +155,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     // staged source directly; document-level HTML must be guarded by target
     // checks so paged/query passes never evaluate `html.*` calls.
     let query_source = write_query_source(&layout, &staged_input)?;
-    let query_input = write_render_wrapper(&layout, &runtime_import, &[], None)?;
+    let query_input = write_render_wrapper(&layout, &runtime_import, &query_source, &[], None)?;
     let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let metadata = preprocess_metadata(
         &config.executables.typst,
@@ -215,6 +215,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         layout.render_input = write_render_wrapper(
             &layout,
             &runtime_import,
+            &staged_input,
             &kernels,
             notebook_theme.as_ref(),
         )?;
@@ -222,6 +223,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         layout.render_input = write_render_wrapper(
             &layout,
             &runtime_import,
+            &staged_input,
             &[],
             notebook_theme.as_ref(),
         )?;
@@ -1105,6 +1107,7 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/_runtime/calepin.typ",
+            &staged_input,
             &[],
             Some(&notebook_theme),
         )
@@ -1127,6 +1130,7 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
+            &staged_input,
             &[],
             Some(&notebook_theme),
         )
@@ -1152,6 +1156,7 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
+            &staged_input,
             &[],
             Some(&notebook_theme),
         )
@@ -1176,6 +1181,7 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
+            &staged_input,
             &["bash"],
             None,
         )

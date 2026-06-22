@@ -47,6 +47,7 @@ pub(super) fn notebook_template_context(
 pub(super) fn write_render_wrapper(
     layout: &LayoutPaths,
     runtime_import: &str,
+    include_input: &Path,
     jupyter_kernels: &[&str],
     notebook_theme: Option<&crate::theme::NotebookSource>,
 ) -> Result<PathBuf> {
@@ -91,6 +92,8 @@ pub(super) fn write_render_wrapper(
             lines.push('\n');
         }
     }
+
+    lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
 
     write_if_changed(&wrapper, lines)?;
     Ok(wrapper_relative)
