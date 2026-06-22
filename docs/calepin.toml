@@ -117,6 +117,9 @@ title = "Themes"
   [[sidebar.section.item]]
   target = "themes/themes.typ"
 
+  [[sidebar.section.item]]
+  target = "themes/pdf_templates.typ"
+
 [[sidebar.section]]
 title = "More"
 

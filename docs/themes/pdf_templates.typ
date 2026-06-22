@@ -1,8 +1,8 @@
-#set document(title: [Notebook Typst layouts])
+#set document(title: [PDF templates])
 #import "/.calepin/calepin.typ" as calepin
 #title()
 
-`layouts/notebook.typ` is the Typst-side layout used by notebook outputs such as PDF and SVG.
+`layouts/notebook.typ` is the Typst-side layout used by PDF and SVG notebook outputs.
 
 ```text
 themes/my-theme/

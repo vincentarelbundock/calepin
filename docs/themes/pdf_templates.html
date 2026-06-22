@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Notebook Typst layouts</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PDF templates</title>
 
 
     <meta name="color-scheme" content="light dark">
@@ -2428,7 +2428,7 @@ html:not([data-theme]) {
         <li><button id="calepin-theme-button" class="calepin-theme-button" type="button" aria-label="Theme: Auto" title="Theme: Auto" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-html-theme"></button></li>
       </ul>
     </nav>
-    <main class="container calepin-content calepin-document-main"><h1 id="notebook-typst-layouts">Notebook Typst layouts</h1><p><code>layouts/notebook.typ</code> is the Typst-side layout used by notebook outputs such as PDF and SVG.</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">themes/my-theme/
+    <main class="container calepin-content calepin-document-main"><h1 id="pdf-templates">PDF templates</h1><p><code>layouts/notebook.typ</code> is the Typst-side layout used by PDF and SVG notebook outputs.</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">themes/my-theme/
   layouts/
     notebook.typ</code></pre></div><p>Before Typst runs, Calepin renders this file with MiniJinja so the output is still valid Typst source. The file uses a <code>.typ</code> extension because it renders to Typst, even though it is a MiniJinja template.</p><p>Inside the layout, place notebook content with <code>document.body</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">#set <span class="calepin-syntax-scope-1">page</span>(
   paper: "us-letter",
