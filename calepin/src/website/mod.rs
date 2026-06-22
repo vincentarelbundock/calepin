@@ -460,7 +460,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let pages_index_json = serde_json::to_string_pretty(&pages_index)?;
     let pages_signature = xxh3_64(pages_index_json.as_bytes());
     write_pages_index(&typ_files, &pages_index_json, &asset_dir)?;
-    let mut theme_asset_paths = theme_assets.output_paths(&out_dir);
+    let theme_asset_paths = theme_assets.output_paths(&out_dir);
     let expected_outputs = expected_generated_outputs(GeneratedOutputInputs {
         out_dir: &out_dir,
         typ_files: &typ_files,
