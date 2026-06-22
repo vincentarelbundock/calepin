@@ -6,6 +6,7 @@ use crate::typst::fence_label::{
     trailing_fence_label, trailing_fence_label_candidate, FENCE_LABEL_METADATA_LABEL,
 };
 use crate::typst::io::write_if_changed;
+use crate::typst::markdown_fence::{is_closing_fence, leading_backtick_count};
 use crate::typst::model::LayoutPaths;
 const DEFAULT_RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
 const RUNTIME_IMPORT_LEGACY: &str = "_calepin/calepin.typ";
@@ -192,6 +193,38 @@ impl LexState {
     fn exit_block_comment(&mut self) {
         self.block_comment_depth = self.block_comment_depth.saturating_sub(1);
     }
+
+    /// Advances `idx` past a line comment, block comment marker, or
+    /// in-progress block comment. Returns `None` when `line[idx..]` is not a
+    /// comment, leaving `idx` for the caller to interpret.
+    fn skip_comment(&mut self, line: &str, idx: usize) -> Option<CommentStep> {
+        if self.in_block_comment() {
+            return Some(if line[idx..].starts_with("/*") {
+                self.enter_block_comment();
+                CommentStep::Continue(idx + 2)
+            } else if line[idx..].starts_with("*/") {
+                self.exit_block_comment();
+                CommentStep::Continue(idx + 2)
+            } else {
+                CommentStep::Continue(idx + next_char_len(&line[idx..]))
+            });
+        }
+
+        if line[idx..].starts_with("//") {
+            return Some(CommentStep::Break);
+        }
+        if line[idx..].starts_with("/*") {
+            self.enter_block_comment();
+            return Some(CommentStep::Continue(idx + 2));
+        }
+
+        None
+    }
+}
+
+enum CommentStep {
+    Continue(usize),
+    Break,
 }
 
 #[derive(Default)]
@@ -245,26 +278,13 @@ impl TypstParseState {
 
         let mut idx = 0;
         while idx < line.len() {
-            if self.lex.in_block_comment() {
-                if line[idx..].starts_with("/*") {
-                    self.lex.enter_block_comment();
-                    idx += 2;
-                } else if line[idx..].starts_with("*/") {
-                    self.lex.exit_block_comment();
-                    idx += 2;
-                } else {
-                    idx += next_char_len(&line[idx..]);
+            match self.lex.skip_comment(line, idx) {
+                Some(CommentStep::Continue(new_idx)) => {
+                    idx = new_idx;
+                    continue;
                 }
-                continue;
-            }
-
-            if line[idx..].starts_with("//") {
-                break;
-            }
-            if line[idx..].starts_with("/*") {
-                self.lex.enter_block_comment();
-                idx += 2;
-                continue;
+                Some(CommentStep::Break) => break,
+                None => {}
             }
 
             let ch = line[idx..].chars().next().expect("valid char index");
@@ -388,19 +408,6 @@ fn opening_fence(trimmed_line: &str) -> Option<(usize, Option<&str>)> {
         rest.split_whitespace().next()
     };
     Some((fence_len, lang))
-}
-
-fn is_closing_fence(trimmed_line: &str, fence_len: usize) -> bool {
-    let closing_len = leading_backtick_count(trimmed_line);
-    if closing_len < fence_len {
-        return false;
-    }
-    let rest = trimmed_line[closing_len..].trim_start();
-    rest.is_empty() || rest.starts_with('<')
-}
-
-fn leading_backtick_count(value: &str) -> usize {
-    value.chars().take_while(|ch| *ch == '`').count()
 }
 
 struct RewrittenRawBlock {
@@ -611,26 +618,13 @@ fn scan_line_for_imports<T>(
 ) -> Option<T> {
     let mut idx = 0;
     while idx < line.len() {
-        if lex.in_block_comment() {
-            if line[idx..].starts_with("/*") {
-                lex.enter_block_comment();
-                idx += 2;
-            } else if line[idx..].starts_with("*/") {
-                lex.exit_block_comment();
-                idx += 2;
-            } else {
-                idx += next_char_len(&line[idx..]);
+        match lex.skip_comment(line, idx) {
+            Some(CommentStep::Continue(new_idx)) => {
+                idx = new_idx;
+                continue;
             }
-            continue;
-        }
-
-        if line[idx..].starts_with("//") {
-            break;
-        }
-        if line[idx..].starts_with("/*") {
-            lex.enter_block_comment();
-            idx += 2;
-            continue;
+            Some(CommentStep::Break) => break,
+            None => {}
         }
         if line[idx..].starts_with('"') {
             idx += string_literal_source_len(&line[idx..]);

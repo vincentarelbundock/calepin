@@ -6,6 +6,7 @@ mod execute;
 mod fence_label;
 mod introspect;
 pub(crate) mod io;
+mod markdown_fence;
 pub(crate) mod model;
 pub(crate) mod paths;
 pub(crate) mod preprocess;

@@ -55,7 +55,7 @@ use metadata::{load_page_meta, PageMetaMap};
 use navigation::{
     build_page_info, build_pages_index, discover_site_build_pages, discover_site_menus,
     discover_site_pages, discover_static_files, fallback_pages, implicit_build_pages,
-    menus_from_plan, nav_from_plans, write_pages_index, MenusModel, NavSectionModel,
+    menus_from_plan, nav_from_plans, write_pages_index, MenusModel, NavItemModel, NavSectionModel,
 };
 #[cfg(test)]
 use navigation::{
@@ -743,6 +743,15 @@ fn fingerprint_files(paths: &[PathBuf]) -> Result<BTreeMap<PathBuf, u64>> {
         .collect()
 }
 
+fn push_nav_item_bytes(bytes: &mut Vec<u8>, item: &NavItemModel) {
+    bytes.extend_from_slice(item.href.as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(item.label.as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(item.label_html.as_bytes());
+    bytes.push(0);
+}
+
 fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
     let mut bytes = Vec::new();
     for section in sections {
@@ -755,12 +764,7 @@ fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
         }
         bytes.push(0);
         for item in &section.items {
-            bytes.extend_from_slice(item.href.as_bytes());
-            bytes.push(0);
-            bytes.extend_from_slice(item.label.as_bytes());
-            bytes.push(0);
-            bytes.extend_from_slice(item.label_html.as_bytes());
-            bytes.push(0);
+            push_nav_item_bytes(&mut bytes, item);
         }
         bytes.push(0xff);
     }
@@ -777,12 +781,7 @@ fn menus_signature(menus: &MenusModel) -> u64 {
                 bytes.extend_from_slice(language.as_bytes());
             }
             bytes.push(0);
-            bytes.extend_from_slice(item.href.as_bytes());
-            bytes.push(0);
-            bytes.extend_from_slice(item.label.as_bytes());
-            bytes.push(0);
-            bytes.extend_from_slice(item.label_html.as_bytes());
-            bytes.push(0);
+            push_nav_item_bytes(&mut bytes, item);
         }
         bytes.push(0xff);
     }
