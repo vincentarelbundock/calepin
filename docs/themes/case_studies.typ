@@ -4,11 +4,10 @@
 
 = Tufte
 
-
-In this case study, we build on top of the `academic` theme to replicate
-features of the popular Tufte CSS article style: serif typography, warm paper
-colors, restrained accents, sidenotes, margin figures, and code/output surfaces
-that match the page.
+This case study shows how to build a local theme on top of `academic` to
+replicate the Tufte CSS article style: serif typography, warm paper colors,
+restrained accents, sidenotes, margin figures, and code/output surfaces that
+match the page.
 
 Reference files and rendered output can be viewed here:
 
@@ -18,13 +17,26 @@ Reference files and rendered output can be viewed here:
 - #link("examples/tufte/tufte.html")[HTML]
 - #link("examples/tufte/tufte.pdf")[PDF]
 
-Start with a small `calepin.toml` next to the document:
+The source tree is intentionally small:
+
+```text
+docs/themes/examples/tufte/
+  calepin.toml
+  tufte.typ
+  themes/
+    tufte/
+      theme.toml
+      css/
+        tufte.css
+```
+
+`calepin.toml` points `calepin` at the local theme directory:
 
 ```toml
 theme = "themes/tufte"
 ```
 
-The local theme extends `academic`:
+The theme directory itself declares its base theme:
 
 ```toml
 # themes/tufte/theme.toml
@@ -34,8 +46,8 @@ extends = "academic"
 That keeps all of the built-in `academic` theme structure: the single-document
 HTML wrapper, the theme toggle, sidenotes, side figures, code styling, and
 dark-mode support. The local `themes/tufte/css/tufte.css` file is intentionally
-small. It overrides the public `--calepin-*` tokens instead of targeting private
-theme internals:
+small. It overrides the public `--calepin-*` tokens instead of targeting
+private theme internals:
 
 ```css
 :root, html[data-theme="light"] {
@@ -87,4 +99,3 @@ The config path matters because `theme = "themes/tufte"` is resolved relative to
 `calepin.toml`. Keeping the config, local theme, and document together makes the
 example portable: copy the directory, run the same commands, and the academic
 theme plus Tufte overlay are applied in both rendered outputs.
-
