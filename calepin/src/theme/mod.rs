@@ -105,40 +105,12 @@ pub(crate) fn resolve_theme_chain(selection: &ThemeSelection) -> Result<ThemeCha
         }),
         ThemeSelection::Dir(dir) => {
             validate_theme_dir(dir)?;
-            let project_root = infer_theme_project_root(dir);
-            let mut stack = Vec::new();
-            resolve_dir_theme_chain(dir, &project_root, &mut stack)
+            resolve_dir_theme_chain(dir)
         }
     }
 }
 
-fn infer_theme_project_root(dir: &Path) -> PathBuf {
-    let mut current = dir;
-    while let Some(parent) = current.parent() {
-        if parent.join("calepin.toml").is_file() {
-            return parent.to_path_buf();
-        }
-        current = parent;
-    }
-    dir.parent().unwrap_or(dir).to_path_buf()
-}
-
-fn resolve_dir_theme_chain(
-    dir: &Path,
-    project_root: &Path,
-    stack: &mut Vec<PathBuf>,
-) -> Result<ThemeChain> {
-    let canonical = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
-    if let Some(index) = stack.iter().position(|path| path == &canonical) {
-        let mut cycle = stack[index..]
-            .iter()
-            .map(|path| path.display().to_string())
-            .collect::<Vec<_>>();
-        cycle.push(canonical.display().to_string());
-        return Err(anyhow!("theme inheritance cycle: {}", cycle.join(" -> ")));
-    }
-    stack.push(canonical.clone());
-
+fn resolve_dir_theme_chain(dir: &Path) -> Result<ThemeChain> {
     let manifest = read_local_theme_manifest(dir)?;
     let mut chain = match manifest.extends.as_deref() {
         None => ThemeChain {
@@ -149,31 +121,23 @@ fn resolve_dir_theme_chain(
             layers: Vec::new(),
             terminal_typst: true,
         },
-        Some(value) if bundle::builtin_names().into_iter().any(|name| name == value) => {
-            ThemeChain {
-                layers: vec![ThemeLayer::Builtin(
-                    bundle::builtin_names()
-                        .into_iter()
-                        .find(|name| *name == value)
-                        .unwrap(),
-                )],
+        Some(value) => match bundle::builtin_names()
+            .into_iter()
+            .find(|name| *name == value)
+        {
+            Some(name) => ThemeChain {
+                layers: vec![ThemeLayer::Builtin(name)],
                 terminal_typst: false,
+            },
+            None => {
+                return Err(anyhow!(
+                    "unknown theme `{value}` in extends; use `typst` or a built-in theme: {}",
+                    bundle::builtin_names().join(", ")
+                ))
             }
-        }
-        Some(value) if is_path_like(value) => {
-            let path = resolve_theme_extends_path(dir, project_root, value)?;
-            validate_theme_dir(&path)?;
-            resolve_dir_theme_chain(&path, project_root, stack)?
-        }
-        Some(value) => {
-            return Err(anyhow!(
-                "unknown theme `{value}` in extends; use `typst`, one of {}, or a relative path inside the project",
-                bundle::builtin_names().join(", ")
-            ))
-        }
+        },
     };
     chain.layers.push(ThemeLayer::Dir(dir.to_path_buf()));
-    stack.pop();
     Ok(chain)
 }
 
@@ -185,32 +149,6 @@ pub(crate) fn read_local_theme_manifest(dir: &Path) -> Result<LocalThemeManifest
     let source = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read {}", path.display()))?;
     toml::from_str(&source).with_context(|| format!("failed to parse {}", path.display()))
-}
-
-fn resolve_theme_extends_path(dir: &Path, project_root: &Path, value: &str) -> Result<PathBuf> {
-    let raw = Path::new(value);
-    if raw.is_absolute() {
-        return Err(anyhow!("theme extends path must be relative: `{value}`"));
-    }
-    let project_root = project_root
-        .canonicalize()
-        .unwrap_or_else(|_| project_root.to_path_buf());
-    let path = dir.join(raw);
-    let canonical = path
-        .canonicalize()
-        .with_context(|| format!("theme extends path not found: {}", path.display()))?;
-    if !canonical.starts_with(&project_root) {
-        return Err(anyhow!(
-            "theme extends path must stay inside the project: `{value}`"
-        ));
-    }
-    if !canonical.is_dir() {
-        return Err(anyhow!(
-            "theme extends path is not a directory: {}",
-            canonical.display()
-        ));
-    }
-    Ok(canonical)
 }
 
 /// Same heuristic the old html theme used: anything that looks like a path
@@ -452,6 +390,24 @@ mod tests {
         assert!(!site.is_default);
         assert!(resolve_html_entry(&sel, HtmlScope::Document).is_err());
         assert!(notebook_source(&sel, &NotebookTemplateContext::default()).is_err());
+    }
+
+    #[test]
+    fn dir_theme_rejects_local_extends_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let parent = dir.path().join("base");
+        let child = dir.path().join("child");
+        std::fs::create_dir_all(parent.join("layouts")).unwrap();
+        std::fs::create_dir_all(&child).unwrap();
+        std::fs::write(parent.join("layouts/webpage.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(child.join("theme.toml"), "extends = \"../base\"\n").unwrap();
+
+        let err = resolve_html_entry(&ThemeSelection::Dir(child), HtmlScope::Site)
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("unknown theme `../base` in extends"), "{err}");
+        assert!(err.contains("built-in theme"), "{err}");
     }
 
     #[test]

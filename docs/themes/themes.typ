@@ -116,17 +116,14 @@ The manifest declares the base theme explicitly:
 extends = "academic"
 ```
 
-`extends` can name a built-in theme, another local theme, or `typst`:
+`extends` can name only a built-in theme or `typst`:
 
 ```toml
 extends = "academic"      # inherit from a built-in theme
-extends = "../base-theme" # inherit from another local theme in the project
 extends = "typst"         # inherit from no Calepin theme
 ```
 
-Local `extends` paths are relative to the current theme directory and must stay
-inside the project. A local theme with no `extends` is standalone; it does not
-fall back to a built-in theme.
+A local theme with no `extends` is standalone; it does not fall back to a built-in theme.
 
 A fuller theme can provide any of these files:
 
