@@ -1,6 +1,6 @@
 //! Theme bundles. A theme is a directory named by family; the target and
-//! scope dimensions are well-known filenames inside it: `layouts/notebook.typ`,
-//! `layouts/notebook.html`, `layouts/webpage.html`. See specs/2026-06-10-theme-bundles-design.md.
+//! scope dimensions are well-known filenames inside it: `layouts/pdf.typ`,
+//! `layouts/document.html`, `layouts/site.html`. See specs/2026-06-10-theme-bundles-design.md.
 
 use std::path::{Path, PathBuf};
 
@@ -165,17 +165,17 @@ fn is_path_like(value: &str) -> bool {
 fn validate_theme_dir(dir: &Path) -> Result<()> {
     let has_entry = dir.join("theme.toml").is_file()
         || [
-            "layouts/notebook.typ",
+            "layouts/pdf.typ",
             "notebook.typ.jinja",
             "paged.typ.jinja",
-            "layouts/notebook.html",
-            "layouts/webpage.html",
+            "layouts/document.html",
+            "layouts/site.html",
         ]
         .iter()
         .any(|file| dir.join(file).is_file());
     if !has_entry {
         return Err(anyhow!(
-            "theme directory {} contains none of layouts/notebook.typ, layouts/notebook.html, layouts/webpage.html",
+            "theme directory {} contains none of layouts/pdf.typ, layouts/document.html, layouts/site.html",
             dir.display()
         ));
     }
@@ -285,7 +285,7 @@ mod tests {
         assert_eq!(document.theme_name, "academic");
         assert!(document.layout.contains("academic-document-main"));
 
-        let landing = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
+        let landing = resolve_explicit_site_html_entry(&sel, "layouts/site-landing.html")
             .unwrap()
             .unwrap();
         assert_eq!(landing.theme_name, "academic");
@@ -354,7 +354,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
-            dir.path().join("layouts/webpage.html"),
+            dir.path().join("layouts/site.html"),
             "<html><head></head><body>X</body></html>",
         )
         .unwrap();
@@ -377,7 +377,7 @@ mod tests {
         let child = dir.path().join("child");
         std::fs::create_dir_all(parent.join("layouts")).unwrap();
         std::fs::create_dir_all(&child).unwrap();
-        std::fs::write(parent.join("layouts/webpage.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(parent.join("layouts/site.html"), "{{ doc.body }}").unwrap();
         std::fs::write(child.join("theme.toml"), "extends = \"../base\"\n").unwrap();
 
         let err = resolve_html_entry(&ThemeSelection::Dir(child), HtmlScope::Site)
@@ -425,7 +425,7 @@ mod tests {
         std::fs::create_dir_all(theme.join("js")).unwrap();
         std::fs::create_dir_all(theme.join("layouts")).unwrap();
         std::fs::create_dir_all(dir.path().join("shared/css")).unwrap();
-        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(theme.join("layouts/document.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
             r#"extends = "typst"
@@ -493,7 +493,7 @@ js = ["copy-code.js"]
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("custom");
         std::fs::create_dir_all(theme.join("layouts")).unwrap();
-        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(theme.join("layouts/document.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
             r#"extends = "typst"
@@ -518,7 +518,7 @@ scripts = ["copy-code.js"]
         let dir = tempfile::tempdir().unwrap();
         let theme = dir.path().join("custom");
         std::fs::create_dir_all(theme.join("layouts")).unwrap();
-        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(theme.join("layouts/document.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
             r#"extends = "typst"
@@ -543,7 +543,7 @@ assets = ["font.woff2"]
         let theme = dir.path().join("custom");
         std::fs::create_dir_all(theme.join("css")).unwrap();
         std::fs::create_dir_all(theme.join("layouts")).unwrap();
-        std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(theme.join("layouts/document.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
             r#"extends = "typst"
@@ -564,7 +564,7 @@ css = ["site.css", "site.css"]
     fn shared_manifest_rejects_path_imports() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
-        std::fs::write(dir.path().join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(dir.path().join("layouts/document.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             dir.path().join("theme.toml"),
             r#"extends = "typst"
@@ -590,12 +590,12 @@ css = ["../theme.css"]
     fn explicit_site_layout_uses_exact_theme_relative_path() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
-        std::fs::write(dir.path().join("layouts/webpage.html"), "{{ doc.body }}").unwrap();
-        std::fs::write(dir.path().join("layouts/landing.html"), "landing").unwrap();
+        std::fs::write(dir.path().join("layouts/site.html"), "{{ doc.body }}").unwrap();
+        std::fs::write(dir.path().join("layouts/site-landing.html"), "landing").unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
-        let entry = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
+        let entry = resolve_explicit_site_html_entry(&sel, "layouts/site-landing.html")
             .unwrap()
             .unwrap();
 
@@ -606,21 +606,21 @@ css = ["../theme.css"]
     fn explicit_site_layout_requires_local_or_inherited_file() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
-        std::fs::write(dir.path().join("layouts/notebook.typ"), "{{ document.body }}").unwrap();
+        std::fs::write(dir.path().join("layouts/pdf.typ"), "{{ document.body }}").unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
-        let err = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
+        let err = resolve_explicit_site_html_entry(&sel, "layouts/site-landing.html")
             .unwrap_err()
             .to_string();
 
-        assert!(err.contains("layouts/landing.html"), "{err}");
+        assert!(err.contains("layouts/site-landing.html"), "{err}");
     }
 
     #[test]
     fn explicit_builtin_landing_layout_resolves() {
         let entry =
-            resolve_explicit_site_html_entry(&ThemeSelection::Default, "layouts/landing.html")
+            resolve_explicit_site_html_entry(&ThemeSelection::Default, "layouts/site-landing.html")
                 .unwrap()
                 .unwrap();
 
@@ -632,8 +632,8 @@ css = ["../theme.css"]
         for value in [
             "landing",
             "landing.typ",
-            "../landing.html",
-            "/tmp/landing.html",
+            "../site-landing.html",
+            "/tmp/site-landing.html",
         ] {
             let err = match resolve_explicit_site_html_entry(&ThemeSelection::Default, value) {
                 Ok(_) => panic!("expected `{value}` to be rejected"),
@@ -663,7 +663,7 @@ css = ["../theme.css"]
     fn empty_notebook_typ_means_no_styling_not_fallback() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
-        std::fs::write(dir.path().join("layouts/notebook.typ"), "").unwrap();
+        std::fs::write(dir.path().join("layouts/pdf.typ"), "").unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         assert_eq!(
@@ -680,7 +680,7 @@ css = ["../theme.css"]
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
-            dir.path().join("layouts/notebook.typ"),
+            dir.path().join("layouts/pdf.typ"),
             r#"#let title = "{{ document.meta.title }}"
 #let species = "{{ params.Species }}"
 "#,
@@ -710,7 +710,7 @@ css = ["../theme.css"]
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
-            dir.path().join("layouts/notebook.typ"),
+            dir.path().join("layouts/pdf.typ"),
             r#"#set text(size: 11pt)
 {{ document.body }}
 [#emph[Generated footer]]
@@ -786,7 +786,7 @@ css = ["../theme.css"]
             .unwrap_err()
             .to_string();
         assert!(err.contains("notebook.typ.jinja"), "{err}");
-        assert!(err.contains("layouts/notebook.typ"), "{err}");
+        assert!(err.contains("layouts/pdf.typ"), "{err}");
     }
 
     #[test]
@@ -803,7 +803,7 @@ css = ["../theme.css"]
             .unwrap_err()
             .to_string();
         assert!(err.contains("paged.typ.jinja"), "{err}");
-        assert!(err.contains("layouts/notebook.typ"), "{err}");
+        assert!(err.contains("layouts/pdf.typ"), "{err}");
     }
 
     #[test]
@@ -830,21 +830,27 @@ css = ["../theme.css"]
             bundle::eject_builtin(DEFAULT_THEME_NAME, &dir.path().join("themes"), false).unwrap();
 
         assert_eq!(dest, dir.path().join("themes/calepin"));
-        assert!(dest.join("layouts/notebook.html").is_file());
-        assert!(dest.join("layouts/webpage.html").is_file());
-        assert!(dest.join("layouts/landing.html").is_file());
-        assert!(dest.join("layouts/notebook.typ").is_file());
+        assert!(dest.join("layouts/document.html").is_file());
+        assert!(dest.join("layouts/site.html").is_file());
+        assert!(dest.join("layouts/site-landing.html").is_file());
+        assert!(dest.join("layouts/pdf.typ").is_file());
         assert!(!dest.join("notebook.typ.jinja").exists());
         assert!(!dest.join("paged.typ.jinja").exists());
         assert!(!dest.join("paged.typ").exists());
-        assert!(dest.join("partials/navbar-item.html").is_file());
-        assert!(dest.join("partials/theme-switcher.html").is_file());
-        assert!(dest.join("partials/site-topbar.html").is_file());
-        assert!(dest.join("partials/site-meta.html").is_file());
-        assert!(dest.join("partials/theme-init.html").is_file());
-        assert!(dest.join("partials/styles.html").is_file());
-        assert!(dest.join("partials/scripts.html").is_file());
-        assert!(dest.join("partials/pagefind-modal.html").is_file());
+        assert!(dest.join("partials/site-nav-item.html").is_file());
+        assert!(dest.join("partials/document-theme-switcher.html").is_file());
+        assert!(dest.join("partials/site-nav.html").is_file());
+        assert!(dest.join("partials/document-head.html").is_file());
+        assert!(dest.join("partials/site-head.html").is_file());
+        assert!(dest.join("partials/site-head-meta.html").is_file());
+        assert!(dest.join("partials/site-brand.html").is_file());
+        assert!(dest.join("partials/site-language-picker.html").is_file());
+        assert!(dest.join("partials/site-nav-prev-next.html").is_file());
+        assert!(dest.join("partials/site-sidebar-item.html").is_file());
+        assert!(dest.join("partials/theme-init-script.html").is_file());
+        assert!(dest.join("partials/theme-styles.html").is_file());
+        assert!(dest.join("partials/theme-scripts.html").is_file());
+        assert!(dest.join("partials/site-search.html").is_file());
         assert!(dest.join("theme.toml").is_file());
         assert!(dest.join("css/20_theme.css").is_file());
         assert!(dest.join("css/30_code.css").is_file());
@@ -872,12 +878,18 @@ css = ["../theme.css"]
         let wrote = eject_builtin_to("academic", &dest, false).unwrap();
 
         assert_eq!(wrote, dest);
-        assert!(wrote.join("layouts/webpage.html").is_file());
-        assert!(wrote.join("partials/navbar-item.html").is_file());
+        assert!(wrote.join("layouts/site.html").is_file());
+        assert!(wrote.join("partials/site-nav-item.html").is_file());
         assert!(wrote.join("theme.toml").is_file());
         assert!(wrote.join("css/50_main.css").is_file());
         assert!(wrote.join("js/main.js").is_file());
-        assert!(wrote.join("partials/theme-toggle.html").is_file());
+        assert!(wrote.join("partials/theme-toggle-button.html").is_file());
+        assert!(wrote.join("partials/document-head.html").is_file());
+        assert!(wrote.join("partials/site-head.html").is_file());
+        assert!(wrote.join("partials/site-brand.html").is_file());
+        assert!(wrote.join("partials/site-language-picker.html").is_file());
+        assert!(wrote.join("partials/site-nav-prev-next.html").is_file());
+        assert!(wrote.join("partials/site-sidebar-item.html").is_file());
         assert!(wrote.join("css/20_theme.css").is_file());
         assert!(wrote.join("js/copy-code.js").is_file());
         assert!(!wrote.parent().unwrap().join("shared").exists());

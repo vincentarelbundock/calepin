@@ -3,7 +3,7 @@
 #set document(title: [Calepin])
 
 #metadata((
-  layout: "layouts/landing.html",
+  layout: "layouts/site-landing.html",
   pdf: true,
 )) <website-metadata>
 

@@ -17,8 +17,8 @@ pub enum HtmlScope {
 impl HtmlScope {
     fn entry_file(self) -> &'static str {
         match self {
-            Self::Document => "layouts/notebook.html",
-            Self::Site => "layouts/webpage.html",
+            Self::Document => "layouts/document.html",
+            Self::Site => "layouts/site.html",
         }
     }
 }

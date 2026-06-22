@@ -1,0 +1,9 @@
+            <a class="calepin-site-brand contrast" href="{% if site.home_url %}{{ site.home_url }}{% else %}index.html{% endif %}" aria-label="{% if site.logo_alt %}{{ site.logo_alt }} home{% elif site.title %}{{ site.title }} home{% else %}Home{% endif %}">
+                {% if site.logo %}
+                <img src="{{ site.logo }}" alt="{% if site.logo_alt %}{{ site.logo_alt }}{% elif site.title %}{{ site.title }}{% endif %}" class="calepin-site-logo" data-inline-svg="1">
+                {% elif site.title %}
+                <span class="calepin-site-brand-text">{{ site.title }}</span>
+                {% else %}
+                <span class="calepin-site-brand-text">Home</span>
+                {% endif %}
+            </a>

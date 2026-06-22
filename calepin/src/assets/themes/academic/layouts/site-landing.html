@@ -1,0 +1,12 @@
+{% set calepin_theme_storage_key = "calepin-academic-theme" %}
+{% set calepin_theme_param = "" %}
+{% include "partials/site-head.html" %}
+{{ doc.body_open }}
+{% include "partials/site-nav.html" %}
+    <main class="academic-landing calepin-landing calepin-content" data-pagefind-body>
+        {{ doc.body }}
+    </main>
+{% include "partials/site-footer.html" %}
+{% include "partials/site-search.html" %}
+{% include "partials/theme-scripts.html" %}
+{{ doc.body_close }}

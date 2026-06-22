@@ -4,7 +4,7 @@
 
 = HTML templates
 
-For a single HTML notebook, use `layouts/notebook.html`. For websites, the default entry is `layouts/webpage.html`.
+For a single HTML notebook, use `layouts/document.html`. For websites, the default entry is `layouts/site.html`.
 
 Layouts are MiniJinja templates. The template context contains these top-level values:
 
@@ -50,7 +50,7 @@ Nested entries expose these fields:
 
 = Minimal template
 
-Here is a minimal `layouts/notebook.html`:
+Here is a minimal `layouts/document.html`:
 
 ```html
 {{ doc.head }}
@@ -103,7 +103,40 @@ Keep repeated HTML in partials under `partials/` and include them from layouts.
 {% include "partials/header.html" %}
 ```
 
-Partials receive the same template context as the file that includes them.
+Partials receive the same template context as the file that includes them. Shared partials from the bundled base layer are included by both built-in themes; a theme-local partial with the same path overrides the shared one. To customize one component, copy that partial into your local theme and edit it there.
+
+== Built-in partials
+
+The bundled themes currently provide these partials. This list is descriptive; the #link("https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/assets/themes")[theme source code on GitHub] is canonical.
+
+Shared partials:
+
+- `partials/document-head.html`
+- `partials/site-brand.html`
+- `partials/site-footer.html`
+- `partials/site-head.html`
+- `partials/site-head-meta.html`
+- `partials/site-language-picker.html`
+- `partials/site-nav-prev-next.html`
+- `partials/site-search.html` — the Pagefind modal container, not the full search UI.
+- `partials/site-sidebar-item.html`
+- `partials/theme-init-script.html`
+- `partials/theme-scripts.html`
+- `partials/theme-styles.html`
+- `partials/theme-toggle-button.html`
+
+`calepin` theme partials:
+
+- `partials/document-theme-switcher.html`
+- `partials/site-nav.html`
+- `partials/site-nav-item.html`
+- `partials/site-nav-sidebar.html`
+- `partials/site-nav-toc.html`
+
+`academic` theme partials:
+
+- `partials/site-nav.html`
+- `partials/site-nav-item.html`
 
 = Page-specific layouts
 
@@ -114,8 +147,8 @@ You can switch layouts per page with `<website-metadata>`:
 ```typ
 #metadata((
   title: "Landing page",
-  layout: "layouts/landing.html",
+  layout: "layouts/site-landing.html",
 )) <website-metadata>
 ```
 
-The `layout` value must be a relative `.html` path inside the active theme. Calepin does not add `layouts/` or `.html` for you and does not fall back to `layouts/webpage.html` if the file is missing.
+The `layout` value must be a relative `.html` path inside the active theme. Calepin does not add `layouts/` or `.html` for you and does not fall back to `layouts/site.html` if the file is missing.

@@ -2,12 +2,12 @@
 #import "/.calepin/calepin.typ" as calepin
 #title()
 
-`layouts/notebook.typ` is the Typst-side layout used by PDF and SVG notebook outputs.
+`layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.
 
 ```text
 themes/my-theme/
   layouts/
-    notebook.typ
+    pdf.typ
 ```
 
 Before Typst runs, Calepin renders this file with MiniJinja so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.
@@ -26,7 +26,7 @@ Inside the layout, place notebook content with `document.body`:
 {{ document.body }}
 ```
 
-Useful `layouts/notebook.typ` values:
+Useful `layouts/pdf.typ` values:
 
 - `theme`: local theme directory name
 - `target`: `notebook`
@@ -39,4 +39,4 @@ Useful `layouts/notebook.typ` values:
 
 If `document.body` is not referenced, Calepin appends the notebook body after the rendered layout.
 
-`theme = "typst"` disables notebook-specific theming, and `extends = "typst"` creates a local theme with no inherited Calepin base. Use an empty `layouts/notebook.typ` for a minimal pass-through layout. `notebook.typ.jinja` and `paged.typ.jinja` are not supported.
+`theme = "typst"` disables notebook-specific theming, and `extends = "typst"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout. `notebook.typ.jinja` and `paged.typ.jinja` are not supported.

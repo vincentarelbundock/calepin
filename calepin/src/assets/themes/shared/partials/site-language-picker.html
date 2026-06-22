@@ -1,0 +1,7 @@
+{% if site.languages and site.languages | length > 1 %}
+                    <select class="calepin-site-language-picker" aria-label="Language" data-calepin-language-picker>
+                        {% for language in site.languages %}
+                        <option value="{{ language.href }}" data-calepin-language-code="{{ language.code }}"{% if language.active %} selected{% endif %}>{{ language.label }}</option>
+                        {% endfor %}
+                    </select>
+{% endif %}

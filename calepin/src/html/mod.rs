@@ -339,7 +339,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "with-removed-context",
-            "layouts/notebook.html",
+            "layouts/document.html",
             r#"{{ doc.body_open }}<style>{{ removed_template_context.css.code }}</style><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
         );
 
@@ -358,7 +358,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "zensical",
-            "layouts/notebook.html",
+            "layouts/document.html",
             r#"{{ doc.body_open }}<aside>{% for item in site.sidebar %}<a href="{{ item.href }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>{% endfor %}</aside><nav>{% for item in site.toc %}<a href="{{ item.href }}">{{ item.label }}</a>{% endfor %}</nav><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
         );
         let output = dir.path().join("docs-src2-build/html/cli.html");
@@ -387,7 +387,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "site-toc",
-            "layouts/webpage.html",
+            "layouts/site.html",
             r#"{{ doc.body_open }}<nav>{% for item in site.toc %}<a href="{{ item.href }}" class="level-{{ item.level }}">{{ item.label }}</a>{% endfor %}</nav><main>{{ doc.body }}</main>{{ doc.body_close }}"#,
         );
         let html = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1><h2>Section</h2></body></html>";
@@ -474,7 +474,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "custom",
-            "layouts/notebook.html",
+            "layouts/document.html",
             "<custom-shell>{{ doc.body }}</custom-shell>",
         );
 
@@ -528,7 +528,7 @@ mod tests {
         std::fs::create_dir_all(theme_dir.join("css")).unwrap();
         std::fs::create_dir_all(theme_dir.join("js")).unwrap();
         std::fs::write(
-            theme_dir.join("layouts/notebook.html"),
+            theme_dir.join("layouts/document.html"),
             "{{ doc.head }}{% for s in css %}<style>{{ s.content }}</style>{% endfor %}{{ doc.body_open }}{% include \"partials/banner.html\" %}{{ doc.body }}{% for s in js %}<script>{{ s.content }}</script>{% endfor %}{{ doc.body_close }}",
         )
         .unwrap();
@@ -553,7 +553,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "broken",
-            "layouts/notebook.html",
+            "layouts/document.html",
             "{% include \"partials/missing.html\" %}",
         );
 
@@ -747,7 +747,7 @@ mod tests {
         )
         .unwrap();
 
-        let brand = themed.find("calepin-website-topbrand").unwrap();
+        let brand = themed.find("calepin-site-brand").unwrap();
         let right_menu = themed.find("</ul>\n            <ul>").unwrap();
         let documentation = themed.find("Documentation").unwrap();
         let github = themed.find("GitHub").unwrap();
@@ -1323,7 +1323,7 @@ mod tests {
         let theme_dir = write_theme(
             dir.path(),
             "title-only",
-            "layouts/notebook.html",
+            "layouts/document.html",
             "<h1>{{ doc.title }}</h1>{{ doc.body_open }}{{ doc.body }}{{ doc.body_close }}",
         );
         let html = "<html><head><title>Foo &amp; Bar</title></head><body><p>x</p></body></html>";

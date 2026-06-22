@@ -1,0 +1,50 @@
+    <header class="calepin-website-topbar calepin-site-topbar">
+        <nav class="calepin-site-nav">
+            <ul>
+                {% if show_site_sidebar | default(true) %}
+                <li>
+                    <button class="calepin-website-nav-toggle calepin-nav-toggle outline secondary" type="button" aria-expanded="false" aria-controls="calepin-website-sidebar" aria-label="Toggle navigation menu"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h16"></path></svg></button>
+                </li>
+                {% endif %}
+                <li>
+                    {% include "partials/site-brand.html" %}
+                </li>
+            </ul>
+            <ul>
+                {% for item in site.menus.main %}
+                {% include "partials/site-nav-item.html" %}
+                {% endfor %}
+                {% for item in site.menus.social %}
+                {% include "partials/site-nav-item.html" %}
+                {% endfor %}
+                <li class="calepin-website-theme-item">
+                    {% set calepin_theme_toggle_storage_key = "calepin-website-theme" %}
+                    {% set calepin_theme_toggle_param = "theme" %}
+                    {% include "partials/theme-toggle-button.html" %}
+                </li>
+                {% if site.languages and site.languages | length > 1 %}
+                <li>
+                    {% include "partials/site-language-picker.html" %}
+                </li>
+                {% endif %}
+                {% if site.pagefind %}
+                <li class="calepin-website-search-item">
+                    <form class="calepin-website-search" role="search" data-calepin-search-form>
+                        <input class="calepin-website-search-input" type="search" placeholder="Search" aria-label="Search documentation" aria-haspopup="listbox" aria-expanded="false" autocomplete="off" spellcheck="false" data-calepin-search-input>
+                        <div class="calepin-website-search-results" role="listbox" aria-label="Search results" hidden data-calepin-search-results></div>
+                    </form>
+                </li>
+                <li class="calepin-website-mobile-search-item">
+                    <button class="calepin-website-mobile-search-button outline secondary" type="button" aria-label="Search documentation" title="Search" data-calepin-mobile-search-trigger><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+                </li>
+                {% endif %}
+                <li class="calepin-website-view-mode-item">
+                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view" data-calepin-view-mode>
+                        <option value="rendered">HTML</option>
+                        <option value="source">Source</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </li>
+            </ul>
+        </nav>
+    </header>

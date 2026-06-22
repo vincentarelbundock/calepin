@@ -1,0 +1,13 @@
+{% set calepin_theme_storage_key = "calepin-academic-document-theme" %}
+{% set calepin_theme_param = "" %}
+{% include "partials/document-head.html" %}
+{{ doc.body_open }}
+    <div class="academic-document-controls">
+        {% set calepin_theme_toggle_storage_key = "calepin-academic-document-theme" %}
+        {% include "partials/theme-toggle-button.html" %}
+    </div>
+    <main class="academic-main academic-document-main calepin-content calepin-document-main">
+        {{ doc.body }}
+    </main>
+{% include "partials/theme-scripts.html" %}
+{{ doc.body_close }}

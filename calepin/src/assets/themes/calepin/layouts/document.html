@@ -1,0 +1,8 @@
+{% set calepin_theme_storage_key = "calepin-html-theme" %}
+{% set calepin_theme_param = "" %}
+{% include "partials/document-head.html" %}
+{{ doc.body_open }}
+{% include "partials/document-theme-switcher.html" %}
+    <main class="container calepin-content calepin-document-main">{{ doc.body }}</main>
+{% include "partials/theme-scripts.html" %}
+{{ doc.body_close }}

@@ -58,7 +58,7 @@ Create a directory with a manifest, a layout, and a stylesheet:
 raw/
   theme.toml
   layouts/
-    notebook.html
+    document.html
   css/
     raw.css
 ```
@@ -69,7 +69,7 @@ Edit the manifest `raw/theme.toml`:
 extends = "typst"
 ```
 
-Edit `raw/layouts/notebook.html` to wrap Typst's generated HTML and inline the theme CSS files:
+Edit `raw/layouts/document.html` to wrap Typst's generated HTML and inline the theme CSS files:
 
 ```html
 {{ doc.head }}

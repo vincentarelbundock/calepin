@@ -69,6 +69,109 @@ a:has(.calepin-nav-icon) {
   gap: 0.35rem;
 }
 
+/* ------------------------------------------------------ Page navigation */
+
+.calepin-website-page-nav {
+  margin: 2.4rem auto 2rem;
+  padding: 0 1rem;
+}
+
+.calepin-website-page-nav-inner {
+  max-width: 52rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.calepin-website-page-nav-link,
+.calepin-website-page-nav-empty {
+  min-height: 3.4rem;
+  border-radius: var(--calepin-radius-sm);
+}
+
+.calepin-website-page-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  text-decoration: none;
+}
+
+.calepin-website-page-nav-link:hover,
+.calepin-website-page-nav-link:focus-visible {
+  transform: translateY(-1px);
+}
+
+.calepin-website-page-nav-empty {
+  display: block;
+}
+
+.calepin-website-page-nav-link--prev {
+  text-align: left;
+}
+
+.calepin-website-page-nav-link--next {
+  text-align: right;
+}
+
+.calepin-website-page-nav-link--next .calepin-website-page-nav-arrow {
+  margin-left: auto;
+}
+
+.calepin-website-page-nav-link--prev .calepin-website-page-nav-arrow {
+  margin-right: auto;
+}
+
+.calepin-website-page-nav-content {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.calepin-website-page-nav-content .calepin-website-page-nav-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calepin-website-page-nav-kind {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.calepin-website-page-nav-arrow {
+  width: 0.95rem;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--calepin-color-muted);
+}
+
+@media (max-width: 64rem) {
+  .calepin-website-page-nav {
+    margin-top: 1.8rem;
+    padding: 0 0.8rem;
+  }
+
+  .calepin-website-page-nav-inner {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .calepin-website-page-nav-link--next,
+  .calepin-website-page-nav-link--prev {
+    text-align: left;
+  }
+
+  .calepin-website-page-nav-link {
+    width: 100%;
+  }
+}
+
 .calepin-site-topbar {
   position: sticky;
   top: 0;

@@ -1,0 +1,19 @@
+{% set calepin_theme_storage_key = "calepin-website-theme" %}
+{% set calepin_theme_param = "theme" %}
+{% include "partials/site-head.html" %}
+{{ doc.body_open }}
+{% set show_site_sidebar = true %}
+{% include "partials/site-nav.html" %}
+    <div class="calepin-website-shell grid">
+        <div class="calepin-website-nav-backdrop" aria-hidden="true"></div>
+        {% include "partials/site-nav-sidebar.html" %}
+        <main class="calepin-website-main calepin-content" data-pagefind-body>
+            {{ doc.body }}
+        </main>
+        {% include "partials/site-nav-toc.html" %}
+    </div>
+{% include "partials/site-nav-prev-next.html" %}
+{% include "partials/site-footer.html" %}
+{% include "partials/site-search.html" %}
+{% include "partials/theme-scripts.html" %}
+{{ doc.body_close }}

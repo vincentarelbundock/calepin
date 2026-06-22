@@ -512,7 +512,7 @@ styles = ["styles/site.css"]
         let config_dir = dir.path().join("project");
         let theme_dir = config_dir.join("themes/local");
         std::fs::create_dir_all(theme_dir.join("layouts")).unwrap();
-        std::fs::write(theme_dir.join("layouts/notebook.html"), "{{ body }}").unwrap();
+        std::fs::write(theme_dir.join("layouts/document.html"), "{{ body }}").unwrap();
         std::fs::write(config_dir.join("calepin.toml"), r#"theme = "themes/local""#).unwrap();
 
         let config =

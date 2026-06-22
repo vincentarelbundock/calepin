@@ -7,7 +7,7 @@ use crate::utils::template::no_autoescape_env;
 use super::bundle::require_builtin;
 use super::{dir_theme_name, resolve_theme_chain, ThemeLayer, ThemeSelection};
 
-const NOTEBOOK_TEMPLATE: &str = "layouts/notebook.typ";
+const NOTEBOOK_TEMPLATE: &str = "layouts/pdf.typ";
 const REMOVED_NOTEBOOK_TEMPLATE: &str = "notebook.typ.jinja";
 const REMOVED_PAGED_TEMPLATE: &str = "paged.typ.jinja";
 
@@ -58,7 +58,7 @@ struct NotebookDocumentContext<'a> {
 }
 
 /// The Typst source to inject while rendering a notebook. `None` disables
-/// notebook theming entirely. Only `layouts/notebook.typ` is supported.
+/// notebook theming entirely. Only `layouts/pdf.typ` is supported.
 pub fn notebook_source(
     selection: &ThemeSelection,
     context: &NotebookTemplateContext,

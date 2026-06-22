@@ -131,7 +131,7 @@ fn website_build_result_canonicalizes_config_theme_dir() {
     std::fs::create_dir_all(&src).unwrap();
     std::fs::create_dir_all(&config).unwrap();
     std::fs::create_dir_all(theme.join("layouts")).unwrap();
-    std::fs::write(theme.join("layouts/webpage.html"), "{{ doc.body }}").unwrap();
+    std::fs::write(theme.join("layouts/site.html"), "{{ doc.body }}").unwrap();
     std::fs::write(config.join("calepin.toml"), r#"theme = "../theme""#).unwrap();
     std::fs::write(src.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
 
@@ -152,7 +152,7 @@ fn website_build_result_canonicalizes_config_theme_dir() {
     .unwrap();
 
     let canonical_theme = theme.canonicalize().unwrap();
-    let canonical_theme_file = theme.join("layouts/webpage.html").canonicalize().unwrap();
+    let canonical_theme_file = theme.join("layouts/site.html").canonicalize().unwrap();
     assert_eq!(result.theme_dirs, vec![canonical_theme]);
     assert!(should_rebuild_for_path(&result, &canonical_theme_file));
 }
@@ -1903,7 +1903,7 @@ fn theme_key_resolves_local_directory_against_config_dir() {
     let temp = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(temp.path().join("themes/my-theme/layouts")).unwrap();
     std::fs::write(
-        temp.path().join("themes/my-theme/layouts/webpage.html"),
+        temp.path().join("themes/my-theme/layouts/site.html"),
         "{{ doc.body }}",
     )
     .unwrap();
@@ -2878,13 +2878,13 @@ fn page_meta_from_value_reads_calepin_keys_and_keeps_raw_dict() {
     let value = serde_json::json!({
         "title": " My Page ",
         "pdf": false,
-        "layout": "layouts/landing.html",
+        "layout": "layouts/site-landing.html",
         "date": "2026-06-10"
     });
     let meta = page_meta_from_value(&value);
     assert_eq!(meta.title.as_deref(), Some("My Page"));
     assert_eq!(meta.pdf, Some(false));
-    assert_eq!(meta.layout.as_deref(), Some("layouts/landing.html"));
+    assert_eq!(meta.layout.as_deref(), Some("layouts/site-landing.html"));
     assert_eq!(meta.raw, value);
 
     let blank_title = page_meta_from_value(&serde_json::json!({"title": ""}));

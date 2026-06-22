@@ -27,7 +27,7 @@
   margin-inline: auto;
 }
 
-.academic-brand {
+.academic-nav .calepin-site-brand {
   font-size: 1.2rem;
 }
 
@@ -35,7 +35,7 @@
   display: contents;
 }
 
-.academic-language-picker {
+.academic-nav .calepin-site-language-picker {
   width: auto;
   min-width: 7rem;
   margin: 0;
@@ -131,36 +131,6 @@ body:has(.academic-document-main .calepin-sidefigure) .academic-document-main {
 
 .calepin-sidefigure table {
   font-size: 0.8rem;
-}
-
-.academic-page-nav {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  width: min(100% - 2rem, var(--calepin-page-width));
-  margin: 0 auto 4rem;
-  padding-top: 1.4rem;
-  border-top: 1px solid var(--calepin-color-border);
-}
-
-.academic-page-nav-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-width: 0;
-  color: inherit;
-  text-decoration: none;
-}
-
-.academic-page-nav-link-next {
-  grid-column: 2;
-  justify-self: end;
-  text-align: right;
-}
-
-.academic-page-nav-link:hover,
-.academic-page-nav-link:focus-visible {
-  color: var(--calepin-color-accent);
 }
 
 .calepin-site-footer {
@@ -274,17 +244,6 @@ body:has(.academic-document-main .calepin-sidefigure) .academic-document-main {
   .academic-document-main,
   .academic-landing {
     padding-block: 2rem 3rem;
-  }
-
-  .academic-page-nav {
-    grid-template-columns: 1fr;
-    width: min(100% - 1.25rem, var(--calepin-content-width));
-  }
-
-  .academic-page-nav-link-next {
-    grid-column: 1;
-    justify-self: start;
-    text-align: left;
   }
 }
 

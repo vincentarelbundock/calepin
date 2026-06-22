@@ -1,4 +1,4 @@
 [shared]
-partials = ["site-meta.html", "theme-init.html", "styles.html", "scripts.html", "pagefind-modal.html", "theme-toggle.html", "site-footer.html"]
+partials = ["document-head.html", "site-head.html", "site-head-meta.html", "site-brand.html", "site-language-picker.html", "site-nav-prev-next.html", "site-sidebar-item.html", "theme-init-script.html", "theme-styles.html", "theme-scripts.html", "site-search.html", "theme-toggle-button.html", "site-footer.html"]
 css = ["10_pico.css", "20_theme.css", "30_code.css", "40_widgets.css"]
 js = ["theme-toggle.js", "language-picker.js", "copy-code.js", "search.js", "theme-init.js"]

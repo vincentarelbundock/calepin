@@ -5,7 +5,7 @@
 
 #title()
 
-Themes control how _Calepin_ renders websites and notebooks. A theme can provide MiniJinja HTML templates, partials, CSS, JavaScript, and a Typst-side `layouts/notebook.typ` layout for paged (PDF or SVG) notebook output. The default theme is called `calepin`.
+Themes control how _Calepin_ renders websites and notebooks. A theme can provide MiniJinja HTML templates, partials, CSS, JavaScript, and a Typst-side `layouts/pdf.typ` layout for paged (PDF or SVG) notebook output. The default theme is called `calepin`.
 
 Theme customization uses one mechanism: create a local theme directory and point `calepin` to it when compiling.
 
@@ -109,10 +109,10 @@ A fuller theme can provide any of these files:
 my-theme/
   theme.toml            # theme metadata and inheritance
   layouts/
-    webpage.html        # website page wrapper
-    notebook.html       # standalone notebook HTML wrapper
-    landing.html        # optional page-specific website layout
-    notebook.typ        # Typst layout around notebook source
+    site.html           # website page wrapper
+    document.html       # standalone notebook HTML wrapper
+    site-landing.html   # optional page-specific website layout
+    pdf.typ             # PDF/SVG Typst layout around notebook source
   partials/
     ...                 # reusable MiniJinja fragments
   css/
