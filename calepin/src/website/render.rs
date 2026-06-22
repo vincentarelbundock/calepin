@@ -13,7 +13,7 @@ use crate::utils::html::escape as html_escape;
 use super::preprocess::run_parallel;
 use super::site::SiteModel;
 use super::url::page_relative_url;
-use super::{BuildContext, SOURCE_DATA_ID};
+use super::{paths::normalize_asset_relative_path, BuildContext, SOURCE_DATA_ID};
 
 pub(super) fn render_documents(
     context: &BuildContext,
@@ -457,22 +457,6 @@ fn rewrite_theme_asset_hrefs(current_href: &str, theme_assets: &mut [crate::html
         let href = page_relative_url(current_href, &asset.href);
         asset.href = html_escape(&href);
     }
-}
-
-fn normalize_asset_relative_path(path: &str) -> String {
-    let normalized_path = path.replace('\\', "/");
-    let parts = normalized_path
-        .split('/')
-        .filter(|part| !part.is_empty())
-        .collect::<Vec<_>>();
-    let mut normalized = Vec::with_capacity(parts.len());
-    for part in parts {
-        if (part.starts_with('.') || part.starts_with('_')) && normalized.last() == Some(&part) {
-            continue;
-        }
-        normalized.push(part);
-    }
-    normalized.join("/")
 }
 
 fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {

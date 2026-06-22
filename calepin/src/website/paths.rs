@@ -93,6 +93,22 @@ pub(super) fn ensure_relative_path<'a>(path: &'a Path, what: &str) -> Result<&'a
     Ok(path)
 }
 
+pub(super) fn normalize_asset_relative_path(path: &str) -> String {
+    let normalized_path = path.replace('\\', "/");
+    let parts = normalized_path
+        .split('/')
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>();
+    let mut normalized = Vec::with_capacity(parts.len());
+    for part in parts {
+        if (part.starts_with('.') || part.starts_with('_')) && normalized.last() == Some(&part) {
+            continue;
+        }
+        normalized.push(part);
+    }
+    normalized.join("/")
+}
+
 pub(super) fn wildcard_match(pattern: &str, value: &str) -> bool {
     let pattern = glob_tokens(pattern);
     let value = value.as_bytes();
@@ -152,4 +168,29 @@ fn glob_tokens(pattern: &str) -> Vec<GlobToken> {
         }
     }
     tokens
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_asset_relative_path;
+
+    #[test]
+    fn normalize_asset_relative_path_drops_repeated_asset_prefix_segment() {
+        assert_eq!(
+            normalize_asset_relative_path(".calepin/.calepin/site.css"),
+            ".calepin/site.css"
+        );
+        assert_eq!(
+            normalize_asset_relative_path("assets/_calepin/_calepin/site.css"),
+            "assets/_calepin/site.css"
+        );
+    }
+
+    #[test]
+    fn normalize_asset_relative_path_preserves_distinct_prefixes() {
+        assert_eq!(
+            normalize_asset_relative_path("assets/assets/site.css"),
+            "assets/assets/site.css"
+        );
+    }
 }
