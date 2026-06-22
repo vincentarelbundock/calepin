@@ -389,12 +389,12 @@ fn render_document(
     site_context.config_stylesheets = asset_decision
         .config_stylesheets
         .iter()
-        .map(|stylesheet| html_escape(&rewrite_asset_href(&current_href, stylesheet)))
+        .map(|stylesheet| html_escape(&page_relative_url(&current_href, stylesheet)))
         .collect();
     site_context.scripts = asset_decision
         .scripts
         .iter()
-        .map(|script| html_escape(&rewrite_asset_href(&current_href, script)))
+        .map(|script| html_escape(&page_relative_url(&current_href, script)))
         .collect();
     rewrite_theme_asset_hrefs(&current_href, &mut site_context.theme_assets);
 
@@ -454,37 +454,25 @@ fn render_document(
 
 fn rewrite_theme_asset_hrefs(current_href: &str, theme_assets: &mut [crate::html::SiteThemeAsset]) {
     for asset in theme_assets.iter_mut() {
-        let href = rewrite_asset_href(current_href, &asset.href);
+        let href = page_relative_url(current_href, &asset.href);
         asset.href = html_escape(&href);
     }
 }
 
-fn rewrite_asset_href(current_href: &str, target: &str) -> String {
-    let target = page_relative_url(current_href, target);
-    dedupe_asset_prefix(&target)
-}
-
-fn dedupe_asset_prefix(path: &str) -> String {
-    let mut parts = path
+fn normalize_asset_relative_path(path: &str) -> String {
+    let normalized_path = path.replace('\\', "/");
+    let parts = normalized_path
         .split('/')
         .filter(|part| !part.is_empty())
         .collect::<Vec<_>>();
-    while parts.len() >= 2 && parts[0] == parts[1] && is_asset_dir_prefix(parts[0]) {
-        parts.remove(0);
+    let mut normalized = Vec::with_capacity(parts.len());
+    for part in parts {
+        if (part.starts_with('.') || part.starts_with('_')) && normalized.last() == Some(&part) {
+            continue;
+        }
+        normalized.push(part);
     }
-    if parts.is_empty() {
-        return String::new();
-    }
-    let normalized = parts.join("/");
-    if path.ends_with('/') && !normalized.ends_with('/') {
-        format!("{normalized}/")
-    } else {
-        normalized
-    }
-}
-
-fn is_asset_dir_prefix(segment: &str) -> bool {
-    segment.starts_with('.') || segment.starts_with('_')
+    normalized.join("/")
 }
 
 fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
@@ -669,7 +657,11 @@ impl GeneratedThemeAsset {
         } else {
             asset_dir.join(format!("{stem}.{extension}"))
         };
-        Self { rel_path, content }
+        let rel_path = normalize_asset_relative_path(&rel_path.to_string_lossy());
+        Self {
+            rel_path: PathBuf::from(rel_path),
+            content,
+        }
     }
 
     pub(super) fn write(&self, out_dir: &Path) -> Result<()> {
@@ -745,30 +737,29 @@ mod tests {
     }
 
     #[test]
-    fn rewrite_theme_asset_hrefs_removes_duplicate_asset_prefix() {
-        let mut theme_assets = vec![crate::html::SiteThemeAsset {
-            name: "theme-toggle.js".to_string(),
-            href: ".calepin/.calepin/theme-toggle.js".to_string(),
-            kind: "js".to_string(),
-        }];
+    fn generated_theme_asset_rel_path_canonicalizes_duplicate_asset_prefix() {
+        let asset = GeneratedThemeAsset::new_with_name(
+            Path::new(".calepin"),
+            ".calepin/theme-toggle.js",
+            "js",
+            "console.log(1)".to_string(),
+        );
 
-        rewrite_theme_asset_hrefs("index.html", &mut theme_assets);
-
-        assert_eq!(theme_assets[0].href, ".calepin/theme-toggle.js");
+        assert_eq!(asset.rel_path, Path::new(".calepin/theme-toggle.js"));
     }
 
     #[test]
-    fn dedupe_asset_prefix_drops_nested_repeat_prefix() {
+    fn generated_asset_paths_preserve_distinct_prefix_segments() {
         assert_eq!(
-            dedupe_asset_prefix(".calepin/.calepin/site.css"),
+            normalize_asset_relative_path(".calepin/.calepin/site.css"),
             ".calepin/site.css"
         );
         assert_eq!(
-            dedupe_asset_prefix("_calepin/_calepin/site.css"),
-            "_calepin/site.css"
+            normalize_asset_relative_path("assets/_calepin/_calepin/site.css"),
+            "assets/_calepin/site.css"
         );
         assert_eq!(
-            dedupe_asset_prefix("assets/assets/site.css"),
+            normalize_asset_relative_path("assets/assets/site.css"),
             "assets/assets/site.css"
         );
     }
