@@ -20,34 +20,33 @@ Reference files and rendered output can be viewed here:
 The source tree is intentionally small:
 
 ```text
-docs/themes/examples/tufte/
+project/
   calepin.toml
   tufte.typ
-  themes/
-    tufte/
-      theme.toml
-      css/
-        tufte.css
+  tufte/
+    theme.toml
+    css/
+      tufte.css
 ```
 
 `calepin.toml` points `calepin` at the local theme directory:
 
 ```toml
-theme = "themes/tufte"
+theme = "tufte"
 ```
 
 The theme directory itself declares its base theme:
 
 ```toml
-# themes/tufte/theme.toml
+# tufte/theme.toml
 extends = "academic"
 ```
 
 That keeps all of the built-in `academic` theme structure: the single-document
 HTML wrapper, the theme toggle, sidenotes, side figures, code styling, and
-dark-mode support. The local `themes/tufte/css/tufte.css` file is intentionally
-small. It overrides the public `--calepin-*` tokens instead of targeting
-private theme internals:
+dark-mode support. The local `tufte/css/tufte.css` file is intentionally small.
+It overrides the public `--calepin-*` tokens instead of targeting private theme
+internals:
 
 ```css
 :root, html[data-theme="light"] {
@@ -87,15 +86,14 @@ The document source can then use the normal academic-theme elements:
 chunks for computed output. The stylesheet changes the feel of those elements,
 but the layout behavior still comes from the built-in theme.
 
-From the case-study directory, render the HTML and PDF with:
+From the project root, render the HTML and PDF with:
 
 ```sh
-cd docs/themes/examples/tufte
 calepin compile tufte.typ --config calepin.toml --format html
 calepin compile tufte.typ --config calepin.toml --format pdf
 ```
 
-The config path matters because `theme = "themes/tufte"` is resolved relative to
+The config path matters because `theme = "tufte"` is resolved relative to
 `calepin.toml`. Keeping the config, local theme, and document together makes the
 example portable: copy the directory, run the same commands, and the academic
 theme plus Tufte overlay are applied in both rendered outputs.
