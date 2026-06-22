@@ -1014,17 +1014,22 @@ mod tests {
             return;
         }
         let dir = tempfile::tempdir().unwrap();
-        // No vars: a chunk referencing `vars` should raise a NameError,
-        // proving nothing was injected.
+        // No vars: Python should still see its built-in `vars` function,
+        // proving Calepin did not inject a document mapping.
         let mut pool = pool_with_vars(dir.path(), serde_json::json!({}));
         let mut chunk = chunk(ResultsMode::Verbatim);
         chunk.engine = EngineName::Python;
         chunk.label = "no-vars".to_string();
         chunk.code = "print(vars)".to_string();
-        let err = pool
+        let result = pool
             .execute_chunk(&chunk, dir.path(), unused_artifact_path)
-            .unwrap_err()
-            .to_string();
-        assert!(err.contains("NameError") || err.contains("vars"), "{err}");
+            .unwrap();
+        let out = result
+            .items
+            .iter()
+            .filter_map(|item| item.text.clone())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(out.contains("<built-in function vars>"), "{out:?}");
     }
 }

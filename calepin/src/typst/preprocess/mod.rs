@@ -155,7 +155,13 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     // staged source directly; document-level HTML must be guarded by target
     // checks so paged/query passes never evaluate `html.*` calls.
     let query_source = write_query_source(&layout, &staged_input)?;
-    let query_input = write_render_wrapper(&layout, &runtime_import, &query_source, &[], None)?;
+    let query_input = write_render_wrapper(
+        &layout,
+        &runtime_import,
+        Some(&query_source),
+        &[],
+        None,
+    )?;
     let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let metadata = preprocess_metadata(
         &config.executables.typst,
@@ -215,7 +221,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         layout.render_input = write_render_wrapper(
             &layout,
             &runtime_import,
-            &staged_input,
+            if notebook_theme.is_some() {
+                None
+            } else {
+                Some(&staged_input)
+            },
             &kernels,
             notebook_theme.as_ref(),
         )?;
@@ -223,7 +233,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         layout.render_input = write_render_wrapper(
             &layout,
             &runtime_import,
-            &staged_input,
+            if notebook_theme.is_some() {
+                None
+            } else {
+                Some(&staged_input)
+            },
             &[],
             notebook_theme.as_ref(),
         )?;
@@ -1099,7 +1113,6 @@ mod tests {
     fn render_wrapper_rewrites_notebook_theme_runtime_import() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
-        let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#import \"/.calepin/calepin.typ\": _html-themed-raw-block\n".to_string(),
         };
@@ -1107,7 +1120,7 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/_runtime/calepin.typ",
-            &staged_input,
+            None,
             &[],
             Some(&notebook_theme),
         )
@@ -1119,10 +1132,9 @@ mod tests {
     }
 
     #[test]
-    fn render_wrapper_includes_notebook_theme_before_source() {
+    fn render_wrapper_keeps_notebook_theme_source_intact() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
-        let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#let notebook-theme-marker = true\n".to_string(),
         };
@@ -1130,25 +1142,21 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
-            &staged_input,
+            None,
             &[],
             Some(&notebook_theme),
         )
         .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
-        let theme_marker = contents.find("#let notebook-theme-marker = true").unwrap();
-        let source_include = contents
-            .find("#include \"/.calepin/paper/source.typ\"")
-            .unwrap();
-        assert!(theme_marker < source_include);
+        assert!(contents.contains("#let notebook-theme-marker = true"));
+        assert!(!contents.contains("#include \"/.calepin/paper/source.typ\""));
     }
 
     #[test]
     fn render_wrapper_does_not_duplicate_template_owned_body() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
-        let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#include \"/.calepin/paper/source.typ\"\n[#emph[Appendix]]\n".to_string(),
         };
@@ -1156,7 +1164,7 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
-            &staged_input,
+            None,
             &[],
             Some(&notebook_theme),
         )
@@ -1181,7 +1189,7 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
-            &staged_input,
+            Some(&staged_input),
             &["bash"],
             None,
         )
