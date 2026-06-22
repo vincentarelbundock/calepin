@@ -4069,7 +4069,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [PDF templates])\n#import \"/.calepin/calepin.typ\" as calepin\n#title()\n\n`layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.\n\n```text\nthemes/my-theme/\n  layouts/\n    pdf.typ\n```\n\nBefore Typst runs, Calepin renders this file with MiniJinja so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.\n\nInside the layout, place notebook content with `document.body`:\n\n```typ\n#set page(\n  paper: \"us-letter\",\n  margin: (x: 1in, y: 0.85in),\n  numbering: \"1\",\n)\n\n#set text(font: \"Libertinus Serif\", size: 10.5pt)\n\n{{ document.body }}\n```\n\nUseful `layouts/pdf.typ` values:\n\n- `theme`: local theme directory name\n- `target`: `notebook`\n- `document.path`: `.typ` input path relative to workspace\n- `document.dir`: input directory relative to workspace\n- `document.stem`: input filename without `.typ`\n- `document.body`: notebook body, injected as a `#include`\n- `document.meta`: values from `#metadata(...) <website-metadata>`\n- `params`: CLI parameter map\n\nIf `document.body` is not referenced, Calepin appends the notebook body after the rendered layout.\n\n`theme = \"typst\"` disables notebook-specific theming, and `extends = \"typst\"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout. `notebook.typ.jinja` and `paged.typ.jinja` are not supported.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [PDF templates])\n#import \"/.calepin/calepin.typ\" as calepin\n#title()\n\n`layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.\n\n```text\nthemes/my-theme/\n  layouts/\n    pdf.typ\n```\n\nBefore Typst runs, Calepin renders this file with MiniJinja, the same engine used for HTML layouts (see #link(\"templating.html\")[Templating]), so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.\n\nInside the layout, place notebook content with `document.body`:\n\n```typ\n#set page(\n  paper: \"us-letter\",\n  margin: (x: 1in, y: 0.85in),\n  numbering: \"1\",\n)\n\n#set text(font: \"Libertinus Serif\", size: 10.5pt)\n\n{{ document.body }}\n```\n\nUseful `layouts/pdf.typ` values:\n\n- `theme`: local theme directory name\n- `target`: `notebook`\n- `document.path`: `.typ` input path relative to workspace\n- `document.dir`: input directory relative to workspace\n- `document.stem`: input filename without `.typ`\n- `document.body`: notebook body, injected as a `#include`\n- `document.meta`: values from `#metadata(...) <website-metadata>`\n- `params`: CLI parameter map\n- `vars`: custom values from `[vars]` in `calepin.toml`, the same map HTML templates receive\n\nIf `document.body` is not referenced, Calepin appends the notebook body after the rendered layout.\n\n`theme = \"typst\"` disables notebook-specific theming, and `extends = \"typst\"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout. `notebook.typ.jinja` and `paged.typ.jinja` are not supported.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4236,9 +4236,11 @@ html:not([data-theme]) {
                             
                             <li><a href="themes.html" aria-label="Themes">Themes</a></li>
                             
-                            <li><a href="pdf_templates.html" aria-label="PDF templates" class="active" aria-current="page">PDF templates</a></li>
+                            <li><a href="templating.html" aria-label="Templating">Templating</a></li>
                             
                             <li><a href="html_templates.html" aria-label="HTML templates">HTML templates</a></li>
+                            
+                            <li><a href="pdf_templates.html" aria-label="PDF templates" class="active" aria-current="page">PDF templates</a></li>
                             
                             <li><a href="css.html" aria-label="CSS">CSS</a></li>
                             
@@ -4272,7 +4274,7 @@ html:not([data-theme]) {
         <main class="calepin-website-main calepin-content" data-pagefind-body>
             <h1 id="pdf-templates">PDF templates</h1><p><code>layouts/pdf.typ</code> is the Typst-side layout used by PDF and SVG notebook outputs.</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">themes/my-theme/
   layouts/
-    pdf.typ</code></pre></div><p>Before Typst runs, Calepin renders this file with MiniJinja so the output is still valid Typst source. The file uses a <code>.typ</code> extension because it renders to Typst, even though it is a MiniJinja template.</p><p>Inside the layout, place notebook content with <code>document.body</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">page</span><span class="calepin-syntax-scope-2">(</span>
+    pdf.typ</code></pre></div><p>Before Typst runs, Calepin renders this file with MiniJinja, the same engine used for HTML layouts (see <a href="templating.html">Templating</a>), so the output is still valid Typst source. The file uses a <code>.typ</code> extension because it renders to Typst, even though it is a MiniJinja template.</p><p>Inside the layout, place notebook content with <code>document.body</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">page</span><span class="calepin-syntax-scope-2">(</span>
   paper<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"us-letter"</span><span class="calepin-syntax-scope-2">,</span>
   margin<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span>x<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-6">1in</span><span class="calepin-syntax-scope-2">,</span> y<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-6">0.85in</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">,</span>
   numbering<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"1"</span><span class="calepin-syntax-scope-2">,</span>
@@ -4280,7 +4282,7 @@ html:not([data-theme]) {
 
 <span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">text</span><span class="calepin-syntax-scope-2">(</span>font<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Libertinus Serif"</span><span class="calepin-syntax-scope-2">,</span> size<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-6">10.5pt</span><span class="calepin-syntax-scope-2">)</span>
 
-{{ document.body }}</code></pre></div><p>Useful <code>layouts/pdf.typ</code> values:</p><ul><li><code>theme</code>: local theme directory name</li><li><code>target</code>: <code>notebook</code></li><li><code>document.path</code>: <code>.typ</code> input path relative to workspace</li><li><code>document.dir</code>: input directory relative to workspace</li><li><code>document.stem</code>: input filename without <code>.typ</code></li><li><code>document.body</code>: notebook body, injected as a <code>#include</code></li><li><code>document.meta</code>: values from <code>#metadata(...) &lt;website-metadata></code></li><li><code>params</code>: CLI parameter map</li></ul><p>If <code>document.body</code> is not referenced, Calepin appends the notebook body after the rendered layout.</p><p><code>theme = "typst"</code> disables notebook-specific theming, and <code>extends = "typst"</code> creates a local theme with no inherited Calepin base. Use an empty <code>layouts/pdf.typ</code> for a minimal pass-through layout. <code>notebook.typ.jinja</code> and <code>paged.typ.jinja</code> are not supported.</p>
+{{ document.body }}</code></pre></div><p>Useful <code>layouts/pdf.typ</code> values:</p><ul><li><code>theme</code>: local theme directory name</li><li><code>target</code>: <code>notebook</code></li><li><code>document.path</code>: <code>.typ</code> input path relative to workspace</li><li><code>document.dir</code>: input directory relative to workspace</li><li><code>document.stem</code>: input filename without <code>.typ</code></li><li><code>document.body</code>: notebook body, injected as a <code>#include</code></li><li><code>document.meta</code>: values from <code>#metadata(...) &lt;website-metadata></code></li><li><code>params</code>: CLI parameter map</li><li><code>vars</code>: custom values from <code>[vars]</code> in <code>calepin.toml</code>, the same map HTML templates receive</li></ul><p>If <code>document.body</code> is not referenced, Calepin appends the notebook body after the rendered layout.</p><p><code>theme = "typst"</code> disables notebook-specific theming, and <code>extends = "typst"</code> creates a local theme with no inherited Calepin base. Use an empty <code>layouts/pdf.typ</code> for a minimal pass-through layout. <code>notebook.typ.jinja</code> and <code>paged.typ.jinja</code> are not supported.</p>
         </main>
                 
     </div>
@@ -4378,6 +4380,16 @@ html:not([data-theme]) {
         
     
         
+        
+            
+        
+    
+        
+        
+            
+        
+    
+        
             
             
         
@@ -4386,11 +4398,6 @@ html:not([data-theme]) {
         
             
             
-        
-        
-            
-        
-    
         
         
             
@@ -4421,20 +4428,20 @@ html:not([data-theme]) {
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="themes.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="html_templates.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Themes</span>
+            <span class="calepin-website-page-nav-title">HTML templates</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="html_templates.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="css.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">HTML templates</span>
+            <span class="calepin-website-page-nav-title">CSS</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>
