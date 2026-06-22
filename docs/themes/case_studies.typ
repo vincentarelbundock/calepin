@@ -97,3 +97,64 @@ The config path matters because `theme = "tufte"` is resolved relative to
 `calepin.toml`. Keeping the config, local theme, and document together makes the
 example portable: copy the directory, run the same commands, and the academic
 theme plus Tufte overlay are applied in both rendered outputs.
+
+= Website fonts
+
+This second case study starts from `calepin new website --theme calepin` and
+shows the smallest possible local theme that changes the website fonts without
+touching the layouts.
+
+The source tree is flat and easy to copy:
+
+```text
+project/
+  calepin.toml
+  docs/
+    index.typ
+  themes/
+    fonts/
+      theme.toml
+      css/
+        fonts.css
+```
+
+`calepin.toml` points at the local theme:
+
+```toml
+theme = "themes/fonts"
+```
+
+The theme manifest inherits from the built-in `calepin` theme:
+
+```toml
+# themes/fonts/theme.toml
+extends = "calepin"
+```
+
+The only CSS file imports Google Fonts and overrides the public font tokens:
+
+```css
+@import url("https://fonts.googleapis.com/css2?family=Rubik+Moonrocks&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+:root {
+  --calepin-font-body: "Space Grotesk", system-ui, sans-serif;
+  --calepin-font-heading: "Rubik Moonrocks", "Space Grotesk", sans-serif;
+  --calepin-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+```
+
+This keeps the layout, navigation, and page behavior from the built-in
+`calepin` theme. The local theme only changes typography, so the result is easy
+to reason about: same site structure, different font stack.
+
+Render it from the project root with:
+
+```sh
+calepin compile docs/index.typ --config calepin.toml --format html
+calepin compile docs/index.typ --config calepin.toml --format pdf
+```
+
+If you want the font change to be more subtle, swap `Rubik Moonrocks` for a
+less aggressive heading font and keep the body/mono families as-is. The only
+thing this theme changes is the type system, so font experimentation stays
+isolated from the rest of the site.
