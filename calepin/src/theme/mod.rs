@@ -113,10 +113,13 @@ pub(crate) fn resolve_theme_chain(selection: &ThemeSelection) -> Result<ThemeCha
 fn resolve_dir_theme_chain(dir: &Path) -> Result<ThemeChain> {
     let manifest = read_local_theme_manifest(dir)?;
     let mut chain = match manifest.extends.as_deref() {
-        None => ThemeChain {
-            layers: Vec::new(),
-            terminal_typst: false,
-        },
+        None => {
+            return Err(anyhow!(
+                "local theme {} must declare `extends` in theme.toml; use `extends = \"typst\"` for a bare theme or a built-in theme: {}",
+                dir.display(),
+                bundle::builtin_names().join(", ")
+            ))
+        }
         Some("typst") => ThemeChain {
             layers: Vec::new(),
             terminal_typst: true,
@@ -377,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn dir_theme_without_extends_does_not_fallback_per_missing_file() {
+    fn dir_theme_without_extends_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
@@ -385,11 +388,16 @@ mod tests {
             "<html><head></head><body>X</body></html>",
         )
         .unwrap();
-        let sel = ThemeSelection::Dir(dir.path().to_path_buf());
-        let site = resolve_html_entry(&sel, HtmlScope::Site).unwrap().unwrap();
-        assert!(!site.is_default);
-        assert!(resolve_html_entry(&sel, HtmlScope::Document).is_err());
-        assert!(notebook_source(&sel, &NotebookTemplateContext::default()).is_err());
+
+        let err = resolve_html_entry(
+            &ThemeSelection::Dir(dir.path().to_path_buf()),
+            HtmlScope::Site,
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("must declare `extends`"), "{err}");
+        assert!(err.contains("extends = \"typst\""), "{err}");
     }
 
     #[test]
@@ -450,7 +458,9 @@ mod tests {
         std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
-            r#"[shared]
+            r#"extends = "typst"
+
+[shared]
 css = ["theme.css", "widgets.css"]
 js = ["copy-code.js"]
 "#,
@@ -499,7 +509,9 @@ js = ["copy-code.js"]
         std::fs::write(theme.join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             theme.join("theme.toml"),
-            r#"[shared]
+            r#"extends = "typst"
+
+[shared]
 css = ["site.css", "site.css"]
 "#,
         )
@@ -518,7 +530,9 @@ css = ["site.css", "site.css"]
         std::fs::write(dir.path().join("layouts/notebook.html"), "{{ doc.body }}").unwrap();
         std::fs::write(
             dir.path().join("theme.toml"),
-            r#"[shared]
+            r#"extends = "typst"
+
+[shared]
 css = ["../theme.css"]
 "#,
         )
@@ -541,6 +555,7 @@ css = ["../theme.css"]
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(dir.path().join("layouts/webpage.html"), "{{ doc.body }}").unwrap();
         std::fs::write(dir.path().join("layouts/landing.html"), "landing").unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
         let entry = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
@@ -555,6 +570,7 @@ css = ["../theme.css"]
     fn explicit_site_layout_requires_local_or_inherited_file() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("notebook.typ.jinja"), "{{ document.body }}").unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
         let err = resolve_explicit_site_html_entry(&sel, "layouts/landing.html")
@@ -611,6 +627,7 @@ css = ["../theme.css"]
     fn empty_notebook_typ_jinja_means_no_styling_not_fallback() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("notebook.typ.jinja"), "").unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         assert_eq!(
             notebook_source(&sel, &NotebookTemplateContext::default()).unwrap(),
@@ -631,6 +648,7 @@ css = ["../theme.css"]
 "#,
         )
         .unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         let context = NotebookTemplateContext {
             input_path: "reports/iris.typ".to_string(),
@@ -660,6 +678,7 @@ css = ["../theme.css"]
 "#,
         )
         .unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         let context = NotebookTemplateContext {
             input_path: "paper.typ".to_string(),
@@ -722,6 +741,7 @@ css = ["../theme.css"]
             "{{ target }} {{ document.body }}",
         )
         .unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         let err = notebook_source(&sel, &NotebookTemplateContext::default())
             .unwrap_err()
@@ -740,6 +760,7 @@ css = ["../theme.css"]
     fn theme_dir_with_only_legacy_paged_typ_errors() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("paged.typ"), "#set text(size: 10pt)").unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
         assert!(notebook_source(&sel, &NotebookTemplateContext::default()).is_err());

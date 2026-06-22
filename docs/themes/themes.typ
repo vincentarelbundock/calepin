@@ -123,7 +123,7 @@ extends = "academic"      # inherit from a built-in theme
 extends = "typst"         # inherit from no Calepin theme
 ```
 
-A local theme with no `extends` is standalone; it does not fall back to a built-in theme.
+Every local theme must declare `extends`; use `extends = "typst"` for a bare-bones start.
 
 A fuller theme can provide any of these files:
 
