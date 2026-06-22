@@ -1022,8 +1022,8 @@ print(vars["region"])
             "compile",
             "paper.typ",
             "paper.pdf",
-            "--var",
-            "region=CA",
+            "--set",
+            "vars.region=CA",
             "--quiet",
         ])
         .current_dir(dir.path())

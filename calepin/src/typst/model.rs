@@ -138,7 +138,7 @@ pub struct SetupDefaults {
     pub fig_responsive: Option<bool>,
     pub fenced_chunks: FencedChunks,
     /// Document-level variables from `calepin.setup(vars: (...))`, kept as a
-    /// JSON object. Merged with `[vars]` config and CLI `--var` overrides, then
+    /// JSON object. Merged with `[vars]` config and CLI `--set vars.*` overrides, then
     /// injected once per engine so chunks can read a `vars` value.
     #[serde(default)]
     pub vars: Value,

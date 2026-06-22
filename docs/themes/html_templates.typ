@@ -13,7 +13,7 @@ Templates can access a variety of "contexts" and "variables" to build a document
 - `highlight_css`: standalone syntax-highlight CSS.
 - `theme`: the active theme name.
 - `target`: the render target; currently `html`.
-- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--var` overrides.
+- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--set vars.<name>=...` overrides.
 
 `doc` contains:
 

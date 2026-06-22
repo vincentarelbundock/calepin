@@ -174,7 +174,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         render_pdf,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
-        vars: args.common.vars,
+        config_overrides: args.common.sets,
         typst_args: args.typst_args,
         incremental_inputs: None,
         clean: true,
@@ -210,7 +210,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         render_pdf,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
-        vars: args.common.vars.clone(),
+        config_overrides: args.common.sets.clone(),
         typst_args: args.typst_args.clone(),
         incremental_inputs: None,
         clean: true,
@@ -249,7 +249,7 @@ struct WebsiteBuildOptions {
     render_pdf: Option<bool>,
     quiet: bool,
     timeout: Option<u64>,
-    vars: Vec<String>,
+    config_overrides: Vec<String>,
     typst_args: Vec<String>,
     incremental_inputs: Option<Vec<PathBuf>>,
     clean: bool,
@@ -299,7 +299,7 @@ fn theme_chain_dirs(theme: &crate::theme::ThemeSelection) -> Result<Vec<PathBuf>
 fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let current_dir = std::env::current_dir()?;
     let config_path = resolve_config_path(&current_dir, Some(args.config.as_path()))?;
-    let config = load_website_config(&config_path, true)?;
+    let config = load_website_config(&config_path, true, &args.config_overrides)?;
 
     let src_dir = resolve_cli_path(
         &current_dir,
@@ -323,7 +323,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         out_dir
     };
 
-    let calepin_config = CalepinConfig::load(&src_dir, Some(&config_path))?;
+    let calepin_config =
+        CalepinConfig::load_with_overrides(&src_dir, Some(&config_path), &args.config_overrides)?;
     let config_theme = calepin_config.theme_selection()?.unwrap_or_default();
     let site_theme = config_theme.clone();
     let asset_dir = resolve_website_asset_dir(&config)?;
@@ -353,8 +354,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     typ_files.dedup();
     let fallback_files = fallback_pages(&src_dir, &languages);
     let page_fingerprints = fingerprint_files(&typ_files)?;
-    let static_files =
-        discover_static_files(&src_dir, config.static_files.as_ref(), &asset_dir)?;
+    let static_files = discover_static_files(&src_dir, config.static_files.as_ref(), &asset_dir)?;
     let config_dir = config_path.parent().unwrap_or(&src_dir);
     let html_syntax_theme = HtmlSyntaxTheme::from_paths(
         config_dir,
@@ -383,7 +383,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config_path: &config_path,
         quiet: args.quiet,
         timeout: args.timeout,
-        vars: &args.vars,
+        config_overrides: &args.config_overrides,
         fallback_theme: config_theme.clone(),
         html_syntax_theme: html_syntax_theme.clone(),
         asset_dir: &asset_dir,
@@ -868,7 +868,7 @@ struct BuildContext {
     progress: ProgressManager,
 }
 
-fn load_website_config(path: &Path, required: bool) -> Result<WebsiteConfig> {
+fn load_website_config(path: &Path, required: bool, overrides: &[String]) -> Result<WebsiteConfig> {
     if !path.is_file() {
         if required {
             return Err(anyhow!("config file not found: {}", path.display()));
@@ -877,7 +877,12 @@ fn load_website_config(path: &Path, required: bool) -> Result<WebsiteConfig> {
     }
     let contents =
         fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
-    toml::from_str(&contents).with_context(|| format!("failed to parse {}", path.display()))
+    let mut value: toml::Value =
+        toml::from_str(&contents).with_context(|| format!("failed to parse {}", path.display()))?;
+    crate::config::apply_config_overrides(&mut value, overrides)?;
+    value
+        .try_into()
+        .with_context(|| format!("failed to parse {}", path.display()))
 }
 
 /// Resolves the website config: an explicit `--config` path wins, otherwise

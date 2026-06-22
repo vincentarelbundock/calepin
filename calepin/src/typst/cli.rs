@@ -206,7 +206,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         fallback_theme: crate::theme::ThemeSelection::Default,
         html_syntax_theme: None,
         asset_dir: None,
-        var_overrides: args.common.vars,
+        config_overrides: args.common.sets,
     })?;
     // The HTML theme step reuses the merged document variables (config < setup
     // < CLI) resolved during preprocessing.
@@ -593,7 +593,7 @@ mod tests {
                 config: None,
                 quiet: true,
                 timeout: None,
-                vars: Vec::new(),
+                sets: Vec::new(),
             },
             typst_args: Vec::new(),
         }

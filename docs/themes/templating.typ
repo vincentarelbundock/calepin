@@ -51,15 +51,13 @@ Both targets receive `theme`, `target`, and `vars`.
 
 = Variables
 
-Add a `[vars]` table to `calepin.toml` for project-specific values you want to use in templates:
+Pass project-specific template values with `--set vars.<name>=...`:
 
-```toml
-[vars]
-course = "Econ 101"
-semester = "Fall 2026"
+```sh
+calepin compile notebook.typ --set vars.course="Econ 101" --set vars.semester="Fall 2026"
 ```
 
-These values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values and CLI `--var` overrides are merged into the same map. In HTML templates, `vars` sits at the top level, not under `site`:
+These values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values are merged into the same map, and CLI `--set vars.<name>=...` values take precedence. In HTML templates, `vars` sits at the top level, not under `site`:
 
 ```html
 <p>{{ vars.course }}, {{ vars.semester }}</p>

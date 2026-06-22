@@ -24,8 +24,8 @@
 #title()
 
 This scaffold is a compact website that exercises Calepin's bundled themes.
-Switch `theme` in `calepin.toml` between `calepin` and `academic` to compare the
-same content in different layouts.
+Build with `--set theme=calepin`, `--set theme=academic`, or
+`--set theme=./theme` to compare the same content in different layouts.
 
 = Reading Content
 

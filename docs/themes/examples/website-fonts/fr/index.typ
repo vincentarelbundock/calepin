@@ -24,8 +24,8 @@
 #title()
 
 Ce scaffold est un petit site qui exerce les thèmes fournis avec Calepin.
-Changez `theme` dans `calepin.toml` entre `calepin` et `academic` pour comparer
-le même contenu dans différents agencements.
+Compilez avec `--set theme=calepin`, `--set theme=academic`, ou
+`--set theme=./theme` pour comparer le même contenu dans différents agencements.
 
 = Contenu de lecture
 

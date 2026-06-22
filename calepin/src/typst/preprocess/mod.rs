@@ -55,8 +55,8 @@ pub struct PreprocessOptions {
     pub html_syntax_theme: Option<crate::html::HtmlSyntaxTheme>,
     /// Optional custom generated asset directory relative to the input root.
     pub asset_dir: Option<PathBuf>,
-    /// `key=value` document-variable overrides from the CLI (`--var`).
-    pub var_overrides: Vec<String>,
+    /// `key=value` config overrides from the CLI (`--set`).
+    pub config_overrides: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -125,7 +125,11 @@ pub fn refresh_cached_preprocess_output(plan: PreprocessPlan) -> Result<Preproce
 
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
     let initial_layout = resolve_layout(&options.input, options.root.as_deref())?;
-    let config = CalepinConfig::load(&initial_layout.root, options.config.as_deref())?;
+    let config = CalepinConfig::load_with_overrides(
+        &initial_layout.root,
+        options.config.as_deref(),
+        &options.config_overrides,
+    )?;
     let config_theme = config.theme_selection()?;
     assert_supported_typst(&config.executables.typst)?;
 
@@ -200,7 +204,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let vars = resolve_vars(
         &config.vars,
         &setup_config.defaults.vars,
-        &options.var_overrides,
+        &crate::config::config_var_overrides(&options.config_overrides)?,
     )?;
 
     let effective_theme = options
@@ -557,12 +561,12 @@ fn write_vars_file(layout: &LayoutPaths, vars: &serde_json::Value) -> Result<Opt
 
 /// Resolve the document's variable map by merging three sources in increasing
 /// precedence: `[vars]` from `calepin.toml`, then `calepin.setup(vars: ...)`,
-/// then `--var key=value` CLI overrides. CLI values inherit the same scalar
-/// typing as `#|` option values.
+/// then `--set vars.key=value` CLI overrides. CLI values inherit the same
+/// scalar typing as `#|` option values.
 fn resolve_vars(
     config_vars: &std::collections::BTreeMap<String, toml::Value>,
     setup_vars: &serde_json::Value,
-    overrides: &[String],
+    overrides: &serde_json::Map<String, serde_json::Value>,
 ) -> Result<serde_json::Value> {
     let mut map = serde_json::Map::new();
     if let Ok(serde_json::Value::Object(config_map)) = serde_json::to_value(config_vars) {
@@ -573,12 +577,8 @@ fn resolve_vars(
             map.insert(key.clone(), value.clone());
         }
     }
-    for entry in overrides {
-        let (key, raw_value) = entry
-            .split_once('=')
-            .ok_or_else(|| anyhow!("invalid --var `{entry}` (expected `key=value`)"))?;
-        let value = crate::typst::chunk_options::parse_qmd_value(raw_value.trim())?;
-        map.insert(key.trim().to_string(), value);
+    for (key, value) in overrides {
+        map.insert(key.clone(), value.clone());
     }
     Ok(serde_json::Value::Object(map))
 }
@@ -624,11 +624,11 @@ mod tests {
         let resolved = resolve_vars(
             &std::collections::BTreeMap::new(),
             &setup,
-            &[
-                "region=CA".to_string(),
-                "alpha=0.5".to_string(),
-                "active=true".to_string(),
-            ],
+            &serde_json::Map::from_iter([
+                ("region".to_string(), serde_json::json!("CA")),
+                ("alpha".to_string(), serde_json::json!(0.5)),
+                ("active".to_string(), serde_json::json!(true)),
+            ]),
         )
         .unwrap();
         assert_eq!(
@@ -640,11 +640,22 @@ mod tests {
     #[test]
     fn vars_merge_config_then_setup_then_cli() {
         let config = std::collections::BTreeMap::from([
-            ("region".to_string(), toml::Value::String("config".to_string())),
-            ("source".to_string(), toml::Value::String("config".to_string())),
+            (
+                "region".to_string(),
+                toml::Value::String("config".to_string()),
+            ),
+            (
+                "source".to_string(),
+                toml::Value::String("config".to_string()),
+            ),
         ]);
         let setup = serde_json::json!({"region": "setup", "doc": "setup"});
-        let resolved = resolve_vars(&config, &setup, &["region=cli".to_string()]).unwrap();
+        let resolved = resolve_vars(
+            &config,
+            &setup,
+            &serde_json::Map::from_iter([("region".to_string(), serde_json::json!("cli"))]),
+        )
+        .unwrap();
         assert_eq!(
             resolved,
             serde_json::json!({"region":"cli","source":"config","doc":"setup"})
@@ -676,7 +687,41 @@ mod tests {
             fallback_theme: crate::theme::ThemeSelection::Default,
             html_syntax_theme: None,
             asset_dir: None,
-            var_overrides: Vec::new(),
+            config_overrides: Vec::new(),
+        })
+        .unwrap();
+
+        assert_eq!(
+            plan.theme,
+            crate::theme::ThemeSelection::Builtin("academic")
+        );
+    }
+
+    #[test]
+    fn preprocess_theme_can_come_from_set_override() {
+        if !command_available("typst") {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "#set document(title: [Paper])\nHello").unwrap();
+
+        let plan = prepare_preprocess_plan(PreprocessOptions {
+            input,
+            root: Some(dir.path().to_path_buf()),
+            config: None,
+            display_root: None,
+            quiet: true,
+            status: false,
+            progress: false,
+            timeout: None,
+            sync_pages: false,
+            theme: None,
+            fallback_theme: crate::theme::ThemeSelection::Default,
+            html_syntax_theme: None,
+            asset_dir: None,
+            config_overrides: vec!["theme=academic".to_string()],
         })
         .unwrap();
 
@@ -711,7 +756,7 @@ mod tests {
             fallback_theme: crate::theme::ThemeSelection::Default,
             html_syntax_theme: None,
             asset_dir: None,
-            var_overrides: Vec::new(),
+            config_overrides: Vec::new(),
         })
         .unwrap();
 
@@ -731,21 +776,22 @@ mod tests {
 
     #[test]
     fn cli_var_without_equals_is_rejected() {
-        let err = resolve_vars(
-            &std::collections::BTreeMap::new(),
-            &serde_json::json!({}),
-            &["bad".to_string()],
-        )
-        .unwrap_err()
-        .to_string();
-        assert!(err.contains("bad"), "{err}");
+        let err = crate::config::config_var_overrides(&["vars=false".to_string()])
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("vars"), "{err}");
     }
 
     #[test]
     fn resolve_vars_with_no_overrides_returns_setup() {
         let setup = serde_json::json!({"a": 1});
         assert_eq!(
-            resolve_vars(&std::collections::BTreeMap::new(), &setup, &[]).unwrap(),
+            resolve_vars(
+                &std::collections::BTreeMap::new(),
+                &setup,
+                &serde_json::Map::new()
+            )
+            .unwrap(),
             setup
         );
     }

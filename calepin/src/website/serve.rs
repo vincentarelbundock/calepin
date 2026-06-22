@@ -124,7 +124,7 @@ fn validate_root(dir: &Path) -> Result<PathBuf> {
 
 fn local_base_path_prefix(root: &Path) -> Option<String> {
     let config_path = root.join(super::DEFAULT_CONFIG);
-    let config = super::load_website_config(&config_path, false).ok()?;
+    let config = super::load_website_config(&config_path, false, &[]).ok()?;
     config
         .base_url
         .as_deref()

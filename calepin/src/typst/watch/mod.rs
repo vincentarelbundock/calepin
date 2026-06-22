@@ -118,7 +118,7 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
         fallback_theme: crate::theme::ThemeSelection::Default,
         html_syntax_theme: None,
         asset_dir: None,
-        var_overrides: args.common.vars.clone(),
+        config_overrides: args.common.sets.clone(),
     }
 }
 

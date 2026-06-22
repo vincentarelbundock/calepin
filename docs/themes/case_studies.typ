@@ -14,7 +14,6 @@ The source tree is intentionally small:
 
 ```text
 project/
-  calepin.toml
   tufte.typ
   theme/
     theme.toml
@@ -22,16 +21,10 @@ project/
       tufte.css
 ```
 
-`calepin.toml` points `calepin` at the local theme directory:
-
-```toml
-theme = "./theme"
-```
-
 The theme directory itself declares its base theme:
 
 ```toml
-# tufte/theme.toml
+# theme/theme.toml
 extends = "academic"
 ```
 
@@ -82,14 +75,14 @@ but the layout behavior still comes from the built-in theme.
 From the project root, render the HTML and PDF with:
 
 ```sh
-calepin compile tufte.typ --config calepin.toml --format html
-calepin compile tufte.typ --config calepin.toml --format pdf
+calepin compile tufte.typ --format html --set theme=./theme
+calepin compile tufte.typ --format pdf --set theme=./theme
 ```
 
-The config path matters because `theme = "tufte"` is resolved relative to
-`calepin.toml`. Keeping the config, local theme, and document together makes the
-example portable: copy the directory, run the same commands, and the academic
-theme plus Tufte overlay are applied in both rendered outputs.
+The theme path is resolved from the project root when no `--config` file is
+provided. Keeping the local theme and document together makes the example
+portable: copy the directory, run the same commands, and the academic theme plus
+Tufte overlay are applied in both rendered outputs.
 
 = Classicthesis
 
@@ -100,18 +93,11 @@ The project can stay small:
 
 ```text
 project/
-  calepin.toml
   book.typ
   theme/
     theme.toml
     layouts/
       pdf.typ
-```
-
-`calepin.toml` points Calepin at the local theme directory:
-
-```toml
-theme = "./theme"
 ```
 
 The theme manifest disables inherited Calepin styling so the PDF layout comes
@@ -157,7 +143,7 @@ is where Calepin injects the document source.
 From the project root, render the PDF with:
 
 ```sh
-calepin compile book.typ --config calepin.toml --format pdf
+calepin compile book.typ --format pdf --set theme=./theme
 ```
 
 If you want the same document to use a different PDF layout later, swap the
@@ -182,18 +168,12 @@ calepin_website/
     css/
       fonts.css
 
-  calepin.toml      # configuration file
+  calepin.toml      # website configuration file
 
   index.typ         # website content
   404.typ
   assets/
   posts/
-```
-
-The configuration file, `calepin_website/calepin.toml`, must point to the local theme:
-
-```toml
-theme = "./theme"
 ```
 
 The theme manifest, `calepin_website/theme/theme.toml`, inherits from the built-in `calepin` theme:
@@ -216,9 +196,9 @@ We add a single CSS file which imports Google Fonts and overrides the public fon
 
 This keeps the layout, navigation, and page behavior from the built-in `calepin` theme. The local theme only changes typography, so the result is easy to reason about: same site structure, different font stack.
 
-Finally, we eender and serve the website:
+Finally, we render and serve the website:
 
 ```sh
-calepin compile calepin_website
+calepin compile calepin_website --set theme=./theme
 calepin serve calepin_website --open
 ```

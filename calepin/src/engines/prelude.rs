@@ -1,7 +1,7 @@
 // Generate language-native literal bindings for document-level variables.
 //
 // Calepin turns the variables declared in `calepin.setup(vars: (...))`, merged
-// with `[vars]` config and CLI `--var` overrides, into a small prelude that is
+// with `[vars]` config and CLI `--set vars.*` overrides, into a small prelude that is
 // evaluated once, at engine startup, so user code can read a `vars` value
 // without any string interpolation. The bindings are emitted as real source in
 // each language (no JSON parser dependency on the runtime side), from the

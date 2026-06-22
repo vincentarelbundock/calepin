@@ -24,25 +24,18 @@ Theme customization uses one mechanism: create a local theme directory and point
 
 = Choose a theme
 
-Select a built-in or local theme with `theme` in `calepin.toml`:
-
-```toml
-# built-in themes
-theme = "calepin"            # default documentation
-theme = "academic"           # essay/blog
-theme = "typst"              # raw Typst output; no styling
-
-# a local theme directory
-theme = "themes/my-theme"
-```
-
-Point `calepin` to your theme of choice by using the `--config` flag:
+Select a built-in or local theme with `--set theme=...`:
 
 ```sh
-calepin compile notebook.typ --config=/path/to/calepin.toml
+calepin compile notebook.typ --set theme=calepin
+calepin compile notebook.typ --set theme=academic
+calepin compile notebook.typ --set theme=typst
+calepin compile notebook.typ --set theme=themes/my-theme
 ```
 
-You can also set the theme in-document with, a setting which will take precedence over `calepin.toml`:
+The built-in `calepin` theme is the default documentation theme, `academic` is for essay/blog pages, and `typst` emits raw Typst output with no Calepin styling.
+
+You can also set the theme in-document:
 
 ```typ
 #calepin.setup(theme: "academic")
@@ -129,14 +122,8 @@ A good way to start building a theme is to "eject" one of the built-in themes in
 calepin new theme /path/to/my_theme --theme=academic
 ```
 
-Modify the files in your `my_theme` directory, then point your `calepin.toml` at it:
-
-```toml
-theme = "/path/to/my_theme/"
-```
-
-Finally, render your document or website using the new theme:
+Modify the files in your `my_theme` directory, then render your document or website using the new theme:
 
 ```sh
-calepin compile notebook.typ --config calepin.toml
+calepin compile notebook.typ --set theme=/path/to/my_theme/
 ```
