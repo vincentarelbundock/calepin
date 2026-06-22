@@ -273,7 +273,6 @@ struct WebsiteBuildResult {
     out_dir: PathBuf,
     asset_dir: PathBuf,
     config_path: PathBuf,
-    theme_dir: Option<PathBuf>,
     theme_dirs: Vec<PathBuf>,
     style_paths: Vec<PathBuf>,
     page_fingerprints: BTreeMap<PathBuf, u64>,
@@ -331,7 +330,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let site_theme = config_theme.clone();
     let asset_dir = resolve_website_asset_dir(&config)?;
     let theme_dirs = theme_chain_dirs(&site_theme)?;
-    let theme_dir = theme_dirs.last().cloned();
     let site_entry = crate::theme::resolve_html_entry(&site_theme, crate::theme::HtmlScope::Site)?;
     let mut external_theme_assets = site_entry.as_ref().is_some_and(|entry| {
         entry.is_default
@@ -651,7 +649,6 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         out_dir,
         asset_dir,
         config_path,
-        theme_dir,
         theme_dirs,
         style_paths,
         page_fingerprints,

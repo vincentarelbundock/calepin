@@ -10,7 +10,6 @@ fn test_build_result(root: &Path, pages: &[PathBuf]) -> WebsiteBuildResult {
         out_dir: root.to_path_buf(),
         asset_dir: PathBuf::from(".calepin"),
         config_path: root.join("calepin.toml"),
-        theme_dir: None,
         theme_dirs: Vec::new(),
         style_paths: Vec::new(),
         page_fingerprints: fingerprint_files(pages).unwrap(),
@@ -236,7 +235,7 @@ fn website_build_result_canonicalizes_config_theme_dir() {
 
     let canonical_theme = theme.canonicalize().unwrap();
     let canonical_theme_file = theme.join("layouts/webpage.html").canonicalize().unwrap();
-    assert_eq!(result.theme_dir, Some(canonical_theme));
+    assert_eq!(result.theme_dirs, vec![canonical_theme]);
     assert!(should_rebuild_for_path(&result, &canonical_theme_file));
 }
 
@@ -341,7 +340,7 @@ fn watch_roots_include_configured_styles() {
     let theme = temp.path().join("theme");
     let style = temp.path().join("styles/site.css");
     let mut current = test_build_result(&src, &[]);
-    current.theme_dir = Some(theme.clone());
+    current.theme_dirs = vec![theme.clone()];
     current.style_paths = vec![style.clone()];
 
     assert_eq!(
@@ -371,7 +370,7 @@ fn watch_roots_changed_detects_style_and_theme_updates() {
     assert!(watch_roots_changed(&current, &style_next));
 
     let mut theme_next = current.clone();
-    theme_next.theme_dir = Some(theme);
+    theme_next.theme_dirs = vec![theme];
     assert!(watch_roots_changed(&current, &theme_next));
 
     assert!(!watch_roots_changed(&style_next, &style_next));
