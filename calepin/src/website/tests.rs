@@ -86,6 +86,18 @@ course = "Econ 101"
 }
 
 #[test]
+fn website_config_accepts_toc_table() {
+    // `[toc]` is resolved from `CalepinConfig` (config.rs), not `WebsiteConfig`;
+    // this just confirms `deny_unknown_fields` doesn't reject it here.
+    website_config_from_toml(
+        r#"[toc]
+enabled = true
+depth = 2
+"#,
+    );
+}
+
+#[test]
 fn website_config_defaults_asset_dir_to_dot_calepin() {
     let config = website_config_from_toml("");
 

@@ -122,6 +122,11 @@ fn render_document(
         context.search,
     );
     site_context.vars = context.vars.clone();
+    site_context.toc_depth = Some(crate::theme::resolve_toc_depth(
+        page_meta.and_then(|meta| meta.toc.as_ref()),
+        &context.toc,
+        &preprocessed.theme,
+    ));
     let page_site_entry = if let Some(layout) = page_meta.and_then(|meta| meta.layout.as_deref()) {
         crate::theme::resolve_explicit_site_html_entry(&preprocessed.theme, layout)?
     } else {

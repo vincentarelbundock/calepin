@@ -11,7 +11,7 @@ mod bundle;
 mod html;
 mod notebook;
 
-pub use bundle::{builtin_names, eject_builtin_to};
+pub(crate) use bundle::{builtin_names, eject_builtin_to};
 pub use html::{resolve_explicit_site_html_entry, resolve_html_entry, HtmlEntry, HtmlScope};
 pub use notebook::{notebook_source, NotebookSource, NotebookTemplateContext};
 
@@ -55,6 +55,118 @@ impl ThemeSelection {
             "unknown theme `{value}`; use `typst`, one of {}, or a path to a theme directory",
             builtin_names().join(", ")
         ))
+    }
+}
+
+const DEFAULT_TOC_DEPTH: usize = 3;
+
+/// Built-in default for whether a theme shows an on-page TOC when neither
+/// `calepin.toml` nor the page's `<website-metadata>` says otherwise. The
+/// `calepin` theme has shown one unconditionally since its TOC partial was
+/// introduced, so it defaults on; other themes (including `academic`) are
+/// opt-in.
+fn theme_default_toc_enabled(theme: &ThemeSelection) -> bool {
+    matches!(theme, ThemeSelection::Default)
+        || matches!(theme, ThemeSelection::Builtin(name) if *name == DEFAULT_THEME_NAME)
+}
+
+/// Resolves the effective on-page TOC depth for a page, merging field-by-field
+/// (page metadata wins, then `calepin.toml`, then the theme's built-in
+/// default). Returns `0` to mean "no TOC" so callers can treat it as a single
+/// number: `annotate_body_headings` collects nothing when depth is `0`.
+pub(crate) fn resolve_toc_depth(
+    page: Option<&crate::config::TocConfig>,
+    config: &crate::config::TocConfig,
+    theme: &ThemeSelection,
+) -> usize {
+    let enabled = page
+        .and_then(|toc| toc.enabled)
+        .or(config.enabled)
+        .unwrap_or_else(|| theme_default_toc_enabled(theme));
+    if !enabled {
+        return 0;
+    }
+    page.and_then(|toc| toc.depth)
+        .or(config.depth)
+        .unwrap_or(DEFAULT_TOC_DEPTH)
+}
+
+#[cfg(test)]
+mod toc_tests {
+    use super::*;
+    use crate::config::TocConfig;
+
+    #[test]
+    fn calepin_theme_defaults_to_enabled() {
+        assert_eq!(
+            resolve_toc_depth(None, &TocConfig::default(), &ThemeSelection::Default),
+            3
+        );
+        assert_eq!(
+            resolve_toc_depth(
+                None,
+                &TocConfig::default(),
+                &ThemeSelection::Builtin("calepin")
+            ),
+            3
+        );
+    }
+
+    #[test]
+    fn academic_theme_defaults_to_disabled() {
+        assert_eq!(
+            resolve_toc_depth(
+                None,
+                &TocConfig::default(),
+                &ThemeSelection::Builtin("academic")
+            ),
+            0
+        );
+    }
+
+    #[test]
+    fn config_can_enable_academic_toc() {
+        let config = TocConfig {
+            enabled: Some(true),
+            depth: Some(2),
+        };
+        assert_eq!(
+            resolve_toc_depth(None, &config, &ThemeSelection::Builtin("academic")),
+            2
+        );
+    }
+
+    #[test]
+    fn page_metadata_overrides_config_field_by_field() {
+        let config = TocConfig {
+            enabled: Some(true),
+            depth: Some(2),
+        };
+        let page = TocConfig {
+            enabled: None,
+            depth: Some(5),
+        };
+        // enabled inherited from config, depth overridden by the page.
+        assert_eq!(
+            resolve_toc_depth(Some(&page), &config, &ThemeSelection::Builtin("academic")),
+            5
+        );
+    }
+
+    #[test]
+    fn page_metadata_can_disable_toc_regardless_of_config() {
+        let config = TocConfig {
+            enabled: Some(true),
+            depth: Some(2),
+        };
+        let page = TocConfig {
+            enabled: Some(false),
+            depth: None,
+        };
+        assert_eq!(
+            resolve_toc_depth(Some(&page), &config, &ThemeSelection::Builtin("calepin")),
+            0
+        );
     }
 }
 

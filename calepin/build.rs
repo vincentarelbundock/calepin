@@ -29,6 +29,7 @@ fn main() {
         &manifest_dir,
         "src/assets/themes/shared",
     );
+    source.push('\n');
 
     fs::write(output, source).unwrap();
 
@@ -136,7 +137,7 @@ fn write_typst_runtime_files(
 
     source.push_str(&format!("static {const_name}: &[RuntimeFile] = &[\n"));
     for (path, source_path) in files {
-        let absolute_source_path = manifest_dir.join(&source_path);
+        let absolute_source_path = manifest_dir.join(source_path);
         println!("cargo:rerun-if-changed={}", absolute_source_path.display());
         let content = fs::read_to_string(&absolute_source_path).unwrap();
         let content_hash = {

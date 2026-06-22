@@ -15,6 +15,17 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
 #[cfg(not(windows))]
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 
+/// Site-wide or per-page on-page table-of-contents settings (HTML website
+/// builds only). `enabled`/`depth` are independently optional so a page can
+/// override just one of them and inherit the other from `calepin.toml` or the
+/// theme's built-in default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(default)]
+pub struct TocConfig {
+    pub enabled: Option<bool>,
+    pub depth: Option<usize>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
@@ -24,6 +35,7 @@ pub struct CalepinConfig {
     /// Directory (relative to project root) for generated Calepin assets.
     /// `None` means the built-in default `.calepin`.
     pub asset_dir: Option<PathBuf>,
+    pub toc: TocConfig,
 }
 
 impl CalepinConfig {
@@ -57,12 +69,14 @@ impl CalepinConfig {
         // at its siblings without `../` gymnastics.
         let config_dir = path.parent().unwrap_or(root).to_path_buf();
         let asset_dir = resolve_asset_dir(raw.asset_dir)?;
+        let toc = validate_toc_config(raw.toc)?;
         Ok(Self {
             executables: ExecutablePaths::from_raw(root, &config_dir, raw.executables),
             config_dir,
             theme: raw.theme,
             vars: raw.vars,
             asset_dir,
+            toc,
         })
     }
 
@@ -73,6 +87,7 @@ impl CalepinConfig {
             theme: None,
             vars: BTreeMap::new(),
             asset_dir: None,
+            toc: TocConfig::default(),
         }
     }
 
@@ -168,6 +183,8 @@ struct RawCalepinConfig {
     vars: BTreeMap<String, toml::Value>,
     #[serde(rename = "asset-dir")]
     asset_dir: Option<PathBuf>,
+    #[serde(default)]
+    toc: TocConfig,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -264,6 +281,20 @@ fn reject_disallowed_config_keys(value: &toml::Value) -> Result<()> {
         return Err(anyhow!("unknown field `revealjs`"));
     }
     Ok(())
+}
+
+pub const TOC_MIN_DEPTH: usize = 1;
+pub const TOC_MAX_DEPTH: usize = 6;
+
+fn validate_toc_config(toc: TocConfig) -> Result<TocConfig> {
+    if let Some(depth) = toc.depth {
+        if !(TOC_MIN_DEPTH..=TOC_MAX_DEPTH).contains(&depth) {
+            return Err(anyhow!(
+                "toc.depth must be between {TOC_MIN_DEPTH} and {TOC_MAX_DEPTH}, got {depth}"
+            ));
+        }
+    }
+    Ok(toc)
 }
 
 fn resolve_asset_dir(value: Option<PathBuf>) -> Result<Option<PathBuf>> {
@@ -621,6 +652,34 @@ credits = 3
 
         assert!(err.contains("invalid type"), "{err}");
         assert!(err.contains("vars"), "{err}");
+    }
+
+    #[test]
+    fn config_parses_toc_table() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            "[toc]\nenabled = false\ndepth = 2\n",
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        assert_eq!(config.toc.enabled, Some(false));
+        assert_eq!(config.toc.depth, Some(2));
+    }
+
+    #[test]
+    fn config_rejects_out_of_range_toc_depth() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "[toc]\ndepth = 7\n").unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("toc.depth"), "{err}");
     }
 
     #[test]

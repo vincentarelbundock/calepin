@@ -937,7 +937,7 @@ html:not([data-theme]) {
 }
 
 .hero-subtitle-text {
-  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+  font-family: var(--calepin-font-heading);
 }
 
 .hero-typst-logo {

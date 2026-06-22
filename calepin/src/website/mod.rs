@@ -104,6 +104,7 @@ const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
     "User-agent: *\nAllow: /\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}\n{% endif %}";
+
 fn resolve_website_asset_dir(config: &WebsiteConfig) -> Result<PathBuf> {
     let raw = match config.asset_dir.as_ref() {
         Some(value) if value.as_os_str().is_empty() => {
@@ -510,6 +511,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             page_info: page_info.clone(),
             languages: languages.clone(),
             vars: calepin_config.vars.clone(),
+            toc: calepin_config.toc,
             syntax_theme: html_syntax_theme,
             parallelism: args.parallelism,
             typst_args: args.typst_args,
@@ -859,6 +861,7 @@ struct BuildContext {
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
     vars: BTreeMap<String, toml::Value>,
+    toc: crate::config::TocConfig,
     syntax_theme: HtmlSyntaxTheme,
     parallelism: Option<usize>,
     typst_args: Vec<String>,

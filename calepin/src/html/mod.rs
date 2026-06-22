@@ -1131,6 +1131,10 @@ mod tests {
             sidebar_sections: vec![sidebar_section("Guide", "guide.html", false)],
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
+            // Academic's built-in default is opt-in (off); the TOC behavior
+            // itself is covered by toc_* tests, this test is about menu/sidebar
+            // gating only.
+            toc_depth: Some(0),
             ..SiteContextInput::default()
         };
         let html = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1><h2>Section</h2></body></html>";
@@ -1150,6 +1154,31 @@ mod tests {
         assert!(!themed.contains(r#"href="guide.html" aria-label="Guide""#));
         assert!(!themed.contains("academic-toc"));
         assert!(!themed.contains("On this page"));
+    }
+
+    #[test]
+    fn academic_site_theme_shows_toc_when_enabled() {
+        let site_context = SiteContextInput {
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            toc_depth: Some(3),
+            ..SiteContextInput::default()
+        };
+        let html = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1><h2>Section</h2></body></html>";
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            html,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains("On this page"));
+        assert!(themed.contains(r##"<li class="level-2"><a href="#section">Section</a></li>"##));
     }
 
     #[test]
