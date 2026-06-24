@@ -193,3 +193,48 @@ This keeps the layout, navigation, and page behavior from the built-in `calepin`
 Finally, we render and serve the website:
 
 #calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile calepin_website --set theme=./theme\ncalepin serve calepin_website --open\n", block: true, lang: "sh"))
+
+= Site verification
+
+This case study shows how to add a small, global element to a website's `<head>`. A realistic reason to do this is site ownership verification for Google Search Console, Bing Webmaster Tools, or another service that asks you to add a verification `<meta>` tag to every page.
+
+Start with a local theme that extends the built-in `calepin` website theme:
+
+```text
+calepin_website/
+  theme/
+    theme.toml
+    partials/
+      site-head.html
+  calepin.toml
+  index.typ
+```
+
+The manifest keeps the built-in website layout:
+
+```toml
+# theme/theme.toml
+extends = "calepin"
+```
+
+Then override the shared `partials/site-head.html` partial:
+
+```html
+{{ doc.head }}
+{% include "partials/site-head-meta.html" %}
+<meta name="google-site-verification" content="abc123-site-token">
+{% include "partials/theme-init-script.html" %}
+{% include "partials/theme-styles.html" %}
+```
+
+The important part is that the custom partial still emits `doc.head` and the
+standard Calepin head partials. The only new line is the verification tag, so
+the theme keeps the inherited title metadata, favicon support, theme
+initialization, and stylesheets.
+
+Render the site with the local theme:
+
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile calepin_website --set theme=./theme\n", block: true, lang: "sh"))
+
+Use the same pattern for other small head-only additions, such as a canonical
+site-wide metadata tag or a lightweight analytics script.

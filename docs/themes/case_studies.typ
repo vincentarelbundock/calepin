@@ -205,10 +205,7 @@ calepin serve calepin_website --open
 
 = Site verification
 
-This case study shows how to add a small, global element to a website's
-`<head>`. A realistic reason to do this is site ownership verification for
-Google Search Console, Bing Webmaster Tools, or another service that asks you
-to add a verification `<meta>` tag to every page.
+This case study shows how to add a small, global element to a website's `<head>`. A realistic reason to do this is site ownership verification for Google Search Console, Bing Webmaster Tools, or another service that asks you to add a verification `<meta>` tag to every page.
 
 Start with a local theme that extends the built-in `calepin` website theme:
 

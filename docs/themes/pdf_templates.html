@@ -1,6 +1,6 @@
 
 
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PDF templates</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PDF</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -14,7 +14,7 @@
     
     
     
-    <meta property="og:title" content="PDF templates | Calepin">
+    <meta property="og:title" content="PDF | Calepin">
     
     
     
@@ -4069,7 +4069,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [PDF templates])\n#import \"/.calepin/calepin.typ\" as calepin\n#title()\n\n`layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.\n\n```text\nthemes/my-theme/\n  layouts/\n    pdf.typ\n```\n\nBefore Typst runs, Calepin renders this file with MiniJinja, the same engine used for HTML layouts (see #link(\"templating.html\")[Templating]), so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.\n\nInside the layout, place notebook content with `doc.body`:\n\n```typ\n#set page(\n  paper: \"us-letter\",\n  margin: (x: 1in, y: 0.85in),\n  numbering: \"1\",\n)\n\n#set text(font: \"Libertinus Serif\", size: 10.5pt)\n\n{{ doc.body }}\n```\n\nUseful `layouts/pdf.typ` values:\n\n- `theme`: local theme directory name\n- `target`: `paged`\n- `doc.path`: `.typ` input path relative to workspace\n- `doc.dir`: input directory relative to workspace\n- `doc.stem`: input filename without `.typ`\n- `doc.title`: document title, or an empty string\n- `doc.body`: notebook body, injected as a `#include`\n- `doc.meta`: values from `#metadata(...) <website-metadata>`\n- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--set vars.<name>=...` overrides\n\n`doc.body` must be included explicitly if you want the notebook body in the rendered output.\n\n`theme = \"typst\"` disables notebook-specific theming, and `extends = \"typst\"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [PDF])\n#import \"/.calepin/calepin.typ\" as calepin\n#title()\n\n`layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.\n\n```text\nthemes/my-theme/\n  layouts/\n    pdf.typ\n```\n\nBefore Typst runs, Calepin renders this file with MiniJinja, the same engine used for HTML layouts (see #link(\"templating.html\")[Templating]), so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.\n\nInside the layout, place notebook content with `doc.body`:\n\n```typ\n#set page(\n  paper: \"us-letter\",\n  margin: (x: 1in, y: 0.85in),\n  numbering: \"1\",\n)\n\n#set text(font: \"Libertinus Serif\", size: 10.5pt)\n\n{{ doc.body }}\n```\n\nUseful `layouts/pdf.typ` values:\n\n- `theme`: local theme directory name\n- `target`: `paged`\n- `doc.path`: `.typ` input path relative to workspace\n- `doc.dir`: input directory relative to workspace\n- `doc.stem`: input filename without `.typ`\n- `doc.title`: document title, or an empty string\n- `doc.body`: notebook body, injected as a `#include`\n- `doc.meta`: values from `#metadata(...) <website-metadata>`\n- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--set vars.<name>=...` overrides\n\n`doc.body` must be included explicitly if you want the notebook body in the rendered output.\n\n`theme = \"typst\"` disables notebook-specific theming, and `extends = \"typst\"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4240,7 +4240,7 @@ html:not([data-theme]) {
                             
                             <li><a href="html_templates.html" aria-label="HTML">HTML</a></li>
                             
-                            <li><a href="pdf_templates.html" aria-label="PDF templates" class="active" aria-current="page">PDF templates</a></li>
+                            <li><a href="pdf_templates.html" aria-label="PDF" class="active" aria-current="page">PDF</a></li>
                             
                             <li><a href="css.html" aria-label="CSS">CSS</a></li>
                             
@@ -4272,7 +4272,7 @@ html:not([data-theme]) {
             </nav>
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
-            <h1 id="pdf-templates">PDF templates</h1><p><code>layouts/pdf.typ</code> is the Typst-side layout used by PDF and SVG notebook outputs.</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">themes/my-theme/
+            <h1 id="pdf">PDF</h1><p><code>layouts/pdf.typ</code> is the Typst-side layout used by PDF and SVG notebook outputs.</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">themes/my-theme/
   layouts/
     pdf.typ</code></pre></div><p>Before Typst runs, Calepin renders this file with MiniJinja, the same engine used for HTML layouts (see <a href="templating.html">Templating</a>), so the output is still valid Typst source. The file uses a <code>.typ</code> extension because it renders to Typst, even though it is a MiniJinja template.</p><p>Inside the layout, place notebook content with <code>doc.body</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">page</span><span class="calepin-syntax-scope-2">(</span>
   paper<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"us-letter"</span><span class="calepin-syntax-scope-2">,</span>
