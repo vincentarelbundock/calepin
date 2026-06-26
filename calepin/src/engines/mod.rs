@@ -136,7 +136,7 @@ pub fn make_sentinel() -> String {
 
 fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) -> Result<()> {
     let (sentinel, rest) = raw.split_once('\n').unwrap_or(("", raw));
-    let sep = format!("\n{}_SEP\n", sentinel);
+    let sep_marker = format!("{}_SEP", sentinel);
 
     let source_prefix = format!("{}_SOURCE:", sentinel);
     let output_prefix = format!("{}_OUTPUT:", sentinel);
@@ -147,7 +147,7 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
     let plot_prefix = format!("{}_PLOT:", sentinel);
     let preamble_prefix = format!("{}_PREAMBLE:", sentinel);
 
-    for part in rest.split(&sep) {
+    for part in split_result_parts(rest, &sep_marker) {
         let part = part.trim();
         if part.is_empty() {
             continue;
@@ -197,6 +197,23 @@ fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) 
     Ok(())
 }
 
+fn split_result_parts(rest: &str, sep_marker: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut current = String::new();
+
+    for line in rest.split_inclusive('\n') {
+        let trimmed_line = line.trim_end_matches('\n').trim_end_matches('\r');
+        if trimmed_line == sep_marker {
+            parts.push(std::mem::take(&mut current));
+        } else {
+            current.push_str(line);
+        }
+    }
+
+    parts.push(current);
+    parts
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,5 +242,39 @@ mod tests {
         assert!(
             matches!(&results[0], EngineResult::Unavailable(message) if message == "no kernel named sh")
         );
+    }
+
+    #[test]
+    fn process_results_parses_crlf_separated_output_records() {
+        let raw =
+            "__TEST__\n__TEST___SOURCE:x = 1\r\nprint(x)\r\n__TEST___SEP\r\n__TEST___OUTPUT:1\r";
+        let mut results = Vec::new();
+
+        process_results(raw, Path::new("unused.svg"), &mut results).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert!(matches!(
+            &results[0],
+            EngineResult::Source(lines) if lines == &vec!["x = 1".to_string(), "print(x)".to_string()]
+        ));
+        assert!(matches!(&results[1], EngineResult::Output(text) if text == "1"));
+    }
+
+    #[test]
+    fn process_results_does_not_leak_crlf_markers_into_warning_records() {
+        let raw = "__TEST__\n__TEST___WARNING:3\r\n__TEST___SEP\r\n__TEST___SOURCE:import sys\r\nprint(3, file=sys.stderr)\r";
+        let mut results = Vec::new();
+
+        process_results(raw, Path::new("unused.svg"), &mut results).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert!(matches!(&results[0], EngineResult::Warning(text) if text == "3"));
+        assert!(matches!(
+            &results[1],
+            EngineResult::Source(lines) if lines == &vec![
+                "import sys".to_string(),
+                "print(3, file=sys.stderr)".to_string()
+            ]
+        ));
     }
 }
