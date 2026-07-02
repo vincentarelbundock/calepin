@@ -1,32 +1,43 @@
-use std::io::{self, IsTerminal};
+use std::env;
 use std::time::Duration;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 
+const PROGRESS_ENV_VAR: &str = "CALEPIN_PROGRESS";
+
 #[derive(Clone)]
 pub struct ProgressManager {
     quiet: bool,
-    interactive: bool,
     multi: Option<MultiProgress>,
 }
 
 impl ProgressManager {
     pub fn new(quiet: bool) -> Self {
-        if quiet {
-            return Self {
-                quiet,
-                interactive: false,
-                multi: None,
-            };
-        }
-        let interactive = io::stderr().is_terminal();
-        let multi = interactive
-            .then(|| MultiProgress::with_draw_target(ProgressDrawTarget::stderr_with_hz(12)));
-        Self {
+        Self::with_draw_target(
             quiet,
-            interactive,
-            multi,
+            ProgressPreference::from_env(),
+            ProgressDrawTarget::stderr_with_hz(12),
+        )
+    }
+
+    fn with_draw_target(
+        quiet: bool,
+        preference: ProgressPreference,
+        draw_target: ProgressDrawTarget,
+    ) -> Self {
+        if quiet {
+            return Self { quiet, multi: None };
         }
+
+        let multi = match preference {
+            ProgressPreference::Auto => {
+                let multi = MultiProgress::with_draw_target(draw_target);
+                (!multi.is_hidden()).then_some(multi)
+            }
+            ProgressPreference::Plain => None,
+        };
+
+        Self { quiet, multi }
     }
 
     pub fn spinner(&self, message: impl Into<String>) -> Progress {
@@ -68,12 +79,9 @@ impl Progress {
         if manager.quiet {
             return Self::hidden(manager.quiet);
         }
-        if !manager.interactive {
-            eprintln!("{message}");
-            return Self::hidden(manager.quiet);
-        }
 
         let Some(multi) = manager.multi.clone() else {
+            eprintln!("{message}");
             return Self::hidden(manager.quiet);
         };
         let bar = match kind {
@@ -140,6 +148,25 @@ impl Progress {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ProgressPreference {
+    Auto,
+    Plain,
+}
+
+impl ProgressPreference {
+    fn from_env() -> Self {
+        Self::from_env_value(env::var(PROGRESS_ENV_VAR).ok().as_deref())
+    }
+
+    fn from_env_value(value: Option<&str>) -> Self {
+        match value.map(str::trim).map(str::to_ascii_lowercase).as_deref() {
+            Some("plain") => Self::Plain,
+            _ => Self::Auto,
+        }
+    }
+}
+
 impl Drop for Progress {
     fn drop(&mut self) {
         if !self.finished {
@@ -147,5 +174,56 @@ impl Drop for Progress {
                 bar.finish_and_clear();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use indicatif::ProgressDrawTarget;
+
+    use super::*;
+
+    #[test]
+    fn progress_preference_defaults_to_auto() {
+        assert_eq!(
+            ProgressPreference::from_env_value(None),
+            ProgressPreference::Auto
+        );
+        assert_eq!(
+            ProgressPreference::from_env_value(Some("")),
+            ProgressPreference::Auto
+        );
+    }
+
+    #[test]
+    fn progress_preference_accepts_plain_escape_hatch() {
+        for value in ["plain", "PLAIN", " plain "] {
+            assert_eq!(
+                ProgressPreference::from_env_value(Some(value)),
+                ProgressPreference::Plain
+            );
+        }
+    }
+
+    #[test]
+    fn auto_progress_uses_indicatif_hidden_detection() {
+        let manager = ProgressManager::with_draw_target(
+            false,
+            ProgressPreference::Auto,
+            ProgressDrawTarget::hidden(),
+        );
+
+        assert!(manager.multi.is_none());
+    }
+
+    #[test]
+    fn plain_progress_skips_dynamic_draw_target() {
+        let manager = ProgressManager::with_draw_target(
+            false,
+            ProgressPreference::Plain,
+            ProgressDrawTarget::stderr_with_hz(12),
+        );
+
+        assert!(manager.multi.is_none());
     }
 }
