@@ -116,11 +116,13 @@ impl SiteModel {
             }
             let mut items = Vec::new();
             for item in &section.items {
-                if item.href == current_href {
+                if !item.href.is_empty() && item.href == current_href {
                     page_title = Some(html_escape(&item.label));
                 }
-                let is_current_page = item.href == current_href;
-                let item_href = if is_current_page && section.language.is_some() {
+                let is_current_page = !item.href.is_empty() && item.href == current_href;
+                let item_href = if item.href.is_empty() {
+                    String::new()
+                } else if is_current_page && section.language.is_some() {
                     item.href.clone()
                 } else {
                     page_relative_url(current_href, &item.href)

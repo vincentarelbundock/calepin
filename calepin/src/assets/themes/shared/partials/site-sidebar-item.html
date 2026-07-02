@@ -1,1 +1,5 @@
-<li><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
+{% if item.href %}
+<li class="calepin-website-sidebar-link"><a href="{{ item.href }}" aria-label="{{ item.label }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label_html }}</a></li>
+{% else %}
+<li class="calepin-website-sidebar-subheading"><span>{{ item.label_html }}</span></li>
+{% endif %}

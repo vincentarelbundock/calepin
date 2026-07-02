@@ -1864,6 +1864,46 @@ fn theme_context_rewrites_nav_urls_relative_to_current_page() {
 }
 
 #[test]
+fn theme_context_keeps_sidebar_subheadings_unlinked() {
+    let site = SiteModel::new(
+        vec![NavSectionModel {
+            language: None,
+            title: Some("Reference".to_string()),
+            items: vec![
+                NavItemModel {
+                    language: None,
+                    href: String::new(),
+                    label: "Language".to_string(),
+                    label_html: html_escape("Language"),
+                },
+                NavItemModel {
+                    language: None,
+                    href: "reference/syntax.html".to_string(),
+                    label: "Syntax".to_string(),
+                    label_html: html_escape("Syntax"),
+                },
+            ],
+        }],
+        MenusModel::default(),
+        SiteMetadata::default(),
+        true,
+    );
+
+    let context = site.theme_context(
+        "reference/syntax.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+    );
+
+    assert_eq!(context.sidebar_sections[0].items[0].href, "");
+    assert!(!context.sidebar_sections[0].items[0].active);
+    assert_eq!(context.sidebar_sections[0].items[1].href, "syntax.html");
+    assert!(context.sidebar_sections[0].items[1].active);
+}
+
+#[test]
 fn theme_context_marks_section_containing_current_page_active() {
     let section = |title: &str, href: &str| NavSectionModel {
         language: None,
@@ -2015,8 +2055,31 @@ fn theme_key_resolves_local_directory_against_config_dir() {
 }
 
 #[test]
-fn sidebar_item_config_rejects_labels() {
-    let err = try_website_config_from_toml(
+fn sidebar_item_config_accepts_label_only_subheadings() {
+    let config = website_config_from_toml(
+        r#"
+[sidebar]
+
+[[sidebar.section]]
+title = "Guide"
+
+  [[sidebar.section.item]]
+  label = "Language"
+
+  [[sidebar.section.item]]
+  target = "install.typ"
+"#,
+    );
+
+    let section = &config.sidebar.unwrap().section[0];
+    assert_eq!(section.item[0].label.as_deref(), Some("Language"));
+    assert_eq!(section.item[0].target, None);
+    assert_eq!(section.item[0].glob, None);
+}
+
+#[test]
+fn sidebar_item_config_rejects_labels_on_page_links() {
+    let config = website_config_from_toml(
         r#"
 [sidebar]
 
@@ -2027,10 +2090,56 @@ title = "Guide"
   target = "install.typ"
   label = "Install"
 "#,
+    );
+
+    let temp = tempfile::tempdir().unwrap();
+    fs::write(temp.path().join("install.typ"), "= Install\n").unwrap();
+
+    let err = discover_pages(
+        temp.path(),
+        config.sidebar.as_ref(),
+        None,
+        None,
+        Path::new(".calepin"),
     )
     .unwrap_err();
 
-    assert!(err.to_string().contains("unknown field `label`"));
+    assert!(err
+        .to_string()
+        .contains("sidebar target items cannot also set label"));
+}
+
+#[test]
+fn sidebar_item_config_rejects_labels_on_globs() {
+    let config = website_config_from_toml(
+        r#"
+[sidebar]
+
+[[sidebar.section]]
+title = "Guide"
+
+  [[sidebar.section.item]]
+  glob = "guide/*.typ"
+  label = "Guide pages"
+"#,
+    );
+
+    let temp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(temp.path().join("guide")).unwrap();
+    fs::write(temp.path().join("guide").join("syntax.typ"), "= Syntax\n").unwrap();
+
+    let err = discover_pages(
+        temp.path(),
+        config.sidebar.as_ref(),
+        None,
+        None,
+        Path::new(".calepin"),
+    )
+    .unwrap_err();
+
+    assert!(err
+        .to_string()
+        .contains("sidebar glob items cannot also set label"));
 }
 
 #[test]
@@ -2480,6 +2589,50 @@ fn discover_pages_resolves_sidebar_page_targets() {
 }
 
 #[test]
+fn discover_pages_keeps_sidebar_subheadings_in_order_without_build_files() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("syntax.typ"), "= Syntax\n").unwrap();
+    let sidebar = SidebarConfig {
+        section: vec![SidebarSectionConfig {
+            item: vec![
+                SidebarItemConfig {
+                    label: Some("Language".to_string()),
+                    ..SidebarItemConfig::default()
+                },
+                SidebarItemConfig {
+                    target: Some("syntax.typ".to_string()),
+                    ..SidebarItemConfig::default()
+                },
+            ],
+            ..SidebarSectionConfig::default()
+        }],
+        ..SidebarConfig::default()
+    };
+
+    let (sections, files) =
+        discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap();
+
+    assert_eq!(
+        files
+            .iter()
+            .map(|path| rel_posix(src, path))
+            .collect::<Vec<_>>(),
+        vec!["syntax.typ"]
+    );
+    assert_eq!(sections[0].items.len(), 2);
+    assert_eq!(sections[0].items[0].path, None);
+    assert_eq!(
+        sections[0].items[0].configured_label.as_deref(),
+        Some("Language")
+    );
+    assert_eq!(
+        sections[0].items[1].path.as_deref(),
+        Some(src.join("syntax.typ").as_path())
+    );
+}
+
+#[test]
 fn discover_pages_rejects_sidebar_targets_outside_source_directory() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path().join("site");
@@ -2522,7 +2675,7 @@ fn discover_pages_applies_pages_exclude_to_explicit_sidebar_targets() {
     };
 
     let (sections, files) = discover_pages(
-        &src,
+        src,
         Some(&sidebar),
         Some(&pages),
         None,
@@ -2566,6 +2719,7 @@ fn discover_pages_rejects_target_combined_with_glob() {
             item: vec![SidebarItemConfig {
                 target: Some("index.typ".to_string()),
                 glob: Some("*.typ".to_string()),
+                ..SidebarItemConfig::default()
             }],
             ..SidebarSectionConfig::default()
         }],

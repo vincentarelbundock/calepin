@@ -126,6 +126,7 @@ pub(super) struct SidebarItemConfig {
     #[serde(alias = "path", alias = "url")]
     pub(super) target: Option<String>,
     pub(super) glob: Option<String>,
+    pub(super) label: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]

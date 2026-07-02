@@ -126,7 +126,7 @@ impl NavSurface<'_> {
     }
 
     fn allows_linkless_items(self) -> bool {
-        matches!(self, NavSurface::Menu("footer"))
+        matches!(self, NavSurface::Sidebar | NavSurface::Menu("footer"))
     }
 
     fn uses_configured_labels(self) -> bool {
@@ -317,7 +317,7 @@ pub(super) fn discover_pages(
             .map(|item| NavItemInput {
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
-                label: None,
+                label: item.label.as_deref(),
                 aria_label: None,
                 weight: None,
             })
@@ -434,6 +434,9 @@ fn resolve_nav_item_plans(
             .map(str::trim)
             .filter(|target| !target.is_empty())
         {
+            if configured_label.is_some() && matches!(resolution.surface, NavSurface::Sidebar) {
+                bail!("sidebar target items cannot also set label");
+            }
             if input.glob.is_some_and(|glob| !glob.trim().is_empty()) {
                 bail!(
                     "{} target items cannot also set glob",
@@ -478,6 +481,16 @@ fn resolve_nav_item_plans(
             continue;
         }
 
+        if configured_label.is_some()
+            && matches!(resolution.surface, NavSurface::Sidebar)
+            && input
+                .glob
+                .map(str::trim)
+                .is_some_and(|glob| !glob.is_empty())
+        {
+            bail!("sidebar glob items cannot also set label");
+        }
+
         if resolution.surface.allows_linkless_items() {
             if let Some(label) = configured_label.clone() {
                 items.push(NavItemPlan {
@@ -491,11 +504,7 @@ fn resolve_nav_item_plans(
             }
         }
 
-        if !input
-            .glob
-            .map(str::trim)
-            .is_some_and(|glob| !glob.is_empty())
-        {
+        if input.glob.map(str::trim).is_none_or(|glob| glob.is_empty()) {
             bail!(
                 "{} item must set path, glob, or url",
                 resolution.surface.context()
@@ -903,12 +912,8 @@ fn nav_item_model(
     }
 
     let Some(path) = item.path.as_ref() else {
-        if matches!(surface, NavSurface::Menu("footer")) {
-            let raw_label = item
-                .configured_label
-                .as_ref()
-                .map(|label| label.as_str())
-                .unwrap_or_default();
+        if surface.allows_linkless_items() {
+            let raw_label = item.configured_label.as_deref().unwrap_or_default();
             let label_html = nav_label_html(raw_label, icon_cache)?;
             return Ok(NavItemModel {
                 language: None,

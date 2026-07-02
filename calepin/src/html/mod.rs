@@ -1265,6 +1265,48 @@ mod tests {
     }
 
     #[test]
+    fn bundled_website_theme_renders_sidebar_subheadings_without_links() {
+        let site_context = SiteContextInput {
+            sidebar_fold: false,
+            sidebar_sections: vec![SiteNavSection {
+                title: Some("Reference".to_string()),
+                active: true,
+                items: vec![
+                    SiteNavEntry {
+                        href: String::new(),
+                        label: "Language".to_string(),
+                        label_html: "Language".to_string(),
+                        active: false,
+                    },
+                    SiteNavEntry {
+                        href: "syntax.html".to_string(),
+                        label: "Syntax".to_string(),
+                        label_html: "Syntax".to_string(),
+                        active: true,
+                    },
+                ],
+            }],
+            ..Default::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains(r#"<li class="calepin-website-sidebar-subheading">"#));
+        assert!(themed.contains(r#"<span>Language</span>"#));
+        assert!(!themed.contains(r#"<a href="" aria-label="Language""#));
+        assert!(themed.contains(r#"<a href="syntax.html" aria-label="Syntax""#));
+    }
+
+    #[test]
     fn bundled_website_theme_script_closes_other_sidebar_sections() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
         let script = theme_scripts(&entry);

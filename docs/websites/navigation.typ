@@ -37,6 +37,27 @@ The sidebar label comes from the page source, not from `calepin.toml`. Put the l
 
 If a page has no `website-metadata.title`, _Calepin_ falls back to the document title, then the filename stem. This keeps multilingual sidebars in one place: each translated page carries its own translated title.
 
+Add non-link subheadings inside a section with an item that sets only `label`:
+
+```toml
+[[sidebar.section.item]]
+label = "Language"
+
+[[sidebar.section.item]]
+target = "reference/syntax.typ"
+
+[[sidebar.section.item]]
+target = "reference/styling.typ"
+
+[[sidebar.section.item]]
+label = "Library"
+
+[[sidebar.section.item]]
+target = "reference/model.typ"
+```
+
+Subheadings are rendered in sidebar order with the `calepin-website-sidebar-subheading` class so themes can style them separately. They do not link anywhere, add build pages, or affect which folded section opens. A sidebar item with `target` or `glob` cannot also set `label`; page labels still come from page metadata.
+
 If you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.
 
 Titled sections are foldable: each page loads with the section that contains it open and the others folded. Opening a different section folds the previous one. To keep every section expanded instead, disable folding:
