@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.24",
+  "calepin_version": "0.0.26",
   "input": "notebooks/diagrams.typ",
   "chunks": {
     "fig-mermaid": {
       "label": "fig-mermaid",
       "engine": "mermaid",
-      "status": "ok",
+      "status": "skipped",
       "options": {
         "echo": true,
         "output": true,
@@ -27,16 +27,7 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "items": [
-        {
-          "type": "display",
-          "data": {
-            "image/svg+xml": {
-              "path": "/.calepin/notebooks/diagrams/figures/fig-mermaid.svg"
-            }
-          }
-        }
-      ],
+      "items": [],
       "crossref-labels": [
         {
           "kind": "fig",
@@ -47,7 +38,7 @@
     "fig-dot": {
       "label": "fig-dot",
       "engine": "dot",
-      "status": "ok",
+      "status": "skipped",
       "options": {
         "echo": true,
         "output": true,
@@ -68,16 +59,7 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "items": [
-        {
-          "type": "display",
-          "data": {
-            "image/svg+xml": {
-              "path": "/.calepin/notebooks/diagrams/figures/fig-dot.svg"
-            }
-          }
-        }
-      ],
+      "items": [],
       "crossref-labels": [
         {
           "kind": "fig",
@@ -88,7 +70,7 @@
     "fig-tikz": {
       "label": "fig-tikz",
       "engine": "tikz",
-      "status": "ok",
+      "status": "skipped",
       "options": {
         "echo": true,
         "output": true,
@@ -109,16 +91,7 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "items": [
-        {
-          "type": "display",
-          "data": {
-            "image/svg+xml": {
-              "path": "/.calepin/notebooks/diagrams/figures/fig-tikz.svg"
-            }
-          }
-        }
-      ],
+      "items": [],
       "crossref-labels": [
         {
           "kind": "fig",
@@ -129,7 +102,7 @@
     "fig-d2": {
       "label": "fig-d2",
       "engine": "d2",
-      "status": "ok",
+      "status": "skipped",
       "options": {
         "echo": true,
         "output": true,
@@ -150,16 +123,7 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "items": [
-        {
-          "type": "display",
-          "data": {
-            "image/svg+xml": {
-              "path": "/.calepin/notebooks/diagrams/figures/fig-d2.svg"
-            }
-          }
-        }
-      ],
+      "items": [],
       "crossref-labels": [
         {
           "kind": "fig",

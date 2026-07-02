@@ -168,33 +168,4 @@ tt(head(iris), caption = "First rows of iris") |>
 ```
 ]
 
-At the time of writing, Typst's HTML export does not support the `#align`
-function. Tables produced with `#align` wrappers are omitted from HTML output,
-even though they still render in PDF output.
-
-Some table-producing packages let you modify the generated Typst before it is
-printed. In R, tinytable can use a `finalize` function to remove those wrappers
-when printing Typst:
-
-#calepin.chunk(echo: true, eval: true, results: "typst", caption: [Blah blah blah])[
-```r
-library(tinytable)
-
-noalign <- function(x) {
-    x <- theme_tinytable(x)
-    fn <- function(table) {
-        if (table@output != "typst") {
-            return(table)
-        }
-        tab <- unlist(strsplit(table@table_string, "\\n"))
-        idx <- grepl("align.*center|end align", tab)
-        table@table_string <- paste(tab[!idx], collapse = "\n")
-        return(table)
-    }
-    x <- style_tt(x, finalize = fn)
-    return(x)
-}
-
-tt(head(iris), caption = "This table is not aligned.", theme = noalign)
-```
-]
+The default `tinytable` Typst output works in both PDF and HTML output.

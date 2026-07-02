@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.24",
+  "calepin_version": "0.0.26",
   "input": "notebooks/parameters.typ",
   "chunks": {
     "inline-1": {
