@@ -928,9 +928,14 @@ fn pages_include_adds_build_only_pages() {
         ..SidebarConfig::default()
     };
 
-    let (_sections, nav_files) =
-        discover_site_pages(src, Some(&sidebar), Some(&pages), &None, Path::new(".calepin"))
-            .unwrap();
+    let (_sections, nav_files) = discover_site_pages(
+        src,
+        Some(&sidebar),
+        Some(&pages),
+        &None,
+        Path::new(".calepin"),
+    )
+    .unwrap();
     let include_files =
         discover_site_build_pages(src, Some(&pages), &None, Path::new(".calepin")).unwrap();
 
@@ -1080,9 +1085,12 @@ fn discover_static_files_rejects_paths_outside_source_directory() {
         exclude: Vec::new(),
     };
 
-    let err =
-        discover_static_files(Path::new("/site/docs"), Some(&config), Path::new(".calepin"))
-            .unwrap_err();
+    let err = discover_static_files(
+        Path::new("/site/docs"),
+        Some(&config),
+        Path::new(".calepin"),
+    )
+    .unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -1422,7 +1430,10 @@ fn site_context_page_url_uses_directory_style_for_index_routes() {
     let empty_page_info = PageInfoMap::new();
 
     let home = site.theme_context("index.html", None, &empty_page_info, None, None);
-    assert_eq!(home.page_url.as_deref(), Some("https://example.com/project/"));
+    assert_eq!(
+        home.page_url.as_deref(),
+        Some("https://example.com/project/")
+    );
 
     let section = site.theme_context("guide/index.html", None, &empty_page_info, None, None);
     assert_eq!(
@@ -2186,16 +2197,15 @@ label = "© 2026 Example"
 "#,
     );
 
-    let (plan, files) =
-        discover_site_menus(
-            src,
-            &config.menus,
-            config.footer.as_ref(),
-            None,
-            &None,
-            Path::new(".calepin"),
-        )
-        .unwrap();
+    let (plan, files) = discover_site_menus(
+        src,
+        &config.menus,
+        config.footer.as_ref(),
+        None,
+        &None,
+        Path::new(".calepin"),
+    )
+    .unwrap();
 
     assert_eq!(
         plan.items["footer"][0].path.as_deref(),
@@ -2511,8 +2521,14 @@ fn discover_pages_applies_pages_exclude_to_explicit_sidebar_targets() {
         ..SidebarConfig::default()
     };
 
-    let (sections, files) =
-        discover_pages(&src, Some(&sidebar), Some(&pages), None, Path::new(".calepin")).unwrap();
+    let (sections, files) = discover_pages(
+        &src,
+        Some(&sidebar),
+        Some(&pages),
+        None,
+        Path::new(".calepin"),
+    )
+    .unwrap();
 
     assert!(files.is_empty());
     assert!(sections[0].items.is_empty());

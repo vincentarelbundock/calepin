@@ -2,7 +2,7 @@
 
 
 
-#let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2", "sh")
+#let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2", "powershell", "sh")
 #show raw.where(block: true, lang: "typ", theme: auto): it => _without-raw-chunk-transforms(() => _html-themed-raw-block(it))
 #show raw.where(block: true, lang: "typst", theme: auto): it => _without-raw-chunk-transforms(() => _html-themed-raw-block(it))
 #show raw.where(block: true, lang: "python", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("python", it) }
@@ -11,6 +11,7 @@
 #show raw.where(block: true, lang: "dot", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("dot", it) }
 #show raw.where(block: true, lang: "tikz", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("tikz", it) }
 #show raw.where(block: true, lang: "d2", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("d2", it) }
+#show raw.where(block: true, lang: "powershell", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("powershell", it) }
 #show raw.where(block: true, lang: "sh", theme: auto): it => if _disable-raw-chunk-transforms.get() { _html-themed-raw-block(it) } else { chunk_from_raw_plain("sh", it) }
 
 #show raw.where(block: true, theme: auto): it => {
@@ -71,6 +72,27 @@ Arguments after `--` are forwarded to Typst, so project-specific Typst
 flags can stay in the same command.
 
 #calepin_runtime.chunk_from_raw_plain("sh", raw("# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n", block: true, lang: "sh"))
+
+== Progress output
+<progress-output>
+
+Calepin shows animated progress when the terminal supports it, using the
+same terminal detection as the underlying progress renderer. When output
+is redirected, the terminal is not interactive, or the terminal reports
+limited capabilities, Calepin falls back to plain status lines.
+
+Some terminal panes and command runners report themselves as interactive
+but render spinner redraws as separate lines. Set `CALEPIN_PROGRESS` to
+`plain` to disable animated progress while keeping status messages:
+
+#calepin_runtime.chunk_from_raw_plain("sh", raw("CALEPIN_PROGRESS=plain calepin compile paper.typ\n", block: true, lang: "sh"))
+
+In PowerShell:
+
+```powershell
+$env:CALEPIN_PROGRESS = "plain"
+calepin compile paper.typ
+```
 
 = Watch
 <watch>

@@ -1161,7 +1161,14 @@ pub(super) fn iter_typ_files(
 ) -> Result<Vec<PathBuf>> {
     let exclude = exclude.iter().collect::<BTreeSet<_>>();
     let mut out = Vec::new();
-    collect_typ_files(src_dir, src_dir, include_hidden, &exclude, asset_dir, &mut out)?;
+    collect_typ_files(
+        src_dir,
+        src_dir,
+        include_hidden,
+        &exclude,
+        asset_dir,
+        &mut out,
+    )?;
     out.sort_by_key(|path| rel_posix(src_dir, path));
     Ok(out)
 }

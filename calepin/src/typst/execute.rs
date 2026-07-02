@@ -33,9 +33,7 @@ pub struct ExecutionConfig {
 
 impl ExecutionConfig {
     fn has_vars(&self) -> bool {
-        self.vars
-            .as_object()
-            .is_some_and(|vars| !vars.is_empty())
+        self.vars.as_object().is_some_and(|vars| !vars.is_empty())
     }
 }
 

@@ -915,9 +915,7 @@ print("comment")
     }
 
     fn runtime_import_count(staged: &str) -> usize {
-        staged
-            .matches("/.calepin/calepin.typ\" as calepin")
-            .count()
+        staged.matches("/.calepin/calepin.typ\" as calepin").count()
     }
 
     #[test]

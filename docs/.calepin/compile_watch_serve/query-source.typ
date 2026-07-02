@@ -24,6 +24,27 @@ flags can stay in the same command.
 
 #calepin_runtime.chunk_from_raw_plain("sh", raw("# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n", block: true, lang: "sh"))
 
+== Progress output
+<progress-output>
+
+Calepin shows animated progress when the terminal supports it, using the
+same terminal detection as the underlying progress renderer. When output
+is redirected, the terminal is not interactive, or the terminal reports
+limited capabilities, Calepin falls back to plain status lines.
+
+Some terminal panes and command runners report themselves as interactive
+but render spinner redraws as separate lines. Set `CALEPIN_PROGRESS` to
+`plain` to disable animated progress while keeping status messages:
+
+#calepin_runtime.chunk_from_raw_plain("sh", raw("CALEPIN_PROGRESS=plain calepin compile paper.typ\n", block: true, lang: "sh"))
+
+In PowerShell:
+
+```powershell
+$env:CALEPIN_PROGRESS = "plain"
+calepin compile paper.typ
+```
+
 = Watch
 <watch>
 

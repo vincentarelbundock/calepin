@@ -133,10 +133,7 @@ mod tests {
     fn r_prelude_binds_named_list() {
         let vars = json!({ "alpha": 0.1, "label": "baseline" });
         let out = r_prelude("vars", &vars);
-        assert_eq!(
-            out,
-            r#"vars <- list("alpha" = 0.1, "label" = "baseline")"#
-        );
+        assert_eq!(out, r#"vars <- list("alpha" = 0.1, "label" = "baseline")"#);
     }
 
     #[test]
