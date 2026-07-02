@@ -1904,6 +1904,48 @@ fn theme_context_keeps_sidebar_subheadings_unlinked() {
 }
 
 #[test]
+fn theme_context_keeps_sidebar_external_links_absolute() {
+    let site = SiteModel::new(
+        vec![NavSectionModel {
+            language: None,
+            title: Some("Reference".to_string()),
+            items: vec![
+                NavItemModel {
+                    language: None,
+                    href: "reference/syntax.html".to_string(),
+                    label: "Syntax".to_string(),
+                    label_html: html_escape("Syntax"),
+                },
+                NavItemModel {
+                    language: None,
+                    href: "https://example.com/docs".to_string(),
+                    label: "External docs".to_string(),
+                    label_html: html_escape("External docs"),
+                },
+            ],
+        }],
+        MenusModel::default(),
+        SiteMetadata::default(),
+        true,
+    );
+
+    let context = site.theme_context(
+        "reference/syntax.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+    );
+
+    assert_eq!(
+        context.sidebar_sections[0].items[1].href,
+        "https://example.com/docs"
+    );
+    assert_eq!(context.sidebar_sections[0].items[1].label, "External docs");
+    assert!(!context.sidebar_sections[0].items[1].active);
+}
+
+#[test]
 fn theme_context_marks_section_containing_current_page_active() {
     let section = |title: &str, href: &str| NavSectionModel {
         language: None,
@@ -2218,6 +2260,35 @@ fn nav_from_plans_uses_metadata_title_then_stem() {
         .map(|item| item.label.as_str())
         .collect::<Vec<_>>();
     assert_eq!(labels, vec!["From Metadata", "c page"]);
+}
+
+#[test]
+fn nav_from_plans_uses_configured_labels_for_sidebar_external_targets() {
+    let sections = vec![NavSectionPlan {
+        language: None,
+        title: Some("Reference".to_string()),
+        items: vec![NavItemPlan {
+            path: None,
+            url: Some("https://example.com/reference".to_string()),
+            configured_label: Some("External reference".to_string()),
+            configured_aria_label: None,
+            weight: None,
+        }],
+    }];
+    let icon_temp = tempfile::tempdir().unwrap();
+    let mut icon_cache = IconCache::new(icon_temp.path(), Path::new(ICON_CACHE_DIR));
+
+    let nav = nav_from_plans(
+        &sections,
+        &PageMetaMap::new(),
+        &PageInfoMap::new(),
+        &mut icon_cache,
+    )
+    .unwrap();
+
+    assert_eq!(nav[0].items[0].href, "https://example.com/reference");
+    assert_eq!(nav[0].items[0].label, "External reference");
+    assert_eq!(nav[0].items[0].label_html, "External reference");
 }
 
 #[test]
@@ -2688,7 +2759,38 @@ fn discover_pages_applies_pages_exclude_to_explicit_sidebar_targets() {
 }
 
 #[test]
-fn discover_pages_rejects_sidebar_external_targets() {
+fn discover_pages_allows_sidebar_external_targets_with_labels() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    let sidebar = SidebarConfig {
+        section: vec![SidebarSectionConfig {
+            item: vec![SidebarItemConfig {
+                target: Some("https://example.com".to_string()),
+                label: Some("External docs".to_string()),
+                ..SidebarItemConfig::default()
+            }],
+            ..SidebarSectionConfig::default()
+        }],
+        ..SidebarConfig::default()
+    };
+
+    let (sections, files) =
+        discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap();
+
+    assert!(files.is_empty());
+    assert_eq!(sections[0].items.len(), 1);
+    assert_eq!(
+        sections[0].items[0].url.as_deref(),
+        Some("https://example.com")
+    );
+    assert_eq!(
+        sections[0].items[0].configured_label.as_deref(),
+        Some("External docs")
+    );
+}
+
+#[test]
+fn discover_pages_rejects_sidebar_external_targets_without_labels() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path();
     let sidebar = SidebarConfig {
@@ -2706,7 +2808,7 @@ fn discover_pages_rejects_sidebar_external_targets() {
 
     assert!(err
         .to_string()
-        .contains("sidebar target must point to a .typ source page"));
+        .contains("sidebar URL target items must set label"));
 }
 
 #[test]

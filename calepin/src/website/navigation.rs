@@ -118,7 +118,7 @@ impl NavSurface<'_> {
     }
 
     fn allows_urls(self) -> bool {
-        matches!(self, NavSurface::Menu(_))
+        matches!(self, NavSurface::Sidebar | NavSurface::Menu(_))
     }
 
     fn skip_duplicate_items(self) -> bool {
@@ -434,9 +434,6 @@ fn resolve_nav_item_plans(
             .map(str::trim)
             .filter(|target| !target.is_empty())
         {
-            if configured_label.is_some() && matches!(resolution.surface, NavSurface::Sidebar) {
-                bail!("sidebar target items cannot also set label");
-            }
             if input.glob.is_some_and(|glob| !glob.trim().is_empty()) {
                 bail!(
                     "{} target items cannot also set glob",
@@ -450,6 +447,11 @@ fn resolve_nav_item_plans(
                             "sidebar target must point to a .typ source page, got literal URL: {url}"
                         );
                     }
+                    if configured_label.is_none()
+                        && matches!(resolution.surface, NavSurface::Sidebar)
+                    {
+                        bail!("sidebar URL target items must set label");
+                    }
                     items.push(NavItemPlan {
                         path: None,
                         url: Some(url),
@@ -459,6 +461,11 @@ fn resolve_nav_item_plans(
                     });
                 }
                 Some(NavTarget::Page(path)) => {
+                    if configured_label.is_some()
+                        && matches!(resolution.surface, NavSurface::Sidebar)
+                    {
+                        bail!("sidebar target items cannot also set label");
+                    }
                     if is_page_excluded(resolution.src_dir, &path, resolution.pages) {
                         continue;
                     }
