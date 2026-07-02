@@ -73,7 +73,7 @@ or include several pages with a glob:
 glob = "guide/*.typ"
 ```
 
-Use `target` for one source page and `glob` for a list of source pages. Sidebar entries always point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site.
+Use `target` for one source page and `glob` for a list of source pages. Page targets point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site.
 
 The sidebar label comes from the page source, not from `calepin.toml`. Put the label in the page's website metadata:
 
@@ -85,6 +85,35 @@ The sidebar label comes from the page source, not from `calepin.toml`. Put the l
 ```
 
 If a page has no `website-metadata.title`, _Calepin_ falls back to the document title, then the filename stem. This keeps multilingual sidebars in one place: each translated page carries its own translated title.
+
+Use an external URL as `target` when you want a sidebar link to leave the site. External targets must set `label` because there is no page metadata to read:
+
+```toml
+[[sidebar.section.item]]
+target = "https://example.com/reference"
+label = "External reference"
+```
+
+Add non-link subheadings inside a section with an item that sets only `label`:
+
+```toml
+[[sidebar.section.item]]
+label = "Language"
+
+[[sidebar.section.item]]
+target = "reference/syntax.typ"
+
+[[sidebar.section.item]]
+target = "reference/styling.typ"
+
+[[sidebar.section.item]]
+label = "Library"
+
+[[sidebar.section.item]]
+target = "reference/model.typ"
+```
+
+Subheadings are rendered in sidebar order with the `calepin-website-sidebar-subheading` class so themes can style them separately. They do not link anywhere, add build pages, or affect which folded section opens. A sidebar item with a `.typ` `target` or `glob` cannot also set `label`; page labels still come from page metadata.
 
 If you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.
 
