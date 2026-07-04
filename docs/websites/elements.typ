@@ -83,46 +83,46 @@ The rendered result:
 
 `calepin.elements.callout` renders AsciiDoc-style admonitions in HTML and paged output. Use `kind:` with `note`, `tip`, `important`, `caution`, or `warning`. The title defaults to the capitalized kind label; pass `title: [...]` to override it, or `title: none` to hide the title row.
 
-```typ
+````typ
 #calepin.elements.callout(kind: "note")[
   Notes highlight neutral supporting information.
 ]
-
-#calepin.elements.callout(kind: "tip")[
-  Tips point to a helpful way forward.
-]
-
-#calepin.elements.callout(kind: "important", title: [Read this first])[
-  Important callouts emphasize required context.
-]
-
-#calepin.elements.callout(kind: "caution", title: none)[
-  Caution callouts can omit the title when the body carries the label.
-]
-
-#calepin.elements.callout(kind: "warning")[
-  Warnings flag potential problems before they happen.
-]
-```
+````
 
 #calepin.elements.callout(kind: "note")[
   Notes highlight neutral supporting information.
 ]
 
-#calepin.elements.callout(kind: "tip")[
-  Tips point to a helpful way forward.
-]
-
-#calepin.elements.callout(kind: "important", title: [Read this first])[
-  Important callouts emphasize required context.
-]
-
-#calepin.elements.callout(kind: "caution", title: none)[
-  Caution callouts can omit the title when the body carries the label.
-]
-
-#calepin.elements.callout(kind: "warning")[
+````typ
+#calepin.elements.callout(kind: "warning", title: [Heads up])[
   Warnings flag potential problems before they happen.
+]
+````
+
+#calepin.elements.callout(kind: "warning", title: [Heads up])[
+  Warnings flag potential problems before they happen.
+]
+
+You can also define a project-specific helper with Typst's `.with()` method:
+
+````typ
+#let callout-custom = calepin.elements.callout.with(
+  kind: "important",
+  title: [Project note],
+)
+
+#callout-custom[
+  Use a local helper when several callouts should share the same kind and title.
+]
+````
+
+#let callout-custom = calepin.elements.callout.with(
+  kind: "important",
+  title: [Project note],
+)
+
+#callout-custom[
+  Use a local helper when several callouts should share the same kind and title.
 ]
 
 = Side notes
