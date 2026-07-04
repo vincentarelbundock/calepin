@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.27",
+  "calepin_version": "0.0.28",
   "input": "reference/cli.typ",
   "chunks": {
     "chunk-1": {

@@ -75,6 +75,19 @@ glob = "guide/*.typ"
 
 Use `target` for one source page and `glob` for a list of source pages. Page targets point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site.
 
+Sidebar items must be nested under `[[sidebar.section]]`, but the section does not need a title. Use an untitled section when you want items to appear as a plain unheaded list:
+
+```toml
+[sidebar]
+
+[[sidebar.section]]
+  [[sidebar.section.item]]
+  target = "index.typ"
+
+  [[sidebar.section.item]]
+  target = "getting-started.typ"
+```
+
 The sidebar label comes from the page source, not from `calepin.toml`. Put the label in the page's website metadata:
 
 ```typ

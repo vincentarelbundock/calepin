@@ -1,4 +1,5 @@
 #import "card.typ": card
+#import "callout.typ": callout
 #import "gallery.typ": gallery
 #import "columns.typ": columns
 #import "lightbox.typ": lightbox-image, lightbox-video

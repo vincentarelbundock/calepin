@@ -2444,6 +2444,49 @@ a:has(.calepin-nav-icon) {
   gap: 0.35rem;
 }
 
+/* ------------------------------------------------------------- Callouts */
+
+.calepin-callout {
+  --callout-accent: var(--calepin-callout-note-color);
+  margin: var(--calepin-block-gap, 1rem) 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--callout-accent);
+  border-left-width: 0.4rem;
+  border-radius: var(--calepin-radius-md, 0.5rem);
+  background: color-mix(in srgb, var(--callout-accent) 10%, var(--calepin-color-background));
+  color: var(--calepin-color-text);
+}
+
+.calepin-callout-title {
+  margin-bottom: 0.4rem;
+  color: var(--callout-accent);
+  font-weight: 700;
+}
+
+.calepin-callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+.calepin-callout-note {
+  --callout-accent: var(--calepin-callout-note-color);
+}
+
+.calepin-callout-tip {
+  --callout-accent: var(--calepin-callout-tip-color);
+}
+
+.calepin-callout-important {
+  --callout-accent: var(--calepin-callout-important-color);
+}
+
+.calepin-callout-caution {
+  --callout-accent: var(--calepin-callout-caution-color);
+}
+
+.calepin-callout-warning {
+  --callout-accent: var(--calepin-callout-warning-color);
+}
+
 /* ------------------------------------------------------ Page navigation */
 
 .calepin-website-page-nav {

@@ -127,6 +127,52 @@ The rendered result:
   A card wraps content with matching style in HTML and paged output.
 ]
 
+= Callouts
+
+`calepin.elements.callout` renders AsciiDoc-style admonitions in HTML and paged output. Use `kind:` with `note`, `tip`, `important`, `caution`, or `warning`. The title defaults to the capitalized kind label; pass `title: [...]` to override it, or `title: none` to hide the title row.
+
+````typ
+#calepin.elements.callout(kind: "note")[
+  Notes highlight neutral supporting information.
+]
+````
+
+#calepin.elements.callout(kind: "note")[
+  Notes highlight neutral supporting information.
+]
+
+````typ
+#calepin.elements.callout(kind: "warning", title: [Heads up])[
+  Warnings flag potential problems before they happen.
+]
+````
+
+#calepin.elements.callout(kind: "warning", title: [Heads up])[
+  Warnings flag potential problems before they happen.
+]
+
+You can also define a project-specific helper with Typst's `.with()` method:
+
+````typ
+#let callout-custom = calepin.elements.callout.with(
+  kind: "important",
+  title: [Project note],
+)
+
+#callout-custom[
+  Use a local helper when several callouts should share the same kind and title.
+]
+````
+
+#let callout-custom = calepin.elements.callout.with(
+  kind: "important",
+  title: [Project note],
+)
+
+#callout-custom[
+  Use a local helper when several callouts should share the same kind and title.
+]
+
 = Side notes
 
 `calepin.elements.sidenote` and `calepin.elements.sidefigure` place supporting
