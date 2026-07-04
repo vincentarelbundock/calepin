@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.28",
+  "calepin_version": "0.0.29",
   "input": "notebooks/code_execution.typ",
   "chunks": {
     "summary": {
