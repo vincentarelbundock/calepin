@@ -1,6 +1,7 @@
     {% if site.sidebar %}
     {% set ns = namespace(prev = none, next = none, active_found = false, previous = none) %}
     {% for item in site.sidebar %}
+        {% if item.href %}
         {% if ns.active_found %}
             {% set ns.next = item %}
             {% set ns.active_found = false %}
@@ -10,6 +11,7 @@
         {% endif %}
         {% if not item.active %}
             {% set ns.previous = item %}
+        {% endif %}
         {% endif %}
     {% endfor %}
 

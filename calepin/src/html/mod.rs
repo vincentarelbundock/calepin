@@ -806,6 +806,82 @@ mod tests {
     }
 
     #[test]
+    fn bundled_themes_skip_linkless_sidebar_items_in_page_navigation() {
+        let site_context = SiteContextInput {
+            sidebar: vec![
+                SiteNavEntry {
+                    href: "intro.html".to_string(),
+                    label: "Intro".to_string(),
+                    label_html: "Intro".to_string(),
+                    active: false,
+                },
+                SiteNavEntry {
+                    href: String::new(),
+                    label: "Language".to_string(),
+                    label_html: "Language".to_string(),
+                    active: false,
+                },
+                SiteNavEntry {
+                    href: "syntax.html".to_string(),
+                    label: "Syntax".to_string(),
+                    label_html: "Syntax".to_string(),
+                    active: true,
+                },
+                SiteNavEntry {
+                    href: String::new(),
+                    label: "Appendix".to_string(),
+                    label_html: "Appendix".to_string(),
+                    active: false,
+                },
+                SiteNavEntry {
+                    href: "api.html".to_string(),
+                    label: "API".to_string(),
+                    label_html: "API".to_string(),
+                    active: false,
+                },
+            ],
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            ..SiteContextInput::default()
+        };
+
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+            let entry = entry_for(&selection, HtmlScope::Site);
+            let theme_name = entry.theme_name.clone();
+            let themed = theme::apply_html_theme(
+                SAMPLE_HTML,
+                Some(&entry),
+                &HtmlSyntaxTheme::builtin(),
+                None,
+                None,
+                Some(&site_context),
+            )
+            .unwrap();
+
+            assert!(
+                themed.contains(
+                    r#"<a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="intro.html" role="button">"#
+                ),
+                "{theme_name}: previous page navigation should use the previous linked sidebar item"
+            );
+            assert!(
+                themed.contains(
+                    r#"<a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="api.html" role="button">"#
+                ),
+                "{theme_name}: next page navigation should use the next linked sidebar item"
+            );
+            assert!(
+                !themed.contains(r#"<span class="calepin-website-page-nav-title">Language</span>"#),
+                "{theme_name}: previous page navigation should skip linkless sidebar labels"
+            );
+            assert!(
+                !themed.contains(r#"<span class="calepin-website-page-nav-title">Appendix</span>"#),
+                "{theme_name}: next page navigation should skip linkless sidebar labels"
+            );
+        }
+    }
+
+    #[test]
     fn bundled_themes_render_default_footer_when_not_configured() {
         let site_context = SiteContextInput {
             title: Some("Example".to_string()),
