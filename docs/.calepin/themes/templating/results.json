@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.29",
+  "calepin_version": "0.0.31",
   "input": "themes/templating.typ",
   "chunks": {
     "chunk-1": {

@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Install])\n\n#title()\n\n= Typst CLI\n<typst-cli>\n\nCalepin requires Typst 0.15.0 or newer. Install or update the Typst CLI from the #link(\"https://github.com/typst/typst#installation\")[Typst installation instructions], and make sure it is available on your `PATH`.\n\n= Calepin\n<calepin-cli>\n\nThe simplest way to install Calepin is with the official installer script, which works on MacOS and Linux:\n\n```sh\ncurl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh\n```\n\nOn Windows via powershell:\n\n```sh\npowershell -ExecutionPolicy Bypass -c \"irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex\"\n```\n\nIf you are a `cargo` for Rust user, you can install with:\n\n```sh\ncargo install calepin\n```\n\n\n\n== Updating Calepin\n\nIf you installed Calepin with the official installer, update it with:\n\n```sh\ncalepin update\n```\n\nThis updates only Calepin, using the `calepin-update` helper installed alongside\nthe main binary. Typst, Python, R, Jupyter, and Jupyter kernels are managed\nseparately.\n\nIf `calepin update` reports that `calepin-update` is missing, reinstall Calepin\nwith the official installer command above. If you installed Calepin with Cargo,\nHomebrew, or another package manager, use that tool to upgrade Calepin instead.\n\n= Jupyter support\n<jupyter-kernels>\n\nCalepin has built-in support for #strong[Python] and #strong[R], and can also\nrun many other languages through Jupyter kernels, but that requires installing\nthe language kernel and kernel client tooling.\n\nTo use a Jupyter kernel, install `jupyter_client` first:\n\n```sh\npip install jupyter_client\n```\n\nMost kernels then install with a single `pip install`:\n\n```sh\npip install bash_kernel       # Bash\npip install octave_kernel     # GNU Octave\npip install gnuplot_kernel    # Gnuplot\n```\n\nSome Python kernel packages also need to register a Jupyter kernelspec after\ninstallation. For Bash, run this in the same Python environment that Calepin\nuses:\n\n```sh\npython -m bash_kernel.install --sys-prefix\n```\n\nIf you use `uv run`, the equivalent command is:\n\n```sh\nuv run python -m bash_kernel.install --sys-prefix\n```\n\nSome kernels are installed from their language's own package manager:\n\n```sh\n# Julia\njulia -e 'using Pkg; Pkg.add(\"IJulia\")'\n```\n\nRun `jupyter kernelspec list` to see what engines are registered and available.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Install])\n\n#title()\n\n= Typst CLI\n<typst-cli>\n\nCalepin requires Typst 0.15.0 or newer. Install or update the Typst CLI from the #link(\"https://github.com/typst/typst#installation\")[Typst installation instructions], and make sure it is available on your `PATH`.\n\n= Calepin\n<calepin-cli>\n\nThe simplest way to install Calepin is with the official installer script, which works on MacOS and Linux:\n\n```sh\ncurl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh\n```\n\nOn Windows via powershell:\n\n```sh\npowershell -ExecutionPolicy Bypass -c \"irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex\"\n```\n\nIf you are a `cargo` for Rust user, you can install with:\n\n```sh\ncargo install calepin\n```\n\n== Updating Calepin\n\nIf you installed Calepin with the official installer, update it with:\n\n```sh\ncalepin update\n```\n\nThis updates only Calepin, using the `calepin-update` helper installed alongside\nthe main binary. Typst, Python, R, Jupyter, and Jupyter kernels are managed\nseparately.\n\nIf `calepin update` reports that `calepin-update` is missing, reinstall Calepin\nwith the official installer command above. If you installed Calepin with Cargo,\nHomebrew, or another package manager, use that tool to upgrade Calepin instead.\n\n= Jupyter support\n<jupyter-kernels>\n\nCalepin has built-in support for #strong[Python] and #strong[R], and can also\nrun many other languages through Jupyter kernels, but that requires installing\nthe language kernel and kernel client tooling.\n\nTo use a Jupyter kernel, install `jupyter_client` first:\n\n```sh\npip install jupyter_client\n```\n\nMost kernels then install with a single `pip install`:\n\n```sh\npip install bash_kernel       # Bash\npip install octave_kernel     # GNU Octave\npip install gnuplot_kernel    # Gnuplot\n```\n\nSome Python kernel packages also need to register a Jupyter kernelspec after\ninstallation. For Bash, run this in the same Python environment that Calepin\nuses:\n\n```sh\npython -m bash_kernel.install --sys-prefix\n```\n\nIf you use `uv run`, the equivalent command is:\n\n```sh\nuv run python -m bash_kernel.install --sys-prefix\n```\n\nSome kernels are installed from their language's own package manager:\n\n```sh\n# Julia\njulia -e 'using Pkg; Pkg.add(\"IJulia\")'\n```\n\nRun `jupyter kernelspec list` to see what engines are registered and available.\n\n= Nix\n<nix>\n\nIf you use Nix flakes, the default package is the basic Calepin CLI wrapped with\nTypst on `PATH`:\n\n```sh\nnix run github:vincentarelbundock/calepin -- --help\nnix run github:vincentarelbundock/calepin#calepin -- compile paper.typ\n```\n\nTo build the package without running it:\n\n```sh\nnix build github:vincentarelbundock/calepin\n```\n\nThe default development shell is also minimal:\n\n```sh\nnix develop github:vincentarelbundock/calepin\n```\n\nFor contributor work on the documentation website, use the heavier website\nshell. It includes Rust tooling, Typst, `uv`, R packages used by the examples,\nand the diagram tools used by the website pages.\n\n```sh\nnix develop github:vincentarelbundock/calepin#website\nmake website\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4394,7 +4394,13 @@ html:not([data-theme]) {
 </code></pre></div><p>If you use <code>uv run</code>, the equivalent command is:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">uv</span><span class="calepin-syntax-scope-1"> run python</span><span class="calepin-syntax-scope-2"> -</span><span class="calepin-syntax-scope-17">m</span><span class="calepin-syntax-scope-1"> bash_kernel.install</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">sys-prefix</span>
 </code></pre></div><p>Some kernels are installed from their language’s own package manager:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Julia</span>
 <span class="calepin-syntax-scope-10">julia</span><span class="calepin-syntax-scope-2"> -</span><span class="calepin-syntax-scope-17">e</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">'</span><span class="calepin-syntax-scope-4">using Pkg; Pkg.add("IJulia")</span><span class="calepin-syntax-scope-4">'</span>
-</code></pre></div><p>Run <code>jupyter kernelspec list</code> to see what engines are registered and available.</p>
+</code></pre></div><p>Run <code>jupyter kernelspec list</code> to see what engines are registered and available.</p><h2 id="nix">Nix</h2><p>If you use Nix flakes, the default package is the basic Calepin CLI wrapped with Typst on <code>PATH</code>:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">nix</span><span class="calepin-syntax-scope-1"> run github:vincentarelbundock/calepin</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> --help</span>
+<span class="calepin-syntax-scope-10">nix</span><span class="calepin-syntax-scope-1"> run github:vincentarelbundock/calepin#calepin</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> compile paper.typ</span>
+</code></pre></div><p>To build the package without running it:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">nix</span><span class="calepin-syntax-scope-1"> build github:vincentarelbundock/calepin</span>
+</code></pre></div><p>The default development shell is also minimal:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">nix</span><span class="calepin-syntax-scope-1"> develop github:vincentarelbundock/calepin</span>
+</code></pre></div><p>For contributor work on the documentation website, use the heavier website shell. It includes Rust tooling, Typst, <code>uv</code>, R packages used by the examples, and the diagram tools used by the website pages.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">nix</span><span class="calepin-syntax-scope-1"> develop github:vincentarelbundock/calepin#website</span>
+<span class="calepin-syntax-scope-10">make</span><span class="calepin-syntax-scope-1"> website</span>
+</code></pre></div>
         </main>
                 
         <aside class="calepin-website-toc">
@@ -4410,6 +4416,8 @@ html:not([data-theme]) {
                     
                     <li class="level-2"><a href="#jupyter-support">Jupyter support</a></li>
                     
+                    <li class="level-2"><a href="#nix">Nix</a></li>
+                    
                 </ul>
             </nav>
         </aside>
@@ -4419,137 +4427,189 @@ html:not([data-theme]) {
     
     
         
-            
-            
-        
-        
-    
         
             
             
         
         
-            
         
     
         
         
             
-        
-    
+            
         
         
             
         
-    
-        
-        
-            
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
         
     
 
