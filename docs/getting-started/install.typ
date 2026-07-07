@@ -28,8 +28,6 @@ If you are a `cargo` for Rust user, you can install with:
 cargo install calepin
 ```
 
-
-
 == Updating Calepin
 
 If you installed Calepin with the official installer, update it with:
@@ -89,3 +87,35 @@ julia -e 'using Pkg; Pkg.add("IJulia")'
 ```
 
 Run `jupyter kernelspec list` to see what engines are registered and available.
+
+= Nix
+<nix>
+
+If you use Nix flakes, the default package is the basic Calepin CLI wrapped with
+Typst on `PATH`:
+
+```sh
+nix run github:vincentarelbundock/calepin -- --help
+nix run github:vincentarelbundock/calepin#calepin -- compile paper.typ
+```
+
+To build the package without running it:
+
+```sh
+nix build github:vincentarelbundock/calepin
+```
+
+The default development shell is also minimal:
+
+```sh
+nix develop github:vincentarelbundock/calepin
+```
+
+For contributor work on the documentation website, use the heavier website
+shell. It includes Rust tooling, Typst, `uv`, R packages used by the examples,
+and the diagram tools used by the website pages.
+
+```sh
+nix develop github:vincentarelbundock/calepin#website
+make website
+```
