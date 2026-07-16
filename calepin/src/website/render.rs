@@ -1,14 +1,16 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
+use serde::Deserialize;
 
 use crate::html::{minify_html_file, HtmlSyntaxTheme};
 use crate::typst::compile::{compile_with_typst, CompileOptions, OutputFormat};
 use crate::typst::paths::project_relative_path;
 use crate::typst::preprocess::PreprocessOutput;
 
+use super::paths::normalize_path;
 use super::preprocess::run_parallel;
 use super::site::SiteModel;
 use super::{BuildContext, SOURCE_DATA_ID};
@@ -18,25 +20,50 @@ pub(super) fn render_documents(
     typ_files: Vec<PathBuf>,
     site: &SiteModel,
     preprocessed: &BTreeMap<PathBuf, PreprocessOutput>,
-) -> Result<()> {
+) -> Result<BTreeMap<PathBuf, BTreeSet<PathBuf>>> {
     let progress = context
         .progress
         .bar("[render] pages", typ_files.len() as u64);
-    run_parallel(
+    let rendered = run_parallel(
         typ_files,
         context.parallelism,
         Some(&progress),
         |input_path| {
             let rel = project_relative_path(&context.src_dir, &input_path);
             let page_progress = context.progress.spinner(format!("[render] {rel}"));
-            render_document(context, site, &input_path, preprocessed)
+            let dependencies = render_document(context, site, &input_path, preprocessed)
                 .with_context(|| format!("failed to render {}", input_path.display()))?;
             page_progress.finish(format!("[done] render {rel}"));
-            Ok(())
+            Ok((input_path, dependencies))
         },
     )?;
     progress.finish("[done] render pages");
-    Ok(())
+    Ok(rendered.into_iter().collect())
+}
+
+#[derive(Deserialize)]
+struct TypstDependencies {
+    inputs: Vec<PathBuf>,
+}
+
+fn read_dependencies(root: &Path, path: &Path) -> Result<BTreeSet<PathBuf>> {
+    let bytes = fs::read(path)
+        .with_context(|| format!("failed to read Typst dependencies from {}", path.display()))?;
+    let manifest: TypstDependencies = serde_json::from_slice(&bytes)
+        .with_context(|| format!("failed to parse Typst dependencies from {}", path.display()))?;
+    Ok(manifest
+        .inputs
+        .into_iter()
+        .map(|input| {
+            let path = if input.is_absolute() {
+                input
+            } else {
+                root.join(input)
+            };
+            path.canonicalize()
+                .unwrap_or_else(|_| normalize_path(&path))
+        })
+        .collect())
 }
 
 fn ensure_parent_directory(path: &Path) -> Result<()> {
@@ -102,7 +129,7 @@ fn render_document(
     site: &SiteModel,
     input_path: &Path,
     preprocessed: &BTreeMap<PathBuf, PreprocessOutput>,
-) -> Result<()> {
+) -> Result<BTreeSet<PathBuf>> {
     let preprocessed = preprocessed
         .get(input_path)
         .ok_or_else(|| anyhow!("page was not preprocessed: {}", input_path.display()))?;
@@ -136,6 +163,7 @@ fn render_document(
     };
     let compile = |output: PathBuf,
                    format: OutputFormat,
+                   dependencies_path: &Path,
                    html_entry: Option<&crate::theme::HtmlEntry>,
                    html_syntax_theme: Option<&HtmlSyntaxTheme>,
                    site_context: Option<&crate::html::SiteContextInput>|
@@ -155,19 +183,23 @@ fn render_document(
                 site_context,
                 pages_input: Some(&context.pages_index_ref),
                 current_href_input: Some(&current_href),
+                dependencies_path: Some(dependencies_path),
                 minify_html: false,
                 progress: false,
             },
         )
     };
 
+    let html_dependencies_path = preprocessed.layout.artifact_path("dependencies-html.json");
     compile(
         html_output.clone(),
         OutputFormat::Html,
+        &html_dependencies_path,
         page_site_entry.as_ref(),
         Some(&context.syntax_theme),
         Some(&site_context),
     )?;
+    let mut dependencies = read_dependencies(&preprocessed.layout.root, &html_dependencies_path)?;
     // Publishes the complete page source for the runtime view-source feature.
     // Authors should treat comments and code chunks in site pages as public.
     embed_source_blob(&html_output, input_path)?;
@@ -181,10 +213,22 @@ fn render_document(
             .as_ref()
             .ok_or_else(|| anyhow!("PDF output was not planned: {}", input_path.display()))?;
         let pdf_output = context.out_dir.join(pdf_href);
-        compile(pdf_output, OutputFormat::Pdf, None, None, None)?;
+        let pdf_dependencies_path = preprocessed.layout.artifact_path("dependencies-pdf.json");
+        compile(
+            pdf_output,
+            OutputFormat::Pdf,
+            &pdf_dependencies_path,
+            None,
+            None,
+            None,
+        )?;
+        dependencies.extend(read_dependencies(
+            &preprocessed.layout.root,
+            &pdf_dependencies_path,
+        )?);
     }
 
-    Ok(())
+    Ok(dependencies)
 }
 
 fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {

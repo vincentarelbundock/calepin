@@ -12,6 +12,7 @@ fn test_build_result(root: &Path, pages: &[PathBuf]) -> WebsiteBuildResult {
         config_path: root.join("calepin.toml"),
         theme_dirs: Vec::new(),
         page_fingerprints: fingerprint_files(pages).unwrap(),
+        page_dependencies: BTreeMap::new(),
         nav_signature: 0,
         pages_signature: 0,
     }
@@ -158,6 +159,7 @@ fn website_build_result_canonicalizes_config_theme_dir() {
         config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
+        incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
     })
@@ -167,6 +169,70 @@ fn website_build_result_canonicalizes_config_theme_dir() {
     let canonical_theme_file = theme.join("layouts/site.html").canonicalize().unwrap();
     assert_eq!(result.theme_dirs, vec![canonical_theme]);
     assert!(should_rebuild_for_path(&result, &canonical_theme_file));
+}
+
+#[test]
+fn website_build_records_typst_dependencies_for_each_page() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-website-dependencies-test-");
+    let root = dir.path();
+    let src = root.join("docs");
+    let data = src.join("data.txt");
+    let page = src.join("index.typ");
+    std::fs::create_dir_all(&src).unwrap();
+    std::fs::write(
+        root.join("calepin.toml"),
+        "[static]\ninclude = [\"data.txt\"]\n",
+    )
+    .unwrap();
+    std::fs::write(&data, "dependency contents").unwrap();
+    std::fs::write(
+        &page,
+        "#set document(title: [Home])\n#read(\"/data.txt\")\n",
+    )
+    .unwrap();
+
+    let options = WebsiteBuildOptions {
+        config: root.join("calepin.toml"),
+        src: Some(src),
+        out: Some(root.join("out")),
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        config_overrides: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        incremental_changed: Vec::new(),
+        clean: true,
+        minify_html: false,
+    };
+    let result = build_site(options.clone()).unwrap();
+
+    let page = page.canonicalize().unwrap();
+    let data = data.canonicalize().unwrap();
+    assert!(result
+        .page_dependencies
+        .get(&page)
+        .is_some_and(|dependencies| dependencies.contains(&data)));
+
+    std::fs::write(&data, "updated dependency contents").unwrap();
+    let next = rebuild_changed_pages(&options, &result, std::slice::from_ref(&data))
+        .unwrap()
+        .unwrap();
+    let html = std::fs::read_to_string(root.join("out/index.html")).unwrap();
+    assert!(html.contains("updated dependency contents"));
+    assert_eq!(
+        std::fs::read_to_string(root.join("out/data.txt")).unwrap(),
+        "updated dependency contents"
+    );
+    assert!(next
+        .page_dependencies
+        .get(&page)
+        .is_some_and(|dependencies| dependencies.contains(&data)));
 }
 
 #[test]
@@ -199,6 +265,7 @@ theme = "calepin"
         config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
+        incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
     })
@@ -250,6 +317,7 @@ fn website_build_result_normalizes_created_output_dir_inside_source() {
         config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
+        incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
     })
@@ -1030,6 +1098,7 @@ exclude = ["lib/**"]
         config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
+        incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
     })
@@ -1340,6 +1409,60 @@ fn changed_typ_pages_returns_modified_known_pages() {
 
     fs::write(&page, "= Updated\n").unwrap();
     let changed = changed_typ_pages(&current, std::slice::from_ref(&page)).unwrap();
+
+    assert_eq!(changed, Some(vec![page]));
+}
+
+#[test]
+fn changed_typ_pages_includes_dependents() {
+    let temp = tempfile::tempdir().unwrap();
+    let shared = temp.path().join("shared.typ");
+    let consumer = temp.path().join("consumer.typ");
+    fs::write(&shared, "#let answer = 42\n").unwrap();
+    fs::write(&consumer, "#import \"shared.typ\": answer\n#answer\n").unwrap();
+    let mut current = test_build_result(temp.path(), &[shared.clone(), consumer.clone()]);
+    current
+        .page_dependencies
+        .insert(consumer.clone(), BTreeSet::from([shared.clone()]));
+
+    fs::write(&shared, "#let answer = 43\n").unwrap();
+    let changed = changed_typ_pages(&current, std::slice::from_ref(&shared)).unwrap();
+
+    assert_eq!(changed, Some(vec![consumer, shared]));
+}
+
+#[test]
+fn changed_typ_pages_rebuilds_consumers_of_non_page_dependencies() {
+    let temp = tempfile::tempdir().unwrap();
+    let page = temp.path().join("index.typ");
+    let data = temp.path().join("data.csv");
+    fs::write(&page, "= Home\n").unwrap();
+    fs::write(&data, "value\n1\n").unwrap();
+    let mut current = test_build_result(temp.path(), std::slice::from_ref(&page));
+    current
+        .page_dependencies
+        .insert(page.clone(), BTreeSet::from([data.clone()]));
+
+    fs::write(&data, "value\n2\n").unwrap();
+    let changed = changed_typ_pages(&current, std::slice::from_ref(&data)).unwrap();
+
+    assert_eq!(changed, Some(vec![page]));
+}
+
+#[test]
+fn changed_typ_pages_rebuilds_consumers_when_dependency_is_removed() {
+    let temp = tempfile::tempdir().unwrap();
+    let page = temp.path().join("index.typ");
+    let data = temp.path().join("data.csv");
+    fs::write(&page, "= Home\n").unwrap();
+    fs::write(&data, "value\n1\n").unwrap();
+    let mut current = test_build_result(temp.path(), std::slice::from_ref(&page));
+    current
+        .page_dependencies
+        .insert(page.clone(), BTreeSet::from([data.clone()]));
+
+    fs::remove_file(&data).unwrap();
+    let changed = changed_typ_pages(&current, std::slice::from_ref(&data)).unwrap();
 
     assert_eq!(changed, Some(vec![page]));
 }
@@ -2031,6 +2154,7 @@ fn shared_theme_init_script_is_inlined() {
         config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
+        incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
     })

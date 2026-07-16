@@ -80,6 +80,8 @@ pub struct CompileOptions<'a> {
     /// Site-relative html path of the page being rendered, exposed as the
     /// `calepin-current-href` input.
     pub current_href_input: Option<&'a str>,
+    /// Write Typst's native dependency manifest to this path.
+    pub dependencies_path: Option<&'a Path>,
     /// Minify final HTML output after theming and asset processing.
     pub minify_html: bool,
     /// Show a live status line around the final Typst render.
@@ -134,6 +136,19 @@ pub(crate) fn validate_forwarded_typst_args(
                 "`--features` is managed by Calepin for HTML output so the required `html` feature stays enabled"
             ));
         }
+    }
+    Ok(())
+}
+
+fn reject_managed_dependency_args(args: &[String]) -> Result<()> {
+    if args.iter().any(|arg| {
+        matches!(arg.as_str(), "--deps" | "--deps-format")
+            || arg.starts_with("--deps=")
+            || arg.starts_with("--deps-format=")
+    }) {
+        return Err(anyhow!(
+            "`--deps` and `--deps-format` are managed by Calepin for website dependency tracking"
+        ));
     }
     Ok(())
 }
@@ -212,6 +227,7 @@ fn typst_subcommand_args(
     output: &ResolvedOutput,
     typst_args: &[String],
     inputs: ReservedInputs<'_>,
+    dependencies_path: Option<&Path>,
 ) -> Result<Vec<OsString>> {
     let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let mut args = vec![
@@ -250,6 +266,11 @@ fn typst_subcommand_args(
     if let Some(current_href_input) = inputs.current_href {
         push_input(&mut args, INPUT_CURRENT_HREF, current_href_input);
     }
+    if let Some(path) = dependencies_path {
+        args.push("--deps".into());
+        args.push(path.as_os_str().into());
+        args.push("--deps-format=json".into());
+    }
 
     args.push(layout.render_input.as_os_str().into());
     args.push(output.arg_path.as_os_str().into());
@@ -266,7 +287,7 @@ pub(crate) fn typst_compile_args(
     inputs: ReservedInputs<'_>,
 ) -> Vec<OsString> {
     let output = resolve_render_output(layout, output, format);
-    typst_subcommand_args("compile", layout, &output, typst_args, inputs).unwrap()
+    typst_subcommand_args("compile", layout, &output, typst_args, inputs, None).unwrap()
 }
 
 pub(crate) fn typst_watch_args(
@@ -277,7 +298,7 @@ pub(crate) fn typst_watch_args(
     inputs: ReservedInputs<'_>,
 ) -> Result<Vec<OsString>> {
     let output = resolve_render_output(layout, output, format);
-    typst_subcommand_args("watch", layout, &output, typst_args, inputs)
+    typst_subcommand_args("watch", layout, &output, typst_args, inputs, None)
 }
 
 fn output_extension(format: Option<OutputFormat>) -> &'static str {
@@ -398,6 +419,9 @@ pub fn compile_with_typst(
     };
     let html_entry = html_entry.as_ref();
     validate_forwarded_typst_args(options.typst_args, output.format)?;
+    if options.dependencies_path.is_some() {
+        reject_managed_dependency_args(options.typst_args)?;
+    }
     let args = typst_subcommand_args(
         "compile",
         layout,
@@ -408,6 +432,7 @@ pub fn compile_with_typst(
             pages: options.pages_input,
             current_href: options.current_href_input,
         },
+        options.dependencies_path,
     )?;
     assert_supported_typst(typst)?;
     let progress = Progress::spinner(

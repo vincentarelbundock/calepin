@@ -225,6 +225,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             site_context: Some(&site_context),
             pages_input: None,
             current_href_input: None,
+            dependencies_path: None,
             minify_html: args.minify,
             progress: true,
         },

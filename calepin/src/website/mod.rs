@@ -177,6 +177,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         config_overrides: args.common.sets,
         typst_args: args.typst_args,
         incremental_inputs: None,
+        incremental_changed: Vec::new(),
         clean: true,
         minify_html: args.minify,
     })?;
@@ -213,6 +214,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         config_overrides: args.common.sets.clone(),
         typst_args: args.typst_args.clone(),
         incremental_inputs: None,
+        incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
     };
@@ -252,6 +254,7 @@ struct WebsiteBuildOptions {
     config_overrides: Vec<String>,
     typst_args: Vec<String>,
     incremental_inputs: Option<Vec<PathBuf>>,
+    incremental_changed: Vec<PathBuf>,
     clean: bool,
     minify_html: bool,
 }
@@ -274,6 +277,7 @@ struct WebsiteBuildResult {
     config_path: PathBuf,
     theme_dirs: Vec<PathBuf>,
     page_fingerprints: BTreeMap<PathBuf, u64>,
+    page_dependencies: BTreeMap<PathBuf, BTreeSet<PathBuf>>,
     nav_signature: u64,
     /// Hash of the pages index; when it changes, every page may render
     /// differently (listings), so incremental rebuilds fall back to full.
@@ -484,6 +488,14 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     if out_dir != src_dir {
         if args.incremental_inputs.is_none() {
             copy_static_files(&src_dir, &out_dir, &static_files)?;
+        } else {
+            let changed = args.incremental_changed.iter().collect::<BTreeSet<_>>();
+            let changed_static = static_files
+                .iter()
+                .filter(|path| changed.contains(path))
+                .cloned()
+                .collect::<Vec<_>>();
+            copy_static_files(&src_dir, &out_dir, &changed_static)?;
         }
         let source_files = if args.incremental_inputs.is_some() {
             build_set.clone()
@@ -501,7 +513,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         metadata.clone(),
         config.sidebar.as_ref().is_none_or(|sidebar| sidebar.fold),
     );
-    render_documents(
+    let page_dependencies = render_documents(
         &BuildContext {
             src_dir: src_dir.clone(),
             out_dir: out_dir.clone(),
@@ -580,6 +592,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config_path,
         theme_dirs,
         page_fingerprints,
+        page_dependencies,
         nav_signature,
         pages_signature,
     })
@@ -717,8 +730,9 @@ fn rebuild_changed_pages(
 
     let mut incremental_options = options.clone();
     incremental_options.incremental_inputs = Some(pages);
+    incremental_options.incremental_changed = changed.to_vec();
     incremental_options.clean = false;
-    let next = build_site(incremental_options)?;
+    let mut next = build_site(incremental_options)?;
     if next.nav_signature != current.nav_signature
         || next.pages_signature != current.pages_signature
         || next
@@ -727,6 +741,11 @@ fn rebuild_changed_pages(
             .ne(current.page_fingerprints.keys())
     {
         return Ok(Some(build_site(options.clone())?));
+    }
+    for (page, dependencies) in &current.page_dependencies {
+        next.page_dependencies
+            .entry(page.clone())
+            .or_insert_with(|| dependencies.clone());
     }
     Ok(Some(next))
 }
@@ -791,25 +810,46 @@ fn changed_typ_pages(
     current: &WebsiteBuildResult,
     changed: &[PathBuf],
 ) -> Result<Option<Vec<PathBuf>>> {
-    let mut pages = Vec::new();
+    let mut pages = BTreeSet::new();
     for path in changed {
-        if path.extension().and_then(|extension| extension.to_str()) != Some("typ") {
+        if path == &current.config_path
+            || current
+                .theme_dirs
+                .iter()
+                .any(|theme_dir| path.starts_with(theme_dir))
+        {
             return Ok(None);
         }
-        if !path.starts_with(&current.src_dir) || !path.is_file() {
+        if !path.starts_with(&current.src_dir) {
             return Ok(None);
         }
-        let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
-        let fingerprint = xxh3_64(&bytes);
-        match current.page_fingerprints.get(path) {
-            Some(previous) if *previous == fingerprint => {}
-            Some(_) => pages.push(path.clone()),
-            None => return Ok(None),
+
+        let is_known_page = current.page_fingerprints.contains_key(path);
+        if is_known_page {
+            if !path.is_file() {
+                return Ok(None);
+            }
+            let bytes =
+                fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+            let fingerprint = xxh3_64(&bytes);
+            if current.page_fingerprints.get(path) == Some(&fingerprint) {
+                continue;
+            }
+            pages.insert(path.clone());
+        }
+
+        let mut found_dependency = false;
+        for (page, dependencies) in &current.page_dependencies {
+            if dependencies.contains(path) {
+                pages.insert(page.clone());
+                found_dependency = true;
+            }
+        }
+        if !is_known_page && !found_dependency {
+            return Ok(None);
         }
     }
-    pages.sort();
-    pages.dedup();
-    Ok(Some(pages))
+    Ok(Some(pages.into_iter().collect()))
 }
 
 fn pdf_enabled_files(
