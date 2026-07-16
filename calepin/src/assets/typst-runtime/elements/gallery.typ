@@ -1,5 +1,4 @@
 #import "../core/assets.typ": _image-meta-entry, _resolve-asset-href
-#import "../core/state.typ": _site-root-prefix
 #import "../core/css.typ": _css-size
 #import "../core/target.typ": _is-html, _is-query
 
@@ -126,18 +125,7 @@
   }
 
   let meta = _image-meta-entry(src)
-  let page-root = _site-root-prefix()
-  let href = if src.starts-with("/") {
-    let with-prefix = page-root + src.slice(1)
-    let asset-href = _resolve-asset-href(src)
-    if asset-href != src {
-      asset-href
-    } else {
-      with-prefix
-    }
-  } else {
-    src
-  }
+  let href = _resolve-asset-href(src)
   (
     src: src,
     href: href,

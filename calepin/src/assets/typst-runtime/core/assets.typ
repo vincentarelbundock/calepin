@@ -1,3 +1,5 @@
+#import "state.typ": _site-root-prefix
+
 #let _image-meta-path = sys.inputs.at("calepin-image-meta", default: "")
 #let _source-dir = sys.inputs.at("calepin-source-dir", default: "")
 
@@ -5,6 +7,8 @@
   let base = sys.inputs.at("calepin-assets", default: "")
   if base != "" and path.starts-with("/") {
     base + path
+  } else if sys.inputs.at("calepin-current-href", default: "") != "" and path.starts-with("/") {
+    _site-root-prefix() + path.slice(1)
   } else {
     path
   }
