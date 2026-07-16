@@ -35,6 +35,23 @@
     "translations": {}
   },
   {
+    "href": "editors.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "getting started",
+        "editors",
+        "VS Code",
+        "Tinymist"
+      ]
+    },
+    "path": "editors.typ",
+    "pdf": "editors.pdf",
+    "title": "Editor integration",
+    "translation_key": "editors",
+    "translations": {}
+  },
+  {
     "href": "getting-started/config.html",
     "language": null,
     "meta": {

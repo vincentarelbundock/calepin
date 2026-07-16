@@ -127,6 +127,7 @@ mod tests {
         let layout = resolve_layout(&input, Some(dir.path())).unwrap();
 
         assert_eq!(layout.input_rel, PathBuf::from("chapters/intro.typ"));
+        assert_eq!(layout.artifact_root(), root.join(".calepin"));
         assert_eq!(
             layout.results_path,
             root.join(".calepin/chapters/intro/results.json")
@@ -163,6 +164,7 @@ mod tests {
         let layout = resolve_layout_in_dir(&input, None, Path::new("_calepin")).unwrap();
 
         assert_eq!(layout.artifact_dir, root.join("_calepin/paper"));
+        assert_eq!(layout.artifact_root(), root.join("_calepin"));
         assert_eq!(
             layout.results_path,
             root.join("_calepin/paper/results.json")

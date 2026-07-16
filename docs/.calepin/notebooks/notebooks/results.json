@@ -5,6 +5,32 @@
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
+      "engine": "sh",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-2": {
+      "label": "chunk-2",
       "engine": "python",
       "status": "ok",
       "options": {
@@ -35,8 +61,8 @@
         }
       ]
     },
-    "chunk-2": {
-      "label": "chunk-2",
+    "chunk-3": {
+      "label": "chunk-3",
       "engine": "python",
       "status": "ok",
       "options": {
@@ -61,8 +87,8 @@
       },
       "items": []
     },
-    "chunk-3": {
-      "label": "chunk-3",
+    "chunk-4": {
+      "label": "chunk-4",
       "engine": "python",
       "status": "ok",
       "options": {

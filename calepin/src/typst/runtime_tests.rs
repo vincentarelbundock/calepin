@@ -1581,15 +1581,15 @@ fn typst_compile_output(
     command.output().unwrap()
 }
 
-fn write_stream_results(dir: &Path, label: &str, text: &str) {
-    std::fs::create_dir_all(dir.join(".calepin/paper")).unwrap();
+fn write_stream_results_at(path: &Path, input: &str, label: &str, text: &str) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(
-        dir.join(".calepin/paper/results.json"),
+        path,
         format!(
             r#"{{
   "schema": 1,
   "calepin_version": "test",
-  "input": "paper.typ",
+  "input": "{input}",
   "chunks": {{
     "{label}": {{
       "label": "{label}",
@@ -1604,6 +1604,181 @@ fn write_stream_results(dir: &Path, label: &str, text: &str) {
         ),
     )
     .unwrap();
+}
+
+fn write_stream_results(dir: &Path, label: &str, text: &str) {
+    write_stream_results_at(
+        &dir.join(".calepin/paper/results.json"),
+        "paper.typ",
+        label,
+        text,
+    );
+}
+
+#[test]
+fn typst_compile_root_facade_falls_back_to_active_notebook() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let layout = crate::typst::testfixtures::layout(dir.path());
+    write_stream_results(dir.path(), "greeting", "ACTIVE_RESULT_12345");
+    write_notebook_binding(&layout, &["python".to_string()]).unwrap();
+    publish_active_binding(&layout).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
+
+#calepin.setup(echo: false, results: "verbatim")
+
+```python
+#| label: greeting
+print("not executed by Typst")
+```
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    let text = pdf_text(&output);
+    assert!(text.contains("ACTIVE_RESULT_12345"), "{text}");
+    assert!(!text.contains("not executed by Typst"), "{text}");
+}
+
+#[test]
+fn typst_document_adapter_does_not_reprocess_explicit_chunk_body() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let layout = crate::typst::testfixtures::layout(dir.path());
+    write_stream_results(dir.path(), "greeting", "EXPLICIT_RESULT_12345");
+    write_notebook_binding(&layout, &["python".to_string()]).unwrap();
+    publish_active_binding(&layout).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
+
+#calepin.chunk("python", label: "greeting", echo: false)[```python
+print("not executed by Typst")
+```]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    let text = pdf_text(&output);
+    assert!(text.contains("EXPLICIT_RESULT_12345"), "{text}");
+    assert!(!text.contains("not executed by Typst"), "{text}");
+}
+
+#[test]
+fn typst_compile_sys_inputs_override_active_notebook() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let layout = crate::typst::testfixtures::layout(dir.path());
+    write_stream_results(dir.path(), "greeting", "ACTIVE_RESULT_12345");
+    write_notebook_binding(&layout, &["python".to_string()]).unwrap();
+    publish_active_binding(&layout).unwrap();
+    write_stream_results_at(
+        &dir.path().join(".calepin/injected/results.json"),
+        "injected.typ",
+        "greeting",
+        "INJECTED_RESULT_67890",
+    );
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import "/.calepin/calepin.typ" as calepin
+
+#calepin.chunk("python", label: "greeting", echo: false)[`pass`]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", "calepin-results=/.calepin/injected/results.json"],
+    );
+    let text = pdf_text(&output);
+    assert!(text.contains("INJECTED_RESULT_67890"), "{text}");
+    assert!(!text.contains("ACTIVE_RESULT_12345"), "{text}");
+}
+
+#[test]
+fn typst_compile_notebook_facade_ignores_different_active_notebook() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    let paper_input = dir.path().join("paper.typ");
+    let other_input = dir.path().join("other.typ");
+    std::fs::write(&paper_input, "").unwrap();
+    std::fs::write(&other_input, "").unwrap();
+    let paper = crate::typst::paths::resolve_layout(&paper_input, Some(dir.path())).unwrap();
+    let other = crate::typst::paths::resolve_layout(&other_input, Some(dir.path())).unwrap();
+    write_runtime(dir.path()).unwrap();
+    write_stream_results_at(
+        &paper.results_path,
+        "paper.typ",
+        "greeting",
+        "ACTIVE_RESULT_12345",
+    );
+    write_stream_results_at(
+        &other.results_path,
+        "other.typ",
+        "greeting",
+        "BOUND_RESULT_67890",
+    );
+    write_notebook_binding(&paper, &["python".to_string()]).unwrap();
+    write_notebook_binding(&other, &["python".to_string()]).unwrap();
+    publish_active_binding(&paper).unwrap();
+
+    let output = dir.path().join("other.pdf");
+    std::fs::write(
+        &other_input,
+        r##"#import "/.calepin/other/calepin.typ" as calepin
+#show: calepin.document
+
+#calepin.setup(echo: false, results: "verbatim")
+
+```python
+#| label: greeting
+print("not executed by Typst")
+```
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &other_input, &output, &[]);
+    let text = pdf_text(&output);
+    assert!(text.contains("BOUND_RESULT_67890"), "{text}");
+    assert!(!text.contains("ACTIVE_RESULT_12345"), "{text}");
 }
 
 fn write_figure_results(dir: &Path, label: &str) {

@@ -17,9 +17,42 @@ During compilation, _Calepin_ creates a hidden `.calepin` directory beside your 
 
 ````typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 ````
 
 Use that import, not Typst Universe, for now. You may see a `calepin` package on Typst Universe, but it is currently only a placeholder and should not be used while _Calepin_ is evolving quickly.
+
+= Tinymist and plain Typst preview
+
+After one successful single-file compile, the original notebook can be previewed directly by Tinymist or compiled by the ordinary Typst CLI without adding notebook-specific `--input` arguments:
+
+```sh
+calepin compile paper.typ
+```
+
+The generic import uses the artifacts from the most recently compiled or watched notebook when Calepin itself is not driving Typst:
+
+````typ
+#import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
+````
+
+The document show rule makes executable raw fences render their stored Calepin results in the original source. Ordinary Typst edits then refresh normally in the preview. Tinymist does not execute notebook code: after changing Python, R, Julia, shell, Jupyter, or diagram code, run Calepin again to refresh the stored output.
+
+Compiling another notebook changes the generic import's active fallback. When several notebook previews must remain independent, use the generated notebook-specific facade instead:
+
+````typ
+#import "/.calepin/paper/calepin.typ" as calepin
+#show: calepin.document
+````
+
+For `chapters/intro.typ`, the corresponding path is `/.calepin/chapters/intro/calepin.typ`. A notebook-specific facade always uses that notebook's artifacts and ignores which notebook is active. Both import forms continue to work when Calepin drives Typst; Calepin's internal inputs take precedence for the generic form.
+
+Existing aliased imports and Calepin-managed compile/watch workflows remain compatible. Avoid wildcard imports such as `#import "/.calepin/calepin.typ": *`: the exported `document` adapter would shadow Typst's built-in `document` element and break rules such as `#set document(...)`.
+
+See #link("../editors.html")[Editor integration] for VS Code, Cursor, Positron, Tinymist, and other Typst editors.
+
+Deleting `.calepin` removes the generated runtime and results. Run `calepin compile` again before restarting the preview.
 
 = Standard Typst
 
@@ -29,6 +62,7 @@ That means a notebook can begin like any other Typst file:
 
 ````typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [My analysis])
 
@@ -94,6 +128,7 @@ Here is a complete starter notebook with comments. Save it as `notebook.typ`, ru
 ````typ
 // Import the Calepin Typst runtime generated in .calepin/.
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 // This is regular Typst metadata.
 #set document(title: [My Calepin notebook])

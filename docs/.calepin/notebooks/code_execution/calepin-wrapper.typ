@@ -84,6 +84,11 @@ _Calepin_ collects executable chunks before Typst renders the document, runs the
 
 Use chunk options when you need to change what runs, what is shown, or where the output appears.
 
+To extract the source chunks into separate language-specific files without
+running them, use `calepin compile document.typ --format script`. See
+#link("../compile_watch_serve.html#extract-scripts")[Extract scripts] for output
+templates and extension rules.
+
 = Output elsewhere
 
 Sometimes you want to run a chunk in one place but show its result somewhere else. Set `results: "hide"` so the chunk runs without showing anything where it is written, give it a `label`, then print its output later with `#calepin.results`:

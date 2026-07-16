@@ -201,7 +201,8 @@ Write notebooks in pure Typst, a simple, consistent, powerful, and elegant types
 
   Write, execute, preview, and publish Calepin documents without leaving your editor.
   Install the Calepin extension from the VS Code Marketplace, or from Open VSX for Cursor,
-  Positron, and other VSX-compatible editors.
+  Positron, and other VSX-compatible editors. See #link("editors.html")[Editor integration]
+  for the Calepin extension, Tinymist, and other Typst editors.
 ]
 
 #let editor-text() = calepin.elements.target(

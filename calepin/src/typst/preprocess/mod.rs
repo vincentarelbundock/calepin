@@ -22,7 +22,7 @@ use crate::typst::results::{
     build_results_document, refresh_cached_results_metadata, write_results,
 };
 use crate::typst::runtime::{
-    write_runtime_with_syntax_theme, write_runtime_with_syntax_theme_in_dir,
+    write_notebook_binding, write_runtime_with_syntax_theme, write_runtime_with_syntax_theme_in_dir,
 };
 use crate::typst::source_rewrite::write_staged_source;
 use crate::typst::sync::write_page_sync;
@@ -33,7 +33,9 @@ const PAGE_META_FILE: &str = "page-meta.json";
 
 use fingerprint::{preprocess_cache_hit, preprocess_fingerprint, write_preprocess_fingerprint};
 use image_meta::write_image_meta;
-use staging::{notebook_template_context, write_query_source, write_render_wrapper};
+use staging::{
+    notebook_template_context, raw_chunk_langs, write_query_source, write_render_wrapper,
+};
 
 pub(crate) use image_meta::image_meta_relative_path;
 
@@ -84,6 +86,7 @@ pub struct PreprocessPlan {
     display_root: Option<PathBuf>,
     vars: serde_json::Value,
     theme: crate::theme::ThemeSelection,
+    raw_languages: Vec<String>,
 }
 
 pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput> {
@@ -122,6 +125,7 @@ pub fn preprocess_cached_output(plan: PreprocessPlan) -> PreprocessOutput {
 
 pub fn refresh_cached_preprocess_output(plan: PreprocessPlan) -> Result<PreprocessOutput> {
     refresh_cached_results_metadata(&plan.layout.results_path, &plan.chunks)?;
+    write_notebook_binding(&plan.layout, &plan.raw_languages)?;
     if !plan.quiet && plan.status {
         eprintln!("[cache] {}", display_input(&plan));
     }
@@ -230,6 +234,8 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
             }
         })
         .collect();
+    let kernel_names = jupyter_kernels.iter().copied().collect::<Vec<_>>();
+    let raw_languages = raw_chunk_langs(&kernel_names);
     let vars = resolve_vars(
         &config.vars,
         &setup_config.defaults.vars,
@@ -304,6 +310,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         display_root: options.display_root,
         vars,
         theme: effective_theme,
+        raw_languages,
     })
 }
 
@@ -424,6 +431,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
     publish_staged_figures(&staged_figures_dir, &plan.layout.figures_dir)?;
     let document = build_results_document(&plan.layout.input_rel, chunk_results)?;
     write_results(&plan.layout.results_path, &document)?;
+    write_notebook_binding(&plan.layout, &plan.raw_languages)?;
     write_preprocess_fingerprint(&plan.layout, plan.fingerprint)?;
     if plan.sync_pages {
         if let Err(error) = write_page_sync(&plan.executables.typst, &plan.layout, &plan.chunks) {
@@ -1178,6 +1186,7 @@ mod tests {
             display_root: None,
             vars: serde_json::json!({}),
             theme: crate::theme::ThemeSelection::Default,
+            raw_languages: vec!["python".to_string(), "r".to_string()],
         })
         .unwrap();
 

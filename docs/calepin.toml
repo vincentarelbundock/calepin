@@ -60,6 +60,9 @@ title = "Getting started"
   [[sidebar.section.item]]
   target = "compile_watch_serve.typ"
 
+  [[sidebar.section.item]]
+  target = "editors.typ"
+
 [[sidebar.section]]
 title = "Notebooks"
 

@@ -11,6 +11,7 @@ use crate::typst::compile::{
     compile_with_typst, resolve_output_format, CompileOptions, OutputFormat,
 };
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
+use crate::typst::runtime::publish_active_binding;
 use crate::typst::script::extract_scripts;
 
 const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/notebook.typ");
@@ -249,6 +250,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
             progress: true,
         },
     )?;
+    publish_active_binding(&output.layout)?;
     Ok(())
 }
 
@@ -327,6 +329,7 @@ mod tests {
 
         let content = fs::read_to_string(path).unwrap();
         assert!(content.contains(r#"#import "/.calepin/calepin.typ" as calepin"#));
+        assert!(content.contains("#show: calepin.document"));
         assert!(content.contains("calepin.inline.with(\"python\")"));
         assert!(content.contains("fenced-chunks: true"));
         assert!(content.contains("```python\n"));

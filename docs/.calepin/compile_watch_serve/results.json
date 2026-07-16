@@ -109,7 +109,7 @@
     },
     "chunk-5": {
       "label": "chunk-5",
-      "engine": "powershell",
+      "engine": "sh",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -161,7 +161,7 @@
     },
     "chunk-7": {
       "label": "chunk-7",
-      "engine": "sh",
+      "engine": "powershell",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -317,6 +317,32 @@
     },
     "chunk-13": {
       "label": "chunk-13",
+      "engine": "sh",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-14": {
+      "label": "chunk-14",
       "engine": "sh",
       "status": "skipped",
       "options": {

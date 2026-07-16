@@ -788,13 +788,36 @@ fn parse_string_literal(input: &str) -> Option<StringLiteral> {
 }
 
 fn is_calepin_runtime_import(value: &str, runtime_import: &str) -> bool {
-    matches!(
+    if matches!(
         value,
         ".calepin/calepin.typ"
             | RUNTIME_IMPORT_LEGACY
             | "/.calepin/calepin.typ"
             | "/_calepin/calepin.typ"
     ) || value == runtime_import
+    {
+        return true;
+    }
+
+    let Some(runtime_dir) = runtime_import.strip_suffix("calepin.typ") else {
+        return false;
+    };
+    let absolute_value;
+    let value = if value.starts_with('/') {
+        value
+    } else {
+        absolute_value = format!("/{value}");
+        &absolute_value
+    };
+    let Some(notebook_path) = value.strip_prefix(runtime_dir) else {
+        return false;
+    };
+    let components = notebook_path.split('/').collect::<Vec<_>>();
+    components.len() >= 2
+        && components.last() == Some(&"calepin.typ")
+        && components[..components.len() - 1]
+            .iter()
+            .all(|component| !component.is_empty() && !matches!(*component, "." | ".."))
 }
 
 #[cfg(test)]
@@ -841,6 +864,36 @@ mod tests {
             rewrite_source(source, "/_calepin/calepin.typ").source,
             r#"#import "/_calepin/calepin.typ" as calepin"#,
         );
+    }
+
+    #[test]
+    fn rewrites_notebook_specific_runtime_import() {
+        let source = r#"#import "/.calepin/chapters/intro/calepin.typ" as calepin"#;
+        assert_eq!(
+            rewrite_source(source, "/.calepin/calepin.typ").source,
+            r#"#import "/.calepin/calepin.typ" as calepin"#,
+        );
+    }
+
+    #[test]
+    fn rewrites_notebook_specific_custom_asset_import() {
+        let source = r#"#import "/_calepin/paper/calepin.typ": chunk"#;
+        assert_eq!(
+            rewrite_source(source, "/_calepin/calepin.typ").source,
+            r#"#import "/_calepin/calepin.typ": chunk"#,
+        );
+    }
+
+    #[test]
+    fn notebook_specific_runtime_import_rejects_traversal() {
+        assert!(!is_calepin_runtime_import(
+            "/.calepin/../other/calepin.typ",
+            "/.calepin/calepin.typ",
+        ));
+        assert!(!is_calepin_runtime_import(
+            "/.calepin/paper//calepin.typ",
+            "/.calepin/calepin.typ",
+        ));
     }
 
     #[test]

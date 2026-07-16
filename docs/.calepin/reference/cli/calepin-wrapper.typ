@@ -156,9 +156,9 @@ Arguments:
 
 Options:
       --format <FORMAT>
-          Output format passed to typst compile
+          Output format, including source-code script extraction
           
-          [possible values: pdf, png, svg, html]
+          [possible values: pdf, png, svg, html, script]
 
       --minify
           Minify HTML output after theming and asset processing

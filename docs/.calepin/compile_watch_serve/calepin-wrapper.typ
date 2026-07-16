@@ -82,6 +82,26 @@ pass-through for Typst flags, plus Calepin preprocessing.
 
 #calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n", block: true, lang: "sh"))
 
+== Extract scripts
+<extract-scripts>
+
+Use `--format script` to extract executable source code without running it or
+rendering the Typst document. Script extraction accepts one `.typ` input at a
+time; website directories and `calepin watch` are not supported.
+
+#calepin_runtime.chunk_from_raw_plain("sh", raw("# write paper.R, paper.py, paper.jl, or paper.sh as needed\ncalepin compile paper.typ --format script\n\n# choose the output template\ncalepin compile paper.typ exported/paper.{ext} --format script\ncalepin compile paper.typ exported/{engine}.{ext} --format script\n", block: true, lang: "sh"))
+
+Calepin writes a separate file for each engine, preserves chunk order within
+that engine, and adds comment separators containing chunk labels. It includes
+chunks with `eval: false`, but excludes diagram chunks. The conventional
+extensions are `.R`, `.py`, `.jl`, and `.sh`. Other Jupyter kernels use `.txt`;
+use `{engine}` when more than one kernel would otherwise produce the same path.
+
+`{ext}` expands to the extension without its leading dot, while `{engine}`
+expands to a filename-safe engine name. When an explicit output has no
+placeholder, it is accepted only when the document contains one engine. An
+output template that maps multiple engines to the same path is rejected.
+
 Compile a website by pointing `calepin compile` at a source directory
 that contains `calepin.toml`:
 

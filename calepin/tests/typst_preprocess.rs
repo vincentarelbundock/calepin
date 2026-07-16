@@ -97,7 +97,7 @@ fn compile_config_asset_dir_writes_no_dot_calepin_directory() {
     let dir = typst_accessible_tempdir();
     std::fs::write(
         dir.path().join("tmp.typ"),
-        r#"#import "/.calepin/calepin.typ" as calepin
+        r#"#import "/_calepin/calepin.typ" as calepin
 
 = Runtime dir test
 "#,
@@ -122,6 +122,9 @@ fn compile_config_asset_dir_writes_no_dot_calepin_directory() {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(dir.path().join("_calepin/calepin.typ").exists());
+    assert!(dir.path().join("_calepin/active.typ").exists());
+    assert!(dir.path().join("_calepin/tmp/calepin.typ").exists());
+    assert!(dir.path().join("_calepin/tmp/runtime-config.typ").exists());
     assert!(dir.path().join("_calepin/tmp/calepin-wrapper.typ").exists());
     assert!(dir.path().join("_calepin/tmp/source.typ").exists());
     assert!(!dir.path().join(".calepin").exists());
@@ -130,6 +133,17 @@ fn compile_config_asset_dir_writes_no_dot_calepin_directory() {
         std::fs::read_to_string(dir.path().join("_calepin/tmp/calepin-wrapper.typ")).unwrap();
     assert!(wrapper.contains("#import \"/_calepin/calepin.typ\""));
     assert!(!wrapper.contains("/.calepin/calepin.typ"));
+
+    let preview = Command::new("typst")
+        .args(["compile", "tmp.typ", "preview.pdf", "--root", "."])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to compile with the custom generated runtime");
+    assert!(
+        preview.status.success(),
+        "plain Typst compile failed:\n{}",
+        String::from_utf8_lossy(&preview.stderr)
+    );
 }
 
 #[test]
@@ -164,6 +178,17 @@ print(x + 1)
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(dir.path().join(".calepin/calepin.typ").exists());
+    assert!(dir.path().join(".calepin/paper/calepin.typ").exists());
+    assert!(dir
+        .path()
+        .join(".calepin/paper/runtime-config.typ")
+        .exists());
+
+    let active = std::fs::read_to_string(dir.path().join(".calepin/active.typ")).unwrap();
+    assert!(
+        active.contains(r#"#import "paper/runtime-config.typ": config"#),
+        "{active}"
+    );
 
     let results_path = dir.path().join(".calepin/paper/results.json");
     let results: serde_json::Value =
@@ -173,6 +198,75 @@ print(x + 1)
     assert!(results["chunks"]["chunk-1"].get("cached").is_none());
     assert_eq!(results["chunks"]["chunk-1"]["items"][0]["type"], "stream");
     assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "42");
+
+    let preview = Command::new("typst")
+        .args(["compile", "paper.typ", "preview.pdf", "--root", "."])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to compile the original source with Typst");
+    assert!(
+        preview.status.success(),
+        "plain Typst compile failed:\n{}",
+        String::from_utf8_lossy(&preview.stderr)
+    );
+}
+
+#[test]
+fn compile_bootstraps_notebook_facade_for_plain_typst_preview() {
+    if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import "/.calepin/paper/calepin.typ" as calepin
+#show: calepin.document
+
+#calepin.setup(echo: false, fenced-chunks: true)
+
+```python
+print("bound preview output")
+```
+
+#calepin.chunk("python", echo: false)[```python
+print("explicit bound output")
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "Calepin compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let preview = Command::new("typst")
+        .args(["compile", "paper.typ", "preview.pdf", "--root", "."])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to compile the original source with Typst");
+    assert!(
+        preview.status.success(),
+        "plain Typst compile failed:\n{}",
+        String::from_utf8_lossy(&preview.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .args(["preview.pdf", "-"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to extract preview text");
+    assert!(text.status.success());
+    let text = String::from_utf8_lossy(&text.stdout);
+    assert!(text.contains("bound preview output"), "{text}");
+    assert!(text.contains("explicit bound output"), "{text}");
 }
 
 #[test]

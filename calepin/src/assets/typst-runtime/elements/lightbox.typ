@@ -8,7 +8,8 @@
   "aria-label": label,
 ))
 
-#let lightbox-image(
+#let _lightbox-image(
+  config,
   id,
   src,
   alt,
@@ -20,9 +21,9 @@
     return none
   }
   if not _is-html() {
-    return image(_resolve-asset-path(src), width: width, alt: alt)
+    return image(_resolve-asset-path(src, config: config), width: width, alt: alt)
   }
-  let href = _resolve-asset-href(src)
+  let href = _resolve-asset-href(src, config: config)
 
   [
     #std.html.elem("div", attrs: (class: "calepin-screenshot-block"))[
@@ -58,7 +59,10 @@
   ]
 }
 
-#let lightbox-video(
+#let lightbox-image(id, src, alt, ..args) = _lightbox-image(none, id, src, alt, ..args)
+
+#let _lightbox-video(
+  config,
   id,
   src,
   poster: none,
@@ -72,7 +76,7 @@
   if not _is-html() {
     if poster != none {
       return [
-        #image(_resolve-asset-path(poster), width: width)
+        #image(_resolve-asset-path(poster, config: config), width: width)
         #v(0.25em)
         #text(size: 0.82em, fill: luma(40%))[Video: #src]
       ]
@@ -88,7 +92,7 @@
     ]
   }
 
-  let href = _resolve-asset-href(src)
+  let href = _resolve-asset-href(src, config: config)
 
   let thumb-attrs = (
     class: "calepin-video-thumb__media",
@@ -98,7 +102,7 @@
     preload: "metadata",
   )
   if poster != none {
-    thumb-attrs.insert("poster", _resolve-asset-href(poster))
+    thumb-attrs.insert("poster", _resolve-asset-href(poster, config: config))
   }
 
   [
@@ -134,3 +138,5 @@
     ]
   ]
 }
+
+#let lightbox-video(id, src, ..args) = _lightbox-video(none, id, src, ..args)

@@ -22,6 +22,7 @@ use crate::typst::compile::{
 use crate::typst::preprocess::{
     prepare_preprocess_plan, preprocess_cached, preprocess_cached_plan, PreprocessOptions,
 };
+use crate::typst::runtime::publish_active_binding;
 use crate::typst::version::assert_supported_typst;
 use crate::utils::{process, tools};
 
@@ -128,6 +129,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     validate_forwarded_typst_args(&args.typst_args, format)?;
 
     let initial = preprocess_cached(preprocess_options(&args, sync_pages))?;
+    publish_active_binding(&initial.layout)?;
 
     let stop = Arc::new(AtomicBool::new(false));
     let stop_for_handler = Arc::clone(&stop);

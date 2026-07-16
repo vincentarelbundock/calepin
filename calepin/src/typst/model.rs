@@ -471,6 +471,16 @@ pub struct LayoutPaths {
 }
 
 impl LayoutPaths {
+    /// Root directory containing the shared Calepin runtime and all notebook
+    /// artifact directories for this project.
+    pub fn artifact_root(&self) -> PathBuf {
+        let mut root = self.artifact_dir.clone();
+        for _ in self.input_rel.components() {
+            root.pop();
+        }
+        root
+    }
+
     pub fn artifact_path(&self, name: impl AsRef<Path>) -> PathBuf {
         self.artifact_dir.join(name)
     }

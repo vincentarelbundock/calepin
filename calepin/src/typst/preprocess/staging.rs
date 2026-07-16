@@ -62,7 +62,12 @@ pub(super) fn write_render_wrapper(
     let wrapper_relative = layout.artifact_relative_path("calepin-wrapper.typ");
     let wrapper = layout.root.join(&wrapper_relative);
 
-    let mut lines = format!("#import \"{runtime_import}\": *\n\n");
+    // The runtime exports `document` for authored `#show: calepin.document`
+    // calls. Preserve Typst's element under the bare name used by inlined
+    // sources and themes before the managed wrapper imports the runtime API.
+    let mut lines = format!(
+        "#let _calepin-document-element = document\n#import \"{runtime_import}\": *\n#let document = _calepin-document-element\n\n"
+    );
 
     lines.push('\n');
     lines.push('\n');
@@ -112,7 +117,7 @@ pub(super) fn write_render_wrapper(
     Ok(wrapper_relative)
 }
 
-fn raw_chunk_langs(jupyter_kernels: &[&str]) -> Vec<String> {
+pub(super) fn raw_chunk_langs(jupyter_kernels: &[&str]) -> Vec<String> {
     let mut langs = Vec::new();
     for lang in BUILTIN_RAW_CHUNK_LANGS {
         langs.push(lang.to_string());
