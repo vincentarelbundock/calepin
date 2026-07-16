@@ -81,6 +81,9 @@ title = "Notebooks"
   [[sidebar.section.item]]
   target = "notebooks/diagrams.typ"
 
+  [[sidebar.section.item]]
+  target = "notebooks/tab_groups.typ"
+
 [[sidebar.section]]
 title = "Websites"
 
