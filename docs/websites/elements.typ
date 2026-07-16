@@ -243,7 +243,9 @@ You can also request more than two columns:
 
 = Tabs
 
-`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the group and `calepin.elements.tab("Label", active: true)[...]` for each panel. Panel names are generated automatically; pass `name: "..."` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed.
+`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the container and `calepin.elements.tab("Label", active: true)[...]` for each panel. Panel names are generated automatically; pass `name: "..."` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed.
+
+Pass the same `group: "..."` value to multiple tab containers to keep their selection synchronized by panel name. As in Quarto tabset groups, selecting a panel in one container selects the panel with the same name in every other container in the group. Containers without `group` remain independent.
 
 ````typ
 #calepin.elements.tabs[

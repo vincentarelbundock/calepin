@@ -266,7 +266,7 @@ fn typst_compile_html_elements_tabs_emit_webawesome_markup() {
         &input,
         r##"#import ".calepin/calepin.typ"
 
-#calepin.elements.tabs[
+#calepin.elements.tabs(group: "settings")[
   #calepin.elements.tab("General")[
     This is the general tab panel.
   ]
@@ -289,7 +289,13 @@ fn typst_compile_html_elements_tabs_emit_webawesome_markup() {
     );
     let html = std::fs::read_to_string(output).unwrap();
     assert!(html.contains("components/tab-group/tab-group.js"), "{html}");
+    assert!(html.contains("wa-tab-show"), "{html}");
+    assert!(html.contains("dataset.calepinTabGroup"), "{html}");
     assert!(html.contains("<wa-tab-group"), "{html}");
+    assert!(
+        html.contains(r#"data-calepin-tab-group="settings""#),
+        "{html}"
+    );
     assert!(html.contains("--track-width"), "{html}");
     assert!(html.contains("padding-block-start"), "{html}");
     assert!(html.contains("wa-tab[active]"), "{html}");
@@ -304,6 +310,47 @@ fn typst_compile_html_elements_tabs_emit_webawesome_markup() {
     assert!(html.contains("<wa-tab-panel"), "{html}");
     assert!(html.contains(r#"name="calepin-tab-Advanced""#), "{html}");
     assert!(html.contains("This is the advanced tab panel."), "{html}");
+}
+
+#[test]
+fn typst_compile_html_elements_tabs_reject_empty_group() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.tabs(group: "")[
+  #calepin.elements.tab("General")[Content]
+]
+"##,
+    )
+    .unwrap();
+
+    let result = Command::new("typst")
+        .arg("compile")
+        .arg(&input)
+        .arg(&output)
+        .arg("--root")
+        .arg(dir.path())
+        .arg("--features")
+        .arg("html")
+        .arg("--input")
+        .arg("calepin-target=html")
+        .output()
+        .unwrap();
+
+    assert!(!result.status.success());
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(
+        stderr.contains("calepin.elements.tabs: group must be none or a non-empty string"),
+        "{stderr}"
+    );
 }
 
 #[test]
