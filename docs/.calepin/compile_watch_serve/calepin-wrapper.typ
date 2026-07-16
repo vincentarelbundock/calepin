@@ -1,4 +1,6 @@
+#let _calepin-document-element = document
 #import "/.calepin/calepin.typ": *
+#let document = _calepin-document-element
 
 
 
@@ -161,6 +163,26 @@ Add `--serve` to run the local server while watching a website. It uses
 the same `--host`, `--port`, and `--open` options as `calepin serve`.
 
 #calepin_runtime.chunk_from_raw_plain("sh", raw("calepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n", block: true, lang: "sh"))
+
+== Eval-only watch
+<eval-only-watch>
+
+When Tinymist or another editor already provides Typst preview, use
+`--eval-only` to refresh Calepin's computational artifacts without starting
+a second `typst watch` process or writing a rendered output file:
+
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin watch paper.typ --eval-only\n", block: true, lang: "sh"))
+
+Calepin performs an initial preprocessing pass, publishes the notebook for
+external preview, and then monitors changes. It runs a lightweight Typst query
+to detect chunk definitions, but Python, R, Jupyter, shell, and diagram engines
+run only when the computational fingerprint changes. Prose-only edits use the
+existing results cache; display-only chunk options can refresh stored rendering
+metadata without re-executing code.
+
+This single-file mode does not accept an output path, `--format`, serving
+options, or Typst pass-through arguments. Tinymist remains responsible for
+rendering and live preview.
 
 == PDF viewer auto-refresh
 <pdf-viewer-auto-refresh>

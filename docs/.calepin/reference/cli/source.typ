@@ -16,7 +16,7 @@ Commands:
   new      Create a notebook file, website scaffold, or ejected theme
   health   Check Calepin's local runtime environment and local links
   compile  Preprocess, then invoke typst compile
-  watch    Watch, preprocess, and delegate recompiles to typst watch
+  watch    Watch and preprocess, optionally delegating rendering to typst watch
   serve    Serve static files locally
   update   Update Calepin using the official installer updater
   clean    Remove `.calepin` directories and generated artifacts
@@ -119,7 +119,7 @@ Options:
 <calepin-watch>
 
 ```text
-Watch, preprocess, and delegate recompiles to typst watch
+Watch and preprocess, optionally delegating rendering to typst watch
 
 Usage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...
 
@@ -138,6 +138,9 @@ Options:
           Output format passed to typst watch
           
           [possible values: pdf, png, svg, html]
+
+      --eval-only
+          Evaluate changed chunks and refresh artifacts without starting typst watch
 
       --serve
           Serve the website while watching a directory

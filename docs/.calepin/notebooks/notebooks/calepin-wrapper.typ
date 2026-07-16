@@ -1,4 +1,6 @@
+#let _calepin-document-element = document
 #import "/.calepin/calepin.typ": *
+#let document = _calepin-document-element
 
 
 
@@ -102,7 +104,7 @@ The generic import uses the artifacts from the most recently compiled or watched
 #show: calepin.document
 ````
 
-The document show rule makes executable raw fences render their stored Calepin results in the original source. Ordinary Typst edits then refresh normally in the preview. Tinymist does not execute notebook code: after changing Python, R, Julia, shell, Jupyter, or diagram code, run Calepin again to refresh the stored output.
+The document show rule makes executable raw fences render their stored Calepin results in the original source. Ordinary Typst edits then refresh normally in the preview. Tinymist does not evaluate notebook code: after changing Python, R, Julia, shell, Jupyter, or diagram code, run Calepin again, or keep `calepin watch paper.typ --eval-only` running to refresh stored output only when the computational fingerprint changes.
 
 Compiling another notebook changes the generic import's active fallback. When several notebook previews must remain independent, use the generated notebook-specific facade instead:
 

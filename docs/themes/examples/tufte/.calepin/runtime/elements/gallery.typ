@@ -99,7 +99,7 @@
   }
 }
 
-#let _entry(item) = {
+#let _entry(config, item) = {
   let src = none
   let alt = ""
   let caption = none
@@ -124,8 +124,8 @@
     return none
   }
 
-  let meta = _image-meta-entry(src)
-  let href = _resolve-asset-href(src)
+  let meta = _image-meta-entry(src, config: config)
+  let href = _resolve-asset-href(src, config: config)
   (
     src: src,
     href: href,
@@ -136,17 +136,17 @@
   )
 }
 
-#let _entries(items) = {
+#let _entries(config, items) = {
   let raw = if type(items) == array { items } else { (items,) }
   let out = ()
   for item in raw {
     if type(item) == array and (type(item.at(0, default: none)) == array or type(item.at(0, default: none)) == dictionary) {
       for nested in item {
-        let entry = _entry(nested)
+        let entry = _entry(config, nested)
         if entry != none { out.push(entry) }
       }
     } else {
-      let entry = _entry(item)
+      let entry = _entry(config, item)
       if entry != none { out.push(entry) }
     }
   }
@@ -204,12 +204,12 @@
   ]
 }
 
-#let gallery(items, columns: 3, gap: 0.75em, max-width: 42em, show-captions: true) = {
+#let _gallery(config, items, columns: 3, gap: 0.75em, max-width: 42em, show-captions: true) = {
   if _is-query() {
     return none
   }
 
-  let entries = _entries(items)
+  let entries = _entries(config, items)
   if entries.len() == 0 {
     return if _is-html() { text[No images yet.] } else { none }
   }
@@ -244,3 +244,5 @@
     }),
   )
 }
+
+#let gallery(items, ..args) = _gallery(none, items, ..args)

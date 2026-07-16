@@ -134,10 +134,10 @@ Write notebooks in pure Typst, a simple, consistent, powerful, and elegant types
 #let editor-text-content() = [
   = Editor integration
 
-  Write, execute, preview, and publish Calepin documents without leaving your editor.
-  Install the Calepin extension from the VS Code Marketplace, or from Open VSX for Cursor,
-  Positron, and other VSX-compatible editors. See #link("editors.html")[Editor integration]
-  for the Calepin extension, Tinymist, and other Typst editors.
+  Write and evaluate Calepin documents without leaving your editor. The Calepin extension
+  starts and stops watched code evaluation; use Tinymist or another extension independently
+  for Typst language tooling and preview. Install Calepin from the VS Code Marketplace, or from Open VSX for Cursor,
+  Positron, and other VSX-compatible editors. See #link("editors.html")[Editor integration].
 ]
 
 #let editor-text() = calepin.elements.target(
@@ -145,21 +145,7 @@ Write notebooks in pure Typst, a simple, consistent, powerful, and elegant types
   paged: () => editor-text-content(),
 )
 
-#let editor-video() = [
-  #calepin.elements.lightbox-video(
-    "calepin-video-dialog",
-    "assets/calepin_vscode.mp4",
-    poster: "assets/calepin_vscode-thumb.png",
-    open-label: "Open Calepin editor preview video",
-  )
-]
-
-#calepin.elements.columns(
-  html-attrs: (style: "align-items: stretch;"),
-  wrap: false,
-  editor-text(),
-  editor-video(),
-)
+#editor-text()
 
 = A simple computational notebook
 

@@ -1,4 +1,6 @@
+#let _calepin-document-element = document
 #import "/.calepin/calepin.typ": *
+#let document = _calepin-document-element
 
 
 

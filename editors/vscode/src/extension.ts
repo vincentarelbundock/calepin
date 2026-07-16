@@ -43,7 +43,6 @@ async function startCalepinWatch(
   if (!input || !(await saveTypstDocument(input))) return;
 
   if (watchProcess && watchInput && sameFsPath(watchInput.fsPath, input.fsPath)) {
-    output?.show(true);
     vscode.window.setStatusBarMessage("Calepin: already watching this document", 3000);
     return;
   }
@@ -63,6 +62,9 @@ async function startCalepinWatch(
 
   watchProcess = process;
   watchInput = input;
+  void vscode.window.showInformationMessage(
+    `Calepin is watching ${path.basename(input.fsPath)} in the background.`,
+  );
   vscode.window.setStatusBarMessage(
     "Calepin: watching code (run Typst: Stop Calepin to stop)",
     5000,
@@ -99,7 +101,6 @@ function startCalepin(
   environment?: NodeJS.ProcessEnv,
 ): ChildProcessWithoutNullStreams | null {
   output?.appendLine(`\n$ ${formatCommand(binary, args, environment)}`);
-  output?.show(true);
 
   try {
     const process = spawn(binary, args, {

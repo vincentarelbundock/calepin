@@ -1,5 +1,6 @@
 #import "../00_syntax-theme.typ": *
 #import "../core/assets.typ": _resolve-asset-href
+#import "../core/config.typ": _runtime-config
 #import "../core/css.typ": *
 #import "../core/state.typ": _artifact-path, _attach-label, _attach-labels
 #import "../core/state.typ": _crossref-labels-for, _select-representation
@@ -641,9 +642,10 @@
 // label) are attached. The inline render owns the anchor; a relocated copy that
 // does not own it passes `anchor: false` so the same output can appear more than
 // once without defining a Typst label twice.
-#let _render-results(label, opts, anchor: true) = {
-  let results-path = sys.inputs.at("calepin-results", default: "")
-  if results-path == "" {
+#let _render-results(label, opts, anchor: true, config: none) = {
+  let runtime-config = _runtime-config(bound: config)
+  let results-path = runtime-config.at("results", default: none)
+  if results-path == none or results-path == "" {
     return none
   }
   let results-doc = json(results-path)

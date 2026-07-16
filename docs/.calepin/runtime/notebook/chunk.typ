@@ -2,6 +2,7 @@
 #import "../core/state.typ": _derive-label, _disable-raw-chunk-transforms
 #import "../core/state.typ": _raw-node, _raw-text, _sync-auto-label-counter
 #import "../core/state.typ": _relocate-opts
+#import "../core/config.typ": _runtime-config
 #import "../core/target.typ": _is-query
 #import "render.typ": _html-themed-raw-block, _input-block, _render-results, _results-hidden
 #import "options.typ": _resolve-options
@@ -163,7 +164,7 @@
   code.slice(nl + 1)
 }
 
-#let _emit-chunk(engine, body, ..args) = context {
+#let _emit-chunk(config, engine, body, ..args) = context {
   let options = _call-defaults + args.named()
   let label-opt = options.at("label")
   let qmd-label-opt = _qmd-label-from-body(body)
@@ -208,7 +209,8 @@
     let code = _strip-lang-version-suffix(engine, code)
     let code = _strip-qmd-header(code)
     let options = _resolve-options(engine, options)
-    let results-path = sys.inputs.at("calepin-results", default: "")
+    let runtime-config = _runtime-config(bound: config)
+    let results-path = runtime-config.at("results", default: none)
     // The runtime parses only `#| label` from the fence header itself; the
     // remaining `#|` options are parsed during the query/execute pass and
     // stored in results.json. Fold the display toggles back in so directives
@@ -218,7 +220,7 @@
     // to `_render-results`, which converts their JSON form for the active
     // target. Function-call options already match what is stored, so this is a
     // no-op for them.
-    if results-path != "" {
+    if results-path != none and results-path != "" {
       let results-doc = json(results-path)
       let chunk = results-doc.at("chunks", default: (:)).at(label, default: none)
       if chunk != none {
@@ -250,13 +252,13 @@
 
     if show-echo {
       _input-block(code, lang: engine)
-    } else if results-path == "" {
+    } else if results-path == none or results-path == "" {
       _input-block(code, lang: engine)
     }
     // `results: "hide"`/`"hidden"` runs the chunk but renders nothing here; the
     // output can still be shown elsewhere with `#calepin.results(label)`.
-    if results-path != "" and not _results-hidden(results-mode) {
-      _render-results(label, options, anchor: true)
+    if results-path != none and results-path != "" and not _results-hidden(results-mode) {
+      _render-results(label, options, anchor: true, config: runtime-config)
     }
   }
 }
@@ -285,14 +287,16 @@
   }
 }
 
-#let chunk_from_raw_plain(engine, it) = context {
+#let _chunk-from-raw-plain(config, engine, it) = context {
   let defaults = _resolve-options(engine, _call-defaults)
   if _fenced-chunks-runs(engine, defaults.at("fenced-chunks")) {
-    _emit-chunk(engine, it, ..defaults)
+    _emit-chunk(config, engine, it, ..defaults)
   } else {
     _html-themed-raw-block(it)
   }
 }
+
+#let chunk_from_raw_plain(engine, it) = _chunk-from-raw-plain(none, engine, it)
 
 #let _infer-engine(body) = {
   let node = _raw-node(body)
@@ -306,7 +310,7 @@
 // `chunk` accepts either an explicit engine (`chunk("python")[...]`) or just a
 // body (`chunk[```python ... ```]`), in which case the engine is read from the
 // fenced block's language.
-#let chunk(..args) = {
+#let _chunk(config, ..args) = {
   let positional = args.pos()
   let engine = none
   let body = none
@@ -319,10 +323,12 @@
   } else {
     panic("calepin.chunk: missing code block")
   }
-  _without-raw-chunk-transforms(() => _emit-chunk(engine, body, ..args.named()))
+  _without-raw-chunk-transforms(() => _emit-chunk(config, engine, body, ..args.named()))
 }
 
-#let inline(engine, body, ..args) = {
+#let chunk(..args) = _chunk(none, ..args)
+
+#let _inline(config, engine, body, ..args) = {
   let opts = args.named()
   if opts.at("label", default: none) != none {
     panic("unexpected argument: label")
@@ -333,8 +339,10 @@
     auto-label-prefix: "inline",
     auto-label-state: _auto-inline-label-index,
   )
-  chunk(engine, body, ..(defaults + opts))
+  _chunk(config, engine, body, ..(defaults + opts))
 }
+
+#let inline(engine, body, ..args) = _inline(none, engine, body, ..args)
 
 // Render a chunk's output at this location instead of (or in addition to) the
 // chunk's own position. Pair it with `results: "hide"` or `results: "hidden"`
@@ -345,7 +353,7 @@
 // figure is shown: at the chunk's own position when it is visible, and here when
 // the source chunk is hidden. Referencing a figure that is shown in more than
 // one place is ambiguous, and Typst reports it as a duplicate-label error.
-#let results(..args) = {
+#let _results(config, ..args) = {
   let positional = args.pos()
   let named = args.named()
   let label = if named.at("label", default: none) != none {
@@ -362,8 +370,9 @@
     // Nothing to emit in the query pass; rendering happens during the render pass.
   } else {
     context {
-      let results-path = sys.inputs.at("calepin-results", default: "")
-      if results-path != "" {
+      let runtime-config = _runtime-config(bound: config)
+      let results-path = runtime-config.at("results", default: none)
+      if results-path != none and results-path != "" {
         let results-doc = json(results-path)
         let chunk = results-doc.at("chunks", default: (:)).at(label, default: none)
         if chunk == none {
@@ -376,8 +385,10 @@
         // The anchor follows the figure: attach it here only when the source
         // chunk is hidden (and so renders nothing at its own position).
         let hidden = _results-hidden(opts.at("results", default: "render"))
-        _render-results(label, opts, anchor: hidden)
+        _render-results(label, opts, anchor: hidden, config: runtime-config)
       }
     }
   }
 }
+
+#let results(..args) = _results(none, ..args)
