@@ -55,7 +55,7 @@ use metadata::{load_page_meta, PageMetaMap};
 use navigation::{
     build_page_info, build_pages_index, discover_site_build_pages, discover_site_menus,
     discover_site_pages, discover_static_files, fallback_pages, implicit_build_pages,
-    menus_from_plan, nav_from_plans, write_pages_index, MenusModel, NavSectionModel,
+    menus_from_plan, nav_from_plans, write_pages_index, MenusModel, NavItemModel, NavSectionModel,
 };
 #[cfg(test)]
 use navigation::{
@@ -104,6 +104,7 @@ const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
     "User-agent: *\nAllow: /\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}\n{% endif %}";
+
 fn resolve_website_asset_dir(config: &WebsiteConfig) -> Result<PathBuf> {
     let raw = match config.asset_dir.as_ref() {
         Some(value) if value.as_os_str().is_empty() => {
@@ -173,7 +174,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         render_pdf,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
-        params: args.common.params,
+        config_overrides: args.common.sets,
         typst_args: args.typst_args,
         incremental_inputs: None,
         clean: true,
@@ -209,7 +210,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         render_pdf,
         quiet: args.common.quiet,
         timeout: args.common.timeout,
-        params: args.common.params.clone(),
+        config_overrides: args.common.sets.clone(),
         typst_args: args.typst_args.clone(),
         incremental_inputs: None,
         clean: true,
@@ -248,7 +249,7 @@ struct WebsiteBuildOptions {
     render_pdf: Option<bool>,
     quiet: bool,
     timeout: Option<u64>,
-    params: Vec<String>,
+    config_overrides: Vec<String>,
     typst_args: Vec<String>,
     incremental_inputs: Option<Vec<PathBuf>>,
     clean: bool,
@@ -298,7 +299,7 @@ fn theme_chain_dirs(theme: &crate::theme::ThemeSelection) -> Result<Vec<PathBuf>
 fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let current_dir = std::env::current_dir()?;
     let config_path = resolve_config_path(&current_dir, Some(args.config.as_path()))?;
-    let config = load_website_config(&config_path, true)?;
+    let config = load_website_config(&config_path, true, &args.config_overrides)?;
 
     let src_dir = resolve_cli_path(
         &current_dir,
@@ -322,7 +323,8 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         out_dir
     };
 
-    let calepin_config = CalepinConfig::load(&src_dir, Some(&config_path))?;
+    let calepin_config =
+        CalepinConfig::load_with_overrides(&src_dir, Some(&config_path), &args.config_overrides)?;
     let config_theme = calepin_config.theme_selection()?.unwrap_or_default();
     let site_theme = config_theme.clone();
     let asset_dir = resolve_website_asset_dir(&config)?;
@@ -333,6 +335,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config.sidebar.as_ref(),
         config.pages.as_ref(),
         &languages,
+        &asset_dir,
     )?;
     let (menus_plan, mut menu_files) = discover_site_menus(
         &src_dir,
@@ -340,17 +343,18 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config.footer.as_ref(),
         config.pages.as_ref(),
         &languages,
+        &asset_dir,
     )?;
     typ_files.append(&mut menu_files);
     let mut included_pages =
-        discover_site_build_pages(&src_dir, config.pages.as_ref(), &languages)?;
+        discover_site_build_pages(&src_dir, config.pages.as_ref(), &languages, &asset_dir)?;
     typ_files.append(&mut included_pages);
     typ_files.extend(implicit_build_pages(&src_dir, &languages));
     typ_files.sort_by_key(|path| rel_posix(&src_dir, path));
     typ_files.dedup();
     let fallback_files = fallback_pages(&src_dir, &languages);
     let page_fingerprints = fingerprint_files(&typ_files)?;
-    let static_files = discover_static_files(&src_dir, config.static_files.as_ref())?;
+    let static_files = discover_static_files(&src_dir, config.static_files.as_ref(), &asset_dir)?;
     let config_dir = config_path.parent().unwrap_or(&src_dir);
     let html_syntax_theme = HtmlSyntaxTheme::from_paths(
         config_dir,
@@ -379,7 +383,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         config_path: &config_path,
         quiet: args.quiet,
         timeout: args.timeout,
-        params: &args.params,
+        config_overrides: &args.config_overrides,
         fallback_theme: config_theme.clone(),
         html_syntax_theme: html_syntax_theme.clone(),
         asset_dir: &asset_dir,
@@ -506,7 +510,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             page_meta: page_meta.clone(),
             page_info: page_info.clone(),
             languages: languages.clone(),
-            vars: calepin_config.vars.clone(),
+            toc: calepin_config.toc,
             syntax_theme: html_syntax_theme,
             parallelism: args.parallelism,
             typst_args: args.typst_args,
@@ -738,6 +742,15 @@ fn fingerprint_files(paths: &[PathBuf]) -> Result<BTreeMap<PathBuf, u64>> {
         .collect()
 }
 
+fn push_nav_item_bytes(bytes: &mut Vec<u8>, item: &NavItemModel) {
+    bytes.extend_from_slice(item.href.as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(item.label.as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(item.label_html.as_bytes());
+    bytes.push(0);
+}
+
 fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
     let mut bytes = Vec::new();
     for section in sections {
@@ -750,12 +763,7 @@ fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
         }
         bytes.push(0);
         for item in &section.items {
-            bytes.extend_from_slice(item.href.as_bytes());
-            bytes.push(0);
-            bytes.extend_from_slice(item.label.as_bytes());
-            bytes.push(0);
-            bytes.extend_from_slice(item.label_html.as_bytes());
-            bytes.push(0);
+            push_nav_item_bytes(&mut bytes, item);
         }
         bytes.push(0xff);
     }
@@ -772,12 +780,7 @@ fn menus_signature(menus: &MenusModel) -> u64 {
                 bytes.extend_from_slice(language.as_bytes());
             }
             bytes.push(0);
-            bytes.extend_from_slice(item.href.as_bytes());
-            bytes.push(0);
-            bytes.extend_from_slice(item.label.as_bytes());
-            bytes.push(0);
-            bytes.extend_from_slice(item.label_html.as_bytes());
-            bytes.push(0);
+            push_nav_item_bytes(&mut bytes, item);
         }
         bytes.push(0xff);
     }
@@ -855,7 +858,7 @@ struct BuildContext {
     page_meta: PageMetaMap,
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,
-    vars: BTreeMap<String, toml::Value>,
+    toc: crate::config::TocConfig,
     syntax_theme: HtmlSyntaxTheme,
     parallelism: Option<usize>,
     typst_args: Vec<String>,
@@ -865,7 +868,7 @@ struct BuildContext {
     progress: ProgressManager,
 }
 
-fn load_website_config(path: &Path, required: bool) -> Result<WebsiteConfig> {
+fn load_website_config(path: &Path, required: bool, overrides: &[String]) -> Result<WebsiteConfig> {
     if !path.is_file() {
         if required {
             return Err(anyhow!("config file not found: {}", path.display()));
@@ -874,7 +877,12 @@ fn load_website_config(path: &Path, required: bool) -> Result<WebsiteConfig> {
     }
     let contents =
         fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
-    toml::from_str(&contents).with_context(|| format!("failed to parse {}", path.display()))
+    let mut value: toml::Value =
+        toml::from_str(&contents).with_context(|| format!("failed to parse {}", path.display()))?;
+    crate::config::apply_config_overrides(&mut value, overrides)?;
+    value
+        .try_into()
+        .with_context(|| format!("failed to parse {}", path.display()))
 }
 
 /// Resolves the website config: an explicit `--config` path wins, otherwise

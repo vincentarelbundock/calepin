@@ -86,6 +86,18 @@ course = "Econ 101"
 }
 
 #[test]
+fn website_config_accepts_toc_table() {
+    // `[toc]` is resolved from `CalepinConfig` (config.rs), not `WebsiteConfig`;
+    // this just confirms `deny_unknown_fields` doesn't reject it here.
+    website_config_from_toml(
+        r#"[toc]
+enabled = true
+depth = 2
+"#,
+    );
+}
+
+#[test]
 fn website_config_defaults_asset_dir_to_dot_calepin() {
     let config = website_config_from_toml("");
 
@@ -143,7 +155,7 @@ fn website_build_result_canonicalizes_config_theme_dir() {
         render_pdf: Some(false),
         quiet: true,
         timeout: None,
-        params: Vec::new(),
+        config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
         clean: true,
@@ -184,7 +196,7 @@ theme = "calepin"
         render_pdf: Some(false),
         quiet: true,
         timeout: None,
-        params: Vec::new(),
+        config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
         clean: true,
@@ -235,7 +247,7 @@ fn website_build_result_normalizes_created_output_dir_inside_source() {
         render_pdf: Some(false),
         quiet: true,
         timeout: None,
-        params: Vec::new(),
+        config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
         clean: true,
@@ -741,7 +753,8 @@ fn discover_site_pages_does_not_treat_language_dirs_as_default_pages() {
         },
     ]);
 
-    let (_sections, files) = discover_site_pages(src, None, None, &languages).unwrap();
+    let (_sections, files) =
+        discover_site_pages(src, None, None, &languages, Path::new(".calepin")).unwrap();
     let mut rel = files
         .iter()
         .map(|path| rel_posix(src, path))
@@ -752,6 +765,65 @@ fn discover_site_pages_does_not_treat_language_dirs_as_default_pages() {
         rel,
         vec!["about.typ", "fr/about.typ", "fr/index.typ", "index.typ"]
     );
+}
+
+#[test]
+fn discover_site_pages_skips_generated_custom_asset_dir() {
+    // A non-dot `asset-dir` (e.g. the Netlify-recommended `_calepin`) holds
+    // regenerated Typst runtime sources. They must not be rediscovered as
+    // pages: otherwise a second build feeds `_calepin/calepin.typ` back in as
+    // input and the runtime path is doubled (`_calepin/_calepin/...`), see #79.
+    // The default `.calepin` is skipped only because it is hidden, so a custom
+    // visible asset dir needs to be skipped explicitly.
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("index.typ"), "= Home\n").unwrap();
+    fs::create_dir_all(src.join("_calepin").join("index")).unwrap();
+    fs::write(src.join("_calepin").join("calepin.typ"), "// generated\n").unwrap();
+    fs::write(
+        src.join("_calepin").join("index").join("query-source.typ"),
+        "// generated\n",
+    )
+    .unwrap();
+
+    let (sections, files) =
+        discover_site_pages(src, None, None, &None, Path::new("_calepin")).unwrap();
+
+    let rel = files
+        .iter()
+        .map(|path| rel_posix(src, path))
+        .collect::<Vec<_>>();
+    assert_eq!(rel, vec!["index.typ".to_string()]);
+
+    // The nav surface must not reference the generated sources either.
+    let nav_under_asset_dir = sections
+        .iter()
+        .flat_map(|section| section.items.iter())
+        .filter_map(|item| item.path.as_ref())
+        .any(|path| rel_posix(src, path).starts_with("_calepin/"));
+    assert!(!nav_under_asset_dir);
+}
+
+#[test]
+fn discover_static_files_skips_generated_custom_asset_dir() {
+    // A broad `static.include` glob must not sweep the regenerable asset dir
+    // into the output, mirroring the page-discovery guard for #79.
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("logo.svg"), "<svg></svg>").unwrap();
+    fs::create_dir_all(src.join("_calepin")).unwrap();
+    fs::write(src.join("_calepin/calepin.typ"), "// generated\n").unwrap();
+    let config = StaticConfig {
+        include: vec!["logo.svg".to_string(), "_calepin".to_string()],
+        exclude: Vec::new(),
+    };
+
+    let files = discover_static_files(src, Some(&config), Path::new("_calepin")).unwrap();
+    let rels = files
+        .iter()
+        .map(|path| rel_posix(src, path))
+        .collect::<Vec<_>>();
+    assert_eq!(rels, vec!["logo.svg".to_string()]);
 }
 
 #[test]
@@ -772,7 +844,8 @@ fn implicit_build_pages_include_root_home_and_fallback_outside_configured_naviga
         ..SidebarConfig::default()
     };
 
-    let (_sections, files) = discover_site_pages(src, Some(&sidebar), None, &None).unwrap();
+    let (_sections, files) =
+        discover_site_pages(src, Some(&sidebar), None, &None, Path::new(".calepin")).unwrap();
     assert_eq!(
         files
             .iter()
@@ -855,9 +928,16 @@ fn pages_include_adds_build_only_pages() {
         ..SidebarConfig::default()
     };
 
-    let (_sections, nav_files) =
-        discover_site_pages(src, Some(&sidebar), Some(&pages), &None).unwrap();
-    let include_files = discover_site_build_pages(src, Some(&pages), &None).unwrap();
+    let (_sections, nav_files) = discover_site_pages(
+        src,
+        Some(&sidebar),
+        Some(&pages),
+        &None,
+        Path::new(".calepin"),
+    )
+    .unwrap();
+    let include_files =
+        discover_site_build_pages(src, Some(&pages), &None, Path::new(".calepin")).unwrap();
 
     assert_eq!(
         nav_files
@@ -888,8 +968,10 @@ fn pages_exclude_removes_pages_from_navigation_and_includes() {
         exclude: vec!["drafts/**".to_string(), "about.typ".to_string()],
     };
 
-    let (_sections, nav_files) = discover_site_pages(src, None, Some(&pages), &None).unwrap();
-    let include_files = discover_site_build_pages(src, Some(&pages), &None).unwrap();
+    let (_sections, nav_files) =
+        discover_site_pages(src, None, Some(&pages), &None, Path::new(".calepin")).unwrap();
+    let include_files =
+        discover_site_build_pages(src, Some(&pages), &None, Path::new(".calepin")).unwrap();
     let required = implicit_build_pages(src, &None);
 
     assert_eq!(
@@ -945,7 +1027,7 @@ exclude = ["lib/**"]
         render_pdf: Some(false),
         quiet: true,
         timeout: None,
-        params: Vec::new(),
+        config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
         clean: true,
@@ -980,7 +1062,7 @@ fn discover_static_files_includes_files_dirs_and_globs_then_excludes() {
         exclude: vec!["assets/private/**".to_string()],
     };
 
-    let files = discover_static_files(src, Some(&config)).unwrap();
+    let files = discover_static_files(src, Some(&config), Path::new(".calepin")).unwrap();
     let rels = files
         .iter()
         .map(|path| rel_posix(src, path))
@@ -1003,7 +1085,12 @@ fn discover_static_files_rejects_paths_outside_source_directory() {
         exclude: Vec::new(),
     };
 
-    let err = discover_static_files(Path::new("/site/docs"), Some(&config)).unwrap_err();
+    let err = discover_static_files(
+        Path::new("/site/docs"),
+        Some(&config),
+        Path::new(".calepin"),
+    )
+    .unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -1343,7 +1430,10 @@ fn site_context_page_url_uses_directory_style_for_index_routes() {
     let empty_page_info = PageInfoMap::new();
 
     let home = site.theme_context("index.html", None, &empty_page_info, None, None);
-    assert_eq!(home.page_url.as_deref(), Some("https://example.com/project/"));
+    assert_eq!(
+        home.page_url.as_deref(),
+        Some("https://example.com/project/")
+    );
 
     let section = site.theme_context("guide/index.html", None, &empty_page_info, None, None);
     assert_eq!(
@@ -1774,6 +1864,88 @@ fn theme_context_rewrites_nav_urls_relative_to_current_page() {
 }
 
 #[test]
+fn theme_context_keeps_sidebar_subheadings_unlinked() {
+    let site = SiteModel::new(
+        vec![NavSectionModel {
+            language: None,
+            title: Some("Reference".to_string()),
+            items: vec![
+                NavItemModel {
+                    language: None,
+                    href: String::new(),
+                    label: "Language".to_string(),
+                    label_html: html_escape("Language"),
+                },
+                NavItemModel {
+                    language: None,
+                    href: "reference/syntax.html".to_string(),
+                    label: "Syntax".to_string(),
+                    label_html: html_escape("Syntax"),
+                },
+            ],
+        }],
+        MenusModel::default(),
+        SiteMetadata::default(),
+        true,
+    );
+
+    let context = site.theme_context(
+        "reference/syntax.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+    );
+
+    assert_eq!(context.sidebar_sections[0].items[0].href, "");
+    assert!(!context.sidebar_sections[0].items[0].active);
+    assert_eq!(context.sidebar_sections[0].items[1].href, "syntax.html");
+    assert!(context.sidebar_sections[0].items[1].active);
+}
+
+#[test]
+fn theme_context_keeps_sidebar_external_links_absolute() {
+    let site = SiteModel::new(
+        vec![NavSectionModel {
+            language: None,
+            title: Some("Reference".to_string()),
+            items: vec![
+                NavItemModel {
+                    language: None,
+                    href: "reference/syntax.html".to_string(),
+                    label: "Syntax".to_string(),
+                    label_html: html_escape("Syntax"),
+                },
+                NavItemModel {
+                    language: None,
+                    href: "https://example.com/docs".to_string(),
+                    label: "External docs".to_string(),
+                    label_html: html_escape("External docs"),
+                },
+            ],
+        }],
+        MenusModel::default(),
+        SiteMetadata::default(),
+        true,
+    );
+
+    let context = site.theme_context(
+        "reference/syntax.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+    );
+
+    assert_eq!(
+        context.sidebar_sections[0].items[1].href,
+        "https://example.com/docs"
+    );
+    assert_eq!(context.sidebar_sections[0].items[1].label, "External docs");
+    assert!(!context.sidebar_sections[0].items[1].active);
+}
+
+#[test]
 fn theme_context_marks_section_containing_current_page_active() {
     let section = |title: &str, href: &str| NavSectionModel {
         language: None,
@@ -1856,7 +2028,7 @@ fn shared_theme_init_script_is_inlined() {
         render_pdf: Some(false),
         quiet: true,
         timeout: None,
-        params: Vec::new(),
+        config_overrides: Vec::new(),
         typst_args: Vec::new(),
         incremental_inputs: None,
         clean: true,
@@ -1925,8 +2097,31 @@ fn theme_key_resolves_local_directory_against_config_dir() {
 }
 
 #[test]
-fn sidebar_item_config_rejects_labels() {
-    let err = try_website_config_from_toml(
+fn sidebar_item_config_accepts_label_only_subheadings() {
+    let config = website_config_from_toml(
+        r#"
+[sidebar]
+
+[[sidebar.section]]
+title = "Guide"
+
+  [[sidebar.section.item]]
+  label = "Language"
+
+  [[sidebar.section.item]]
+  target = "install.typ"
+"#,
+    );
+
+    let section = &config.sidebar.unwrap().section[0];
+    assert_eq!(section.item[0].label.as_deref(), Some("Language"));
+    assert_eq!(section.item[0].target, None);
+    assert_eq!(section.item[0].glob, None);
+}
+
+#[test]
+fn sidebar_item_config_rejects_labels_on_page_links() {
+    let config = website_config_from_toml(
         r#"
 [sidebar]
 
@@ -1937,10 +2132,56 @@ title = "Guide"
   target = "install.typ"
   label = "Install"
 "#,
+    );
+
+    let temp = tempfile::tempdir().unwrap();
+    fs::write(temp.path().join("install.typ"), "= Install\n").unwrap();
+
+    let err = discover_pages(
+        temp.path(),
+        config.sidebar.as_ref(),
+        None,
+        None,
+        Path::new(".calepin"),
     )
     .unwrap_err();
 
-    assert!(err.to_string().contains("unknown field `label`"));
+    assert!(err
+        .to_string()
+        .contains("sidebar target items cannot also set label"));
+}
+
+#[test]
+fn sidebar_item_config_rejects_labels_on_globs() {
+    let config = website_config_from_toml(
+        r#"
+[sidebar]
+
+[[sidebar.section]]
+title = "Guide"
+
+  [[sidebar.section.item]]
+  glob = "guide/*.typ"
+  label = "Guide pages"
+"#,
+    );
+
+    let temp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(temp.path().join("guide")).unwrap();
+    fs::write(temp.path().join("guide").join("syntax.typ"), "= Syntax\n").unwrap();
+
+    let err = discover_pages(
+        temp.path(),
+        config.sidebar.as_ref(),
+        None,
+        None,
+        Path::new(".calepin"),
+    )
+    .unwrap_err();
+
+    assert!(err
+        .to_string()
+        .contains("sidebar glob items cannot also set label"));
 }
 
 #[test]
@@ -2019,6 +2260,35 @@ fn nav_from_plans_uses_metadata_title_then_stem() {
         .map(|item| item.label.as_str())
         .collect::<Vec<_>>();
     assert_eq!(labels, vec!["From Metadata", "c page"]);
+}
+
+#[test]
+fn nav_from_plans_uses_configured_labels_for_sidebar_external_targets() {
+    let sections = vec![NavSectionPlan {
+        language: None,
+        title: Some("Reference".to_string()),
+        items: vec![NavItemPlan {
+            path: None,
+            url: Some("https://example.com/reference".to_string()),
+            configured_label: Some("External reference".to_string()),
+            configured_aria_label: None,
+            weight: None,
+        }],
+    }];
+    let icon_temp = tempfile::tempdir().unwrap();
+    let mut icon_cache = IconCache::new(icon_temp.path(), Path::new(ICON_CACHE_DIR));
+
+    let nav = nav_from_plans(
+        &sections,
+        &PageMetaMap::new(),
+        &PageInfoMap::new(),
+        &mut icon_cache,
+    )
+    .unwrap();
+
+    assert_eq!(nav[0].items[0].href, "https://example.com/reference");
+    assert_eq!(nav[0].items[0].label, "External reference");
+    assert_eq!(nav[0].items[0].label_html, "External reference");
 }
 
 #[test]
@@ -2107,8 +2377,15 @@ label = "© 2026 Example"
 "#,
     );
 
-    let (plan, files) =
-        discover_site_menus(src, &config.menus, config.footer.as_ref(), None, &None).unwrap();
+    let (plan, files) = discover_site_menus(
+        src,
+        &config.menus,
+        config.footer.as_ref(),
+        None,
+        &None,
+        Path::new(".calepin"),
+    )
+    .unwrap();
 
     assert_eq!(
         plan.items["footer"][0].path.as_deref(),
@@ -2138,6 +2415,7 @@ label = "© 2026 Example"
         config.footer.as_ref(),
         None,
         &None,
+        Path::new(".calepin"),
     )
     .unwrap_err();
 
@@ -2180,7 +2458,7 @@ fn discover_menus_resolves_named_menus_and_orders_by_weight() {
         ),
     ]);
 
-    let (plan, files) = discover_menus(src, &menus, None).unwrap();
+    let (plan, files) = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap();
 
     assert_eq!(
         plan.items["main"][0].path.as_deref(),
@@ -2223,7 +2501,7 @@ fn discover_menus_allows_footer_items_without_targets() {
         ],
     )]);
 
-    let (plan, files) = discover_menus(src, &menus, None).unwrap();
+    let (plan, files) = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap();
 
     assert_eq!(
         plan.items["footer"][0].path.as_deref(),
@@ -2250,7 +2528,7 @@ fn discover_menus_rejects_linkless_items_for_non_footer_menus() {
         }],
     )]);
 
-    let err = discover_menus(src, &menus, None).unwrap_err();
+    let err = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("item must set path, glob, or url"));
 }
@@ -2261,7 +2539,7 @@ fn discover_menus_rejects_invalid_menu_names() {
     let src = temp.path();
     let menus = BTreeMap::from([("Main Nav".to_string(), Vec::new())]);
 
-    let err = discover_menus(src, &menus, None).unwrap_err();
+    let err = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("invalid menu name `Main Nav`"));
 }
@@ -2365,7 +2643,8 @@ fn discover_pages_resolves_sidebar_page_targets() {
         ..SidebarConfig::default()
     };
 
-    let (sections, files) = discover_pages(src, Some(&sidebar), None, None).unwrap();
+    let (sections, files) =
+        discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap();
 
     assert_eq!(
         files
@@ -2377,6 +2656,50 @@ fn discover_pages_resolves_sidebar_page_targets() {
     assert_eq!(
         sections[0].items[0].path.as_deref(),
         Some(src.join("index.typ").as_path())
+    );
+}
+
+#[test]
+fn discover_pages_keeps_sidebar_subheadings_in_order_without_build_files() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::write(src.join("syntax.typ"), "= Syntax\n").unwrap();
+    let sidebar = SidebarConfig {
+        section: vec![SidebarSectionConfig {
+            item: vec![
+                SidebarItemConfig {
+                    label: Some("Language".to_string()),
+                    ..SidebarItemConfig::default()
+                },
+                SidebarItemConfig {
+                    target: Some("syntax.typ".to_string()),
+                    ..SidebarItemConfig::default()
+                },
+            ],
+            ..SidebarSectionConfig::default()
+        }],
+        ..SidebarConfig::default()
+    };
+
+    let (sections, files) =
+        discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap();
+
+    assert_eq!(
+        files
+            .iter()
+            .map(|path| rel_posix(src, path))
+            .collect::<Vec<_>>(),
+        vec!["syntax.typ"]
+    );
+    assert_eq!(sections[0].items.len(), 2);
+    assert_eq!(sections[0].items[0].path, None);
+    assert_eq!(
+        sections[0].items[0].configured_label.as_deref(),
+        Some("Language")
+    );
+    assert_eq!(
+        sections[0].items[1].path.as_deref(),
+        Some(src.join("syntax.typ").as_path())
     );
 }
 
@@ -2397,7 +2720,7 @@ fn discover_pages_rejects_sidebar_targets_outside_source_directory() {
         ..SidebarConfig::default()
     };
 
-    let err = discover_pages(&src, Some(&sidebar), None, None).unwrap_err();
+    let err = discover_pages(&src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -2422,14 +2745,52 @@ fn discover_pages_applies_pages_exclude_to_explicit_sidebar_targets() {
         ..SidebarConfig::default()
     };
 
-    let (sections, files) = discover_pages(&src, Some(&sidebar), Some(&pages), None).unwrap();
+    let (sections, files) = discover_pages(
+        src,
+        Some(&sidebar),
+        Some(&pages),
+        None,
+        Path::new(".calepin"),
+    )
+    .unwrap();
 
     assert!(files.is_empty());
     assert!(sections[0].items.is_empty());
 }
 
 #[test]
-fn discover_pages_rejects_sidebar_external_targets() {
+fn discover_pages_allows_sidebar_external_targets_with_labels() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    let sidebar = SidebarConfig {
+        section: vec![SidebarSectionConfig {
+            item: vec![SidebarItemConfig {
+                target: Some("https://example.com".to_string()),
+                label: Some("External docs".to_string()),
+                ..SidebarItemConfig::default()
+            }],
+            ..SidebarSectionConfig::default()
+        }],
+        ..SidebarConfig::default()
+    };
+
+    let (sections, files) =
+        discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap();
+
+    assert!(files.is_empty());
+    assert_eq!(sections[0].items.len(), 1);
+    assert_eq!(
+        sections[0].items[0].url.as_deref(),
+        Some("https://example.com")
+    );
+    assert_eq!(
+        sections[0].items[0].configured_label.as_deref(),
+        Some("External docs")
+    );
+}
+
+#[test]
+fn discover_pages_rejects_sidebar_external_targets_without_labels() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path();
     let sidebar = SidebarConfig {
@@ -2443,11 +2804,11 @@ fn discover_pages_rejects_sidebar_external_targets() {
         ..SidebarConfig::default()
     };
 
-    let err = discover_pages(src, Some(&sidebar), None, None).unwrap_err();
+    let err = discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err
         .to_string()
-        .contains("sidebar target must point to a .typ source page"));
+        .contains("sidebar URL target items must set label"));
 }
 
 #[test]
@@ -2460,13 +2821,14 @@ fn discover_pages_rejects_target_combined_with_glob() {
             item: vec![SidebarItemConfig {
                 target: Some("index.typ".to_string()),
                 glob: Some("*.typ".to_string()),
+                ..SidebarItemConfig::default()
             }],
             ..SidebarSectionConfig::default()
         }],
         ..SidebarConfig::default()
     };
 
-    let err = discover_pages(src, Some(&sidebar), None, None).unwrap_err();
+    let err = discover_pages(src, Some(&sidebar), None, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err
         .to_string()
@@ -2499,7 +2861,7 @@ fn discover_menus_rejects_target_combined_with_glob() {
         }],
     )]);
 
-    let err = discover_menus(src, &menus, None).unwrap_err();
+    let err = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err
         .to_string()
@@ -2520,7 +2882,7 @@ fn discover_menus_rejects_targets_outside_source_directory() {
         }],
     )]);
 
-    let err = discover_menus(&src, &menus, None).unwrap_err();
+    let err = discover_menus(&src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -2536,7 +2898,8 @@ fn discover_site_build_pages_rejects_include_paths_outside_source_directory() {
         ..PagesConfig::default()
     };
 
-    let err = discover_site_build_pages(&src, Some(&pages), &None).unwrap_err();
+    let err =
+        discover_site_build_pages(&src, Some(&pages), &None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("source directory"));
 }
@@ -2554,7 +2917,7 @@ fn discover_menus_rejects_unsafe_literal_url_targets() {
         }],
     )]);
 
-    let err = discover_menus(src, &menus, None).unwrap_err();
+    let err = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap_err();
 
     assert!(err.to_string().contains("unsafe URL"));
 }
@@ -2572,7 +2935,7 @@ fn discover_menus_keeps_absolute_url_targets_ending_in_typ_as_urls() {
         }],
     )]);
 
-    let (plan, files) = discover_menus(src, &menus, None).unwrap();
+    let (plan, files) = discover_menus(src, &menus, None, Path::new(".calepin")).unwrap();
 
     assert!(files.is_empty());
     assert_eq!(

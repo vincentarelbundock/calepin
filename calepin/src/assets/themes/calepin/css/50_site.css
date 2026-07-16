@@ -687,6 +687,21 @@ html:not([data-theme]) {
   color: inherit;
 }
 
+.calepin-website-sidebar-subheading {
+  margin: 0.85rem 0 0.25rem;
+  padding-inline: 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: var(--calepin-color-muted);
+}
+
+.calepin-website-sidebar-subheading:first-child {
+  margin-top: 0;
+}
+
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
 .calepin-website-sidebar nav p,
 .calepin-website-toc-title {
@@ -937,7 +952,7 @@ html:not([data-theme]) {
 }
 
 .hero-subtitle-text {
-  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+  font-family: var(--calepin-font-heading);
 }
 
 .hero-typst-logo {

@@ -18,7 +18,7 @@ pub(super) fn preprocess_fingerprint(
     chunks: &[ChunkSpec],
     cwd: &Path,
     timeout: Option<Duration>,
-    params: &serde_json::Value,
+    vars: &serde_json::Value,
     theme: &crate::theme::ThemeSelection,
     asset_dir: &Path,
     image_meta_signature: u64,
@@ -35,7 +35,7 @@ pub(super) fn preprocess_fingerprint(
             .iter()
             .map(ChunkFingerprint::from)
             .collect::<Vec<_>>(),
-        params: params.clone(),
+        vars: vars.clone(),
         theme: theme_fingerprint(theme),
         asset_dir: path_fingerprint(asset_dir),
         image_meta: format!("{image_meta_signature:016x}"),
@@ -87,7 +87,7 @@ struct PreprocessFingerprint {
     timeout_secs: Option<u64>,
     executables: ExecutableFingerprint,
     chunks: Vec<ChunkFingerprint>,
-    params: serde_json::Value,
+    vars: serde_json::Value,
     theme: String,
     asset_dir: String,
     image_meta: String,

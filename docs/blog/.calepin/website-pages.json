@@ -1,0 +1,318 @@
+[
+  {
+    "href": "blog/static-website-generation.html",
+    "language": null,
+    "meta": {
+      "date": "2026-06-19",
+      "description": "The second major Calepin feature: building fast, flexible static websites from standard Typst files.",
+      "pdf": true,
+      "tags": [
+        "release",
+        "websites",
+        "typst"
+      ],
+      "title": "Calepin is now a static website generator"
+    },
+    "path": "blog/static-website-generation.typ",
+    "pdf": "blog/static-website-generation.pdf",
+    "title": "Calepin is now a static website generator",
+    "translation_key": "blog/static-website-generation",
+    "translations": {}
+  },
+  {
+    "href": "compile_watch_serve.html",
+    "language": null,
+    "meta": {},
+    "path": "compile_watch_serve.typ",
+    "pdf": "compile_watch_serve.pdf",
+    "title": "Compile, watch, serve",
+    "translation_key": "compile_watch_serve",
+    "translations": {}
+  },
+  {
+    "href": "getting-started/config.html",
+    "language": null,
+    "meta": {},
+    "path": "getting-started/config.typ",
+    "pdf": "getting-started/config.pdf",
+    "title": "Configuration",
+    "translation_key": "getting-started/config",
+    "translations": {}
+  },
+  {
+    "href": "getting-started/install.html",
+    "language": null,
+    "meta": {},
+    "path": "getting-started/install.typ",
+    "pdf": "getting-started/install.pdf",
+    "title": "Install",
+    "translation_key": "getting-started/install",
+    "translations": {}
+  },
+  {
+    "href": "index.html",
+    "language": null,
+    "meta": {
+      "layout": "layouts/site-landing.html",
+      "pdf": true
+    },
+    "path": "index.typ",
+    "pdf": "index.pdf",
+    "title": "Calepin",
+    "translation_key": "index",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/code_execution.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/code_execution.typ",
+    "pdf": "notebooks/code_execution.pdf",
+    "title": "Code execution",
+    "translation_key": "notebooks/code_execution",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/cross-references.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/cross-references.typ",
+    "pdf": "notebooks/cross-references.pdf",
+    "title": "Cross-references",
+    "translation_key": "notebooks/cross-references",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/diagrams.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/diagrams.typ",
+    "pdf": "notebooks/diagrams.pdf",
+    "title": "Diagrams",
+    "translation_key": "notebooks/diagrams",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/figures.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/figures.typ",
+    "pdf": "notebooks/figures.pdf",
+    "title": "Figures and tables",
+    "translation_key": "notebooks/figures",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/notebooks.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/notebooks.typ",
+    "pdf": "notebooks/notebooks.pdf",
+    "title": "Notebooks",
+    "translation_key": "notebooks/notebooks",
+    "translations": {}
+  },
+  {
+    "href": "notebooks/parameters.html",
+    "language": null,
+    "meta": {},
+    "path": "notebooks/parameters.typ",
+    "pdf": "notebooks/parameters.pdf",
+    "title": "Parameters",
+    "translation_key": "notebooks/parameters",
+    "translations": {}
+  },
+  {
+    "href": "reference/cli.html",
+    "language": null,
+    "meta": {},
+    "path": "reference/cli.typ",
+    "pdf": "reference/cli.pdf",
+    "title": "CLI reference",
+    "translation_key": "reference/cli",
+    "translations": {}
+  },
+  {
+    "href": "slides/touying.html",
+    "language": null,
+    "meta": {
+      "pdf": false,
+      "title": "Touying"
+    },
+    "path": "slides/touying.typ",
+    "pdf": null,
+    "title": "Touying",
+    "translation_key": "slides/touying",
+    "translations": {}
+  },
+  {
+    "href": "themes/case_studies.html",
+    "language": null,
+    "meta": {},
+    "path": "themes/case_studies.typ",
+    "pdf": "themes/case_studies.pdf",
+    "title": "Case studies",
+    "translation_key": "themes/case_studies",
+    "translations": {}
+  },
+  {
+    "href": "themes/css.html",
+    "language": null,
+    "meta": {},
+    "path": "themes/css.typ",
+    "pdf": "themes/css.pdf",
+    "title": "CSS",
+    "translation_key": "themes/css",
+    "translations": {}
+  },
+  {
+    "href": "themes/html_templates.html",
+    "language": null,
+    "meta": {},
+    "path": "themes/html_templates.typ",
+    "pdf": "themes/html_templates.pdf",
+    "title": "HTML",
+    "translation_key": "themes/html_templates",
+    "translations": {}
+  },
+  {
+    "href": "themes/pdf_templates.html",
+    "language": null,
+    "meta": {},
+    "path": "themes/pdf_templates.typ",
+    "pdf": "themes/pdf_templates.pdf",
+    "title": "PDF",
+    "translation_key": "themes/pdf_templates",
+    "translations": {}
+  },
+  {
+    "href": "themes/templating.html",
+    "language": null,
+    "meta": {},
+    "path": "themes/templating.typ",
+    "pdf": "themes/templating.pdf",
+    "title": "Templating",
+    "translation_key": "themes/templating",
+    "translations": {}
+  },
+  {
+    "href": "themes/themes.html",
+    "language": null,
+    "meta": {
+      "title": "Themes"
+    },
+    "path": "themes/themes.typ",
+    "pdf": "themes/themes.pdf",
+    "title": "Themes",
+    "translation_key": "themes/themes",
+    "translations": {}
+  },
+  {
+    "href": "tips.html",
+    "language": null,
+    "meta": {},
+    "path": "tips.typ",
+    "pdf": "tips.pdf",
+    "title": "Tips & tricks",
+    "translation_key": "tips",
+    "translations": {}
+  },
+  {
+    "href": "websites/configuration.html",
+    "language": null,
+    "meta": {
+      "title": "Configuration"
+    },
+    "path": "websites/configuration.typ",
+    "pdf": "websites/configuration.pdf",
+    "title": "Configuration",
+    "translation_key": "websites/configuration",
+    "translations": {}
+  },
+  {
+    "href": "websites/custom-elements.html",
+    "language": null,
+    "meta": {
+      "pdf": false,
+      "title": "Custom elements"
+    },
+    "path": "websites/custom-elements.typ",
+    "pdf": null,
+    "title": "Custom elements",
+    "translation_key": "websites/custom-elements",
+    "translations": {}
+  },
+  {
+    "href": "websites/elements.html",
+    "language": null,
+    "meta": {
+      "pdf": false,
+      "title": "Elements"
+    },
+    "path": "websites/elements.typ",
+    "pdf": null,
+    "title": "Elements",
+    "translation_key": "websites/elements",
+    "translations": {}
+  },
+  {
+    "href": "websites/health.html",
+    "language": null,
+    "meta": {
+      "title": "Health"
+    },
+    "path": "websites/health.typ",
+    "pdf": "websites/health.pdf",
+    "title": "Health",
+    "translation_key": "websites/health",
+    "translations": {}
+  },
+  {
+    "href": "websites/multilingual.html",
+    "language": null,
+    "meta": {
+      "title": "Multilingual"
+    },
+    "path": "websites/multilingual.typ",
+    "pdf": "websites/multilingual.pdf",
+    "title": "Multilingual",
+    "translation_key": "websites/multilingual",
+    "translations": {}
+  },
+  {
+    "href": "websites/navigation.html",
+    "language": null,
+    "meta": {
+      "title": "Navigation"
+    },
+    "path": "websites/navigation.typ",
+    "pdf": "websites/navigation.pdf",
+    "title": "Navigation",
+    "translation_key": "websites/navigation",
+    "translations": {}
+  },
+  {
+    "href": "websites/pages.html",
+    "language": null,
+    "meta": {
+      "title": "Pages"
+    },
+    "path": "websites/pages.typ",
+    "pdf": "websites/pages.pdf",
+    "title": "Pages",
+    "translation_key": "websites/pages",
+    "translations": {}
+  },
+  {
+    "href": "websites/websites.html",
+    "language": null,
+    "meta": {
+      "title": "Overview"
+    },
+    "path": "websites/websites.typ",
+    "pdf": "websites/websites.pdf",
+    "title": "Overview",
+    "translation_key": "websites/websites",
+    "translations": {}
+  }
+]

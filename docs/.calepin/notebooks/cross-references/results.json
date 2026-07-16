@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "calepin_version": "0.0.31",
+  "input": "notebooks/cross-references.typ",
+  "chunks": {
+    "fig-cross-scatter": {
+      "label": "fig-cross-scatter",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Miles per gallon and horsepower",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/cross-references/figures/fig-cross-scatter.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-cross-scatter"
+        }
+      ]
+    },
+    "fig-cross-qmd": {
+      "label": "fig-cross-qmd",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Distribution of car weights",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/cross-references/figures/fig-cross-qmd.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-cross-qmd"
+        }
+      ]
+    },
+    "fig-cross-trailing": {
+      "label": "fig-cross-trailing",
+      "engine": "r",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Speed and stopping distance",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/cross-references/figures/fig-cross-trailing.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-cross-trailing"
+        }
+      ]
+    }
+  }
+}

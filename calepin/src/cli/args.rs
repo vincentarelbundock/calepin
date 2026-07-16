@@ -242,12 +242,12 @@ pub struct CommonArgs {
     #[arg(long)]
     pub timeout: Option<u64>,
 
-    /// Override a document parameter as `key=value` (repeatable).
+    /// Override a Calepin config value as `key=value` (repeatable).
     ///
-    /// Takes precedence over `calepin.setup(params: ...)`, so the same document
-    /// can render with different values without editing the source.
-    #[arg(short = 'P', long = "param", value_name = "KEY=VALUE")]
-    pub params: Vec<String>,
+    /// Uses dotted paths for nested config, such as `theme=./theme`,
+    /// `vars.region=CA`, or `toc.enabled=false`.
+    #[arg(long = "set", value_name = "KEY=VALUE")]
+    pub sets: Vec<String>,
 }
 
 /// Print a yellow warning to stderr.
@@ -376,33 +376,36 @@ mod tests {
     }
 
     #[test]
-    fn test_compile_param_overrides() {
+    fn test_compile_set_overrides() {
         let cli = Cli::try_parse_from([
             "calepin",
             "compile",
             "paper.typ",
-            "-P",
-            "region=NY",
-            "--param",
-            "min_count=25",
+            "--set",
+            "vars.region=NY",
+            "--set",
+            "vars.min_count=25",
         ])
         .unwrap();
 
         match cli.command {
             Command::Compile(args) => {
-                assert_eq!(args.common.params, vec!["region=NY", "min_count=25"]);
+                assert_eq!(
+                    args.common.sets,
+                    vec!["vars.region=NY", "vars.min_count=25"]
+                );
             }
             other => panic!("expected compile command, got {other:?}"),
         }
     }
 
     #[test]
-    fn test_watch_param_overrides() {
-        let cli =
-            Cli::try_parse_from(["calepin", "watch", "paper.typ", "-P", "region=CA"]).unwrap();
+    fn test_watch_set_overrides() {
+        let cli = Cli::try_parse_from(["calepin", "watch", "paper.typ", "--set", "theme=academic"])
+            .unwrap();
         match cli.command {
             Command::Watch(args) => {
-                assert_eq!(args.common.params, vec!["region=CA"]);
+                assert_eq!(args.common.sets, vec!["theme=academic"]);
             }
             other => panic!("expected watch command, got {other:?}"),
         }

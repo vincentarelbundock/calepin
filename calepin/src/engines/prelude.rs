@@ -1,24 +1,25 @@
-// Generate language-native literal bindings for document-level parameters.
+// Generate language-native literal bindings for document-level variables.
 //
-// Calepin turns the parameters declared in `calepin.setup(params: (...))` into a
-// small prelude that is evaluated once, at engine startup, so user code can read
-// a `params` value without any string interpolation. The bindings are emitted as
-// real source in each language (no JSON parser dependency on the runtime side),
-// from the already-validated `serde_json::Value` Calepin holds.
+// Calepin turns the variables declared in `calepin.setup(vars: (...))`, merged
+// with `[vars]` config and CLI `--set vars.*` overrides, into a small prelude that is
+// evaluated once, at engine startup, so user code can read a `vars` value
+// without any string interpolation. The bindings are emitted as real source in
+// each language (no JSON parser dependency on the runtime side), from the
+// already-validated `serde_json::Value` Calepin holds.
 //
 // Only the v1 leaf types reach here (none, bool, int, float, str, array,
 // dictionary); unsupported Typst values are rejected earlier, on the Typst side.
 
 use serde_json::Value;
 
-/// R prelude: `params <- list("alpha" = 0.1, ...)`.
-pub fn r_prelude(name: &str, params: &Value) -> String {
-    format!("{name} <- {}", r_value(params))
+/// R prelude: `vars <- list("alpha" = 0.1, ...)`.
+pub fn r_prelude(name: &str, vars: &Value) -> String {
+    format!("{name} <- {}", r_value(vars))
 }
 
-/// Python prelude: `params = {"alpha": 0.1, ...}`.
-pub fn python_prelude(name: &str, params: &Value) -> String {
-    format!("{name} = {}", python_value(params))
+/// Python prelude: `vars = {"alpha": 0.1, ...}`.
+pub fn python_prelude(name: &str, vars: &Value) -> String {
+    format!("{name} = {}", python_value(vars))
 }
 
 fn r_value(value: &Value) -> String {
@@ -55,7 +56,7 @@ fn r_number(value: &Value) -> String {
 }
 
 /// JSON arrays become R vectors when every element is a non-null scalar of the
-/// same kind (so `params$years` is a numeric vector); otherwise a list, which is
+/// same kind (so `vars$years` is a numeric vector); otherwise a list, which is
 /// the only R container that can hold nulls, nested values, or mixed types.
 fn r_array(items: &[Value]) -> String {
     let rendered: Vec<String> = items.iter().map(r_value).collect();
@@ -130,12 +131,9 @@ mod tests {
 
     #[test]
     fn r_prelude_binds_named_list() {
-        let params = json!({ "alpha": 0.1, "label": "baseline" });
-        let out = r_prelude("params", &params);
-        assert_eq!(
-            out,
-            r#"params <- list("alpha" = 0.1, "label" = "baseline")"#
-        );
+        let vars = json!({ "alpha": 0.1, "label": "baseline" });
+        let out = r_prelude("vars", &vars);
+        assert_eq!(out, r#"vars <- list("alpha" = 0.1, "label" = "baseline")"#);
     }
 
     #[test]
@@ -207,9 +205,9 @@ mod tests {
     fn python_prelude_binds_dict() {
         // Object keys are emitted in serde_json's deterministic (sorted) order;
         // order is irrelevant for a dict accessed by key.
-        let params = json!({ "alpha": 0.1, "active": true });
-        let out = python_prelude("params", &params);
-        assert_eq!(out, r#"params = {"active": True, "alpha": 0.1}"#);
+        let vars = json!({ "alpha": 0.1, "active": true });
+        let out = python_prelude("vars", &vars);
+        assert_eq!(out, r#"vars = {"active": True, "alpha": 0.1}"#);
     }
 
     #[test]

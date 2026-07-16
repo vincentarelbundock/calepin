@@ -142,6 +142,10 @@ mod tests {
         let dir = parent.join(name);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join(entry_file);
+        let manifest_path = dir.join("theme.toml");
+        if !manifest_path.exists() {
+            std::fs::write(manifest_path, "extends = \"typst\"\n").unwrap();
+        }
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).unwrap();
         }
@@ -492,17 +496,11 @@ mod tests {
             styles: Vec::new(),
             scripts: Vec::new(),
         };
-        let mut vars = BTreeMap::new();
-        vars.insert(
-            "course".to_string(),
-            toml::Value::String("Econ 101".to_string()),
-        );
-        vars.insert(
-            "semester".to_string(),
-            toml::Value::String("Fall 2026".to_string()),
-        );
         let site_context = SiteContextInput {
-            vars,
+            vars: serde_json::json!({
+                "course": "Econ 101",
+                "semester": "Fall 2026",
+            }),
             ..SiteContextInput::default()
         };
 
@@ -803,6 +801,82 @@ mod tests {
             assert!(
                 themed.contains(r#"<span>© 2026 Example</span>"#),
                 "{theme_name}: missing footer text"
+            );
+        }
+    }
+
+    #[test]
+    fn bundled_themes_skip_linkless_sidebar_items_in_page_navigation() {
+        let site_context = SiteContextInput {
+            sidebar: vec![
+                SiteNavEntry {
+                    href: "intro.html".to_string(),
+                    label: "Intro".to_string(),
+                    label_html: "Intro".to_string(),
+                    active: false,
+                },
+                SiteNavEntry {
+                    href: String::new(),
+                    label: "Language".to_string(),
+                    label_html: "Language".to_string(),
+                    active: false,
+                },
+                SiteNavEntry {
+                    href: "syntax.html".to_string(),
+                    label: "Syntax".to_string(),
+                    label_html: "Syntax".to_string(),
+                    active: true,
+                },
+                SiteNavEntry {
+                    href: String::new(),
+                    label: "Appendix".to_string(),
+                    label_html: "Appendix".to_string(),
+                    active: false,
+                },
+                SiteNavEntry {
+                    href: "api.html".to_string(),
+                    label: "API".to_string(),
+                    label_html: "API".to_string(),
+                    active: false,
+                },
+            ],
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            ..SiteContextInput::default()
+        };
+
+        for selection in [ThemeSelection::Default, ThemeSelection::Builtin("academic")] {
+            let entry = entry_for(&selection, HtmlScope::Site);
+            let theme_name = entry.theme_name.clone();
+            let themed = theme::apply_html_theme(
+                SAMPLE_HTML,
+                Some(&entry),
+                &HtmlSyntaxTheme::builtin(),
+                None,
+                None,
+                Some(&site_context),
+            )
+            .unwrap();
+
+            assert!(
+                themed.contains(
+                    r#"<a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="intro.html" role="button">"#
+                ),
+                "{theme_name}: previous page navigation should use the previous linked sidebar item"
+            );
+            assert!(
+                themed.contains(
+                    r#"<a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="api.html" role="button">"#
+                ),
+                "{theme_name}: next page navigation should use the next linked sidebar item"
+            );
+            assert!(
+                !themed.contains(r#"<span class="calepin-website-page-nav-title">Language</span>"#),
+                "{theme_name}: previous page navigation should skip linkless sidebar labels"
+            );
+            assert!(
+                !themed.contains(r#"<span class="calepin-website-page-nav-title">Appendix</span>"#),
+                "{theme_name}: next page navigation should skip linkless sidebar labels"
             );
         }
     }
@@ -1127,6 +1201,10 @@ mod tests {
             sidebar_sections: vec![sidebar_section("Guide", "guide.html", false)],
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
+            // Academic's built-in default is opt-in (off); the TOC behavior
+            // itself is covered by toc_* tests, this test is about menu/sidebar
+            // gating only.
+            toc_depth: Some(0),
             ..SiteContextInput::default()
         };
         let html = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1><h2>Section</h2></body></html>";
@@ -1149,6 +1227,31 @@ mod tests {
     }
 
     #[test]
+    fn academic_site_theme_shows_toc_when_enabled() {
+        let site_context = SiteContextInput {
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            toc_depth: Some(3),
+            ..SiteContextInput::default()
+        };
+        let html = "<html><head><title>Standard Title</title></head><body><h1>Standard Title</h1><h2>Section</h2></body></html>";
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            html,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains("On this page"));
+        assert!(themed.contains(r##"<li class="level-2"><a href="#section">Section</a></li>"##));
+    }
+
+    #[test]
     fn academic_site_theme_centers_text_and_inherits_shared_code_styles() {
         let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
         let css = theme_stylesheet(&entry, &HtmlSyntaxTheme::builtin());
@@ -1163,8 +1266,8 @@ mod tests {
   display: contents;"#
         ));
         assert!(css.contains(
-            r#".academic-page-nav-link-next {
-  grid-column: 2;"#
+            r#".academic-nav {
+  display: flex;"#
         ));
         assert!(css.contains("pre > code"));
         assert!(css.contains("calepin-copy-code"));
@@ -1238,6 +1341,48 @@ mod tests {
     }
 
     #[test]
+    fn bundled_website_theme_renders_sidebar_subheadings_without_links() {
+        let site_context = SiteContextInput {
+            sidebar_fold: false,
+            sidebar_sections: vec![SiteNavSection {
+                title: Some("Reference".to_string()),
+                active: true,
+                items: vec![
+                    SiteNavEntry {
+                        href: String::new(),
+                        label: "Language".to_string(),
+                        label_html: "Language".to_string(),
+                        active: false,
+                    },
+                    SiteNavEntry {
+                        href: "syntax.html".to_string(),
+                        label: "Syntax".to_string(),
+                        label_html: "Syntax".to_string(),
+                        active: true,
+                    },
+                ],
+            }],
+            ..Default::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains(r#"<li class="calepin-website-sidebar-subheading">"#));
+        assert!(themed.contains(r#"<span>Language</span>"#));
+        assert!(!themed.contains(r#"<a href="" aria-label="Language""#));
+        assert!(themed.contains(r#"<a href="syntax.html" aria-label="Syntax""#));
+    }
+
+    #[test]
     fn bundled_website_theme_script_closes_other_sidebar_sections() {
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
         let script = theme_scripts(&entry);
@@ -1296,7 +1441,7 @@ mod tests {
 
         assert!(!themed.contains(r#"<link rel="stylesheet" href="../.calepin/10_pico.css">"#));
         assert!(themed.contains("<style>"));
-        assert!(themed.contains("--calepin-code-border"));
+        assert!(themed.contains("--calepin-syntax-border"));
         assert!(themed.contains("--calepin-topbar-height"));
     }
 

@@ -137,10 +137,11 @@ pub struct SetupDefaults {
     pub fig_align: Option<Value>,
     pub fig_responsive: Option<bool>,
     pub fenced_chunks: FencedChunks,
-    /// Document-level parameters from `calepin.setup(params: (...))`, kept as a
-    /// JSON object. Injected once per engine so chunks can read a `params` value.
+    /// Document-level variables from `calepin.setup(vars: (...))`, kept as a
+    /// JSON object. Merged with `[vars]` config and CLI `--set vars.*` overrides, then
+    /// injected once per engine so chunks can read a `vars` value.
     #[serde(default)]
-    pub params: Value,
+    pub vars: Value,
     /// Document-level theme from `calepin.setup(theme: ...)`: a builtin name, a
     /// project-relative path, or `"typst"` for raw Typst output.
     #[serde(default)]
@@ -167,7 +168,7 @@ impl Default for SetupDefaults {
             fig_align: Some(Value::String("center".to_string())),
             fig_responsive: Some(true),
             fenced_chunks: FencedChunks::All,
-            params: Value::Object(serde_json::Map::new()),
+            vars: Value::Object(serde_json::Map::new()),
             theme: None,
         }
     }

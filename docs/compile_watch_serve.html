@@ -139,7 +139,7 @@
 
   /* Typography */
   --calepin-font-body: var(--pico-font-family);
-  --calepin-font-heading: Georgia, "Times New Roman", serif;
+  --calepin-font-heading: "GFS Didot", "Didot HTF", Didot, Georgia, "Times New Roman", serif;
   --calepin-font-mono: var(--pico-font-family-monospace);
   --calepin-font-size: 100%;
   --calepin-font-size-sm: 0.875rem;
@@ -2444,6 +2444,49 @@ a:has(.calepin-nav-icon) {
   gap: 0.35rem;
 }
 
+/* ------------------------------------------------------------- Callouts */
+
+.calepin-callout {
+  --callout-accent: var(--calepin-callout-note-color);
+  margin: var(--calepin-block-gap, 1rem) 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--callout-accent);
+  border-left-width: 0.4rem;
+  border-radius: var(--calepin-radius-md, 0.5rem);
+  background: color-mix(in srgb, var(--callout-accent) 10%, var(--calepin-color-background));
+  color: var(--calepin-color-text);
+}
+
+.calepin-callout-title {
+  margin-bottom: 0.4rem;
+  color: var(--callout-accent);
+  font-weight: 700;
+}
+
+.calepin-callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+.calepin-callout-note {
+  --callout-accent: var(--calepin-callout-note-color);
+}
+
+.calepin-callout-tip {
+  --callout-accent: var(--calepin-callout-tip-color);
+}
+
+.calepin-callout-important {
+  --callout-accent: var(--calepin-callout-important-color);
+}
+
+.calepin-callout-caution {
+  --callout-accent: var(--calepin-callout-caution-color);
+}
+
+.calepin-callout-warning {
+  --callout-accent: var(--calepin-callout-warning-color);
+}
+
 /* ------------------------------------------------------ Page navigation */
 
 .calepin-website-page-nav {
@@ -3376,6 +3419,21 @@ html:not([data-theme]) {
   color: inherit;
 }
 
+.calepin-website-sidebar-subheading {
+  margin: 0.85rem 0 0.25rem;
+  padding-inline: 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: var(--calepin-color-muted);
+}
+
+.calepin-website-sidebar-subheading:first-child {
+  margin-top: 0;
+}
+
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
 .calepin-website-sidebar nav p,
 .calepin-website-toc-title {
@@ -3626,7 +3684,7 @@ html:not([data-theme]) {
 }
 
 .hero-subtitle-text {
-  font-family: "GFS Didot", Didot, Georgia, "Times New Roman", serif;
+  font-family: var(--calepin-font-heading);
 }
 
 .hero-typst-logo {
@@ -4069,7 +4127,7 @@ html:not([data-theme]) {
     <script src="pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Compile, watch, serve])\n\n#title() <compile-watch-serve>\n\n= Compile\n<compile>\n\nUse `calepin compile` when you want to execute code chunks and render a\ndocument. The command line shape is intentionally the same as\n`typst compile`: same output-first/format-driven arguments, with `--`\npass-through for Typst flags, plus Calepin preprocessing.\n\n```sh\ncalepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n```\n\nCompile a website by pointing `calepin compile` at a source directory\nthat contains `calepin.toml`:\n\n```sh\ncalepin compile docs docs\ncalepin compile my_site public\n```\n\nArguments after `--` are forwarded to Typst, so project-specific Typst\nflags can stay in the same command.\n\n```sh\n# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n```\n\n= Watch\n<watch>\n\nUse `calepin watch` while editing. It watches your source for changes,\nre-runs preprocessing, and delegates recompilation and previewing to\n`typst watch`. The command form is the same as `typst watch`: same\npositional arguments and pass-through flags, with Calepin running its\npreprocessing step first.\n\n```sh\ncalepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n```\n\nThe default output format is PDF. Choose another format with `--format`,\nor let the output extension select the format.\n\nArguments after `--` are passed through to `typst watch`. Typst's\n`--open` flag opens the rendered output in the operating system's\ndefault viewer, and Typst's `--port` flag chooses the HTML preview port.\n\n```sh\ncalepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n```\n\nWatch a website directory by passing the source and output directories:\n\n```sh\ncalepin watch docs docs\ncalepin watch my_site public\n```\n\nAdd `--serve` to run the local server while watching a website. It uses\nthe same `--host`, `--port`, and `--open` options as `calepin serve`.\n\n```sh\ncalepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n```\n\n== PDF viewer auto-refresh\n<pdf-viewer-auto-refresh>\n\nSome PDF viewers do not automatically refresh a document when it is\nregenerated on disk. For example, macOS Preview may keep showing an\nolder PDF until the window is focused, the file is reopened, or the\napplication is restarted.\n\nFor smoother live preview, use a PDF viewer that reloads the file when\nit changes. On macOS, Skim is a good option. Other platforms have\nsimilar auto-reloading viewers, which are useful when working with tools\nthat repeatedly rebuild PDFs.\n\n= Serve\n<serve>\n\nUse `calepin serve` to preview a compiled website directory locally.\nThis is useful for checking routing, assets, Pagefind search, and links\nafter a static build.\n\n```sh\ncalepin serve docs\ncalepin serve public\n```\n\nBy default, Calepin uses `127.0.0.1` and the first available port from\n8000. Set the host and port explicitly when you need a stable preview\nURL:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\nOpen the served website in your default browser:\n\n```sh\ncalepin serve docs --open\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Compile, watch, serve])\n\n#title() <compile-watch-serve>\n\n= Compile\n<compile>\n\nUse `calepin compile` when you want to execute code chunks and render a\ndocument. The command line shape is intentionally the same as\n`typst compile`: same output-first/format-driven arguments, with `--`\npass-through for Typst flags, plus Calepin preprocessing.\n\n```sh\ncalepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n```\n\nCompile a website by pointing `calepin compile` at a source directory\nthat contains `calepin.toml`:\n\n```sh\ncalepin compile docs docs\ncalepin compile my_site public\n```\n\nArguments after `--` are forwarded to Typst, so project-specific Typst\nflags can stay in the same command.\n\n```sh\n# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n```\n\n== Progress output\n<progress-output>\n\nCalepin shows animated progress when the terminal supports it, using the\nsame terminal detection as the underlying progress renderer. When output\nis redirected, the terminal is not interactive, or the terminal reports\nlimited capabilities, Calepin falls back to plain status lines.\n\nSome terminal panes and command runners report themselves as interactive\nbut render spinner redraws as separate lines. Set `CALEPIN_PROGRESS` to\n`plain` to disable animated progress while keeping status messages:\n\n```sh\nCALEPIN_PROGRESS=plain calepin compile paper.typ\n```\n\nIn PowerShell:\n\n```powershell\n$env:CALEPIN_PROGRESS = \"plain\"\ncalepin compile paper.typ\n```\n\n= Watch\n<watch>\n\nUse `calepin watch` while editing. It watches your source for changes,\nre-runs preprocessing, and delegates recompilation and previewing to\n`typst watch`. The command form is the same as `typst watch`: same\npositional arguments and pass-through flags, with Calepin running its\npreprocessing step first.\n\n```sh\ncalepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n```\n\nThe default output format is PDF. Choose another format with `--format`,\nor let the output extension select the format.\n\nArguments after `--` are passed through to `typst watch`. Typst's\n`--open` flag opens the rendered output in the operating system's\ndefault viewer, and Typst's `--port` flag chooses the HTML preview port.\n\n```sh\ncalepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n```\n\nWatch a website directory by passing the source and output directories:\n\n```sh\ncalepin watch docs docs\ncalepin watch my_site public\n```\n\nAdd `--serve` to run the local server while watching a website. It uses\nthe same `--host`, `--port`, and `--open` options as `calepin serve`.\n\n```sh\ncalepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n```\n\n== PDF viewer auto-refresh\n<pdf-viewer-auto-refresh>\n\nSome PDF viewers do not automatically refresh a document when it is\nregenerated on disk. For example, macOS Preview may keep showing an\nolder PDF until the window is focused, the file is reopened, or the\napplication is restarted.\n\nFor smoother live preview, use a PDF viewer that reloads the file when\nit changes. On macOS, Skim is a good option. Other platforms have\nsimilar auto-reloading viewers, which are useful when working with tools\nthat repeatedly rebuild PDFs.\n\n= Serve\n<serve>\n\nUse `calepin serve` to preview a compiled website directory locally.\nThis is useful for checking routing, assets, Pagefind search, and links\nafter a static build.\n\n```sh\ncalepin serve docs\ncalepin serve public\n```\n\nBy default, Calepin uses `127.0.0.1` and the first available port from\n8000. Set the host and port explicitly when you need a stable preview\nURL:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\nOpen the served website in your default browser:\n\n```sh\ncalepin serve docs --open\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4156,11 +4214,17 @@ html:not([data-theme]) {
                         <summary>Getting started</summary>
                         <ul>
                             
-                            <li><a href="getting-started/install.html" aria-label="Install">Install</a></li>
                             
-                            <li><a href="getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+<li class="calepin-website-sidebar-link"><a href="getting-started/install.html" aria-label="Install">Install</a></li>
+
                             
-                            <li><a href="compile_watch_serve.html" aria-label="Compile, watch, serve" class="active" aria-current="page">Compile, watch, serve</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="getting-started/config.html" aria-label="Configuration">Configuration</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="compile_watch_serve.html" aria-label="Compile, watch, serve" class="active" aria-current="page">Compile, watch, serve</a></li>
+
                             
                         </ul>
                     </details>
@@ -4173,17 +4237,29 @@ html:not([data-theme]) {
                         <summary>Notebooks</summary>
                         <ul>
                             
-                            <li><a href="notebooks/notebooks.html" aria-label="Notebooks">Notebooks</a></li>
                             
-                            <li><a href="notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
+<li class="calepin-website-sidebar-link"><a href="notebooks/notebooks.html" aria-label="Notebooks">Notebooks</a></li>
+
                             
-                            <li><a href="notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
                             
-                            <li><a href="notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
+<li class="calepin-website-sidebar-link"><a href="notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
+
                             
-                            <li><a href="notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
                             
-                            <li><a href="notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
+<li class="calepin-website-sidebar-link"><a href="notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
+
                             
                         </ul>
                     </details>
@@ -4196,19 +4272,33 @@ html:not([data-theme]) {
                         <summary>Websites</summary>
                         <ul>
                             
-                            <li><a href="websites/websites.html" aria-label="Overview">Overview</a></li>
                             
-                            <li><a href="websites/configuration.html" aria-label="Configuration">Configuration</a></li>
+<li class="calepin-website-sidebar-link"><a href="websites/websites.html" aria-label="Overview">Overview</a></li>
+
                             
-                            <li><a href="websites/navigation.html" aria-label="Navigation">Navigation</a></li>
                             
-                            <li><a href="websites/pages.html" aria-label="Pages">Pages</a></li>
+<li class="calepin-website-sidebar-link"><a href="websites/configuration.html" aria-label="Configuration">Configuration</a></li>
+
                             
-                            <li><a href="websites/multilingual.html" aria-label="Multilingual">Multilingual</a></li>
                             
-                            <li><a href="websites/elements.html" aria-label="Elements">Elements</a></li>
+<li class="calepin-website-sidebar-link"><a href="websites/navigation.html" aria-label="Navigation">Navigation</a></li>
+
                             
-                            <li><a href="websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="websites/pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="websites/multilingual.html" aria-label="Multilingual">Multilingual</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="websites/elements.html" aria-label="Elements">Elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+
                             
                         </ul>
                     </details>
@@ -4221,7 +4311,9 @@ html:not([data-theme]) {
                         <summary>Slides</summary>
                         <ul>
                             
-                            <li><a href="slides/touying.html" aria-label="Touying">Touying</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="slides/touying.html" aria-label="Touying">Touying</a></li>
+
                             
                         </ul>
                     </details>
@@ -4234,15 +4326,29 @@ html:not([data-theme]) {
                         <summary>Themes</summary>
                         <ul>
                             
-                            <li><a href="themes/themes.html" aria-label="Themes">Themes</a></li>
                             
-                            <li><a href="themes/pdf_templates.html" aria-label="PDF templates">PDF templates</a></li>
+<li class="calepin-website-sidebar-link"><a href="themes/themes.html" aria-label="Themes">Themes</a></li>
+
                             
-                            <li><a href="themes/html_templates.html" aria-label="HTML templates">HTML templates</a></li>
                             
-                            <li><a href="themes/css.html" aria-label="CSS">CSS</a></li>
+<li class="calepin-website-sidebar-link"><a href="themes/templating.html" aria-label="Templating">Templating</a></li>
+
                             
-                            <li><a href="themes/case_studies.html" aria-label="Case studies">Case studies</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="themes/html_templates.html" aria-label="HTML">HTML</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="themes/pdf_templates.html" aria-label="PDF">PDF</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="themes/css.html" aria-label="CSS">CSS</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="themes/case_studies.html" aria-label="Case studies">Case studies</a></li>
+
                             
                         </ul>
                     </details>
@@ -4255,11 +4361,17 @@ html:not([data-theme]) {
                         <summary>More</summary>
                         <ul>
                             
-                            <li><a href="tips.html" aria-label="Tips &amp; tricks">Tips &amp; tricks</a></li>
                             
-                            <li><a href="websites/health.html" aria-label="Health">Health</a></li>
+<li class="calepin-website-sidebar-link"><a href="tips.html" aria-label="Tips &amp; tricks">Tips &amp; tricks</a></li>
+
                             
-                            <li><a href="reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="websites/health.html" aria-label="Health">Health</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
+
                             
                         </ul>
                     </details>
@@ -4283,7 +4395,9 @@ html:not([data-theme]) {
 
 <span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> set path to font directory</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile paper.typ</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> --font-path fonts</span>
-</code></pre></div><h2 id="watch">Watch</h2><p>Use <code>calepin watch</code> while editing. It watches your source for changes, re-runs preprocessing, and delegates recompilation and previewing to <code>typst watch</code>. The command form is the same as <code>typst watch</code>: same positional arguments and pass-through flags, with Calepin running its preprocessing step first.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ</span>
+</code></pre></div><h3 id="progress-output">Progress output</h3><p>Calepin shows animated progress when the terminal supports it, using the same terminal detection as the underlying progress renderer. When output is redirected, the terminal is not interactive, or the terminal reports limited capabilities, Calepin falls back to plain status lines.</p><p>Some terminal panes and command runners report themselves as interactive but render spinner redraws as separate lines. Set <code>CALEPIN_PROGRESS</code> to <code>plain</code> to disable animated progress while keeping status messages:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-1">CALEPIN_PROGRESS</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">plain</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile paper.typ</span>
+</code></pre></div><p>In PowerShell:</p><div class="sourceCode" data-lang="powershell"><pre><code data-lang="powershell">$env:CALEPIN_PROGRESS = "plain"
+calepin compile paper.typ</code></pre></div><h2 id="watch">Watch</h2><p>Use <code>calepin watch</code> while editing. It watches your source for changes, re-runs preprocessing, and delegates recompilation and previewing to <code>typst watch</code>. The command form is the same as <code>typst watch</code>: same positional arguments and pass-through flags, with Calepin running its preprocessing step first.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> html</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ </span><span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">p</span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-1">.svg</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> svg</span>
 </code></pre></div><p>The default output format is PDF. Choose another format with <code>--format</code>, or let the output extension select the format.</p><p>Arguments after <code>--</code> are passed through to <code>typst watch</code>. Typst’s <code>--open</code> flag opens the rendered output in the operating system’s default viewer, and Typst’s <code>--port</code> flag chooses the HTML preview port.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch example.typ</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> --open</span>
@@ -4306,6 +4420,8 @@ html:not([data-theme]) {
                     
                     <li class="level-2"><a href="#compile">Compile</a></li>
                     
+                    <li class="level-3"><a href="#progress-output">Progress output</a></li>
+                    
                     <li class="level-2"><a href="#watch">Watch</a></li>
                     
                     <li class="level-3"><a href="#pdf-viewer-auto-refresh">PDF viewer auto-refresh</a></li>
@@ -4322,131 +4438,188 @@ html:not([data-theme]) {
     
         
         
-            
         
-    
-        
-        
-            
-        
-    
-        
-            
             
         
         
     
         
-            
-            
         
         
             
+        
         
     
         
         
             
+            
+        
+        
         
     
         
         
             
-        
-    
+            
         
         
             
         
-    
-        
-        
-            
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
         
     
         
         
+        
             
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
         
     
 

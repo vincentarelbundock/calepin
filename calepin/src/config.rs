@@ -15,6 +15,17 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
 #[cfg(not(windows))]
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 
+/// Site-wide or per-page on-page table-of-contents settings (HTML website
+/// builds only). `enabled`/`depth` are independently optional so a page can
+/// override just one of them and inherit the other from `calepin.toml` or the
+/// theme's built-in default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(default)]
+pub struct TocConfig {
+    pub enabled: Option<bool>,
+    pub depth: Option<usize>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CalepinConfig {
     pub executables: ExecutablePaths,
@@ -24,12 +35,23 @@ pub struct CalepinConfig {
     /// Directory (relative to project root) for generated Calepin assets.
     /// `None` means the built-in default `.calepin`.
     pub asset_dir: Option<PathBuf>,
+    pub toc: TocConfig,
 }
 
 impl CalepinConfig {
     pub fn load(root: &Path, config_path: Option<&Path>) -> Result<Self> {
+        Self::load_with_overrides(root, config_path, &[])
+    }
+
+    pub fn load_with_overrides(
+        root: &Path,
+        config_path: Option<&Path>,
+        overrides: &[String],
+    ) -> Result<Self> {
         let Some(path) = config_path else {
-            return Ok(Self::default_for_root(root));
+            let mut value = toml::Value::Table(toml::map::Map::new());
+            apply_config_overrides(&mut value, overrides)?;
+            return Self::from_value(root, root, value, "CLI overrides");
         };
         let path = resolve_config_path(path)?;
         if !path.exists() {
@@ -43,35 +65,36 @@ impl CalepinConfig {
         }
         let contents = std::fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
-        let raw_value: toml::Value = toml::from_str(&contents)
+        let mut raw_value: toml::Value = toml::from_str(&contents)
             .with_context(|| format!("failed to parse {}", path.display()))?;
+        apply_config_overrides(&mut raw_value, overrides)?;
+        let config_dir = path.parent().unwrap_or(root).to_path_buf();
+        Self::from_value(root, &config_dir, raw_value, &path.display().to_string())
+    }
+
+    fn from_value(
+        root: &Path,
+        config_dir: &Path,
+        raw_value: toml::Value,
+        source: &str,
+    ) -> Result<Self> {
         reject_removed_asset_dir_keys(&raw_value)?;
         reject_removed_styles_key(&raw_value)?;
+        reject_disallowed_config_keys(&raw_value)?;
+        reject_non_table_vars(&raw_value)?;
         let raw: RawCalepinConfig = raw_value
             .try_into()
-            .with_context(|| format!("failed to parse {}", path.display()))?;
-        // Relative paths written in the config resolve against the config
-        // file's own directory, so a config can live anywhere and still point
-        // at its siblings without `../` gymnastics.
-        let config_dir = path.parent().unwrap_or(root).to_path_buf();
+            .with_context(|| format!("failed to parse {source}"))?;
         let asset_dir = resolve_asset_dir(raw.asset_dir)?;
+        let toc = validate_toc_config(raw.toc)?;
         Ok(Self {
             executables: ExecutablePaths::from_raw(root, &config_dir, raw.executables),
-            config_dir,
+            config_dir: config_dir.to_path_buf(),
             theme: raw.theme,
             vars: raw.vars,
             asset_dir,
+            toc,
         })
-    }
-
-    fn default_for_root(root: &Path) -> Self {
-        Self {
-            executables: ExecutablePaths::from_raw(root, root, RawExecutablePaths::default()),
-            config_dir: root.to_path_buf(),
-            theme: None,
-            vars: BTreeMap::new(),
-            asset_dir: None,
-        }
     }
 
     pub fn theme_selection(&self) -> Result<Option<crate::theme::ThemeSelection>> {
@@ -83,6 +106,125 @@ impl CalepinConfig {
             )?)),
         }
     }
+}
+
+pub fn apply_config_overrides(value: &mut toml::Value, overrides: &[String]) -> Result<()> {
+    for override_entry in overrides {
+        apply_config_override(value, override_entry)?;
+    }
+    Ok(())
+}
+
+pub fn config_var_overrides(
+    overrides: &[String],
+) -> Result<serde_json::Map<String, serde_json::Value>> {
+    let mut value = toml::Value::Table(toml::map::Map::new());
+    for entry in overrides {
+        let Some((path, _)) = entry.split_once('=') else {
+            continue;
+        };
+        let path = path.trim();
+        if path == "vars" || path.starts_with("vars.") {
+            apply_config_override(&mut value, entry)?;
+        }
+    }
+    let Some(vars) = value.get("vars") else {
+        return Ok(serde_json::Map::new());
+    };
+    let serde_json::Value::Object(map) = serde_json::to_value(vars)? else {
+        return Err(anyhow!("invalid --set `vars`: expected a table"));
+    };
+    Ok(map)
+}
+
+fn apply_config_override(value: &mut toml::Value, entry: &str) -> Result<()> {
+    let (raw_path, raw_value) = entry
+        .split_once('=')
+        .ok_or_else(|| anyhow!("invalid --set `{entry}` (expected `key=value`)"))?;
+    let path = parse_override_path(raw_path)?;
+    let override_value = parse_override_value(raw_value.trim());
+    insert_override_value(value, path, override_value, entry)
+}
+
+fn parse_override_path(raw_path: &str) -> Result<Vec<&str>> {
+    let parts: Vec<&str> = raw_path
+        .split('.')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect();
+    if parts.is_empty() {
+        return Err(anyhow!("invalid --set `{raw_path}` (empty key)"));
+    }
+    validate_override_root(parts[0])?;
+    Ok(parts)
+}
+
+fn validate_override_root(root: &str) -> Result<()> {
+    const ALLOWED_ROOTS: &[&str] = &[
+        "asset-dir",
+        "base_url",
+        "default_language",
+        "description",
+        "executables",
+        "favicon",
+        "feeds",
+        "footer",
+        "generate_feeds",
+        "highlight-dark",
+        "highlight-light",
+        "languages",
+        "logo",
+        "logo_alt",
+        "menus",
+        "minify",
+        "pages",
+        "pdf",
+        "robots",
+        "search",
+        "sidebar",
+        "static",
+        "theme",
+        "title",
+        "toc",
+        "vars",
+    ];
+    if ALLOWED_ROOTS.contains(&root) {
+        return Ok(());
+    }
+    Err(anyhow!("unknown config key `{root}` in --set override"))
+}
+
+fn parse_override_value(raw_value: &str) -> toml::Value {
+    toml::from_str::<toml::Value>(&format!("value = {raw_value}"))
+        .ok()
+        .and_then(|value| value.get("value").cloned())
+        .unwrap_or_else(|| toml::Value::String(raw_value.to_string()))
+}
+
+fn insert_override_value(
+    root: &mut toml::Value,
+    path: Vec<&str>,
+    value: toml::Value,
+    original_entry: &str,
+) -> Result<()> {
+    if !root.is_table() {
+        *root = toml::Value::Table(toml::map::Map::new());
+    }
+    let mut table = root.as_table_mut().expect("root was forced to table");
+    for key in &path[..path.len() - 1] {
+        let entry = table
+            .entry((*key).to_string())
+            .or_insert_with(|| toml::Value::Table(toml::map::Map::new()));
+        if !entry.is_table() {
+            return Err(anyhow!(
+                "invalid --set `{original_entry}`: `{key}` is already a non-table value"
+            ));
+        }
+        table = entry.as_table_mut().expect("entry was checked as table");
+    }
+    let leaf = path.last().expect("path is non-empty");
+    table.insert((*leaf).to_string(), value);
+    Ok(())
 }
 
 fn resolve_config_path(path: &Path) -> Result<PathBuf> {
@@ -160,11 +302,14 @@ impl ExecutablePaths {
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 struct RawCalepinConfig {
+    #[serde(default)]
     executables: RawExecutablePaths,
     theme: Option<String>,
     vars: BTreeMap<String, toml::Value>,
     #[serde(rename = "asset-dir")]
     asset_dir: Option<PathBuf>,
+    #[serde(default)]
+    toc: TocConfig,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -245,6 +390,36 @@ fn reject_removed_styles_key(value: &toml::Value) -> Result<()> {
         ));
     }
     Ok(())
+}
+
+fn reject_non_table_vars(value: &toml::Value) -> Result<()> {
+    if let Some(vars) = value.get("vars") {
+        if !vars.is_table() {
+            return Err(anyhow!("invalid type for `vars`: expected a table"));
+        }
+    }
+    Ok(())
+}
+
+fn reject_disallowed_config_keys(value: &toml::Value) -> Result<()> {
+    if value.get("revealjs").is_some() {
+        return Err(anyhow!("unknown field `revealjs`"));
+    }
+    Ok(())
+}
+
+pub const TOC_MIN_DEPTH: usize = 1;
+pub const TOC_MAX_DEPTH: usize = 6;
+
+fn validate_toc_config(toc: TocConfig) -> Result<TocConfig> {
+    if let Some(depth) = toc.depth {
+        if !(TOC_MIN_DEPTH..=TOC_MAX_DEPTH).contains(&depth) {
+            return Err(anyhow!(
+                "toc.depth must be between {TOC_MIN_DEPTH} and {TOC_MAX_DEPTH}, got {depth}"
+            ));
+        }
+    }
+    Ok(toc)
 }
 
 fn resolve_asset_dir(value: Option<PathBuf>) -> Result<Option<PathBuf>> {
@@ -592,6 +767,56 @@ credits = 3
     }
 
     #[test]
+    fn config_set_overrides_patch_dotted_paths() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let config = CalepinConfig::load_with_overrides(
+            dir.path(),
+            None,
+            &[
+                "theme=./theme".to_string(),
+                "vars.course=Econ 101".to_string(),
+                "toc.enabled=false".to_string(),
+                "toc.depth=2".to_string(),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(config.theme, Some("./theme".to_string()));
+        assert_eq!(
+            config.vars.get("course"),
+            Some(&toml::Value::String("Econ 101".to_string()))
+        );
+        assert_eq!(config.toc.enabled, Some(false));
+        assert_eq!(config.toc.depth, Some(2));
+    }
+
+    #[test]
+    fn config_set_rejects_unknown_root_keys() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let err = CalepinConfig::load_with_overrides(dir.path(), None, &["thme=academic".into()])
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("unknown config key `thme`"), "{err}");
+    }
+
+    #[test]
+    fn config_var_overrides_preserve_nested_paths() {
+        let overrides = config_var_overrides(&[
+            "vars.group.name=control".to_string(),
+            "vars.group.n=25".to_string(),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            serde_json::Value::Object(overrides),
+            serde_json::json!({"group":{"name":"control","n":25}})
+        );
+    }
+
+    #[test]
     fn vars_config_key_rejects_non_table_values() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("calepin.toml"), "vars = false").unwrap();
@@ -605,9 +830,41 @@ credits = 3
     }
 
     #[test]
+    fn config_parses_toc_table() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            "[toc]\nenabled = false\ndepth = 2\n",
+        )
+        .unwrap();
+
+        let config =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
+
+        assert_eq!(config.toc.enabled, Some(false));
+        assert_eq!(config.toc.depth, Some(2));
+    }
+
+    #[test]
+    fn config_rejects_out_of_range_toc_depth() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "[toc]\ndepth = 7\n").unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("toc.depth"), "{err}");
+    }
+
+    #[test]
     fn revealjs_config_key_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("calepin.toml"), "[revealjs]\nhash = false\n").unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            "[revealjs]\nhash = false\n",
+        )
+        .unwrap();
 
         let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
             .unwrap_err()

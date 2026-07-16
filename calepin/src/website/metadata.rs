@@ -2,15 +2,16 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::config::TocConfig;
 use crate::typst::preprocess::read_page_meta_with_root;
 
 use super::util::clean_optional_string;
 
 /// Per-page metadata exposed through the `<website-metadata>` Typst label,
 /// extracted during preprocessing and persisted under `.calepin/`. `title`,
-/// `pdf`, `layout`, `translation_key`, `slug`, and `url` are the keys calepin
-/// interprets; `raw` carries the author's whole dictionary verbatim for the
-/// pages index.
+/// `pdf`, `layout`, `translation_key`, `slug`, `url`, and `toc` are the keys
+/// calepin interprets; `raw` carries the author's whole dictionary verbatim
+/// for the pages index.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(super) struct PageMeta {
     pub(super) title: Option<String>,
@@ -19,6 +20,7 @@ pub(super) struct PageMeta {
     pub(super) translation_key: Option<String>,
     pub(super) slug: Option<String>,
     pub(super) url: Option<String>,
+    pub(super) toc: Option<TocConfig>,
     pub(super) raw: serde_json::Value,
 }
 
@@ -284,11 +286,84 @@ pub(super) fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
             .or_else(|| string_field(value, "translationKey")),
         slug: string_field(value, "slug"),
         url: string_field(value, "url"),
+        toc: value.get("toc").and_then(toc_field),
         raw: if value.is_object() {
             value.clone()
         } else {
             serde_json::json!({})
         },
+    }
+}
+
+/// Parses a `toc: (enabled: ..., depth: ...)` page-metadata entry leniently:
+/// malformed or out-of-range fields are ignored (left `None`) rather than
+/// failing the whole page, matching the rest of this lenient metadata parser.
+fn toc_field(value: &serde_json::Value) -> Option<TocConfig> {
+    let object = value.as_object()?;
+    let enabled = object.get("enabled").and_then(serde_json::Value::as_bool);
+    let depth = object
+        .get("depth")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|depth| usize::try_from(depth).ok())
+        .filter(|depth| {
+            (crate::config::TOC_MIN_DEPTH..=crate::config::TOC_MAX_DEPTH).contains(depth)
+        });
+    if enabled.is_none() && depth.is_none() {
+        return None;
+    }
+    Some(TocConfig { enabled, depth })
+}
+
+#[cfg(test)]
+mod toc_field_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn page_meta_parses_toc_enabled_and_depth() {
+        let meta = page_meta_from_value(&json!({"toc": {"enabled": false, "depth": 2}}));
+
+        assert_eq!(
+            meta.toc,
+            Some(TocConfig {
+                enabled: Some(false),
+                depth: Some(2),
+            })
+        );
+    }
+
+    #[test]
+    fn page_meta_keeps_partial_toc_overrides() {
+        let meta = page_meta_from_value(&json!({"toc": {"depth": 2}}));
+
+        assert_eq!(
+            meta.toc,
+            Some(TocConfig {
+                enabled: None,
+                depth: Some(2),
+            })
+        );
+    }
+
+    #[test]
+    fn page_meta_ignores_out_of_range_toc_depth() {
+        let meta = page_meta_from_value(&json!({"toc": {"depth": 99}}));
+
+        assert_eq!(meta.toc, None);
+    }
+
+    #[test]
+    fn page_meta_ignores_malformed_toc_value() {
+        let meta = page_meta_from_value(&json!({"toc": "yes"}));
+
+        assert_eq!(meta.toc, None);
+    }
+
+    #[test]
+    fn page_meta_without_toc_key_is_none() {
+        let meta = page_meta_from_value(&json!({"title": "Hello"}));
+
+        assert_eq!(meta.toc, None);
     }
 }
 

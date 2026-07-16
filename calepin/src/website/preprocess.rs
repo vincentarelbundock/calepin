@@ -131,7 +131,7 @@ pub(super) struct WebsitePreprocessOptions<'a> {
     pub(super) config_path: &'a Path,
     pub(super) quiet: bool,
     pub(super) timeout: Option<u64>,
-    pub(super) params: &'a [String],
+    pub(super) config_overrides: &'a [String],
     pub(super) fallback_theme: crate::theme::ThemeSelection,
     pub(super) html_syntax_theme: HtmlSyntaxTheme,
     pub(super) asset_dir: &'a Path,
@@ -173,7 +173,7 @@ pub(super) fn preprocess_documents(
                 fallback_theme: options.fallback_theme.clone(),
                 html_syntax_theme: Some(options.html_syntax_theme.clone()),
                 asset_dir: Some(options.asset_dir.to_path_buf()),
-                param_overrides: options.params.to_vec(),
+                config_overrides: options.config_overrides.to_vec(),
             })
             .with_context(|| format!("failed to scan {}", input.display()))?;
             let work = if preprocess_plan_cache_hit(&plan)? {

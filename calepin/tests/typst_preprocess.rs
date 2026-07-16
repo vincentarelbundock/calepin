@@ -303,6 +303,67 @@ Theme is a compile-time concern.
 }
 
 #[test]
+fn compile_html_assigns_safe_ids_to_all_heading_forms() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(eval: false)
+
+= #html.elem("i", "", attrs: (class: "icon")) Labeled Research <research>
+
+= #html.elem("i", "", attrs: (class: "icon")) Slugged Research
+
+#heading[Dynamic label] #label("x\" onmouseover=\"alert(1)")
+
+====== Deep heading <deep>
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.html",
+            "--format",
+            "html",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
+    assert!(html.contains(r#"<h2 id="research">"#), "{html}");
+    assert!(html.contains(r#"<h2 id="slugged-research">"#), "{html}");
+    assert!(
+        html.contains(r#"<h2 id="x&quot; onmouseover=&quot;alert(1)">Dynamic label</h2>"#),
+        "{html}"
+    );
+    assert!(
+        !html.contains(r#" id="x" onmouseover="alert(1)""#),
+        "{html}"
+    );
+    assert!(
+        html.contains(r#"<div role="heading" aria-level="7" id="deep">Deep heading</div>"#),
+        "{html}"
+    );
+    assert!(!html.contains("calepin-heading-anchor"), "{html}");
+}
+
+#[test]
 fn compile_html_respects_canonical_figure_display_dimensions() {
     if !has_command("typst")
         || Command::new("dot")
@@ -958,7 +1019,7 @@ print(42)
 }
 
 #[test]
-fn compile_injects_setup_params_into_python() {
+fn compile_injects_setup_vars_into_python() {
     if !has_command("typst") || !has_command("python3") {
         return;
     }
@@ -968,10 +1029,10 @@ fn compile_injects_setup_params_into_python() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(params: (region: "NY", min_count: 25))
+#calepin.setup(vars: (region: "NY", min_count: 25))
 
 #calepin.chunk("python", echo: false)[```
-print(params["region"], params["min_count"])
+print(vars["region"], vars["min_count"])
 ```]
 "##,
     )
@@ -993,12 +1054,12 @@ print(params["region"], params["min_count"])
     )
     .unwrap();
     assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "NY 25");
-    // params.json is written as the universal transport / reproducibility record.
-    assert!(dir.path().join(".calepin/paper/params.json").exists());
+    // vars.json is written as the universal transport / reproducibility record.
+    assert!(dir.path().join(".calepin/paper/vars.json").exists());
 }
 
 #[test]
-fn compile_param_override_beats_setup_params() {
+fn compile_var_override_beats_setup_vars() {
     if !has_command("typst") || !has_command("python3") {
         return;
     }
@@ -1008,10 +1069,10 @@ fn compile_param_override_beats_setup_params() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(params: (region: "NY"))
+#calepin.setup(vars: (region: "NY"))
 
 #calepin.chunk("python", echo: false)[```
-print(params["region"])
+print(vars["region"])
 ```]
 "##,
     )
@@ -1022,8 +1083,8 @@ print(params["region"])
             "compile",
             "paper.typ",
             "paper.pdf",
-            "-P",
-            "region=CA",
+            "--set",
+            "vars.region=CA",
             "--quiet",
         ])
         .current_dir(dir.path())
@@ -1043,7 +1104,7 @@ print(params["region"])
 }
 
 #[test]
-fn compile_rejects_unsupported_param_type() {
+fn compile_rejects_unsupported_var_type() {
     if !has_command("typst") {
         return;
     }
@@ -1053,7 +1114,7 @@ fn compile_rejects_unsupported_param_type() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(params: (bad: red))
+#calepin.setup(vars: (bad: red))
 
 Body text.
 "##,
@@ -1069,7 +1130,7 @@ Body text.
     assert!(!output.status.success(), "compile unexpectedly succeeded");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("unsupported parameter") && stderr.contains("bad"),
+        stderr.contains("unsupported variable") && stderr.contains("bad"),
         "{stderr}"
     );
 }
@@ -1117,5 +1178,61 @@ Body text in between.
     assert_eq!(
         count, 1,
         "expected hidden output to appear once at the relocation: {extracted}"
+    );
+}
+
+#[test]
+fn document_body_can_call_theme_exported_helpers() {
+    if !has_command("typst") || !has_pdftotext() {
+        return;
+    }
+
+    // A theme that hands the author a vocabulary: a `#let` defined in the theme
+    // preamble. The body inlines at the theme's `{{ doc.body }}` seam and shares
+    // its file scope, so it can call the helper. The body is evaluated in both
+    // the query and render passes, so this only works because both passes use
+    // the same themed wrapper.
+    let dir = typst_accessible_tempdir();
+    std::fs::create_dir_all(dir.path().join("mytheme/layouts")).unwrap();
+    std::fs::write(
+        dir.path().join("mytheme/theme.toml"),
+        "extends = \"typst\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("mytheme/layouts/pdf.typ"),
+        "#let theme-badge(body) = [BADGE: #body]\n\n{{ doc.body }}\n",
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("paper.toml"), "theme = \"mytheme/\"\n").unwrap();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import "/.calepin/calepin.typ" as calepin
+
+#theme-badge[VOCAB_OK]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "--config", "paper.toml", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8(text.stdout).unwrap();
+    assert!(
+        extracted.contains("BADGE: VOCAB_OK"),
+        "body should be able to call a theme-exported helper: {extracted}"
     );
 }

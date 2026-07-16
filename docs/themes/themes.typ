@@ -24,25 +24,18 @@ Theme customization uses one mechanism: create a local theme directory and point
 
 = Choose a theme
 
-Select a built-in or local theme with `theme` in `calepin.toml`:
-
-```toml
-# built-in themes
-theme = "calepin"            # default documentation
-theme = "academic"           # essay/blog
-theme = "typst"              # raw Typst output; no styling
-
-# a local theme directory
-theme = "themes/my-theme"
-```
-
-Point `calepin` to your theme of choice by using the `--config` flag:
+Select a built-in or local theme with `--set theme=...`:
 
 ```sh
-calepin compile notebook.typ --config=/path/to/calepin.toml
+calepin compile notebook.typ --set theme=calepin
+calepin compile notebook.typ --set theme=academic
+calepin compile notebook.typ --set theme=typst
+calepin compile notebook.typ --set theme=themes/my-theme
 ```
 
-You can also set the theme in-document with, a setting which will take precedence over `calepin.toml`:
+The built-in `calepin` theme is the default documentation theme, `academic` is for essay/blog pages, and `typst` emits raw Typst output with no Calepin styling.
+
+You can also set the theme in-document:
 
 ```typ
 #calepin.setup(theme: "academic")
@@ -84,7 +77,7 @@ It includes a centered narrow text column, margin-note support, top navigation, 
 
 `typst` disables the website and notebook themed wrappers and uses raw Typst output. Use this when you want unstyled HTML or PDF output.
 
-= How to build or customize a theme
+= Build or customize
 
 A theme is a directory with templates, resources, and a manifest.  A minimal theme could look like this, with only a `theme.toml` manifest and one CSS stylesheet:
 
@@ -123,22 +116,14 @@ my-theme/
 
 All the files in your custom theme are optional, except for the `theme.toml` manifest. When a file is present, it overrides the built-in theme file of the same name. When a file absent, it falls back to the built-in theme. New CSS and JavaScript files are appended in sorted order after inherited files.
 
-= Get started
-
 A good way to start building a theme is to "eject" one of the built-in themes into your project. This copies all of the built-in theme's files into a local directory where you can modify or delete them. To start a new theme based on `academic`, run:
 
 ```sh
 calepin new theme /path/to/my_theme --theme=academic
 ```
 
-Modify the files in your `my_theme` directory, then point your `calepin.toml` at it:
-
-```toml
-theme = "/path/to/my_theme/"
-```
-
-Finally, render your document or website using the new theme:
+Modify the files in your `my_theme` directory, then render your document or website using the new theme:
 
 ```sh
-calepin compile notebook.typ --config calepin.toml
+calepin compile notebook.typ --set theme=/path/to/my_theme/
 ```

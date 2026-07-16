@@ -10,18 +10,22 @@ Calepin requires Typst 0.15.0 or newer. Install or update the Typst CLI from the
 = Calepin
 <calepin-cli>
 
-
-
-MacOS and Linux:
+The simplest way to install Calepin is with the official installer script, which works on MacOS and Linux:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.sh | sh
 ```
 
-Windows via powershell:
+On Windows via powershell:
 
 ```sh
 powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex"
+```
+
+If you are a `cargo` for Rust user, you can install with:
+
+```sh
+cargo install calepin
 ```
 
 == Updating Calepin
@@ -83,3 +87,35 @@ julia -e 'using Pkg; Pkg.add("IJulia")'
 ```
 
 Run `jupyter kernelspec list` to see what engines are registered and available.
+
+= Nix
+<nix>
+
+If you use Nix flakes, the default package is the basic Calepin CLI wrapped with
+Typst on `PATH`:
+
+```sh
+nix run github:vincentarelbundock/calepin -- --help
+nix run github:vincentarelbundock/calepin#calepin -- compile paper.typ
+```
+
+To build the package without running it:
+
+```sh
+nix build github:vincentarelbundock/calepin
+```
+
+The default development shell is also minimal:
+
+```sh
+nix develop github:vincentarelbundock/calepin
+```
+
+For contributor work on the documentation website, use the heavier website
+shell. It includes Rust tooling, Typst, `uv`, R packages used by the examples,
+and the diagram tools used by the website pages.
+
+```sh
+nix develop github:vincentarelbundock/calepin#website
+make website
+```

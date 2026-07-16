@@ -12,10 +12,10 @@ const BUILTIN_RAW_CHUNK_LANGS: &[&str] = &["python", "r", "mermaid", "dot", "tik
 
 pub(super) fn notebook_template_context(
     layout: &LayoutPaths,
-    include_input: &Path,
+    staged_input: &Path,
     page_meta: Option<serde_json::Value>,
-    params: serde_json::Value,
-) -> crate::theme::NotebookTemplateContext {
+    vars: serde_json::Value,
+) -> Result<crate::theme::NotebookTemplateContext> {
     let input_dir = layout
         .input_rel
         .parent()
@@ -26,20 +26,36 @@ pub(super) fn notebook_template_context(
         .file_stem()
         .map(|stem| stem.to_string_lossy().to_string())
         .unwrap_or_default();
-    crate::theme::NotebookTemplateContext {
+    let page_meta = page_meta.unwrap_or(serde_json::Value::Null);
+    // Best-available title before Typst runs: the `<website-metadata>` title.
+    let title = page_meta
+        .get("title")
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
+    // Inline the staged source directly at the theme's `{{ doc.body }}` seam
+    // (rather than `#include`-ing it) so the body shares a file scope with the
+    // theme preamble and can call its `#let`/`#import`ed helpers. The body is a
+    // render-context variable, so minijinja substitutes it literally without
+    // re-evaluating any `{{ }}`/`{% %}` it may contain.
+    let staged_input_abs = layout.root.join(staged_input);
+    let body = fs::read_to_string(&staged_input_abs)
+        .with_context(|| format!("failed to read {}", staged_input_abs.display()))?;
+    Ok(crate::theme::NotebookTemplateContext {
         input_path: slash_path(&layout.input_rel),
         input_dir,
         input_stem,
-        body: format!("#include \"/{}\"", slash_path(include_input)),
-        page_meta: page_meta.unwrap_or(serde_json::Value::Null),
-        params,
-    }
+        title,
+        body,
+        page_meta,
+        vars,
+    })
 }
 
 pub(super) fn write_render_wrapper(
     layout: &LayoutPaths,
     runtime_import: &str,
-    include_input: &Path,
+    include_input: Option<&Path>,
     jupyter_kernels: &[&str],
     notebook_theme: Option<&crate::theme::NotebookSource>,
 ) -> Result<PathBuf> {
@@ -73,10 +89,10 @@ pub(super) fn write_render_wrapper(
         lines.push_str(&raw_show_rule(kernel));
     }
 
-    lines.push_str("\n");
+    lines.push('\n');
     lines.push_str(html_raw_show_rule());
 
-    lines.push_str("\n");
+    lines.push('\n');
     lines.push_str(heading_anchor_show_rule());
 
     if let Some(notebook_theme) = notebook_theme {
@@ -88,7 +104,7 @@ pub(super) fn write_render_wrapper(
         }
     }
 
-    if !notebook_theme.is_some_and(|theme| theme.owns_body) {
+    if let Some(include_input) = include_input {
         lines.push_str(&format!("\n#include \"/{}\"\n", slash_path(include_input)));
     }
 

@@ -118,7 +118,7 @@ impl NavSurface<'_> {
     }
 
     fn allows_urls(self) -> bool {
-        matches!(self, NavSurface::Menu(_))
+        matches!(self, NavSurface::Sidebar | NavSurface::Menu(_))
     }
 
     fn skip_duplicate_items(self) -> bool {
@@ -126,7 +126,7 @@ impl NavSurface<'_> {
     }
 
     fn allows_linkless_items(self) -> bool {
-        matches!(self, NavSurface::Menu("footer"))
+        matches!(self, NavSurface::Sidebar | NavSurface::Menu("footer"))
     }
 
     fn uses_configured_labels(self) -> bool {
@@ -155,9 +155,10 @@ pub(super) fn discover_site_pages(
     sidebar: Option<&SidebarConfig>,
     pages: Option<&PagesConfig>,
     languages: &Option<Vec<LanguageInfo>>,
+    asset_dir: &Path,
 ) -> Result<(Vec<NavSectionPlan>, Vec<PathBuf>)> {
     let Some(languages) = languages else {
-        return discover_pages(src_dir, sidebar, pages, None);
+        return discover_pages(src_dir, sidebar, pages, None, asset_dir);
     };
     let mut sections = Vec::new();
     let mut files = Vec::new();
@@ -167,6 +168,7 @@ pub(super) fn discover_site_pages(
             sidebar,
             pages,
             Some(language.code.clone()),
+            asset_dir,
         )?;
         language_files.retain(|path| !is_nested_language_page(path, language, languages));
         for section in &mut language_sections {
@@ -188,19 +190,20 @@ pub(super) fn discover_site_menus(
     footer: Option<&FooterConfig>,
     pages: Option<&PagesConfig>,
     languages: &Option<Vec<LanguageInfo>>,
+    asset_dir: &Path,
 ) -> Result<(MenusPlan, Vec<PathBuf>)> {
     let menus = effective_site_menus(menus, footer)?;
     if menus.is_empty() {
         return Ok((MenusPlan::default(), Vec::new()));
     }
     let Some(languages) = languages else {
-        return discover_menus(src_dir, &menus, pages);
+        return discover_menus(src_dir, &menus, pages, asset_dir);
     };
     let mut plan = MenusPlan::default();
     let mut files = Vec::new();
     for language in languages {
         let (mut language_plan, mut language_files) =
-            discover_menus(&language.content_dir, &menus, pages)?;
+            discover_menus(&language.content_dir, &menus, pages, asset_dir)?;
         language_files.retain(|path| !is_nested_language_page(path, language, languages));
         retain_menu_language_items(&mut language_plan, language, languages);
         if !language.is_default {
@@ -268,9 +271,10 @@ pub(super) fn discover_pages(
     sidebar: Option<&SidebarConfig>,
     pages: Option<&PagesConfig>,
     language: Option<String>,
+    asset_dir: &Path,
 ) -> Result<(Vec<NavSectionPlan>, Vec<PathBuf>)> {
     let Some(sidebar) = sidebar else {
-        let mut files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)])?;
+        let mut files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)], asset_dir)?;
         files.retain(|path| !is_page_excluded(src_dir, path, pages));
         let items = files
             .iter()
@@ -296,6 +300,7 @@ pub(super) fn discover_pages(
         src_dir,
         sidebar.show_hidden,
         &[PathBuf::from(FALLBACK_PAGE)],
+        asset_dir,
     )?;
     let all_typ_files = all_typ_files
         .into_iter()
@@ -312,7 +317,7 @@ pub(super) fn discover_pages(
             .map(|item| NavItemInput {
                 target: item.target.as_deref(),
                 glob: item.glob.as_deref(),
-                label: None,
+                label: item.label.as_deref(),
                 aria_label: None,
                 weight: None,
             })
@@ -340,11 +345,12 @@ pub(super) fn discover_menus(
     src_dir: &Path,
     menus: &BTreeMap<String, Vec<MenuItemConfig>>,
     pages: Option<&PagesConfig>,
+    asset_dir: &Path,
 ) -> Result<(MenusPlan, Vec<PathBuf>)> {
     for name in menus.keys() {
         validate_menu_name(name)?;
     }
-    let all_typ_files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)])?;
+    let all_typ_files = iter_typ_files(src_dir, false, &[PathBuf::from(FALLBACK_PAGE)], asset_dir)?;
     let all_typ_files = all_typ_files
         .into_iter()
         .filter(|path| !is_page_excluded(src_dir, path, pages))
@@ -441,6 +447,11 @@ fn resolve_nav_item_plans(
                             "sidebar target must point to a .typ source page, got literal URL: {url}"
                         );
                     }
+                    if configured_label.is_none()
+                        && matches!(resolution.surface, NavSurface::Sidebar)
+                    {
+                        bail!("sidebar URL target items must set label");
+                    }
                     items.push(NavItemPlan {
                         path: None,
                         url: Some(url),
@@ -450,6 +461,11 @@ fn resolve_nav_item_plans(
                     });
                 }
                 Some(NavTarget::Page(path)) => {
+                    if configured_label.is_some()
+                        && matches!(resolution.surface, NavSurface::Sidebar)
+                    {
+                        bail!("sidebar target items cannot also set label");
+                    }
                     if is_page_excluded(resolution.src_dir, &path, resolution.pages) {
                         continue;
                     }
@@ -472,6 +488,16 @@ fn resolve_nav_item_plans(
             continue;
         }
 
+        if configured_label.is_some()
+            && matches!(resolution.surface, NavSurface::Sidebar)
+            && input
+                .glob
+                .map(str::trim)
+                .is_some_and(|glob| !glob.is_empty())
+        {
+            bail!("sidebar glob items cannot also set label");
+        }
+
         if resolution.surface.allows_linkless_items() {
             if let Some(label) = configured_label.clone() {
                 items.push(NavItemPlan {
@@ -485,11 +511,7 @@ fn resolve_nav_item_plans(
             }
         }
 
-        if !input
-            .glob
-            .map(str::trim)
-            .is_some_and(|glob| !glob.is_empty())
-        {
+        if input.glob.map(str::trim).is_none_or(|glob| glob.is_empty()) {
             bail!(
                 "{} item must set path, glob, or url",
                 resolution.surface.context()
@@ -557,13 +579,14 @@ pub(super) fn discover_site_build_pages(
     src_dir: &Path,
     pages: Option<&PagesConfig>,
     languages: &Option<Vec<LanguageInfo>>,
+    asset_dir: &Path,
 ) -> Result<Vec<PathBuf>> {
     let Some(languages) = languages else {
-        return discover_build_pages(src_dir, pages);
+        return discover_build_pages(src_dir, pages, asset_dir);
     };
     let mut files = Vec::new();
     for language in languages {
-        let mut language_files = discover_build_pages(&language.content_dir, pages)?;
+        let mut language_files = discover_build_pages(&language.content_dir, pages, asset_dir)?;
         language_files.retain(|path| !is_nested_language_page(path, language, languages));
         files.append(&mut language_files);
     }
@@ -573,11 +596,12 @@ pub(super) fn discover_site_build_pages(
 pub(super) fn discover_build_pages(
     src_dir: &Path,
     pages: Option<&PagesConfig>,
+    asset_dir: &Path,
 ) -> Result<Vec<PathBuf>> {
     let Some(pages) = pages else {
         return Ok(Vec::new());
     };
-    let all_typ_files = iter_typ_files(src_dir, true, &[PathBuf::from(FALLBACK_PAGE)])?;
+    let all_typ_files = iter_typ_files(src_dir, true, &[PathBuf::from(FALLBACK_PAGE)], asset_dir)?;
     let mut files = BTreeSet::new();
     for pattern in page_patterns(&pages.include) {
         let matches = if has_glob_chars(&pattern) {
@@ -603,13 +627,14 @@ pub(super) fn discover_build_pages(
 pub(super) fn discover_static_files(
     src_dir: &Path,
     static_files: Option<&StaticConfig>,
+    asset_dir: &Path,
 ) -> Result<Vec<PathBuf>> {
     let Some(static_files) = static_files else {
         return Ok(Vec::new());
     };
     let include = static_patterns(&static_files.include, "static.include")?;
     let exclude = static_patterns(&static_files.exclude, "static.exclude")?;
-    let all_files = iter_static_files(src_dir)?;
+    let all_files = iter_static_files(src_dir, asset_dir)?;
     let mut files = BTreeSet::new();
     for pattern in include {
         let matches = if has_glob_chars(&pattern) {
@@ -643,20 +668,25 @@ pub(super) fn discover_static_files(
     Ok(files.into_iter().collect())
 }
 
-fn iter_static_files(src_dir: &Path) -> Result<Vec<PathBuf>> {
+fn iter_static_files(src_dir: &Path, asset_dir: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
-    collect_static_files(src_dir, src_dir, &mut out)?;
+    collect_static_files(src_dir, src_dir, asset_dir, &mut out)?;
     out.sort_by_key(|path| rel_posix(src_dir, path));
     Ok(out)
 }
 
-fn collect_static_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+fn collect_static_files(
+    root: &Path,
+    dir: &Path,
+    asset_dir: &Path,
+    out: &mut Vec<PathBuf>,
+) -> Result<()> {
     collect_files_by(
         root,
         dir,
         out,
-        |rel, _| !path_has_common_skip_dir(rel),
-        |rel, _| !path_has_common_skip_dir(rel),
+        |rel, _| !path_has_common_skip_dir(rel) && !rel.starts_with(asset_dir),
+        |rel, _| !path_has_common_skip_dir(rel) && !rel.starts_with(asset_dir),
     )
 }
 
@@ -889,12 +919,8 @@ fn nav_item_model(
     }
 
     let Some(path) = item.path.as_ref() else {
-        if matches!(surface, NavSurface::Menu("footer")) {
-            let raw_label = item
-                .configured_label
-                .as_ref()
-                .map(|label| label.as_str())
-                .unwrap_or_default();
+        if surface.allows_linkless_items() {
+            let raw_label = item.configured_label.as_deref().unwrap_or_default();
             let label_html = nav_label_html(raw_label, icon_cache)?;
             return Ok(NavItemModel {
                 language: None,
@@ -1143,10 +1169,18 @@ pub(super) fn iter_typ_files(
     src_dir: &Path,
     include_hidden: bool,
     exclude: &[PathBuf],
+    asset_dir: &Path,
 ) -> Result<Vec<PathBuf>> {
     let exclude = exclude.iter().collect::<BTreeSet<_>>();
     let mut out = Vec::new();
-    collect_typ_files(src_dir, src_dir, include_hidden, &exclude, &mut out)?;
+    collect_typ_files(
+        src_dir,
+        src_dir,
+        include_hidden,
+        &exclude,
+        asset_dir,
+        &mut out,
+    )?;
     out.sort_by_key(|path| rel_posix(src_dir, path));
     Ok(out)
 }
@@ -1156,15 +1190,17 @@ fn collect_typ_files(
     dir: &Path,
     include_hidden: bool,
     exclude: &BTreeSet<&PathBuf>,
+    asset_dir: &Path,
     out: &mut Vec<PathBuf>,
 ) -> Result<()> {
     collect_files_by(
         root,
         dir,
         out,
-        |rel, _| include_hidden || !has_hidden_component(rel),
+        |rel, _| (include_hidden || !has_hidden_component(rel)) && !rel.starts_with(asset_dir),
         |rel, path| {
             (include_hidden || !has_hidden_component(rel))
+                && !rel.starts_with(asset_dir)
                 && path.extension().and_then(|ext| ext.to_str()) == Some("typ")
                 && !exclude.contains(&rel.to_path_buf())
         },

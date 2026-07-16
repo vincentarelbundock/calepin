@@ -16,9 +16,10 @@ pub struct NotebookTemplateContext {
     pub input_path: String,
     pub input_dir: String,
     pub input_stem: String,
+    pub title: String,
     pub body: String,
     pub page_meta: Value,
-    pub params: Value,
+    pub vars: Value,
 }
 
 impl Default for NotebookTemplateContext {
@@ -27,9 +28,10 @@ impl Default for NotebookTemplateContext {
             input_path: String::new(),
             input_dir: String::new(),
             input_stem: String::new(),
+            title: String::new(),
             body: String::new(),
             page_meta: Value::Null,
-            params: Value::Object(serde_json::Map::new()),
+            vars: Value::Object(serde_json::Map::new()),
         }
     }
 }
@@ -37,22 +39,22 @@ impl Default for NotebookTemplateContext {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NotebookSource {
     pub source: String,
-    pub owns_body: bool,
 }
 
 #[derive(Serialize)]
 struct NotebookTemplateRenderContext<'a> {
     theme: &'a str,
     target: &'static str,
-    document: NotebookDocumentContext<'a>,
-    params: &'a Value,
+    doc: NotebookDocContext<'a>,
+    vars: &'a Value,
 }
 
 #[derive(Serialize)]
-struct NotebookDocumentContext<'a> {
+struct NotebookDocContext<'a> {
     path: &'a str,
     dir: &'a str,
     stem: &'a str,
+    title: &'a str,
     body: &'a str,
     meta: &'a Value,
 }
@@ -78,9 +80,8 @@ pub fn notebook_source(
             "theme `{theme}` does not contain {NOTEBOOK_TEMPLATE}"
         ));
     };
-    let owns_body = source.contains("document.body");
-    render_notebook_template(&name, NOTEBOOK_TEMPLATE, "notebook", source, context)
-        .map(|source| Some(NotebookSource { source, owns_body }))
+    render_notebook_template(&name, NOTEBOOK_TEMPLATE, "paged", source, context)
+        .map(|source| Some(NotebookSource { source }))
 }
 
 fn find_notebook_template(layers: &[ThemeLayer]) -> Result<Option<(String, String)>> {
@@ -145,14 +146,15 @@ fn render_notebook_template(
         .render(NotebookTemplateRenderContext {
             theme: theme_name,
             target,
-            document: NotebookDocumentContext {
+            doc: NotebookDocContext {
                 path: &context.input_path,
                 dir: &context.input_dir,
                 stem: &context.input_stem,
+                title: &context.title,
                 body: &context.body,
                 meta: &context.page_meta,
             },
-            params: &context.params,
+            vars: &context.vars,
         })
         .map_err(|error| notebook_template_error(theme_name, template_name, error))
 }

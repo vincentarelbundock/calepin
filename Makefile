@@ -172,8 +172,8 @@ cli-reference: build  ## Generate docs/reference/cli.typ from clap help output
 	} > docs/reference/cli.typ
 
 website: ## Render docs/ via calepin compile directory mode
-	uv run calepin compile docs/themes/examples/tufte/tufte.typ --config docs/themes/examples/tufte/calepin.toml --format html
-	uv run calepin compile docs/themes/examples/tufte/tufte.typ --config docs/themes/examples/tufte/calepin.toml --format pdf
+	uv run calepin compile docs/themes/examples/tufte/tufte.typ --set theme=./theme --format html
+	uv run calepin compile docs/themes/examples/tufte/tufte.typ --set theme=./theme --format pdf
 	calepin compile docs
 
 serve:  ## Build and serve the website at http://$(HOST):$(PORT)

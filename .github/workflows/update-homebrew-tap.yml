@@ -1,0 +1,66 @@
+name: Update Homebrew Tap
+
+# Run after cargo-dist finishes creating the GitHub Release. Keeping this
+# separate avoids editing cargo-dist's generated release.yml.
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional tag to release (e.g. v0.0.25). If omitted, resolves from workflow_run."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - id: resolve
+        env:
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        shell: bash
+        run: |
+          SHA="${RELEASE_SHA:-}"
+          if [ -z "$SHA" ]; then
+            SHA=$(git rev-parse HEAD)
+          fi
+
+          if [ -n "$DISPATCH_TAG" ]; then
+            TAG="$DISPATCH_TAG"
+          else
+            TAG=$(git describe --tags --exact-match "$SHA" 2>/dev/null || true)
+            if [ -z "$TAG" ]; then
+              TAG="$RUN_HEAD_BRANCH"
+            fi
+          fi
+          TAG=${TAG#refs/tags/}
+
+          if [ -z "$TAG" ] || ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "No release tag found for $SHA; skipping."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag: $TAG at $SHA"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update Homebrew tap
+        if: steps.resolve.outputs.proceed == 'true'
+        run: bash scripts/update-homebrew-tap.sh
+        env:
+          CALEPIN_RELEASE_TAG: ${{ steps.resolve.outputs.tag }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}

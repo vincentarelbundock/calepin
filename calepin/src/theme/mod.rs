@@ -11,7 +11,7 @@ mod bundle;
 mod html;
 mod notebook;
 
-pub use bundle::{builtin_names, eject_builtin_to};
+pub(crate) use bundle::{builtin_names, eject_builtin_to};
 pub use html::{resolve_explicit_site_html_entry, resolve_html_entry, HtmlEntry, HtmlScope};
 pub use notebook::{notebook_source, NotebookSource, NotebookTemplateContext};
 
@@ -55,6 +55,118 @@ impl ThemeSelection {
             "unknown theme `{value}`; use `typst`, one of {}, or a path to a theme directory",
             builtin_names().join(", ")
         ))
+    }
+}
+
+const DEFAULT_TOC_DEPTH: usize = 3;
+
+/// Built-in default for whether a theme shows an on-page TOC when neither
+/// `calepin.toml` nor the page's `<website-metadata>` says otherwise. The
+/// `calepin` theme has shown one unconditionally since its TOC partial was
+/// introduced, so it defaults on; other themes (including `academic`) are
+/// opt-in.
+fn theme_default_toc_enabled(theme: &ThemeSelection) -> bool {
+    matches!(theme, ThemeSelection::Default)
+        || matches!(theme, ThemeSelection::Builtin(name) if *name == DEFAULT_THEME_NAME)
+}
+
+/// Resolves the effective on-page TOC depth for a page, merging field-by-field
+/// (page metadata wins, then `calepin.toml`, then the theme's built-in
+/// default). Returns `0` to mean "no TOC" so callers can treat it as a single
+/// number: `annotate_body_headings` collects nothing when depth is `0`.
+pub(crate) fn resolve_toc_depth(
+    page: Option<&crate::config::TocConfig>,
+    config: &crate::config::TocConfig,
+    theme: &ThemeSelection,
+) -> usize {
+    let enabled = page
+        .and_then(|toc| toc.enabled)
+        .or(config.enabled)
+        .unwrap_or_else(|| theme_default_toc_enabled(theme));
+    if !enabled {
+        return 0;
+    }
+    page.and_then(|toc| toc.depth)
+        .or(config.depth)
+        .unwrap_or(DEFAULT_TOC_DEPTH)
+}
+
+#[cfg(test)]
+mod toc_tests {
+    use super::*;
+    use crate::config::TocConfig;
+
+    #[test]
+    fn calepin_theme_defaults_to_enabled() {
+        assert_eq!(
+            resolve_toc_depth(None, &TocConfig::default(), &ThemeSelection::Default),
+            3
+        );
+        assert_eq!(
+            resolve_toc_depth(
+                None,
+                &TocConfig::default(),
+                &ThemeSelection::Builtin("calepin")
+            ),
+            3
+        );
+    }
+
+    #[test]
+    fn academic_theme_defaults_to_disabled() {
+        assert_eq!(
+            resolve_toc_depth(
+                None,
+                &TocConfig::default(),
+                &ThemeSelection::Builtin("academic")
+            ),
+            0
+        );
+    }
+
+    #[test]
+    fn config_can_enable_academic_toc() {
+        let config = TocConfig {
+            enabled: Some(true),
+            depth: Some(2),
+        };
+        assert_eq!(
+            resolve_toc_depth(None, &config, &ThemeSelection::Builtin("academic")),
+            2
+        );
+    }
+
+    #[test]
+    fn page_metadata_overrides_config_field_by_field() {
+        let config = TocConfig {
+            enabled: Some(true),
+            depth: Some(2),
+        };
+        let page = TocConfig {
+            enabled: None,
+            depth: Some(5),
+        };
+        // enabled inherited from config, depth overridden by the page.
+        assert_eq!(
+            resolve_toc_depth(Some(&page), &config, &ThemeSelection::Builtin("academic")),
+            5
+        );
+    }
+
+    #[test]
+    fn page_metadata_can_disable_toc_regardless_of_config() {
+        let config = TocConfig {
+            enabled: Some(true),
+            depth: Some(2),
+        };
+        let page = TocConfig {
+            enabled: Some(false),
+            depth: None,
+        };
+        assert_eq!(
+            resolve_toc_depth(Some(&page), &config, &ThemeSelection::Builtin("calepin")),
+            0
+        );
     }
 }
 
@@ -110,13 +222,10 @@ pub(crate) fn resolve_theme_chain(selection: &ThemeSelection) -> Result<ThemeCha
 fn resolve_dir_theme_chain(dir: &Path) -> Result<ThemeChain> {
     let manifest = read_local_theme_manifest(dir)?;
     let mut chain = match manifest.extends.as_deref() {
-        None => {
-            return Err(anyhow!(
-                "local theme {} must declare `extends` in theme.toml; use `extends = \"typst\"` for a bare theme or a built-in theme: {}",
-                dir.display(),
-                bundle::builtin_names().join(", ")
-            ))
-        }
+        None => ThemeChain {
+            layers: vec![ThemeLayer::Builtin(DEFAULT_THEME_NAME)],
+            terminal_typst: false,
+        },
         Some("typst") => ThemeChain {
             layers: Vec::new(),
             terminal_typst: true,
@@ -148,7 +257,58 @@ pub(crate) fn read_local_theme_manifest(dir: &Path) -> Result<LocalThemeManifest
     }
     let source = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read {}", path.display()))?;
-    toml::from_str(&source).with_context(|| format!("failed to parse {}", path.display()))
+    let value: toml::Value =
+        toml::from_str(&source).with_context(|| format!("failed to parse {}", path.display()))?;
+    reject_unknown_manifest_top_level_keys(&value)?;
+    reject_unknown_shared_keys(&value)?;
+    value
+        .try_into()
+        .with_context(|| format!("failed to parse {}", path.display()))
+}
+
+fn reject_unknown_manifest_top_level_keys(value: &toml::Value) -> Result<()> {
+    let Some(table) = value.as_table() else {
+        return Ok(());
+    };
+    for key in table.keys() {
+        match key.as_str() {
+            "extends" | "shared" => continue,
+            _ => return Err(anyhow!("unknown field `{key}`")),
+        }
+    }
+    Ok(())
+}
+
+fn reject_unknown_shared_keys(value: &toml::Value) -> Result<()> {
+    let Some(shared) = value
+        .as_table()
+        .and_then(|table| table.get("shared"))
+        .and_then(|value| value.as_table())
+    else {
+        return Ok(());
+    };
+
+    if shared.contains_key("styles") {
+        return Err(anyhow!(
+            "unknown field `styles`; use `css` for shared css assets"
+        ));
+    }
+    if shared.contains_key("scripts") {
+        return Err(anyhow!(
+            "unknown field `scripts`; use `js` for shared scripts"
+        ));
+    }
+    if shared.contains_key("assets") {
+        return Err(anyhow!("unknown field `assets`; remove this legacy key"));
+    }
+
+    for key in shared.keys() {
+        match key.as_str() {
+            "partials" | "css" | "js" => continue,
+            _ => return Err(anyhow!("unknown field `{key}`")),
+        }
+    }
+    Ok(())
 }
 
 /// Same heuristic the old html theme used: anything that looks like a path
@@ -218,7 +378,7 @@ fn read_theme_files(dir: &Path, ext: &str) -> Result<Vec<(String, String)>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
     #[test]
     fn parse_builtin_names() {
@@ -350,7 +510,7 @@ mod tests {
     }
 
     #[test]
-    fn dir_theme_without_extends_is_rejected() {
+    fn dir_theme_without_extends_defaults_to_typst() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
@@ -359,15 +519,17 @@ mod tests {
         )
         .unwrap();
 
-        let err = resolve_html_entry(
+        let entry = resolve_html_entry(
             &ThemeSelection::Dir(dir.path().to_path_buf()),
             HtmlScope::Site,
         )
-        .unwrap_err()
-        .to_string();
+        .unwrap()
+        .unwrap();
 
-        assert!(err.contains("must declare `extends`"), "{err}");
-        assert!(err.contains("extends = \"typst\""), "{err}");
+        assert_eq!(
+            entry.theme_name,
+            dir.path().file_name().unwrap().to_string_lossy()
+        );
     }
 
     #[test]
@@ -606,7 +768,7 @@ css = ["../theme.css"]
     fn explicit_site_layout_requires_local_or_inherited_file() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
-        std::fs::write(dir.path().join("layouts/pdf.typ"), "{{ document.body }}").unwrap();
+        std::fs::write(dir.path().join("layouts/pdf.typ"), "{{ doc.body }}").unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
 
@@ -670,7 +832,6 @@ css = ["../theme.css"]
             notebook_source(&sel, &NotebookTemplateContext::default()).unwrap(),
             Some(NotebookSource {
                 source: String::new(),
-                owns_body: false,
             })
         );
     }
@@ -681,8 +842,10 @@ css = ["../theme.css"]
         std::fs::create_dir(dir.path().join("layouts")).unwrap();
         std::fs::write(
             dir.path().join("layouts/pdf.typ"),
-            r#"#let title = "{{ document.meta.title }}"
-#let species = "{{ params.Species }}"
+            r#"#let title = "{{ doc.title }}"
+#let meta_title = "{{ doc.meta.title }}"
+#let species = "{{ vars.Species }}"
+#let course = "{{ vars.course }}"
 "#,
         )
         .unwrap();
@@ -692,17 +855,50 @@ css = ["../theme.css"]
             input_path: "reports/iris.typ".to_string(),
             input_dir: "reports".to_string(),
             input_stem: "iris".to_string(),
+            title: "Iris Report".to_string(),
             body: "#include \"/.calepin/reports/iris/source.typ\"".to_string(),
             page_meta: serde_json::json!({"title": "Iris Report"}),
-            params: serde_json::json!({"Species": "setosa"}),
+            vars: serde_json::json!({"Species": "setosa", "course": "Econ 101"}),
         };
 
         let source = notebook_source(&sel, &context).unwrap().unwrap();
         assert_eq!(
             source.source,
-            "#let title = \"Iris Report\"\n#let species = \"setosa\""
+            "#let title = \"Iris Report\"\n#let meta_title = \"Iris Report\"\n#let species = \"setosa\"\n#let course = \"Econ 101\""
         );
-        assert!(!source.owns_body);
+    }
+
+    #[test]
+    fn document_body_is_not_re_evaluated_as_a_template() {
+        // The document body is inlined at the theme's `{{ doc.body }}` seam as a
+        // render-context variable, so Typst source that happens to contain Jinja
+        // delimiters must survive verbatim rather than being interpreted.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("layouts")).unwrap();
+        std::fs::write(dir.path().join("layouts/pdf.typ"), "{{ doc.body }}\n").unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
+        let sel = ThemeSelection::Dir(dir.path().to_path_buf());
+        let context = NotebookTemplateContext {
+            body: "Value: {{ vars.Species }} and {% if x %}y{% endif %}".to_string(),
+            vars: serde_json::json!({"Species": "setosa"}),
+            ..NotebookTemplateContext::default()
+        };
+        let source = notebook_source(&sel, &context).unwrap().unwrap();
+        assert!(
+            source.source.contains("{{ vars.Species }}"),
+            "body Jinja delimiters must survive verbatim: {}",
+            source.source
+        );
+        assert!(
+            source.source.contains("{% if x %}"),
+            "body Jinja statements must survive verbatim: {}",
+            source.source
+        );
+        assert!(
+            !source.source.contains("setosa"),
+            "body must not be re-evaluated against vars: {}",
+            source.source
+        );
     }
 
     #[test]
@@ -712,7 +908,7 @@ css = ["../theme.css"]
         std::fs::write(
             dir.path().join("layouts/pdf.typ"),
             r#"#set text(size: 11pt)
-{{ document.body }}
+{{ doc.body }}
 [#emph[Generated footer]]
 "#,
         )
@@ -723,9 +919,10 @@ css = ["../theme.css"]
             input_path: "paper.typ".to_string(),
             input_dir: String::new(),
             input_stem: "paper".to_string(),
+            title: String::new(),
             body: "#include \"/.calepin/paper/source.typ\"".to_string(),
             page_meta: serde_json::Value::Null,
-            params: serde_json::json!({}),
+            vars: serde_json::json!({}),
         };
 
         let source = notebook_source(&sel, &context).unwrap().unwrap();
@@ -733,7 +930,6 @@ css = ["../theme.css"]
             source.source,
             "#set text(size: 11pt)\n#include \"/.calepin/paper/source.typ\"\n[#emph[Generated footer]]"
         );
-        assert!(source.owns_body);
     }
 
     #[test]
@@ -777,7 +973,7 @@ css = ["../theme.css"]
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("notebook.typ.jinja"),
-            "{{ target }} {{ document.body }}",
+            "{{ target }} {{ doc.body }}",
         )
         .unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
@@ -794,7 +990,7 @@ css = ["../theme.css"]
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("paged.typ.jinja"),
-            "{{ target }} {{ document.body }}",
+            "{{ target }} {{ doc.body }}",
         )
         .unwrap();
         std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();

@@ -263,6 +263,172 @@ fn typst_compile_html_elements_tabs_emit_webawesome_markup() {
 }
 
 #[test]
+fn typst_compile_html_elements_callout_emits_admonition_markup() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.callout(kind: "warning", title: [Heads up])[
+  Check #strong[this] result.
+]
+
+#calepin.elements.callout(kind: "tip", title: none)[
+  No title row here.
+]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("calepin-callout calepin-callout-warning"),
+        "expected warning callout classes in HTML output:\n{html}"
+    );
+    assert!(
+        html.contains("calepin-callout calepin-callout-tip"),
+        "expected tip callout classes in HTML output:\n{html}"
+    );
+    assert!(
+        html.contains("calepin-callout-title"),
+        "expected a callout title wrapper:\n{html}"
+    );
+    assert!(
+        html.matches("calepin-callout-title").count() == 1,
+        "title: none should suppress the title wrapper:\n{html}"
+    );
+    assert!(html.contains("Heads up"), "{html}");
+    assert!(html.contains("calepin-callout-body"), "{html}");
+    assert!(html.contains("Check"), "{html}");
+    assert!(html.contains("No title row here."), "{html}");
+}
+
+#[test]
+fn typst_compile_paged_elements_callout_compiles() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.callout(kind: "note")[
+  Default note title.
+]
+
+#calepin.elements.callout(kind: "tip")[
+  A tip.
+]
+
+#calepin.elements.callout(kind: "important", title: [Read this])[
+  Important content.
+]
+
+#calepin.elements.callout(kind: "caution", title: none)[
+  Caution content.
+]
+
+#calepin.elements.callout(kind: "warning")[
+  Warning content.
+]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", "calepin-target=paged"],
+    );
+    assert!(output.exists());
+    assert!(std::fs::metadata(output).unwrap().len() > 0);
+}
+
+#[test]
+fn typst_query_elements_callout_passes_body_through_in_query_mode() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.callout(kind: "important")[
+  #metadata("INSIDE_CALLOUT")<callout-probe>
+]
+"##,
+    )
+    .unwrap();
+
+    let json = typst_query(dir.path(), &input, "<callout-probe>");
+    assert!(
+        json.contains("INSIDE_CALLOUT"),
+        "expected the callout body to pass through in query mode:\n{json}"
+    );
+}
+
+#[test]
+fn typst_compile_elements_callout_rejects_unknown_kind() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.callout(kind: "memo")[
+  Unknown kind.
+]
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new("typst")
+        .arg("compile")
+        .arg(&input)
+        .arg(&output)
+        .arg("--root")
+        .arg(dir.path())
+        .arg("--features")
+        .arg("html")
+        .arg("--input")
+        .arg("calepin-target=html")
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("calepin.elements.callout: unknown kind"),
+        "{stderr}"
+    );
+}
+
+#[test]
 fn typst_query_elements_tabs_exposes_nested_chunks() {
     skip_if_no_typst!();
 

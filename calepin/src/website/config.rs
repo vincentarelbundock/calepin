@@ -15,6 +15,10 @@ pub(super) struct WebsiteConfig {
     pub(super) theme: Option<toml::Value>,
     #[serde(rename = "vars")]
     pub(super) _vars: BTreeMap<String, toml::Value>,
+    // Resolved from `CalepinConfig` (config.rs), not here; this field only
+    // exists so `deny_unknown_fields` accepts `[toc]` in calepin.toml.
+    #[serde(rename = "toc")]
+    pub(super) _toc: Option<toml::Value>,
     pub(super) title: Option<String>,
     pub(super) description: Option<String>,
     pub(super) base_url: Option<String>,
@@ -122,6 +126,7 @@ pub(super) struct SidebarItemConfig {
     #[serde(alias = "path", alias = "url")]
     pub(super) target: Option<String>,
     pub(super) glob: Option<String>,
+    pub(super) label: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]

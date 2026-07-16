@@ -55,8 +55,8 @@ pub struct PreprocessOptions {
     pub html_syntax_theme: Option<crate::html::HtmlSyntaxTheme>,
     /// Optional custom generated asset directory relative to the input root.
     pub asset_dir: Option<PathBuf>,
-    /// `key=value` document-parameter overrides from the CLI (`-P`).
-    pub param_overrides: Vec<String>,
+    /// `key=value` config overrides from the CLI (`--set`).
+    pub config_overrides: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -64,6 +64,9 @@ pub struct PreprocessOutput {
     pub layout: LayoutPaths,
     pub executables: ExecutablePaths,
     pub theme: crate::theme::ThemeSelection,
+    /// Resolved document variables (`[vars]` config < `setup(vars:)` < CLI),
+    /// reused as the `vars` context for the single-document HTML theme step.
+    pub vars: serde_json::Value,
 }
 
 #[derive(Debug)]
@@ -79,7 +82,7 @@ pub struct PreprocessPlan {
     progress: bool,
     sync_pages: bool,
     display_root: Option<PathBuf>,
-    params: serde_json::Value,
+    vars: serde_json::Value,
     theme: crate::theme::ThemeSelection,
 }
 
@@ -108,6 +111,7 @@ pub fn preprocess_cached_output(plan: PreprocessPlan) -> PreprocessOutput {
         layout: plan.layout,
         executables: plan.executables,
         theme: plan.theme,
+        vars: plan.vars,
     }
 }
 
@@ -121,7 +125,11 @@ pub fn refresh_cached_preprocess_output(plan: PreprocessPlan) -> Result<Preproce
 
 pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessPlan> {
     let initial_layout = resolve_layout(&options.input, options.root.as_deref())?;
-    let config = CalepinConfig::load(&initial_layout.root, options.config.as_deref())?;
+    let config = CalepinConfig::load_with_overrides(
+        &initial_layout.root,
+        options.config.as_deref(),
+        &options.config_overrides,
+    )?;
     let config_theme = config.theme_selection()?;
     assert_supported_typst(&config.executables.typst)?;
 
@@ -151,7 +159,37 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     // staged source directly; document-level HTML must be guarded by target
     // checks so paged/query passes never evaluate `html.*` calls.
     let query_source = write_query_source(&layout, &staged_input)?;
-    let query_input = write_render_wrapper(&layout, &runtime_import, &query_source, &[], None)?;
+    // Theme the query pass with the same theme + inlined body as render, so the
+    // document body shares the theme's scope during metadata extraction too (it
+    // is evaluated in both passes). The theme must be knowable before the query:
+    // CLI > config > fallback. In-document `setup(theme:)` cannot participate
+    // here because it is itself extracted by this pass, so a theme that exports
+    // a vocabulary for the body must be selected via config or the CLI.
+    let pre_query_theme = options
+        .theme
+        .clone()
+        .or_else(|| config_theme.clone())
+        .unwrap_or_else(|| options.fallback_theme.clone());
+    // Title and vars are render concerns and irrelevant to metadata extraction,
+    // so the query context leaves them empty.
+    let query_context = notebook_template_context(
+        &layout,
+        &staged_input,
+        None,
+        serde_json::Value::Object(serde_json::Map::new()),
+    )?;
+    let query_theme = crate::theme::notebook_source(&pre_query_theme, &query_context)?;
+    let query_input = write_render_wrapper(
+        &layout,
+        &runtime_import,
+        if query_theme.is_some() {
+            None
+        } else {
+            Some(&query_source)
+        },
+        &[],
+        query_theme.as_ref(),
+    )?;
     let results_input = artifact_reference(&layout.root, &layout.results_path)?;
     let metadata = preprocess_metadata(
         &config.executables.typst,
@@ -187,7 +225,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
             }
         })
         .collect();
-    let params = resolve_params(&setup_config.defaults.params, &options.param_overrides)?;
+    let vars = resolve_vars(
+        &config.vars,
+        &setup_config.defaults.vars,
+        &crate::config::config_var_overrides(&options.config_overrides)?,
+    )?;
 
     let effective_theme = options
         .theme
@@ -199,15 +241,19 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &layout,
         &staged_input,
         metadata.page_meta.clone(),
-        params.clone(),
-    );
+        vars.clone(),
+    )?;
     let notebook_theme = crate::theme::notebook_source(&effective_theme, &notebook_context)?;
     if !jupyter_kernels.is_empty() {
         let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
         layout.render_input = write_render_wrapper(
             &layout,
             &runtime_import,
-            &staged_input,
+            if notebook_theme.is_some() {
+                None
+            } else {
+                Some(&staged_input)
+            },
             &kernels,
             notebook_theme.as_ref(),
         )?;
@@ -215,7 +261,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         layout.render_input = write_render_wrapper(
             &layout,
             &runtime_import,
-            &staged_input,
+            if notebook_theme.is_some() {
+                None
+            } else {
+                Some(&staged_input)
+            },
             &[],
             notebook_theme.as_ref(),
         )?;
@@ -229,7 +279,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &chunks,
         &cwd,
         timeout,
-        &params,
+        &vars,
         &effective_theme,
         asset_dir,
         image_meta.signature()?,
@@ -247,7 +297,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         progress: options.progress,
         sync_pages: options.sync_pages,
         display_root: options.display_root,
-        params,
+        vars,
         theme: effective_theme,
     })
 }
@@ -309,17 +359,17 @@ pub fn execute_preprocess_plan_with_chunk_progress(
     std::fs::create_dir_all(&staged_figures_dir)
         .with_context(|| format!("failed to create {}", staged_figures_dir.display()))?;
 
-    // Always write params.json when there are parameters: it is the universal
+    // Always write vars.json when there are variables: it is the universal
     // transport for Jupyter kernels Calepin cannot auto-bind, and a useful
     // reproducibility record. Native R/Python read their literal prelude instead.
-    let params_path = write_params_file(&plan.layout, &plan.params)?;
+    let vars_path = write_vars_file(&plan.layout, &plan.vars)?;
 
     let execution_config = ExecutionConfig {
         cwd: plan.cwd.clone(),
         executables: plan.executables.clone(),
         timeout: plan.timeout,
-        params: plan.params.clone(),
-        params_path,
+        vars: plan.vars.clone(),
+        vars_path,
     };
     let mut pool = EnginePool::new(execution_config);
     let mut chunk_results: Vec<Option<ChunkResultDocument>> = vec![None; plan.chunks.len()];
@@ -385,6 +435,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         layout: plan.layout,
         executables: plan.executables,
         theme: plan.theme,
+        vars: plan.vars,
     })
 }
 
@@ -517,34 +568,41 @@ fn publish_staged_file(source: &Path, target: &Path) -> Result<()> {
     write_if_changed(target, bytes)
 }
 
-/// Write `params.json` next to `results.json` when there are parameters, and
+/// Write `vars.json` next to `results.json` when there are variables, and
 /// return its path. Returns `None` (and removes any stale file) when empty.
-fn write_params_file(layout: &LayoutPaths, params: &serde_json::Value) -> Result<Option<PathBuf>> {
-    let path = layout.artifact_path("params.json");
-    let is_empty = params.as_object().is_none_or(|map| map.is_empty());
+fn write_vars_file(layout: &LayoutPaths, vars: &serde_json::Value) -> Result<Option<PathBuf>> {
+    let path = layout.artifact_path("vars.json");
+    let is_empty = vars.as_object().is_none_or(|map| map.is_empty());
     if is_empty {
         let _ = fs::remove_file(&path);
         return Ok(None);
     }
     ensure_parent(&path)?;
-    let json = serde_json::to_string_pretty(params)?;
+    let json = serde_json::to_string_pretty(vars)?;
     write_if_changed(&path, json)?;
     Ok(Some(path))
 }
 
-/// Merge `-P key=value` CLI overrides onto the document's `setup(params: ...)`.
-/// CLI values win, and inherit the same scalar typing as `#|` option values.
-fn resolve_params(base: &serde_json::Value, overrides: &[String]) -> Result<serde_json::Value> {
-    let mut map = match base {
-        serde_json::Value::Object(map) => map.clone(),
-        _ => serde_json::Map::new(),
-    };
-    for entry in overrides {
-        let (key, raw_value) = entry
-            .split_once('=')
-            .ok_or_else(|| anyhow!("invalid --param `{entry}` (expected `key=value`)"))?;
-        let value = crate::typst::chunk_options::parse_qmd_value(raw_value.trim())?;
-        map.insert(key.trim().to_string(), value);
+/// Resolve the document's variable map by merging three sources in increasing
+/// precedence: `[vars]` from `calepin.toml`, then `calepin.setup(vars: ...)`,
+/// then `--set vars.key=value` CLI overrides. CLI values inherit the same
+/// scalar typing as `#|` option values.
+fn resolve_vars(
+    config_vars: &std::collections::BTreeMap<String, toml::Value>,
+    setup_vars: &serde_json::Value,
+    overrides: &serde_json::Map<String, serde_json::Value>,
+) -> Result<serde_json::Value> {
+    let mut map = serde_json::Map::new();
+    if let Ok(serde_json::Value::Object(config_map)) = serde_json::to_value(config_vars) {
+        map.extend(config_map);
+    }
+    if let serde_json::Value::Object(setup_map) = setup_vars {
+        for (key, value) in setup_map {
+            map.insert(key.clone(), value.clone());
+        }
+    }
+    for (key, value) in overrides {
+        map.insert(key.clone(), value.clone());
     }
     Ok(serde_json::Value::Object(map))
 }
@@ -585,20 +643,46 @@ mod tests {
     }
 
     #[test]
-    fn cli_params_override_setup_params() {
-        let base = serde_json::json!({"region": "NY", "min_count": 10});
-        let resolved = resolve_params(
-            &base,
-            &[
-                "region=CA".to_string(),
-                "alpha=0.5".to_string(),
-                "active=true".to_string(),
-            ],
+    fn cli_vars_override_setup_vars() {
+        let setup = serde_json::json!({"region": "NY", "min_count": 10});
+        let resolved = resolve_vars(
+            &std::collections::BTreeMap::new(),
+            &setup,
+            &serde_json::Map::from_iter([
+                ("region".to_string(), serde_json::json!("CA")),
+                ("alpha".to_string(), serde_json::json!(0.5)),
+                ("active".to_string(), serde_json::json!(true)),
+            ]),
         )
         .unwrap();
         assert_eq!(
             resolved,
             serde_json::json!({"region":"CA","min_count":10,"alpha":0.5,"active":true})
+        );
+    }
+
+    #[test]
+    fn vars_merge_config_then_setup_then_cli() {
+        let config = std::collections::BTreeMap::from([
+            (
+                "region".to_string(),
+                toml::Value::String("config".to_string()),
+            ),
+            (
+                "source".to_string(),
+                toml::Value::String("config".to_string()),
+            ),
+        ]);
+        let setup = serde_json::json!({"region": "setup", "doc": "setup"});
+        let resolved = resolve_vars(
+            &config,
+            &setup,
+            &serde_json::Map::from_iter([("region".to_string(), serde_json::json!("cli"))]),
+        )
+        .unwrap();
+        assert_eq!(
+            resolved,
+            serde_json::json!({"region":"cli","source":"config","doc":"setup"})
         );
     }
 
@@ -627,7 +711,41 @@ mod tests {
             fallback_theme: crate::theme::ThemeSelection::Default,
             html_syntax_theme: None,
             asset_dir: None,
-            param_overrides: Vec::new(),
+            config_overrides: Vec::new(),
+        })
+        .unwrap();
+
+        assert_eq!(
+            plan.theme,
+            crate::theme::ThemeSelection::Builtin("academic")
+        );
+    }
+
+    #[test]
+    fn preprocess_theme_can_come_from_set_override() {
+        if !command_available("typst") {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "#set document(title: [Paper])\nHello").unwrap();
+
+        let plan = prepare_preprocess_plan(PreprocessOptions {
+            input,
+            root: Some(dir.path().to_path_buf()),
+            config: None,
+            display_root: None,
+            quiet: true,
+            status: false,
+            progress: false,
+            timeout: None,
+            sync_pages: false,
+            theme: None,
+            fallback_theme: crate::theme::ThemeSelection::Default,
+            html_syntax_theme: None,
+            asset_dir: None,
+            config_overrides: vec!["theme=academic".to_string()],
         })
         .unwrap();
 
@@ -662,7 +780,7 @@ mod tests {
             fallback_theme: crate::theme::ThemeSelection::Default,
             html_syntax_theme: None,
             asset_dir: None,
-            param_overrides: Vec::new(),
+            config_overrides: Vec::new(),
         })
         .unwrap();
 
@@ -681,17 +799,25 @@ mod tests {
     }
 
     #[test]
-    fn cli_param_without_equals_is_rejected() {
-        let err = resolve_params(&serde_json::json!({}), &["bad".to_string()])
+    fn cli_var_without_equals_is_rejected() {
+        let err = crate::config::config_var_overrides(&["vars=false".to_string()])
             .unwrap_err()
             .to_string();
-        assert!(err.contains("bad"), "{err}");
+        assert!(err.contains("vars"), "{err}");
     }
 
     #[test]
-    fn resolve_params_with_no_overrides_returns_base() {
-        let base = serde_json::json!({"a": 1});
-        assert_eq!(resolve_params(&base, &[]).unwrap(), base);
+    fn resolve_vars_with_no_overrides_returns_setup() {
+        let setup = serde_json::json!({"a": 1});
+        assert_eq!(
+            resolve_vars(
+                &std::collections::BTreeMap::new(),
+                &setup,
+                &serde_json::Map::new()
+            )
+            .unwrap(),
+            setup
+        );
     }
 
     #[test]
@@ -760,7 +886,7 @@ mod tests {
     }
 
     #[test]
-    fn preprocess_fingerprint_tracks_params() {
+    fn preprocess_fingerprint_tracks_vars() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
         let executables = ExecutablePaths::defaults();
@@ -1045,7 +1171,7 @@ mod tests {
             progress: false,
             sync_pages: false,
             display_root: None,
-            params: serde_json::json!({}),
+            vars: serde_json::json!({}),
             theme: crate::theme::ThemeSelection::Default,
         })
         .unwrap();
@@ -1057,16 +1183,14 @@ mod tests {
     fn render_wrapper_rewrites_notebook_theme_runtime_import() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
-        let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#import \"/.calepin/calepin.typ\": _html-themed-raw-block\n".to_string(),
-            owns_body: false,
         };
 
         let wrapper = write_render_wrapper(
             &layout,
             "/_runtime/calepin.typ",
-            &staged_input,
+            None,
             &[],
             Some(&notebook_theme),
         )
@@ -1078,46 +1202,39 @@ mod tests {
     }
 
     #[test]
-    fn render_wrapper_includes_notebook_theme_before_source() {
+    fn render_wrapper_keeps_notebook_theme_source_intact() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
-        let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#let notebook-theme-marker = true\n".to_string(),
-            owns_body: false,
         };
 
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
-            &staged_input,
+            None,
             &[],
             Some(&notebook_theme),
         )
         .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
-        let theme_marker = contents.find("#let notebook-theme-marker = true").unwrap();
-        let source_include = contents
-            .find("#include \"/.calepin/paper/source.typ\"")
-            .unwrap();
-        assert!(theme_marker < source_include);
+        assert!(contents.contains("#let notebook-theme-marker = true"));
+        assert!(!contents.contains("#include \"/.calepin/paper/source.typ\""));
     }
 
     #[test]
     fn render_wrapper_does_not_duplicate_template_owned_body() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
-        let staged_input = PathBuf::from(".calepin/paper/source.typ");
         let notebook_theme = crate::theme::NotebookSource {
             source: "#include \"/.calepin/paper/source.typ\"\n[#emph[Appendix]]\n".to_string(),
-            owns_body: true,
         };
 
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
-            &staged_input,
+            None,
             &[],
             Some(&notebook_theme),
         )
@@ -1142,7 +1259,7 @@ mod tests {
         let wrapper = write_render_wrapper(
             &layout,
             "/.calepin/calepin.typ",
-            &staged_input,
+            Some(&staged_input),
             &["bash"],
             None,
         )

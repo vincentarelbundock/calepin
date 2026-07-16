@@ -923,7 +923,7 @@ mod tests {
             fig_align: Some(Value::String("center".to_string())),
             fig_responsive: Some(true),
             fenced_chunks: FencedChunks::Off,
-            params: serde_json::json!({}),
+            vars: serde_json::json!({}),
             theme: None,
         };
         let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
@@ -974,32 +974,32 @@ mod tests {
     }
 
     #[test]
-    fn parses_setup_params_object() {
+    fn parses_setup_vars_object() {
         let json = setup_metadata(
             r#"{
               "echo":true,
-              "params":{"region":"NY","min_count":25,"active":true}
+              "vars":{"region":"NY","min_count":25,"active":true}
             }"#,
         );
         let config = parse_setup_config(&json).unwrap().unwrap();
         assert_eq!(
-            config.defaults.params,
+            config.defaults.vars,
             serde_json::json!({"region":"NY","min_count":25,"active":true})
         );
     }
 
     #[test]
-    fn setup_params_default_to_empty_object() {
+    fn setup_vars_default_to_empty_object() {
         let json = setup_metadata(r#"{"echo":true}"#);
         let config = parse_setup_config(&json).unwrap().unwrap();
-        assert_eq!(config.defaults.params, serde_json::json!({}));
+        assert_eq!(config.defaults.vars, serde_json::json!({}));
     }
 
     #[test]
-    fn rejects_non_object_setup_params() {
-        let json = setup_metadata(r#"{"params":[1,2,3]}"#);
+    fn rejects_non_object_setup_vars() {
+        let json = setup_metadata(r#"{"vars":[1,2,3]}"#);
         let err = parse_setup_config(&json).unwrap_err().to_string();
-        assert!(err.contains("params"), "{err}");
+        assert!(err.contains("vars"), "{err}");
     }
 
     #[test]

@@ -3,7 +3,8 @@
 {% include "partials/site-head.html" %}
 {{ doc.body_open }}
 {% include "partials/site-nav.html" %}
-    <div class="academic-page calepin-reading-page">
+    <div class="academic-page calepin-reading-page{% if site.toc %} has-toc{% endif %}">
+        {% include "partials/site-nav-toc.html" %}
         <main class="academic-main calepin-content" data-pagefind-body>
             {{ doc.body }}
         </main>

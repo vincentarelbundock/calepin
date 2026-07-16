@@ -191,10 +191,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     }
 
     let format = args.format.map(OutputFormat::from);
-    let current_dir = std::env::current_dir()?;
-    let config = crate::config::CalepinConfig::load(&current_dir, args.common.config.as_deref())?;
     let mut site_context = SiteContextInput::default();
-    site_context.vars = config.vars.clone();
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
         root: None,
@@ -209,8 +206,11 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         fallback_theme: crate::theme::ThemeSelection::Default,
         html_syntax_theme: None,
         asset_dir: None,
-        param_overrides: args.common.params,
+        config_overrides: args.common.sets,
     })?;
+    // The HTML theme step reuses the merged document variables (config < setup
+    // < CLI) resolved during preprocessing.
+    site_context.vars = output.vars.clone();
     compile_with_typst(
         &output.executables.typst,
         &output.layout,
@@ -593,7 +593,7 @@ mod tests {
                 config: None,
                 quiet: true,
                 timeout: None,
-                params: Vec::new(),
+                sets: Vec::new(),
             },
             typst_args: Vec::new(),
         }

@@ -8,20 +8,7 @@ where
     R: Read,
     W: Write,
 {
-    let mut reader = BufReader::new(reader);
-    let mut relay = TypstWatchOutputRelay::new(writer);
-    let mut line = String::new();
-
-    loop {
-        line.clear();
-        let bytes = reader.read_line(&mut line)?;
-        if bytes == 0 {
-            break;
-        }
-        relay.write_line(&line)?;
-    }
-
-    relay.finish()
+    relay_typst_watch_output_inner(reader, writer, None)
 }
 
 struct TypstWatchOutputRelay<W> {
@@ -146,6 +133,18 @@ where
     R: Read,
     W: Write,
 {
+    relay_typst_watch_output_inner(reader, writer, Some(on_write))
+}
+
+fn relay_typst_watch_output_inner<R, W>(
+    reader: R,
+    writer: W,
+    on_write: Option<Sender<PathBuf>>,
+) -> io::Result<()>
+where
+    R: Read,
+    W: Write,
+{
     let mut reader = BufReader::new(reader);
     let mut relay = TypstWatchOutputRelay::new(writer);
     let mut line = String::new();
@@ -156,8 +155,10 @@ where
         if bytes == 0 {
             break;
         }
-        if let Some(path) = typst_watch_output_path(&line) {
-            on_write.send(path).ok();
+        if let Some(on_write) = &on_write {
+            if let Some(path) = typst_watch_output_path(&line) {
+                on_write.send(path).ok();
+            }
         }
         relay.write_line(&line)?;
     }

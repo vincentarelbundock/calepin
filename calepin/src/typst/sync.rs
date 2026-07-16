@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::typst::introspect::page_anchors;
 use crate::typst::io::write_if_changed;
+use crate::typst::markdown_fence::{is_closing_fence, leading_backtick_count};
 use crate::typst::model::{ChunkSpec, LayoutPaths};
 use crate::typst::paths::slash_path;
 
@@ -161,15 +162,6 @@ fn source_code_ranges(source: &str) -> Vec<Range<usize>> {
     ranges
 }
 
-fn is_closing_fence(trimmed_line: &str, fence_len: usize) -> bool {
-    let closing_len = leading_backtick_count(trimmed_line);
-    if closing_len < fence_len {
-        return false;
-    }
-    let rest = trimmed_line[closing_len..].trim_start();
-    rest.is_empty() || rest.starts_with('<')
-}
-
 fn collect_inline_code_ranges(line: &str, line_start: usize, ranges: &mut Vec<Range<usize>>) {
     let bytes = line.as_bytes();
     let mut index = 0;
@@ -200,10 +192,6 @@ fn collect_inline_code_ranges(line: &str, line_start: usize, ranges: &mut Vec<Ra
         }
         index = end;
     }
-}
-
-fn leading_backtick_count(value: &str) -> usize {
-    value.chars().take_while(|ch| *ch == '`').count()
 }
 
 fn byte_index_to_line(source: &str, index: usize) -> usize {

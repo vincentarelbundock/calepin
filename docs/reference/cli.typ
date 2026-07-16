@@ -38,8 +38,7 @@ Arguments:
   [DIR]                 Destination directory when creating a website scaffold or ejected theme
 
 Options:
-      --theme <THEME>  Built-in theme to use when creating a website scaffold or ejected theme
-                       [possible values: calepin, academic]
+      --theme <THEME>  Built-in theme to use when creating a website scaffold or ejected theme [possible values: calepin, academic]
   -f, --force          Overwrite the file if it already exists
   -h, --help           Print help
 
@@ -105,10 +104,10 @@ Options:
       --timeout <TIMEOUT>
           Per-chunk timeout in seconds
 
-  -P, --param <KEY=VALUE>
-          Override a document parameter as `key=value` (repeatable).
+      --set <KEY=VALUE>
+          Override a Calepin config value as `key=value` (repeatable).
           
-          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.
+          Uses dotted paths for nested config, such as `theme=./theme`, `vars.region=CA`, or `toc.enabled=false`.
 
   -h, --help
           Print help (see a summary with '-h')
@@ -161,10 +160,10 @@ Options:
       --timeout <TIMEOUT>
           Per-chunk timeout in seconds
 
-  -P, --param <KEY=VALUE>
-          Override a document parameter as `key=value` (repeatable).
+      --set <KEY=VALUE>
+          Override a Calepin config value as `key=value` (repeatable).
           
-          Takes precedence over `calepin.setup(params: ...)`, so the same document can render with different values without editing the source.
+          Uses dotted paths for nested config, such as `theme=./theme`, `vars.region=CA`, or `toc.enabled=false`.
 
   -h, --help
           Print help (see a summary with '-h')
