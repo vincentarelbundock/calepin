@@ -98,6 +98,7 @@ fn write_notebook_scaffold(path: &Path, force: bool) -> Result<()> {
 
 pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
     set_quiet(args.common.quiet);
+    validate_eval_only_watch_flags(&args)?;
     if args.input.is_dir() {
         return crate::website::watch_from_watch_args(args);
     }
@@ -109,6 +110,38 @@ pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
     apply_html_watch_typst_args(&mut args, is_html);
 
     crate::typst::watch::run_watch(args)
+}
+
+fn validate_eval_only_watch_flags(args: &WatchArgs) -> Result<()> {
+    if !args.eval_only {
+        return Ok(());
+    }
+    if args.input.is_dir() {
+        return Err(anyhow::anyhow!(
+            "`--eval-only` supports a single .typ input, not a website directory"
+        ));
+    }
+    if args.output.is_some() {
+        return Err(anyhow::anyhow!(
+            "an output path cannot be used with `--eval-only`"
+        ));
+    }
+    if args.format.is_some() {
+        return Err(anyhow::anyhow!(
+            "`--format` cannot be used with `--eval-only`"
+        ));
+    }
+    if args.serve || args.open || args.port.is_some() || args.host != "127.0.0.1" {
+        return Err(anyhow::anyhow!(
+            "`--serve`, `--open`, `--host`, and `--port` cannot be used with `--eval-only`"
+        ));
+    }
+    if !args.typst_args.is_empty() {
+        return Err(anyhow::anyhow!(
+            "Typst pass-through arguments cannot be used with `--eval-only`"
+        ));
+    }
+    Ok(())
 }
 
 fn validate_single_file_watch_flags(args: &WatchArgs, is_html: bool) -> Result<()> {
@@ -603,11 +636,35 @@ mod tests {
             .any(|pair| pair == ["--port", "3000"]));
     }
 
+    #[test]
+    fn eval_only_watch_rejects_render_options() {
+        let mut args = watch_args(PathBuf::from("paper.typ"), Some(WatchFormat::Pdf));
+        args.eval_only = true;
+
+        let err = validate_eval_only_watch_flags(&args)
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("--format"), "{err}");
+        assert!(err.contains("--eval-only"), "{err}");
+    }
+
+    #[test]
+    fn eval_only_watch_accepts_computational_options() {
+        let mut args = watch_args(PathBuf::from("paper.typ"), None);
+        args.eval_only = true;
+        args.common.timeout = Some(30);
+        args.common.sets = vec!["vars.seed=42".to_string()];
+
+        validate_eval_only_watch_flags(&args).unwrap();
+    }
+
     fn watch_args(input: PathBuf, format: Option<WatchFormat>) -> WatchArgs {
         WatchArgs {
             input,
             output: None,
             format,
+            eval_only: false,
             serve: false,
             open: false,
             host: "127.0.0.1".to_string(),

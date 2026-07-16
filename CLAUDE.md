@@ -20,7 +20,7 @@ The binary crate is nested at `calepin/`, so direct cargo invocations need `--ma
 - `make cli-reference` regenerates `docs-src/cli.md` from clap `--help` output
 - `make website` / `make serve` build the docs site via `calepin compile docs docs` into `docs/` (website config auto-discovered at `docs/calepin.toml`)
 - `make bump VERSION=x.y.z` then `make release` cuts a release (tags + pushes, which fires the cargo-dist and crates.io workflows). `make release` refuses a dirty tree.
-- `make editors` builds and installs the VS Code / Positron extension from `editors/vscode/`
+- `make editors` builds the extension from `editors/vscode/`, installs it in VS Code, and installs it in Positron when the Positron CLI is available
 
 Integration tests in `tests/typst_preprocess.rs` shell out to the built binary plus real `typst`/`python3`/`pdftotext`. They return early (skip, not fail) when a required tool is absent, so a green run on a machine without `typst` may have skipped the meaningful tests.
 
@@ -63,7 +63,7 @@ For input `paper.typ` under a project root, artifacts live under `.calepin/<stem
 
 ### Watch (`typst/watch/`)
 
-`calepin watch` preprocesses once, then spawns a child `typst watch` for live re-rendering and runs its own filesystem watcher (`notify`) over the project root. On a source change, the watcher re-runs `preprocess` (regenerating `results.json`); the child `typst watch` notices the changed results and re-renders. Calepin owns no HTTP server or port. Ctrl+C stops both.
+`calepin watch` preprocesses once, then normally spawns a child `typst watch` for live re-rendering and runs its own filesystem watcher (`notify`) over the project root. On a source change, the watcher re-runs the metadata query; the preprocessing fingerprint prevents prose and display-only changes from re-evaluating chunks. The child `typst watch` notices changed results and re-renders. With `--eval-only`, Calepin does not spawn `typst watch` or write rendered output, leaving preview to an external frontend such as Tinymist. Calepin owns no HTTP server or port. Ctrl+C stops the active watcher processes.
 
 ### Theme bundles (`theme.rs`, `html/theme.rs`)
 
@@ -79,4 +79,4 @@ calling `html/theme.rs`; paged rendering injects the effective bundle
 
 - Tests are behavior-focused. Do not add regression pins on exact layout, generated source strings, or byte output; assert on observable behavior instead.
 - Embedded assets (`runtime.typ`, the html-theme templates and `.tmTheme` files) are compiled into the binary via `include_str!`. Editing them changes program behavior and requires a rebuild; there is no separate install step.
-- `editors/vscode/` is a TypeScript VS Code extension that bundles a built `calepin` binary plus pdf.js. Its version is kept in sync with the Rust crate by `make vscode-sync-version`.
+- `editors/vscode/` is a small TypeScript VS Code extension that bundles a built `calepin` binary. It contributes explicit start/stop commands for `calepin watch --eval-only` and does not integrate with or depend on a preview extension. Its version is kept in sync with the Rust crate by `make vscode-sync-version`.

@@ -43,7 +43,7 @@ pub enum Command {
     /// Preprocess, then invoke typst compile
     Compile(CompileArgs),
 
-    /// Watch, preprocess, and delegate recompiles to typst watch
+    /// Watch and preprocess, optionally delegating rendering to typst watch
     Watch(WatchArgs),
 
     /// Serve static files locally
@@ -183,6 +183,10 @@ pub struct WatchArgs {
     /// Output format passed to typst watch
     #[arg(long, value_enum)]
     pub format: Option<WatchFormat>,
+
+    /// Evaluate changed chunks and refresh artifacts without starting typst watch
+    #[arg(long)]
+    pub eval_only: bool,
 
     /// Serve the website while watching a directory
     #[arg(long)]
@@ -465,6 +469,7 @@ mod tests {
                 assert_eq!(args.input, PathBuf::from("paper.typ"));
                 assert_eq!(args.output, Some(PathBuf::from("out/paper.html")));
                 assert_eq!(args.format, Some(WatchFormat::Html));
+                assert!(!args.eval_only);
                 assert!(!args.serve);
                 assert!(!args.open);
                 assert!(args.common.quiet);
@@ -481,6 +486,21 @@ mod tests {
             .unwrap_err();
 
         assert!(error.to_string().contains("invalid value 'script'"));
+    }
+
+    #[test]
+    fn test_typst_watch_eval_only_args() {
+        let cli = Cli::try_parse_from(["calepin", "watch", "paper.typ", "--eval-only", "--quiet"])
+            .unwrap();
+
+        match cli.command {
+            Command::Watch(args) => {
+                assert_eq!(args.input, PathBuf::from("paper.typ"));
+                assert!(args.eval_only);
+                assert!(args.common.quiet);
+            }
+            other => panic!("expected watch command, got {other:?}"),
+        }
     }
 
     #[test]

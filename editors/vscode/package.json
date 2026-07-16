@@ -2,7 +2,7 @@
   "name": "calepin",
   "displayName": "Calepin for Typst",
   "description": "Calepin brings computational notebooks to Typst",
-  "version": "0.0.2",
+  "version": "0.0.32",
   "publisher": "VincentArel-Bundock",
   "license": "MIT",
   "icon": "logo_short.png",
@@ -41,44 +41,28 @@
   "activationEvents": [
     "onLanguage:typst",
     "workspaceContains:**/*.typ",
-    "onCommand:calepin.watch",
-    "onCommand:calepin.compile",
-    "onCommand:calepin.stop",
-    "onCommand:calepin.new"
+    "onCommand:calepin.start",
+    "onCommand:calepin.stop"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "calepin.watch",
-        "title": "Calepin Typst Watch"
-      },
-      {
-        "command": "calepin.compile",
-        "title": "Calepin Typst Compile"
+        "command": "calepin.start",
+        "title": "Typst: Calepin"
       },
       {
         "command": "calepin.stop",
-        "title": "Calepin Typst Stop"
-      },
-      {
-        "command": "calepin.new",
-        "title": "Calepin Typst New"
+        "title": "Typst: Stop Calepin"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "calepin.watch"
-        },
-        {
-          "command": "calepin.compile"
+          "command": "calepin.start"
         },
         {
           "command": "calepin.stop"
-        },
-        {
-          "command": "calepin.new"
         }
       ]
     },
@@ -89,25 +73,6 @@
           "type": "string",
           "default": "",
           "description": "Absolute path to the calepin binary. Leave empty to use the bundled binary, then PATH."
-        },
-        "calepin.watchFormat": {
-          "type": "string",
-          "enum": [
-            "pdf",
-            "html",
-            "svg",
-            "png"
-          ],
-          "default": "pdf",
-          "description": "Output format for Calepin Typst Watch."
-        },
-        "calepin.watchTypstArgs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Arguments forwarded to typst watch after --, such as --port, --open, or --font-path."
         }
       }
     }
@@ -123,8 +88,5 @@
     "@vscode/vsce": "^3.0.0",
     "ovsx": "^0.9.0",
     "typescript": "^5.4.0"
-  },
-  "dependencies": {
-    "pdfjs-dist": "^4.10.38"
   }
 }

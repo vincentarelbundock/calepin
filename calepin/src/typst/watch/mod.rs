@@ -3,7 +3,7 @@ mod relay;
 mod watcher;
 
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
@@ -123,7 +123,87 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
     }
 }
 
+fn install_ctrl_c_handler() -> Result<Arc<AtomicBool>> {
+    let stop = Arc::new(AtomicBool::new(false));
+    let stop_for_handler = Arc::clone(&stop);
+    ctrlc::set_handler(move || {
+        stop_for_handler.store(true, Ordering::Relaxed);
+    })
+    .context("failed to set Ctrl+C handler")?;
+    Ok(stop)
+}
+
+fn watch_preprocess_changes(
+    args: &WatchArgs,
+    root: &Path,
+    excluded_output: &Path,
+    stop: Arc<AtomicBool>,
+    sync_pages: bool,
+    action: &'static str,
+) -> Result<()> {
+    let options = preprocess_options(args, sync_pages);
+    let quiet = args.common.quiet;
+    watcher::watch_root(
+        root,
+        excluded_output,
+        args.common.config.as_deref(),
+        stop,
+        move |changed| match prepare_preprocess_plan(options.clone()) {
+            Ok(plan) => {
+                if !quiet {
+                    let names = changed
+                        .iter()
+                        .filter_map(|path| path.file_name())
+                        .map(|name| name.to_string_lossy().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    eprintln!("{action} {names}...");
+                }
+                match preprocess_cached_plan(plan) {
+                    Ok(output) => {
+                        if let Err(error) = publish_active_binding(&output.layout) {
+                            cwarn!("failed to publish active notebook: {}", error);
+                        }
+                    }
+                    Err(error) => {
+                        cwarn!("rebuild failed: {}", error);
+                    }
+                }
+            }
+            Err(error) => {
+                cwarn!("rebuild failed: {}", error);
+            }
+        },
+    )
+}
+
+fn run_eval_only_watch(args: WatchArgs) -> Result<()> {
+    let initial = preprocess_cached(preprocess_options(&args, false))?;
+    publish_active_binding(&initial.layout)?;
+    let stop = install_ctrl_c_handler()?;
+
+    if !args.common.quiet {
+        eprintln!(
+            "watching {} for computational changes...",
+            initial.layout.input_rel.display()
+        );
+    }
+
+    watch_preprocess_changes(
+        &args,
+        &initial.layout.root,
+        &initial.layout.results_path,
+        stop,
+        false,
+        "checking",
+    )
+}
+
 pub fn run_watch(args: WatchArgs) -> Result<()> {
+    if args.eval_only {
+        return run_eval_only_watch(args);
+    }
+
     let format = resolve_output_format(args.format.map(OutputFormat::from), args.output.as_deref());
     let sync_pages = format.unwrap_or(OutputFormat::Pdf) == OutputFormat::Pdf;
     validate_forwarded_typst_args(&args.typst_args, format)?;
@@ -131,12 +211,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let initial = preprocess_cached(preprocess_options(&args, sync_pages))?;
     publish_active_binding(&initial.layout)?;
 
-    let stop = Arc::new(AtomicBool::new(false));
-    let stop_for_handler = Arc::clone(&stop);
-    ctrlc::set_handler(move || {
-        stop_for_handler.store(true, Ordering::Relaxed);
-    })
-    .context("failed to set Ctrl+C handler")?;
+    let stop = install_ctrl_c_handler()?;
 
     let resolved_output = resolve_output_path(&initial.layout, args.output.as_deref(), format);
     let root = initial.layout.root.clone();
@@ -153,8 +228,10 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let mut html_postprocessor = None;
     let mut write_events = None;
     if is_html {
-        let mut site_context = SiteContextInput::default();
-        site_context.vars = initial.vars.clone();
+        let site_context = SiteContextInput {
+            vars: initial.vars.clone(),
+            ..SiteContextInput::default()
+        };
         let html_entry =
             crate::theme::resolve_html_entry(&initial.theme, crate::theme::HtmlScope::Document)?;
         let (sender, receiver) = mpsc::channel();
@@ -237,36 +314,14 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let watcher_args = args.clone();
     let watcher_root = root.clone();
     let watcher_output = resolved_output.clone();
-    let quiet = args.common.quiet;
     let watcher = thread::spawn(move || {
-        let options = preprocess_options(&watcher_args, sync_pages);
-        let result = watcher::watch_root(
+        let result = watch_preprocess_changes(
+            &watcher_args,
             &watcher_root,
             &watcher_output,
-            watcher_args.common.config.as_deref(),
             Arc::clone(&watcher_stop),
-            move |changed| match prepare_preprocess_plan(options.clone()) {
-                Ok(plan) => {
-                    if !quiet {
-                        let names = changed
-                            .iter()
-                            .filter_map(|path| path.file_name())
-                            .map(|name| name.to_string_lossy().to_string())
-                            .collect::<Vec<_>>()
-                            .join(", ");
-                        eprintln!("rebuilding {names}...");
-                    }
-                    match preprocess_cached_plan(plan) {
-                        Ok(_) => {}
-                        Err(error) => {
-                            cwarn!("rebuild failed: {}", error);
-                        }
-                    }
-                }
-                Err(error) => {
-                    cwarn!("rebuild failed: {}", error);
-                }
-            },
+            sync_pages,
+            "rebuilding",
         );
         if let Err(error) = result {
             cwarn!("watch error: {}", error);

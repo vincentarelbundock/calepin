@@ -131,6 +131,28 @@ calepin watch docs docs --serve --open
 calepin watch my_site public --serve --host 127.0.0.1 --port 8001
 ```
 
+== Eval-only watch
+<eval-only-watch>
+
+When Tinymist or another editor already provides Typst preview, use
+`--eval-only` to refresh Calepin's computational artifacts without starting
+a second `typst watch` process or writing a rendered output file:
+
+```sh
+calepin watch paper.typ --eval-only
+```
+
+Calepin performs an initial preprocessing pass, publishes the notebook for
+external preview, and then monitors changes. It runs a lightweight Typst query
+to detect chunk definitions, but Python, R, Jupyter, shell, and diagram engines
+run only when the computational fingerprint changes. Prose-only edits use the
+existing results cache; display-only chunk options can refresh stored rendering
+metadata without re-executing code.
+
+This single-file mode does not accept an output path, `--format`, serving
+options, or Typst pass-through arguments. Tinymist remains responsible for
+rendering and live preview.
+
 == PDF viewer auto-refresh
 <pdf-viewer-auto-refresh>
 
