@@ -5,6 +5,7 @@
 #metadata((
   layout: "layouts/site-landing.html",
   pdf: true,
+  tags: ("overview", "getting started"),
 )) <website-metadata>
 
 #let typst-logo-paths = (

@@ -27,6 +27,13 @@
   }
 }
 
+#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
@@ -58,7 +65,7 @@
 
 #import "/.calepin/calepin.typ" as calepin
 #set document(title: [Touying slides])
-#metadata((title: "Touying", pdf: false)) <website-metadata>
+#metadata((title: "Touying", pdf: false, tags: ("slides", "notebooks"))) <website-metadata>
 
 #let target = sys.inputs.at("calepin-target", default: "paged")
 

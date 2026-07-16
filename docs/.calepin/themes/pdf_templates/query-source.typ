@@ -1,5 +1,6 @@
 #set document(title: [PDF])
 #import "/.calepin/calepin.typ" as calepin
+#metadata((tags: ("themes", "PDF", "templates"))) <website-metadata>
 #title()
 
 `layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.

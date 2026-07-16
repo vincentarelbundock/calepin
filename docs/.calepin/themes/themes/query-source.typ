@@ -2,7 +2,7 @@
 #set document(title: [Themes])
 #import "/.calepin/calepin.typ" as calepin
 
-#metadata((title: "Themes")) <website-metadata>
+#metadata((title: "Themes", tags: ("themes", "overview"))) <website-metadata>
 
 #title()
 

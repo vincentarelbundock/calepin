@@ -3,7 +3,7 @@
 
 #set document(title: [Reusable elements])
 
-#metadata((title: "Elements", pdf: false)) <website-metadata>
+#metadata((title: "Elements", pdf: false, tags: ("websites", "elements"))) <website-metadata>
 
 #calepin.setup(fenced-chunks: true)
 
@@ -244,7 +244,9 @@ You can also request more than two columns:
 
 = Tabs
 
-`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the group and `calepin.elements.tab("Label", active: true)[...]` for each panel. Panel names are generated automatically; pass `name: "..."` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed.
+`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the container and `calepin.elements.tab("Label", active: true)[...]` for each panel. Panel names are generated automatically; pass `name: "..."` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed.
+
+Pass the same `group: "..."` value to multiple tab containers to keep their selection synchronized by panel name. As in Quarto tabset groups, selecting a panel in one container selects the panel with the same name in every other container in the group. Containers without `group` remain independent.
 
 ````typ
 #calepin.elements.tabs[
@@ -289,14 +291,14 @@ This tab shows Python code:
 ```typ
 #calepin.elements.lightbox-image(
   "editor-image",
-  "../assets/screenshot_notebook.png",
+  "/assets/screenshot_notebook.png",
   "Notebook screenshot",
   width: 16em,
 )
 #calepin.elements.lightbox-video(
   "editor-video",
-  "../assets/calepin_vscode.mp4",
-  poster: "../assets/calepin_vscode-thumb.png",
+  "/assets/calepin_vscode.mp4",
+  poster: "/assets/calepin_vscode-thumb.png",
   width: 16em,
 )
 ```
@@ -307,7 +309,7 @@ This tab shows Python code:
   [
     #calepin.elements.lightbox-image(
       "editor-image",
-      "../assets/screenshot_notebook.png",
+      "/assets/screenshot_notebook.png",
       "Notebook screenshot",
       width: 16em,
     )
@@ -315,8 +317,8 @@ This tab shows Python code:
   [
     #calepin.elements.lightbox-video(
       "editor-video",
-      "../assets/calepin_vscode.mp4",
-      poster: "../assets/calepin_vscode-thumb.png",
+      "/assets/calepin_vscode.mp4",
+      poster: "/assets/calepin_vscode-thumb.png",
       width: 16em,
     )
   ],

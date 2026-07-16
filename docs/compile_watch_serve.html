@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Compile, watch, serve])\n\n#title() <compile-watch-serve>\n\n= Compile\n<compile>\n\nUse `calepin compile` when you want to execute code chunks and render a\ndocument. The command line shape is intentionally the same as\n`typst compile`: same output-first/format-driven arguments, with `--`\npass-through for Typst flags, plus Calepin preprocessing.\n\n```sh\ncalepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n```\n\nCompile a website by pointing `calepin compile` at a source directory\nthat contains `calepin.toml`:\n\n```sh\ncalepin compile docs docs\ncalepin compile my_site public\n```\n\nArguments after `--` are forwarded to Typst, so project-specific Typst\nflags can stay in the same command.\n\n```sh\n# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n```\n\n== Progress output\n<progress-output>\n\nCalepin shows animated progress when the terminal supports it, using the\nsame terminal detection as the underlying progress renderer. When output\nis redirected, the terminal is not interactive, or the terminal reports\nlimited capabilities, Calepin falls back to plain status lines.\n\nSome terminal panes and command runners report themselves as interactive\nbut render spinner redraws as separate lines. Set `CALEPIN_PROGRESS` to\n`plain` to disable animated progress while keeping status messages:\n\n```sh\nCALEPIN_PROGRESS=plain calepin compile paper.typ\n```\n\nIn PowerShell:\n\n```powershell\n$env:CALEPIN_PROGRESS = \"plain\"\ncalepin compile paper.typ\n```\n\n= Watch\n<watch>\n\nUse `calepin watch` while editing. It watches your source for changes,\nre-runs preprocessing, and delegates recompilation and previewing to\n`typst watch`. The command form is the same as `typst watch`: same\npositional arguments and pass-through flags, with Calepin running its\npreprocessing step first.\n\n```sh\ncalepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n```\n\nThe default output format is PDF. Choose another format with `--format`,\nor let the output extension select the format.\n\nArguments after `--` are passed through to `typst watch`. Typst's\n`--open` flag opens the rendered output in the operating system's\ndefault viewer, and Typst's `--port` flag chooses the HTML preview port.\n\n```sh\ncalepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n```\n\nWatch a website directory by passing the source and output directories:\n\n```sh\ncalepin watch docs docs\ncalepin watch my_site public\n```\n\nAdd `--serve` to run the local server while watching a website. It uses\nthe same `--host`, `--port`, and `--open` options as `calepin serve`.\n\n```sh\ncalepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n```\n\n== PDF viewer auto-refresh\n<pdf-viewer-auto-refresh>\n\nSome PDF viewers do not automatically refresh a document when it is\nregenerated on disk. For example, macOS Preview may keep showing an\nolder PDF until the window is focused, the file is reopened, or the\napplication is restarted.\n\nFor smoother live preview, use a PDF viewer that reloads the file when\nit changes. On macOS, Skim is a good option. Other platforms have\nsimilar auto-reloading viewers, which are useful when working with tools\nthat repeatedly rebuild PDFs.\n\n= Serve\n<serve>\n\nUse `calepin serve` to preview a compiled website directory locally.\nThis is useful for checking routing, assets, Pagefind search, and links\nafter a static build.\n\n```sh\ncalepin serve docs\ncalepin serve public\n```\n\nBy default, Calepin uses `127.0.0.1` and the first available port from\n8000. Set the host and port explicitly when you need a stable preview\nURL:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\nOpen the served website in your default browser:\n\n```sh\ncalepin serve docs --open\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Compile, watch, serve])\n#metadata((tags: (\"getting started\", \"CLI\"))) <website-metadata>\n\n#title() <compile-watch-serve>\n\n= Compile\n<compile>\n\nUse `calepin compile` when you want to execute code chunks and render a\ndocument. The command line shape is intentionally the same as\n`typst compile`: same output-first/format-driven arguments, with `--`\npass-through for Typst flags, plus Calepin preprocessing.\n\n```sh\ncalepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n```\n\nCompile a website by pointing `calepin compile` at a source directory\nthat contains `calepin.toml`:\n\n```sh\ncalepin compile docs docs\ncalepin compile my_site public\n```\n\nArguments after `--` are forwarded to Typst, so project-specific Typst\nflags can stay in the same command.\n\n```sh\n# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n```\n\n== Progress output\n<progress-output>\n\nCalepin shows animated progress when the terminal supports it, using the\nsame terminal detection as the underlying progress renderer. When output\nis redirected, the terminal is not interactive, or the terminal reports\nlimited capabilities, Calepin falls back to plain status lines.\n\nSome terminal panes and command runners report themselves as interactive\nbut render spinner redraws as separate lines. Set `CALEPIN_PROGRESS` to\n`plain` to disable animated progress while keeping status messages:\n\n```sh\nCALEPIN_PROGRESS=plain calepin compile paper.typ\n```\n\nIn PowerShell:\n\n```powershell\n$env:CALEPIN_PROGRESS = \"plain\"\ncalepin compile paper.typ\n```\n\n= Watch\n<watch>\n\nUse `calepin watch` while editing. It watches your source for changes,\nre-runs preprocessing, and delegates recompilation and previewing to\n`typst watch`. The command form is the same as `typst watch`: same\npositional arguments and pass-through flags, with Calepin running its\npreprocessing step first.\n\n```sh\ncalepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n```\n\nThe default output format is PDF. Choose another format with `--format`,\nor let the output extension select the format.\n\nArguments after `--` are passed through to `typst watch`. Typst's\n`--open` flag opens the rendered output in the operating system's\ndefault viewer, and Typst's `--port` flag chooses the HTML preview port.\n\n```sh\ncalepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n```\n\nWatch a website directory by passing the source and output directories:\n\n```sh\ncalepin watch docs docs\ncalepin watch my_site public\n```\n\nAdd `--serve` to run the local server while watching a website. It uses\nthe same `--host`, `--port`, and `--open` options as `calepin serve`.\n\n```sh\ncalepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n```\n\n== PDF viewer auto-refresh\n<pdf-viewer-auto-refresh>\n\nSome PDF viewers do not automatically refresh a document when it is\nregenerated on disk. For example, macOS Preview may keep showing an\nolder PDF until the window is focused, the file is reopened, or the\napplication is restarted.\n\nFor smoother live preview, use a PDF viewer that reloads the file when\nit changes. On macOS, Skim is a good option. Other platforms have\nsimilar auto-reloading viewers, which are useful when working with tools\nthat repeatedly rebuild PDFs.\n\n= Serve\n<serve>\n\nUse `calepin serve` to preview a compiled website directory locally.\nThis is useful for checking routing, assets, Pagefind search, and links\nafter a static build.\n\n```sh\ncalepin serve docs\ncalepin serve public\n```\n\nBy default, Calepin uses `127.0.0.1` and the first available port from\n8000. Set the host and port explicitly when you need a stable preview\nURL:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\nOpen the served website in your default browser:\n\n```sh\ncalepin serve docs --open\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="websites/pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="websites/tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4462,6 +4470,20 @@ calepin compile paper.typ</code></pre></div><h2 id="watch">Watch</h2><p>Use <cod
         
             
             
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
         
         
             

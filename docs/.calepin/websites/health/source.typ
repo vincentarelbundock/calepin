@@ -1,6 +1,6 @@
 #import "/.calepin/calepin.typ" as calepin
 #set document(title: [Health checks])
-#metadata((title: "Health")) <website-metadata>
+#metadata((title: "Health", tags: ("websites", "CLI", "validation"))) <website-metadata>
 
 #title()
 

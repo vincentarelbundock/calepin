@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Configuration])\n\n#title()\n\n= `config.toml`\n\n`Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:\n\n```bash\ncalepin compile --config config.toml paper.typ\n```\n\nIf `--config` is omitted, `Calepin` uses defaults.\n\nRelative paths written inside the config resolve relative to the config file's own directory, not the document being compiled. Absolute paths are used as is.\n\n`asset-dir` controls where Calepin writes generated runtime files and browser-facing assets, including theme CSS, JavaScript, and fonts. The default is `.calepin`, which works in local preview. Some hosts like Netlify do not serve files from dot-directories, so deployed pages can sometimes load without styling, search, dark-mode toggles, or other theme JavaScript even though they looked correct locally. For sites published to those hosts, set `asset-dir = \"_calepin\"` before building.\n\n```toml\n# config.toml\n\n# Directory for generated Calepin runtime and website assets.\n# Default: \".calepin\". Use \"_calepin\" for Netlify or GitHub Pages.\nasset-dir = \".calepin\"\n\n[executables]\ntypst = \"typst\"                    # Typst binary (can be name or full path)\npython = \".venv/bin/python\"         # Python interpreter\nrscript = \"Rscript\"                # R executable\nmmdc = \"mmdc\"                      # Mermaid\n#dot = \"/opt/homebrew/bin/dot\"     # optional, if needed\n#d2 = \"d2\"                          # optional\n#tectonic = \"tectonic\"              # optional\n#dvisvgm = \"dvisvgm\"                # optional\n#pdf2svg = \"pdf2svg\"                # optional\n```\n\nIf `python` is not configured, set `CALEPIN_PYTHON` in the environment to\npick it. If that is absent, Calepin uses a local `.venv` interpreter when\navailable.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Configuration])\n#metadata((tags: (\"getting started\", \"configuration\"))) <website-metadata>\n\n#title()\n\n= `config.toml`\n\n`Calepin` does not auto-discover configuration. For `compile` and `watch`, pass the config path explicitly with `--config=PATH`:\n\n```bash\ncalepin compile --config config.toml paper.typ\n```\n\nIf `--config` is omitted, `Calepin` uses defaults.\n\nRelative paths written inside the config resolve relative to the config file's own directory, not the document being compiled. Absolute paths are used as is.\n\n`asset-dir` controls where Calepin writes generated runtime files and browser-facing assets, including theme CSS, JavaScript, and fonts. The default is `.calepin`, which works in local preview. Some hosts like Netlify do not serve files from dot-directories, so deployed pages can sometimes load without styling, search, dark-mode toggles, or other theme JavaScript even though they looked correct locally. For sites published to those hosts, set `asset-dir = \"_calepin\"` before building.\n\n```toml\n# config.toml\n\n# Directory for generated Calepin runtime and website assets.\n# Default: \".calepin\". Use \"_calepin\" for Netlify or GitHub Pages.\nasset-dir = \".calepin\"\n\n[executables]\ntypst = \"typst\"                    # Typst binary (can be name or full path)\npython = \".venv/bin/python\"         # Python interpreter\nrscript = \"Rscript\"                # R executable\nmmdc = \"mmdc\"                      # Mermaid\n#dot = \"/opt/homebrew/bin/dot\"     # optional, if needed\n#d2 = \"d2\"                          # optional\n#tectonic = \"tectonic\"              # optional\n#dvisvgm = \"dvisvgm\"                # optional\n#pdf2svg = \"pdf2svg\"                # optional\n```\n\nIf `python` is not configured, set `CALEPIN_PYTHON` in the environment to\npick it. If that is absent, Calepin uses a local `.venv` interpreter when\navailable.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../websites/pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4435,6 +4443,20 @@ html:not([data-theme]) {
         
             
             
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
         
         
             

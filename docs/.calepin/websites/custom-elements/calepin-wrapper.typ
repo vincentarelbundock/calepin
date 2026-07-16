@@ -28,6 +28,13 @@
   }
 }
 
+#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
@@ -60,7 +67,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Custom web elements])
-#metadata((title: "Custom elements", pdf: false)) <website-metadata>
+#metadata((title: "Custom elements", pdf: false, tags: ("websites", "HTML", "elements"))) <website-metadata>
 
 #calepin.setup(fenced-chunks: true)
 #let target = sys.inputs.at("calepin-target", default: "paged")

@@ -28,6 +28,13 @@
   }
 }
 
+#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
@@ -59,7 +66,7 @@
 
 #import "/.calepin/calepin.typ" as calepin
 #set document(title: [Pages and metadata])
-#metadata((title: "Pages")) <website-metadata>
+#metadata((title: "Pages", tags: ("websites", "metadata"))) <website-metadata>
 
 #title()
 
@@ -139,3 +146,5 @@ Use `calepin.pages()` to get structured information about every built page, incl
 Only `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.
 
 There is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.
+
+See the #link("tags.html")[tags and taxonomies example] for a reusable function that groups this site's documentation pages by metadata value.

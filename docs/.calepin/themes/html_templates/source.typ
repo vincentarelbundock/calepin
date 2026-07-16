@@ -1,5 +1,6 @@
 #set document(title: [HTML])
 #import "/.calepin/calepin.typ" as calepin
+#metadata((tags: ("themes", "HTML", "templates"))) <website-metadata>
 #title()
 
 = Context

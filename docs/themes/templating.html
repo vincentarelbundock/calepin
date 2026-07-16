@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Templating])\n#import \"/.calepin/calepin.typ\" as calepin\n#title()\n\nTheme layouts are #link(\"https://docs.rs/minijinja/latest/minijinja/syntax/index.html\")[MiniJinja] templates. The HTML layouts (`layouts/site.html` and `layouts/document.html`) and the paged layout (`layouts/pdf.typ`) all use the same engine, so the syntax on this page applies to both. The #link(\"html_templates.html\")[HTML templates] and #link(\"pdf_templates.html\")[PDF templates] pages document the values each layout receives.\n\n= Syntax\n\nMiniJinja has two kinds of tags.\n\nInterpolation prints a value:\n\n```html\n<title>{{ doc.title }}</title>\n```\n\nStatements control flow. Loops repeat a block:\n\n```html\n{% for file in css %}\n<style>\n{{ file.content }}\n</style>\n{% endfor %}\n```\n\nConditionals show a block only when a value is set:\n\n```html\n{% if site.logo %}\n<img src=\"{{ site.logo }}\" alt=\"{{ site.logo_alt }}\">\n{% endif %}\n```\n\nIncludes pull in another template file, which is how themes share partials:\n\n```html\n{% include \"partials/site-footer.html\" %}\n```\n\nThe #link(\"https://docs.rs/minijinja/latest/minijinja/syntax/index.html\")[MiniJinja syntax reference] covers the rest: filters, tests, macros, and more.\n\n= Context\n\nEach layout receives a context: a set of named values you reference with `{{ }}`. The available names depend on the target.\n\n- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `vars`, and more. See #link(\"html_templates.html\")[HTML templates].\n- The paged layout receives `doc`, `theme`, `target`, and `vars`. See #link(\"pdf_templates.html\")[PDF templates].\n\nBoth targets receive `theme`, `target`, and `vars`.\n\n= Variables\n\nPass project-specific template values with `--set vars.<name>=...`:\n\n```sh\ncalepin compile notebook.typ --set vars.course=\"Econ 101\" --set vars.semester=\"Fall 2026\"\n```\n\nThese values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values are merged into the same map, and CLI `--set vars.<name>=...` values take precedence. In HTML templates, `vars` sits at the top level, not under `site`:\n\n```html\n<p>{{ vars.course }}, {{ vars.semester }}</p>\n```\n\nIn a `layouts/pdf.typ` paged layout, read the same values and emit Typst:\n\n```typ\n#let course = \"{{ vars.course }}\"\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Templating])\n#import \"/.calepin/calepin.typ\" as calepin\n#metadata((tags: (\"themes\", \"templates\"))) <website-metadata>\n#title()\n\nTheme layouts are #link(\"https://docs.rs/minijinja/latest/minijinja/syntax/index.html\")[MiniJinja] templates. The HTML layouts (`layouts/site.html` and `layouts/document.html`) and the paged layout (`layouts/pdf.typ`) all use the same engine, so the syntax on this page applies to both. The #link(\"html_templates.html\")[HTML templates] and #link(\"pdf_templates.html\")[PDF templates] pages document the values each layout receives.\n\n= Syntax\n\nMiniJinja has two kinds of tags.\n\nInterpolation prints a value:\n\n```html\n<title>{{ doc.title }}</title>\n```\n\nStatements control flow. Loops repeat a block:\n\n```html\n{% for file in css %}\n<style>\n{{ file.content }}\n</style>\n{% endfor %}\n```\n\nConditionals show a block only when a value is set:\n\n```html\n{% if site.logo %}\n<img src=\"{{ site.logo }}\" alt=\"{{ site.logo_alt }}\">\n{% endif %}\n```\n\nIncludes pull in another template file, which is how themes share partials:\n\n```html\n{% include \"partials/site-footer.html\" %}\n```\n\nThe #link(\"https://docs.rs/minijinja/latest/minijinja/syntax/index.html\")[MiniJinja syntax reference] covers the rest: filters, tests, macros, and more.\n\n= Context\n\nEach layout receives a context: a set of named values you reference with `{{ }}`. The available names depend on the target.\n\n- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `vars`, and more. See #link(\"html_templates.html\")[HTML templates].\n- The paged layout receives `doc`, `theme`, `target`, and `vars`. See #link(\"pdf_templates.html\")[PDF templates].\n\nBoth targets receive `theme`, `target`, and `vars`.\n\n= Variables\n\nPass project-specific template values with `--set vars.<name>=...`:\n\n```sh\ncalepin compile notebook.typ --set vars.course=\"Econ 101\" --set vars.semester=\"Fall 2026\"\n```\n\nThese values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values are merged into the same map, and CLI `--set vars.<name>=...` values take precedence. In HTML templates, `vars` sits at the top level, not under `site`:\n\n```html\n<p>{{ vars.course }}, {{ vars.semester }}</p>\n```\n\nIn a `layouts/pdf.typ` paged layout, read the same values and emit Typst:\n\n```typ\n#let course = \"{{ vars.course }}\"\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../websites/pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4410,6 +4418,20 @@ html:not([data-theme]) {
     </div>
     
     
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
     
         
         

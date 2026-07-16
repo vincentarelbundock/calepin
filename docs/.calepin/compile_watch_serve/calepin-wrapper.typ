@@ -29,6 +29,13 @@
   }
 }
 
+#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
@@ -61,6 +68,7 @@
 #import "/.calepin/calepin.typ" as calepin
 #import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Compile, watch, serve])
+#metadata((tags: ("getting started", "CLI"))) <website-metadata>
 
 #title() <compile-watch-serve>
 

@@ -1,7 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 #import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Static website generator])
-#metadata((title: "Overview")) <website-metadata>
+#metadata((title: "Overview", tags: ("websites", "overview"))) <website-metadata>
 
 #title()
 

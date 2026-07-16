@@ -22,7 +22,12 @@
   {
     "href": "compile_watch_serve.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "getting started",
+        "CLI"
+      ]
+    },
     "path": "compile_watch_serve.typ",
     "pdf": "compile_watch_serve.pdf",
     "title": "Compile, watch, serve",
@@ -32,7 +37,12 @@
   {
     "href": "getting-started/config.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "getting started",
+        "configuration"
+      ]
+    },
     "path": "getting-started/config.typ",
     "pdf": "getting-started/config.pdf",
     "title": "Configuration",
@@ -42,7 +52,12 @@
   {
     "href": "getting-started/install.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "getting started",
+        "installation"
+      ]
+    },
     "path": "getting-started/install.typ",
     "pdf": "getting-started/install.pdf",
     "title": "Install",
@@ -54,7 +69,11 @@
     "language": null,
     "meta": {
       "layout": "layouts/site-landing.html",
-      "pdf": true
+      "pdf": true,
+      "tags": [
+        "overview",
+        "getting started"
+      ]
     },
     "path": "index.typ",
     "pdf": "index.pdf",
@@ -65,7 +84,12 @@
   {
     "href": "notebooks/code_execution.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "notebooks",
+        "code execution"
+      ]
+    },
     "path": "notebooks/code_execution.typ",
     "pdf": "notebooks/code_execution.pdf",
     "title": "Code execution",
@@ -75,7 +99,12 @@
   {
     "href": "notebooks/cross-references.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "notebooks",
+        "cross-references"
+      ]
+    },
     "path": "notebooks/cross-references.typ",
     "pdf": "notebooks/cross-references.pdf",
     "title": "Cross-references",
@@ -85,7 +114,12 @@
   {
     "href": "notebooks/diagrams.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "notebooks",
+        "diagrams"
+      ]
+    },
     "path": "notebooks/diagrams.typ",
     "pdf": "notebooks/diagrams.pdf",
     "title": "Diagrams",
@@ -95,7 +129,13 @@
   {
     "href": "notebooks/figures.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "notebooks",
+        "figures",
+        "tables"
+      ]
+    },
     "path": "notebooks/figures.typ",
     "pdf": "notebooks/figures.pdf",
     "title": "Figures and tables",
@@ -105,7 +145,12 @@
   {
     "href": "notebooks/notebooks.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "notebooks",
+        "overview"
+      ]
+    },
     "path": "notebooks/notebooks.typ",
     "pdf": "notebooks/notebooks.pdf",
     "title": "Notebooks",
@@ -115,7 +160,12 @@
   {
     "href": "notebooks/parameters.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "notebooks",
+        "parameters"
+      ]
+    },
     "path": "notebooks/parameters.typ",
     "pdf": "notebooks/parameters.pdf",
     "title": "Parameters",
@@ -123,9 +173,29 @@
     "translations": {}
   },
   {
+    "href": "notebooks/tab_groups.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "notebooks",
+        "HTML"
+      ]
+    },
+    "path": "notebooks/tab_groups.typ",
+    "pdf": "notebooks/tab_groups.pdf",
+    "title": "Synchronized tab groups",
+    "translation_key": "notebooks/tab_groups",
+    "translations": {}
+  },
+  {
     "href": "reference/cli.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "reference",
+        "CLI"
+      ]
+    },
     "path": "reference/cli.typ",
     "pdf": "reference/cli.pdf",
     "title": "CLI reference",
@@ -137,6 +207,10 @@
     "language": null,
     "meta": {
       "pdf": false,
+      "tags": [
+        "slides",
+        "notebooks"
+      ],
       "title": "Touying"
     },
     "path": "slides/touying.typ",
@@ -148,7 +222,12 @@
   {
     "href": "themes/case_studies.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "themes",
+        "examples"
+      ]
+    },
     "path": "themes/case_studies.typ",
     "pdf": "themes/case_studies.pdf",
     "title": "Case studies",
@@ -158,7 +237,13 @@
   {
     "href": "themes/css.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "themes",
+        "CSS",
+        "HTML"
+      ]
+    },
     "path": "themes/css.typ",
     "pdf": "themes/css.pdf",
     "title": "CSS",
@@ -168,7 +253,13 @@
   {
     "href": "themes/html_templates.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "themes",
+        "HTML",
+        "templates"
+      ]
+    },
     "path": "themes/html_templates.typ",
     "pdf": "themes/html_templates.pdf",
     "title": "HTML",
@@ -178,7 +269,13 @@
   {
     "href": "themes/pdf_templates.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "themes",
+        "PDF",
+        "templates"
+      ]
+    },
     "path": "themes/pdf_templates.typ",
     "pdf": "themes/pdf_templates.pdf",
     "title": "PDF",
@@ -188,7 +285,12 @@
   {
     "href": "themes/templating.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "themes",
+        "templates"
+      ]
+    },
     "path": "themes/templating.typ",
     "pdf": "themes/templating.pdf",
     "title": "Templating",
@@ -199,6 +301,10 @@
     "href": "themes/themes.html",
     "language": null,
     "meta": {
+      "tags": [
+        "themes",
+        "overview"
+      ],
       "title": "Themes"
     },
     "path": "themes/themes.typ",
@@ -210,7 +316,13 @@
   {
     "href": "tips.html",
     "language": null,
-    "meta": {},
+    "meta": {
+      "tags": [
+        "tips",
+        "notebooks",
+        "websites"
+      ]
+    },
     "path": "tips.typ",
     "pdf": "tips.pdf",
     "title": "Tips & tricks",
@@ -221,6 +333,10 @@
     "href": "websites/configuration.html",
     "language": null,
     "meta": {
+      "tags": [
+        "websites",
+        "configuration"
+      ],
       "title": "Configuration"
     },
     "path": "websites/configuration.typ",
@@ -234,6 +350,11 @@
     "language": null,
     "meta": {
       "pdf": false,
+      "tags": [
+        "websites",
+        "HTML",
+        "elements"
+      ],
       "title": "Custom elements"
     },
     "path": "websites/custom-elements.typ",
@@ -247,6 +368,10 @@
     "language": null,
     "meta": {
       "pdf": false,
+      "tags": [
+        "websites",
+        "elements"
+      ],
       "title": "Elements"
     },
     "path": "websites/elements.typ",
@@ -259,6 +384,11 @@
     "href": "websites/health.html",
     "language": null,
     "meta": {
+      "tags": [
+        "websites",
+        "CLI",
+        "validation"
+      ],
       "title": "Health"
     },
     "path": "websites/health.typ",
@@ -271,6 +401,10 @@
     "href": "websites/multilingual.html",
     "language": null,
     "meta": {
+      "tags": [
+        "websites",
+        "localization"
+      ],
       "title": "Multilingual"
     },
     "path": "websites/multilingual.typ",
@@ -283,6 +417,10 @@
     "href": "websites/navigation.html",
     "language": null,
     "meta": {
+      "tags": [
+        "websites",
+        "navigation"
+      ],
       "title": "Navigation"
     },
     "path": "websites/navigation.typ",
@@ -295,6 +433,10 @@
     "href": "websites/pages.html",
     "language": null,
     "meta": {
+      "tags": [
+        "websites",
+        "metadata"
+      ],
       "title": "Pages"
     },
     "path": "websites/pages.typ",
@@ -304,9 +446,30 @@
     "translations": {}
   },
   {
+    "href": "websites/tags.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "websites",
+        "metadata",
+        "navigation"
+      ],
+      "title": "Tags"
+    },
+    "path": "websites/tags.typ",
+    "pdf": "websites/tags.pdf",
+    "title": "Tags",
+    "translation_key": "websites/tags",
+    "translations": {}
+  },
+  {
     "href": "websites/websites.html",
     "language": null,
     "meta": {
+      "tags": [
+        "websites",
+        "overview"
+      ],
       "title": "Overview"
     },
     "path": "websites/websites.typ",

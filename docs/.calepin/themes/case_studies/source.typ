@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Case studies])
 #import "/.calepin/calepin.typ" as calepin
+#metadata((tags: ("themes", "examples"))) <website-metadata>
 #title()
 
 This page shows how to use local themes to customize various aspects of notebooks and websites in PDF or HTML. Fully reproducible examples for each case study are available on Github:

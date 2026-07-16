@@ -28,6 +28,13 @@
   }
 }
 
+#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
@@ -59,6 +66,7 @@
 
 #set document(title: [HTML])
 #import "/.calepin/calepin.typ" as calepin
+#metadata((tags: ("themes", "HTML", "templates"))) <website-metadata>
 #title()
 
 = Context

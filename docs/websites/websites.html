@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Static website generator])\n#metadata((title: \"Overview\")) <website-metadata>\n\n#title()\n\n_Calepin_ can turn a directory of Typst documents into a website. In fact, the website you are reading now was entirely generated with _Calepin_.\n\n= New website\n\nUse this command to scaffold an example site:\n\n```sh\ncalepin new website\n```\n\nThis creates a website source directory with enough structure to exercise the bundled themes:\n\n- `calepin_website/calepin.toml`: the site configuration file, where you set the title, base URL, navigation, theme, and output options.\n- `calepin_website/index.typ`: the home page source file, which builds to `index.html`.\n- `calepin_website/404.typ`: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.\n- `calepin_website/about.typ`, `calepin_website/guide/*.typ`, and `calepin_website/fr/*.typ`: regular pages in two languages, with site menu and sidebar entries.\n- `calepin_website/blog.typ` and `calepin_website/posts/*.typ`: a small blog index and post source files using `calepin.pages()`.\n\nThe scaffold uses the `calepin` theme by default. Use `--theme` to start from\nanother built-in theme:\n\n```sh\ncalepin new website --theme academic\n```\n\n= Build\n\nCompile a website directory with the same `compile` command used for a single Typst document:\n\n```sh\ncalepin compile my_site/\n```\n\nThis compiles the website in place: source files are read from `my_site/`, and generated outputs are written back into `my_site/`.\n\nTo compile the same source directory somewhere else, pass an output directory as the second path:\n\n```sh\ncalepin compile my_site/ public/\n```\n\nWhen the input path is a directory, _Calepin_ looks for `calepin.toml` at the root of that directory. An explicit `--config <path>` supersedes the automatic lookup; if no config is found either way, the build fails.\n\nBy default, website pages render to HTML. Configure PDF output and site settings in #link(\"configuration.html\")[Site configuration].\n\n= Serve\n\nServe the built site locally with:\n\n```sh\ncalepin serve my_site/\n```\n\nThis is useful for a quick preview after `calepin compile`. By default, _Calepin_ uses `127.0.0.1` and the first available port from 8000.\n\nUse `--host` and `--port` when you need a specific address:\n\n```sh\ncalepin serve my_site/ --host 127.0.0.1 --port 8001\n```\n\nAdd `--open` to launch the served site in your default browser:\n\n```sh\ncalepin serve my_site/ --open\n```\n\n= Watch\n\nDuring development, watch the website source directory for changes, and re-compile automatically:\n\n```sh\ncalepin watch my_site/ my_site/\n```\n\nAs with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The first build renders the whole site. After that, _Calepin_ hashes each edited page and rebuilds only the pages whose content actually changed; files that were touched but not modified are skipped.\n\nChanges that can affect more than one page trigger a full rebuild instead. This includes edits to `calepin.toml`, themes, or assets, pages that are added, removed, or renamed, and edits that change the site navigation or page metadata.\n\nAdd `--serve` to run the local server while watching; it uses the same `--host`, `--port`, and `--open` options as `calepin serve`.\n\n```sh\ncalepin watch my_site/ my_site/ --serve --open\n```\n\n= Features\n\n- Directory builds from Typst source files.\n- In-place or separate output directories.\n- Sidebar and site menu navigation from configuration or discovered pages.\n- HTML output with optional PDF twins.\n- Page metadata and `calepin.pages()` for listings and indexes.\n- Multilingual site navigation.\n- Static file copying for assets, downloads, and host-specific files.\n- Generated `sitemap.xml` and `robots.txt`, with template overrides for `robots.txt`.\n- Optional Pagefind search index generation, with cached no-op rebuilds.\n- Optional HTML minification, including inline CSS and JavaScript.\n- Local serving and incremental watch builds.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Static website generator])\n#metadata((title: \"Overview\", tags: (\"websites\", \"overview\"))) <website-metadata>\n\n#title()\n\n_Calepin_ can turn a directory of Typst documents into a website. In fact, the website you are reading now was entirely generated with _Calepin_.\n\n= New website\n\nUse this command to scaffold an example site:\n\n```sh\ncalepin new website\n```\n\nThis creates a website source directory with enough structure to exercise the bundled themes:\n\n- `calepin_website/calepin.toml`: the site configuration file, where you set the title, base URL, navigation, theme, and output options.\n- `calepin_website/index.typ`: the home page source file, which builds to `index.html`.\n- `calepin_website/404.typ`: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.\n- `calepin_website/about.typ`, `calepin_website/guide/*.typ`, and `calepin_website/fr/*.typ`: regular pages in two languages, with site menu and sidebar entries.\n- `calepin_website/blog.typ` and `calepin_website/posts/*.typ`: a small blog index and post source files using `calepin.pages()`.\n\nThe scaffold uses the `calepin` theme by default. Use `--theme` to start from\nanother built-in theme:\n\n```sh\ncalepin new website --theme academic\n```\n\n= Build\n\nCompile a website directory with the same `compile` command used for a single Typst document:\n\n```sh\ncalepin compile my_site/\n```\n\nThis compiles the website in place: source files are read from `my_site/`, and generated outputs are written back into `my_site/`.\n\nTo compile the same source directory somewhere else, pass an output directory as the second path:\n\n```sh\ncalepin compile my_site/ public/\n```\n\nWhen the input path is a directory, _Calepin_ looks for `calepin.toml` at the root of that directory. An explicit `--config <path>` supersedes the automatic lookup; if no config is found either way, the build fails.\n\nBy default, website pages render to HTML. Configure PDF output and site settings in #link(\"configuration.html\")[Site configuration].\n\n= Serve\n\nServe the built site locally with:\n\n```sh\ncalepin serve my_site/\n```\n\nThis is useful for a quick preview after `calepin compile`. By default, _Calepin_ uses `127.0.0.1` and the first available port from 8000.\n\nUse `--host` and `--port` when you need a specific address:\n\n```sh\ncalepin serve my_site/ --host 127.0.0.1 --port 8001\n```\n\nAdd `--open` to launch the served site in your default browser:\n\n```sh\ncalepin serve my_site/ --open\n```\n\n= Watch\n\nDuring development, watch the website source directory for changes, and re-compile automatically:\n\n```sh\ncalepin watch my_site/ my_site/\n```\n\nAs with `compile`, the first positional argument is the source directory and the optional second positional argument is the output directory. The first build renders the whole site. After that, _Calepin_ hashes each edited page and rebuilds only the pages whose content actually changed; files that were touched but not modified are skipped.\n\nChanges that can affect more than one page trigger a full rebuild instead. This includes edits to `calepin.toml`, themes, or assets, pages that are added, removed, or renamed, and edits that change the site navigation or page metadata.\n\nAdd `--serve` to run the local server while watching; it uses the same `--host`, `--port`, and `--open` options as `calepin serve`.\n\n```sh\ncalepin watch my_site/ my_site/ --serve --open\n```\n\n= Features\n\n- Directory builds from Typst source files.\n- In-place or separate output directories.\n- Sidebar and site menu navigation from configuration or discovered pages.\n- HTML output with optional PDF twins.\n- Page metadata and `calepin.pages()` for listings and indexes.\n- Multilingual site navigation.\n- Static file copying for assets, downloads, and host-specific files.\n- Generated `sitemap.xml` and `robots.txt`, with template overrides for `robots.txt`.\n- Optional Pagefind search index generation, with cached no-op rebuilds.\n- Optional HTML minification, including inline CSS and JavaScript.\n- Local serving and incremental watch builds.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4474,6 +4482,13 @@ html:not([data-theme]) {
     
         
         
+        
+            
+        
+        
+    
+        
+        
             
             
         
@@ -4484,6 +4499,13 @@ html:not([data-theme]) {
         
             
             
+        
+        
+            
+        
+        
+    
+        
         
         
             
@@ -4600,11 +4622,11 @@ html:not([data-theme]) {
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="../notebooks/diagrams.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="../notebooks/tab_groups.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Diagrams</span>
+            <span class="calepin-website-page-nav-title">Synchronized tab groups</span>
           </span>
         </a>
         

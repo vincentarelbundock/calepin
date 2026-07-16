@@ -28,6 +28,13 @@
   }
 }
 
+#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
@@ -59,6 +66,7 @@
 
 #set document(title: [PDF])
 #import "/.calepin/calepin.typ" as calepin
+#metadata((tags: ("themes", "PDF", "templates"))) <website-metadata>
 #title()
 
 `layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.

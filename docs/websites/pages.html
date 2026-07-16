@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Pages and metadata])\n#metadata((title: \"Pages\")) <website-metadata>\n\n#title()\n\n= Include or exclude pages\n\nUse `[pages]` for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:\n\n```toml\n[pages]\ninclude = [\"blog/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\nExcluded files are also omitted from copied `.typ` source artifacts in the build output directory.\n\nPut the page title in the document and keep website metadata for fields used by listings, routing, and output options:\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n)) <website-metadata>\n\n#title()\n```\n\n`index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.\n\n= Page metadata\n\nAdd arbitrary page metadata with Typst's `#metadata` function and the `<website-metadata>` label. _Calepin_ reads this dictionary while building the site and attaches it to the page entry returned by `calepin.pages()`.\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n  author: \"Ada Lovelace\",\n  summary: \"A short release note for the new website.\",\n  draft: false,\n)) <website-metadata>\n\n#title()\n```\n\nUse `calepin.pages()` to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.\n\n```typ\n#import \"/.calepin/calepin.typ\" as calepin\n\n#let posts = calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .filter(p => not p.meta.at(\"draft\", default: false))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev()\n\n#for post in posts [\n  - #link(post.href)[#post.title] \\\n    #post.meta.at(\"summary\", default: [])\n]\n```\n\n`calepin.pages()` returns one dictionary per built page, excluding `404.typ`. _Calepin_ creates these entry fields:\n\n- `path`: source path relative to the website root\n- `href`: rendered HTML path relative to the current page\n- `title`: resolved page title\n- `language`: language code, or `none` when languages are not configured\n- `translation_key`: resolved key used to connect translated pages\n- `translations`: matching pages in other languages, or an empty dictionary\n- `pdf`: PDF path, or `none` when the page has no PDF output\n- `meta`: the page's `<website-metadata>` dictionary, or an empty dictionary\n\nOnly `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.\n\nThere is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Pages and metadata])\n#metadata((title: \"Pages\", tags: (\"websites\", \"metadata\"))) <website-metadata>\n\n#title()\n\n= Include or exclude pages\n\nUse `[pages]` for Typst pages that should be built but should not appear in navigation, such as blog posts or legal pages:\n\n```toml\n[pages]\ninclude = [\"blog/*.typ\", \"legal/privacy.typ\"]\nexclude = [\"drafts/**\"]\n```\n\nExcluded files are also omitted from copied `.typ` source artifacts in the build output directory.\n\nPut the page title in the document and keep website metadata for fields used by listings, routing, and output options:\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n)) <website-metadata>\n\n#title()\n```\n\n`index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.\n\n= Page metadata\n\nAdd arbitrary page metadata with Typst's `#metadata` function and the `<website-metadata>` label. _Calepin_ reads this dictionary while building the site and attaches it to the page entry returned by `calepin.pages()`.\n\n```typ\n#set document(title: [First post])\n\n#metadata((\n  date: \"2026-06-10\",\n  tags: (\"release\", \"website\"),\n  author: \"Ada Lovelace\",\n  summary: \"A short release note for the new website.\",\n  draft: false,\n)) <website-metadata>\n\n#title()\n```\n\nUse `calepin.pages()` to get structured information about every built page, including its metadata, and process it with normal Typst functions and methods. This is useful for lists, indexes, feeds, publication pages, course pages, and any page that needs to organize other pages in the site.\n\n```typ\n#import \"/.calepin/calepin.typ\" as calepin\n\n#let posts = calepin.pages()\n  .filter(p => p.path.starts-with(\"blog/\"))\n  .filter(p => not p.meta.at(\"draft\", default: false))\n  .sorted(key: p => p.meta.at(\"date\", default: \"\"))\n  .rev()\n\n#for post in posts [\n  - #link(post.href)[#post.title] \\\n    #post.meta.at(\"summary\", default: [])\n]\n```\n\n`calepin.pages()` returns one dictionary per built page, excluding `404.typ`. _Calepin_ creates these entry fields:\n\n- `path`: source path relative to the website root\n- `href`: rendered HTML path relative to the current page\n- `title`: resolved page title\n- `language`: language code, or `none` when languages are not configured\n- `translation_key`: resolved key used to connect translated pages\n- `translations`: matching pages in other languages, or an empty dictionary\n- `pdf`: PDF path, or `none` when the page has no PDF output\n- `meta`: the page's `<website-metadata>` dictionary, or an empty dictionary\n\nOnly `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.\n\nThere is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.\n\nSee the #link(\"tags.html\")[tags and taxonomies example] for a reusable function that groups this site's documentation pages by metadata value.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="pages.html" aria-label="Pages" class="active" aria-current="page">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4412,7 +4420,7 @@ html:not([data-theme]) {
 <span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">for</span> post <span class="calepin-syntax-scope-7">in</span> posts <span class="calepin-syntax-scope-2">[</span>
   <span class="calepin-syntax-scope-2">-</span> <span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">link</span><span class="calepin-syntax-scope-2">(</span>post<span class="calepin-syntax-scope-2">.</span>href<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">[</span>#post<span class="calepin-syntax-scope-2">.</span>title<span class="calepin-syntax-scope-2">]</span> <span class="calepin-syntax-scope-5">\</span>
     #post<span class="calepin-syntax-scope-2">.</span>meta<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">at</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"summary"</span><span class="calepin-syntax-scope-2">,</span> default<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
-<span class="calepin-syntax-scope-2">]</span></code></pre></div><p><code>calepin.pages()</code> returns one dictionary per built page, excluding <code>404.typ</code>. <em>Calepin</em> creates these entry fields:</p><ul><li><code>path</code>: source path relative to the website root</li><li><code>href</code>: rendered HTML path relative to the current page</li><li><code>title</code>: resolved page title</li><li><code>language</code>: language code, or <code>none</code> when languages are not configured</li><li><code>translation_key</code>: resolved key used to connect translated pages</li><li><code>translations</code>: matching pages in other languages, or an empty dictionary</li><li><code>pdf</code>: PDF path, or <code>none</code> when the page has no PDF output</li><li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, or an empty dictionary</li></ul><p>Only <code>meta</code> comes from the page’s <code>#metadata</code> value. <em>Calepin</em> interprets a few optional metadata keys: <code>title</code>, <code>pdf</code>, <code>translation_key</code>, <code>slug</code>, and <code>url</code>. All other keys are left untouched for your own Typst code.</p><p>There is no required schema for custom metadata. Common keys include <code>date</code>, <code>tags</code>, <code>author</code>, <code>authors</code>, <code>category</code>, <code>venue</code>, <code>summary</code>, and <code>draft</code>, but you can use any key your page list or template expects. Since <code>calepin.pages()</code> returns a Typst array of dictionaries, you can use Typst functions and methods such as <code>filter</code>, <code>map</code>, <code>sorted</code>, <code>rev</code>, <code>at</code>, and <code>contains</code> to select and format the pages you need.</p>
+<span class="calepin-syntax-scope-2">]</span></code></pre></div><p><code>calepin.pages()</code> returns one dictionary per built page, excluding <code>404.typ</code>. <em>Calepin</em> creates these entry fields:</p><ul><li><code>path</code>: source path relative to the website root</li><li><code>href</code>: rendered HTML path relative to the current page</li><li><code>title</code>: resolved page title</li><li><code>language</code>: language code, or <code>none</code> when languages are not configured</li><li><code>translation_key</code>: resolved key used to connect translated pages</li><li><code>translations</code>: matching pages in other languages, or an empty dictionary</li><li><code>pdf</code>: PDF path, or <code>none</code> when the page has no PDF output</li><li><code>meta</code>: the page’s <code>&lt;website-metadata></code> dictionary, or an empty dictionary</li></ul><p>Only <code>meta</code> comes from the page’s <code>#metadata</code> value. <em>Calepin</em> interprets a few optional metadata keys: <code>title</code>, <code>pdf</code>, <code>translation_key</code>, <code>slug</code>, and <code>url</code>. All other keys are left untouched for your own Typst code.</p><p>There is no required schema for custom metadata. Common keys include <code>date</code>, <code>tags</code>, <code>author</code>, <code>authors</code>, <code>category</code>, <code>venue</code>, <code>summary</code>, and <code>draft</code>, but you can use any key your page list or template expects. Since <code>calepin.pages()</code> returns a Typst array of dictionaries, you can use Typst functions and methods such as <code>filter</code>, <code>map</code>, <code>sorted</code>, <code>rev</code>, <code>at</code>, and <code>contains</code> to select and format the pages you need.</p><p>See the <a href="tags.html">tags and taxonomies example</a> for a reusable function that groups this site’s documentation pages by metadata value.</p>
         </main>
                 
         <aside class="calepin-website-toc">
@@ -4518,6 +4526,13 @@ html:not([data-theme]) {
     
         
         
+        
+            
+        
+        
+    
+        
+        
             
             
         
@@ -4528,6 +4543,13 @@ html:not([data-theme]) {
         
             
             
+        
+        
+            
+        
+        
+    
+        
         
         
             
@@ -4633,10 +4655,10 @@ html:not([data-theme]) {
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="multilingual.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="tags.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Multilingual</span>
+            <span class="calepin-website-page-nav-title">Tags</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

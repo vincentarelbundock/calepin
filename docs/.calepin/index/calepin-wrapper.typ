@@ -27,6 +27,13 @@
   }
 }
 
+#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
@@ -63,6 +70,7 @@
 #metadata((
   layout: "layouts/site-landing.html",
   pdf: true,
+  tags: ("overview", "getting started"),
 )) <website-metadata>
 
 #let typst-logo-paths = (

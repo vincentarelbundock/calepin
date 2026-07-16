@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Tips & tricks])\n\n#title()\n\n= Conditional output\n\nUse `calepin-target` when a small piece of Typst should change between HTML and paged output:\n\n```typ\n#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" [\n  This appears only in HTML.\n] else [\n  This appears in PDF, SVG, and PNG output.\n]\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Tips & tricks])\n#metadata((tags: (\"tips\", \"notebooks\", \"websites\"))) <website-metadata>\n\n#title()\n\n= Conditional output\n\nUse `calepin-target` when a small piece of Typst should change between HTML and paged output:\n\n```typ\n#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" [\n  This appears only in HTML.\n] else [\n  This appears in PDF, SVG, and PNG output.\n]\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="websites/pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="websites/tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4382,7 +4390,7 @@ html:not([data-theme]) {
             </nav>
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
-            <h1 id="tips-amp-tricks">Tips &amp; tricks</h1><h2 id="conditional-output">Conditional output</h2><p>Use <code>calepin-target</code> when a small piece of Typst should change between HTML and paged output:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> target <span class="calepin-syntax-scope-9">=</span> sys<span class="calepin-syntax-scope-2">.</span>inputs<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">at</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"calepin-target"</span><span class="calepin-syntax-scope-2">,</span> default<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"paged"</span><span class="calepin-syntax-scope-2">)</span>
+            <h1 id="tips-tricks">Tips &amp; tricks</h1><h2 id="conditional-output">Conditional output</h2><p>Use <code>calepin-target</code> when a small piece of Typst should change between HTML and paged output:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> target <span class="calepin-syntax-scope-9">=</span> sys<span class="calepin-syntax-scope-2">.</span>inputs<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">at</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"calepin-target"</span><span class="calepin-syntax-scope-2">,</span> default<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"paged"</span><span class="calepin-syntax-scope-2">)</span>
 
 <span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">if</span> target <span class="calepin-syntax-scope-9">==</span> <span class="calepin-syntax-scope-4">"html"</span> <span class="calepin-syntax-scope-2">[</span>
   This appears only in HTML.
@@ -4405,6 +4413,20 @@ html:not([data-theme]) {
     </div>
     
     
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
     
         
         

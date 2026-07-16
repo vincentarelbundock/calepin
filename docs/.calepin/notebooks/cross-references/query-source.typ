@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Cross-references])
+#metadata((tags: ("notebooks", "cross-references"))) <website-metadata>
 
 #calepin.setup(
   echo: true,

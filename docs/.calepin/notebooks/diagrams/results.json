@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.31",
+  "calepin_version": "0.0.32",
   "input": "notebooks/diagrams.typ",
   "chunks": {
     "fig-mermaid": {
@@ -38,7 +38,7 @@
     "fig-dot": {
       "label": "fig-dot",
       "engine": "dot",
-      "status": "skipped",
+      "status": "ok",
       "options": {
         "echo": true,
         "output": true,
@@ -59,7 +59,16 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "items": [],
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/diagrams/figures/fig-dot.svg"
+            }
+          }
+        }
+      ],
       "crossref-labels": [
         {
           "kind": "fig",

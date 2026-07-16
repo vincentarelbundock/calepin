@@ -1,7 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Custom web elements])
-#metadata((title: "Custom elements", pdf: false)) <website-metadata>
+#metadata((title: "Custom elements", pdf: false, tags: ("websites", "HTML", "elements"))) <website-metadata>
 
 #calepin.setup(fenced-chunks: true)
 #let target = sys.inputs.at("calepin-target", default: "paged")

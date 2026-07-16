@@ -10,6 +10,30 @@
     [
       #std.html.elem("script", "
         import 'https://ka-f.webawesome.com/webawesome@3.8.0/components/tab-group/tab-group.js';
+
+        let syncingTabGroup = false;
+        document.addEventListener('wa-tab-show', event => {
+          if (syncingTabGroup) return;
+
+          const source = event.target;
+          const group = source.dataset.calepinTabGroup;
+          const active = source.active;
+          if (!group || !active) return;
+
+          syncingTabGroup = true;
+          try {
+            document.querySelectorAll('wa-tab-group[data-calepin-tab-group]').forEach(target => {
+              if (target !== source && target.dataset.calepinTabGroup === group) {
+                const tab = Array.from(target.querySelectorAll('wa-tab')).find(
+                  candidate => candidate.panel === active && !candidate.disabled
+                );
+                if (tab) target.active = active;
+              }
+            });
+          } finally {
+            syncingTabGroup = false;
+          }
+        });
       ", attrs: (type: "module"))
       #std.html.elem("style", "
         wa-tab-group.calepin-elements-tabs {
@@ -57,12 +81,16 @@
 }
 
 #let tabs(
+  group: none,
   without-scroll-controls: false,
   html-tag: "wa-tab-group",
   html-class: "calepin-elements-tabs",
   html-attrs: (:),
   body,
 ) = {
+  if group != none and (type(group) != str or group == "") {
+    panic("calepin.elements.tabs: group must be none or a non-empty string")
+  }
   if type(without-scroll-controls) != bool {
     panic("calepin.elements.tabs: without-scroll-controls must be a boolean")
   }
@@ -92,10 +120,16 @@
     } else {
       (:)
     }
+    let group-attrs = if group == none {
+      (:)
+    } else {
+      ("data-calepin-tab-group": group)
+    }
     let attrs = (
       ..html-attrs,
       class: attrs-class,
       ..scroll-attrs,
+      ..group-attrs,
     )
     return [
       #_asset_once()

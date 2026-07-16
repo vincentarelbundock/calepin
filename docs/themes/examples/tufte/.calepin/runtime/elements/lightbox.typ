@@ -1,5 +1,5 @@
 #import "../core/target.typ": _is-html, _is-query
-#import "../core/assets.typ": _resolve-asset-path
+#import "../core/assets.typ": _resolve-asset-href, _resolve-asset-path
 
 #let _dialog-close(label) = std.html.elem("button", attrs: (
   rel: "prev",
@@ -22,6 +22,7 @@
   if not _is-html() {
     return image(_resolve-asset-path(src), width: width, alt: alt)
   }
+  let href = _resolve-asset-href(src)
 
   [
     #std.html.elem("div", attrs: (class: "calepin-screenshot-block"))[
@@ -32,7 +33,7 @@
         "aria-label": open-label,
       ))[
         #std.html.elem("img", attrs: (
-          src: src,
+          src: href,
           alt: alt,
           class: "calepin-screenshot-thumb__media",
         ))
@@ -49,7 +50,7 @@
         ]
         #std.html.elem("img", attrs: (
           class: "calepin-screenshot-dialog__media",
-          src: src,
+          src: href,
           alt: alt,
         ))
       ]
@@ -87,15 +88,17 @@
     ]
   }
 
+  let href = _resolve-asset-href(src)
+
   let thumb-attrs = (
     class: "calepin-video-thumb__media",
-    src: src,
+    src: href,
     muted: "",
     playsinline: "",
     preload: "metadata",
   )
   if poster != none {
-    thumb-attrs.insert("poster", poster)
+    thumb-attrs.insert("poster", _resolve-asset-href(poster))
   }
 
   [
@@ -120,7 +123,7 @@
         ]
         #std.html.elem("video", attrs: (
           class: "calepin-video-dialog__media",
-          src: src,
+          src: href,
           muted: "",
           autoplay: "",
           controls: "",

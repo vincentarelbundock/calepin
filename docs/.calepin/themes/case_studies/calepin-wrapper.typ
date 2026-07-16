@@ -32,6 +32,13 @@
   }
 }
 
+#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+
 // Notebook theme
 #import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
 
@@ -64,6 +71,7 @@
 #import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Case studies])
 #import "/.calepin/calepin.typ" as calepin
+#metadata((tags: ("themes", "examples"))) <website-metadata>
 #title()
 
 This page shows how to use local themes to customize various aspects of notebooks and websites in PDF or HTML. Fully reproducible examples for each case study are available on Github:

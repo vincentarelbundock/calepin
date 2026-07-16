@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 #import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Configuration])
+#metadata((tags: ("getting started", "configuration"))) <website-metadata>
 
 #title()
 

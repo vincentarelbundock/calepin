@@ -2,6 +2,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Figures and tables])
+#metadata((tags: ("notebooks", "figures", "tables"))) <website-metadata>
 
 #calepin.setup(
   echo: true,

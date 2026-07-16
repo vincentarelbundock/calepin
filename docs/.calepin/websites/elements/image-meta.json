@@ -1,13 +1,6 @@
 {
   "schema": 1,
   "images": {
-    "../assets/calepin_vscode-thumb.png": {
-      "path": "assets/calepin_vscode-thumb.png",
-      "xxh3": "100cb8f7a64ba31c",
-      "bytes": 350981,
-      "width": 1280,
-      "height": 804
-    },
     "../assets/flowers_01.jpg": {
       "path": "assets/flowers_01.jpg",
       "xxh3": "69358cbce0a9ceaa",
@@ -42,13 +35,6 @@
       "bytes": 507166,
       "width": 2001,
       "height": 3000
-    },
-    "../assets/screenshot_notebook.png": {
-      "path": "assets/screenshot_notebook.png",
-      "xxh3": "dca0e15c967aefa9",
-      "bytes": 241790,
-      "width": 1638,
-      "height": 1484
     },
     "/assets/calepin_vscode-thumb.png": {
       "path": "assets/calepin_vscode-thumb.png",

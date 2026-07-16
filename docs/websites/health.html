@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Health checks])\n#metadata((title: \"Health\")) <website-metadata>\n\n#title()\n\n`calepin health` runs quick diagnostic checks on the current project (notebook or website) and reports anything that could break rendering or execution.\n\nIt checks the following by default:\n\n- executable availability for configured engines and diagram tools\n- Python/Jupyter kernel metadata consistency\n- local literal links inside `.typ` files\n- local literal images inside `.typ` files\n- missing alt text on literal Typst images\n- duplicate explicit page routes from `slug` and `url` page metadata\n\n```text\ncalepin health [OPTIONS]\n```\n\nUse `--json` for machine-readable output.\n\n= Link checking\n\n`health` scans `#link(\"...\")` literals in Typst source files and verifies targets.\n\n- A bad local target (for example `#link(\"missing.html\")`) is reported as an **error**.\n- External `http://` and `https://` links are ignored by default.\n- Pass `--check-external-links` to validate HTTP(S) links too.\n\nBy default, `health` walks directories recursively from the current directory,\nignoring `.calepin`, `.git`, `target`, `node_modules`, and `.venv`.\nYou can limit recursion depth with `--depth`:\n\n```text\ncalepin health --depth 2\n```\n\nWith recursive links that may refer to generated outputs, run `calepin health` after a\nbuild so referenced pages exist.\n\n= Image checking\n\n`health` scans literal `#image(\"...\")` calls in Typst source files. Missing local image files are reported as **errors**. Images without non-empty `alt:` text are reported as **warnings**.\n\nRelative image paths are resolved from the source file that contains the image call. Root-relative paths are resolved from the project root. External and special targets such as `http://`, `https://`, `data:`, `mailto:`, and fragment-only targets are ignored.\n\nAlt text is considered present when the image call has an `alt:` argument with a non-empty string or a computed value. These calls pass the accessibility check:\n\n```typ\n#image(\"assets/chart.png\", alt: \"Line chart of quarterly revenue\")\n#image(\"assets/logo.svg\", alt: figure_alt)\n```\n\nThese calls produce warnings:\n\n```typ\n#image(\"assets/chart.png\")\n#image(\"assets/chart.png\", alt: \"\")\n#image(\"assets/chart.png\", alt: none)\n```\n\n= Page route checking\n\n`health` scans `<website-metadata>` for literal `slug` and `url` values and reports duplicate or unsafe output routes as **errors**. The check compares the rendered HTML route, so pages in different directories can use the same slug as long as they do not write the same output path.\n\nFor example, these two pages collide because they both render to `same.html`:\n\n```typ\n#metadata((slug: \"same\")) <website-metadata>\n#metadata((url: \"same.html\")) <website-metadata>\n```\n\nRoutes that escape the output directory are also errors:\n\n```typ\n#metadata((slug: \"../outside\")) <website-metadata>\n#metadata((url: \"/absolute/path\")) <website-metadata>\n```\n\n= Source scanning\n\nRaw Typst code spans and blocks are ignored by source checks, so documentation examples do not need to point at real files.\n\nThe source checks are intentionally conservative: they only inspect literal `#link(\"...\")`, `#image(\"...\")`, `slug: \"...\"`, and `url: \"...\"` values. Dynamic expressions are left to the normal build process.\n\n`--strict` turns warnings into failures (in addition to errors).\n\n```text\ncalepin health --strict --check-external-links\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Health checks])\n#metadata((title: \"Health\", tags: (\"websites\", \"CLI\", \"validation\"))) <website-metadata>\n\n#title()\n\n`calepin health` runs quick diagnostic checks on the current project (notebook or website) and reports anything that could break rendering or execution.\n\nIt checks the following by default:\n\n- executable availability for configured engines and diagram tools\n- Python/Jupyter kernel metadata consistency\n- local literal links inside `.typ` files\n- local literal images inside `.typ` files\n- missing alt text on literal Typst images\n- duplicate explicit page routes from `slug` and `url` page metadata\n\n```text\ncalepin health [OPTIONS]\n```\n\nUse `--json` for machine-readable output.\n\n= Link checking\n\n`health` scans `#link(\"...\")` literals in Typst source files and verifies targets.\n\n- A bad local target (for example `#link(\"missing.html\")`) is reported as an **error**.\n- External `http://` and `https://` links are ignored by default.\n- Pass `--check-external-links` to validate HTTP(S) links too.\n\nBy default, `health` walks directories recursively from the current directory,\nignoring `.calepin`, `.git`, `target`, `node_modules`, and `.venv`.\nYou can limit recursion depth with `--depth`:\n\n```text\ncalepin health --depth 2\n```\n\nWith recursive links that may refer to generated outputs, run `calepin health` after a\nbuild so referenced pages exist.\n\n= Image checking\n\n`health` scans literal `#image(\"...\")` calls in Typst source files. Missing local image files are reported as **errors**. Images without non-empty `alt:` text are reported as **warnings**.\n\nRelative image paths are resolved from the source file that contains the image call. Root-relative paths are resolved from the project root. External and special targets such as `http://`, `https://`, `data:`, `mailto:`, and fragment-only targets are ignored.\n\nAlt text is considered present when the image call has an `alt:` argument with a non-empty string or a computed value. These calls pass the accessibility check:\n\n```typ\n#image(\"assets/chart.png\", alt: \"Line chart of quarterly revenue\")\n#image(\"assets/logo.svg\", alt: figure_alt)\n```\n\nThese calls produce warnings:\n\n```typ\n#image(\"assets/chart.png\")\n#image(\"assets/chart.png\", alt: \"\")\n#image(\"assets/chart.png\", alt: none)\n```\n\n= Page route checking\n\n`health` scans `<website-metadata>` for literal `slug` and `url` values and reports duplicate or unsafe output routes as **errors**. The check compares the rendered HTML route, so pages in different directories can use the same slug as long as they do not write the same output path.\n\nFor example, these two pages collide because they both render to `same.html`:\n\n```typ\n#metadata((slug: \"same\")) <website-metadata>\n#metadata((url: \"same.html\")) <website-metadata>\n```\n\nRoutes that escape the output directory are also errors:\n\n```typ\n#metadata((slug: \"../outside\")) <website-metadata>\n#metadata((url: \"/absolute/path\")) <website-metadata>\n```\n\n= Source scanning\n\nRaw Typst code spans and blocks are ignored by source checks, so documentation examples do not need to point at real files.\n\nThe source checks are intentionally conservative: they only inspect literal `#link(\"...\")`, `#image(\"...\")`, `slug: \"...\"`, and `url: \"...\"` values. Dynamic expressions are left to the normal build process.\n\n`--strict` turns warnings into failures (in addition to errors).\n\n```text\ncalepin health --strict --check-external-links\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4410,6 +4418,20 @@ html:not([data-theme]) {
     </div>
     
     
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
     
         
         

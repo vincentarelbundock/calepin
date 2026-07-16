@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Multilingual sites])\n#metadata((title: \"Multilingual\")) <website-metadata>\n\n#title()\n\nConfigure languages with one content directory per language:\n\n```toml\ndefault_language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent_dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent_dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; other languages use their language code as a URL prefix, such as `fr/about.html`.\n\nUse page metadata when translations move or need different slugs:\n\n```typ\n#set document(title: [À propos])\n\n#metadata((\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) <website-metadata>\n\n#title()\n```\n\nWhen more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Multilingual sites])\n#metadata((title: \"Multilingual\", tags: (\"websites\", \"localization\"))) <website-metadata>\n\n#title()\n\nConfigure languages with one content directory per language:\n\n```toml\ndefault_language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent_dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent_dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; other languages use their language code as a URL prefix, such as `fr/about.html`.\n\nUse page metadata when translations move or need different slugs:\n\n```typ\n#set document(title: [À propos])\n\n#metadata((\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) <website-metadata>\n\n#title()\n```\n\nWhen more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4497,6 +4505,20 @@ html:not([data-theme]) {
     
         
         
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
             
             
         
@@ -4595,11 +4617,11 @@ html:not([data-theme]) {
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="pages.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="tags.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Pages</span>
+            <span class="calepin-website-page-nav-title">Tags</span>
           </span>
         </a>
         

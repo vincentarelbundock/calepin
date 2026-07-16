@@ -4127,7 +4127,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Touying slides])\n#metadata((title: \"Touying\", pdf: false)) <website-metadata>\n\n#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#title()\n\nThis page shows a small #link(\"https://touying-typ.github.io/\")[Touying] slide deck that uses Calepin chunks.\n\nTouying handles the presentation structure: slides, themes, headings, and features such as `#pause`. Calepin handles code execution and stores chunk output so it can be shown later in the document.\n\nThe main interesting pattern here is delayed display. A chunk can run in one place with `results: \"hidden\"`, and its saved output can be printed somewhere else with `#calepin.results(\"label\")`.\n\nExample details:\n\n- Plain `python` and `r` fences are executable chunks.\n- The R plot uses a `#| fig-width` option.\n- One Python chunk is displayed in the left column, while its output appears in the right column.\n- Another Python chunk is shown on one slide, while its output appears on the next slide.\n- The same saved output is printed twice at the end to show that `#calepin.results` can be reused.\n\n= Full `slides.typ`\n\n````typ\n#import \"/.calepin/calepin.typ\" as calepin\n#import \"@preview/touying:0.7.4\": *\n#import themes.simple: *\n\n#set document(title: [Calepin Touying slides])\n\n#show: simple-theme.with(aspect-ratio: \"16-9\")\n\n#show raw.where(block: true): set text(size: .8em)\n\n#title-slide[\n  #calepin.setup(\n    echo: true,\n    eval: true,\n    results: \"render\",\n  )\n  _Calepin_: Code execution in Touying slides\n]\n\n== Print from Python\n\n```python\nprint(\"Hello, Touying!\")\n```\n\n== Plot from R\n\n```r\n#| fig-width: 50%\nplot(mpg ~ hp, data = mtcars)\n```\n\n== Compute in one column; show in another\n\nUse the `results: \"hidden\"` option to keep the output hidden from the code location, then call it later with `calepin.results(label)` in the other column.\n\n#grid(columns: (1fr, 1fr), gutter: .4em, [\n=== Column 1: Code here\n#calepin.chunk(\"python\", label: \"summary2\", results: \"hidden\")[\n```python\nvalues = [2, 3, 5, 8, 13]\ntotal = sum(values)\nprint(f\"Total = {total}\")\n```\n]\n],\n\n[\n=== Column 2: Output here\n#calepin.results(\"summary2\")\n],\n)\n\n== Compute in one slide; show in another\n\n#calepin.chunk(\"python\", label: \"next-slide-claim\", results: \"hidden\")[\n```python\nbaseline = 120\ncurrent = 156\nchange = (current - baseline) / baseline\nprint(f\"Change from baseline: {change:.0%}\")\n```\n]\n\nThe chunk source is visible here, but `results: \"hidden\"` keeps its output off\nthis slide.\n\n== Result on the next slide\n\n#calepin.results(\"next-slide-claim\")\n\nThe same label can be reused multiple times, anywhere in the deck.\n\n#calepin.results(\"next-slide-claim\")\n````\n\n= Rendered PDF\n\n#if target == \"html\" [\n  #html.elem(\"iframe\", attrs: (\n    src: \"../assets/slides.pdf\",\n    title: \"Rendered Touying slides PDF\",\n    style: \"display: block; width: 100%; height: min(78vh, 52rem); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);\",\n  ))[]\n] else [\n  #link(\"../assets/slides.pdf\")[Open the rendered slides PDF.]\n]\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Touying slides])\n#metadata((title: \"Touying\", pdf: false, tags: (\"slides\", \"notebooks\"))) <website-metadata>\n\n#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#title()\n\nThis page shows a small #link(\"https://touying-typ.github.io/\")[Touying] slide deck that uses Calepin chunks.\n\nTouying handles the presentation structure: slides, themes, headings, and features such as `#pause`. Calepin handles code execution and stores chunk output so it can be shown later in the document.\n\nThe main interesting pattern here is delayed display. A chunk can run in one place with `results: \"hidden\"`, and its saved output can be printed somewhere else with `#calepin.results(\"label\")`.\n\nExample details:\n\n- Plain `python` and `r` fences are executable chunks.\n- The R plot uses a `#| fig-width` option.\n- One Python chunk is displayed in the left column, while its output appears in the right column.\n- Another Python chunk is shown on one slide, while its output appears on the next slide.\n- The same saved output is printed twice at the end to show that `#calepin.results` can be reused.\n\n= Full `slides.typ`\n\n````typ\n#import \"/.calepin/calepin.typ\" as calepin\n#import \"@preview/touying:0.7.4\": *\n#import themes.simple: *\n\n#set document(title: [Calepin Touying slides])\n\n#show: simple-theme.with(aspect-ratio: \"16-9\")\n\n#show raw.where(block: true): set text(size: .8em)\n\n#title-slide[\n  #calepin.setup(\n    echo: true,\n    eval: true,\n    results: \"render\",\n  )\n  _Calepin_: Code execution in Touying slides\n]\n\n== Print from Python\n\n```python\nprint(\"Hello, Touying!\")\n```\n\n== Plot from R\n\n```r\n#| fig-width: 50%\nplot(mpg ~ hp, data = mtcars)\n```\n\n== Compute in one column; show in another\n\nUse the `results: \"hidden\"` option to keep the output hidden from the code location, then call it later with `calepin.results(label)` in the other column.\n\n#grid(columns: (1fr, 1fr), gutter: .4em, [\n=== Column 1: Code here\n#calepin.chunk(\"python\", label: \"summary2\", results: \"hidden\")[\n```python\nvalues = [2, 3, 5, 8, 13]\ntotal = sum(values)\nprint(f\"Total = {total}\")\n```\n]\n],\n\n[\n=== Column 2: Output here\n#calepin.results(\"summary2\")\n],\n)\n\n== Compute in one slide; show in another\n\n#calepin.chunk(\"python\", label: \"next-slide-claim\", results: \"hidden\")[\n```python\nbaseline = 120\ncurrent = 156\nchange = (current - baseline) / baseline\nprint(f\"Change from baseline: {change:.0%}\")\n```\n]\n\nThe chunk source is visible here, but `results: \"hidden\"` keeps its output off\nthis slide.\n\n== Result on the next slide\n\n#calepin.results(\"next-slide-claim\")\n\nThe same label can be reused multiple times, anywhere in the deck.\n\n#calepin.results(\"next-slide-claim\")\n````\n\n= Rendered PDF\n\n#if target == \"html\" [\n  #html.elem(\"iframe\", attrs: (\n    src: \"../assets/slides.pdf\",\n    title: \"Rendered Touying slides PDF\",\n    style: \"display: block; width: 100%; height: min(78vh, 52rem); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);\",\n  ))[]\n] else [\n  #link(\"../assets/slides.pdf\")[Open the rendered slides PDF.]\n]\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4261,6 +4261,10 @@ html:not([data-theme]) {
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                            
+<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+
+                            
                         </ul>
                     </details>
                     
@@ -4286,6 +4290,10 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../websites/pages.html" aria-label="Pages">Pages</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/tags.html" aria-label="Tags">Tags</a></li>
 
                             
                             
@@ -4474,6 +4482,20 @@ The same label can be reused multiple times, anywhere in the deck.
     </div>
     
     
+    
+        
+        
+        
+            
+        
+        
+    
+        
+        
+        
+            
+        
+        
     
         
         
