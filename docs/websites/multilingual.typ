@@ -1,5 +1,5 @@
 #set document(title: [Multilingual sites])
-#metadata((title: "Multilingual")) <website-metadata>
+#metadata((title: "Multilingual", tags: ("websites", "localization"))) <website-metadata>
 
 #title()
 

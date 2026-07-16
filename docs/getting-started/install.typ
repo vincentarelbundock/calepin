@@ -1,4 +1,5 @@
 #set document(title: [Install])
+#metadata((tags: ("getting started", "installation"))) <website-metadata>
 
 #title()
 

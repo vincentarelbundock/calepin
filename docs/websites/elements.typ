@@ -2,7 +2,7 @@
 
 #set document(title: [Reusable elements])
 
-#metadata((title: "Elements", pdf: false)) <website-metadata>
+#metadata((title: "Elements", pdf: false, tags: ("websites", "elements"))) <website-metadata>
 
 #calepin.setup(fenced-chunks: true)
 

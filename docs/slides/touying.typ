@@ -1,5 +1,5 @@
 #set document(title: [Touying slides])
-#metadata((title: "Touying", pdf: false)) <website-metadata>
+#metadata((title: "Touying", pdf: false, tags: ("slides", "notebooks"))) <website-metadata>
 
 #let target = sys.inputs.at("calepin-target", default: "paged")
 

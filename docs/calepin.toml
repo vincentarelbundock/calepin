@@ -100,6 +100,9 @@ title = "Websites"
   target = "websites/pages.typ"
 
   [[sidebar.section.item]]
+  target = "websites/tags.typ"
+
+  [[sidebar.section.item]]
   target = "websites/multilingual.typ"
 
   [[sidebar.section.item]]

@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Parameters])
+#metadata((tags: ("notebooks", "parameters"))) <website-metadata>
 
 #calepin.setup(
   eval: true,

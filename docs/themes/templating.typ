@@ -1,5 +1,6 @@
 #set document(title: [Templating])
 #import "/.calepin/calepin.typ" as calepin
+#metadata((tags: ("themes", "templates"))) <website-metadata>
 #title()
 
 Theme layouts are #link("https://docs.rs/minijinja/latest/minijinja/syntax/index.html")[MiniJinja] templates. The HTML layouts (`layouts/site.html` and `layouts/document.html`) and the paged layout (`layouts/pdf.typ`) all use the same engine, so the syntax on this page applies to both. The #link("html_templates.html")[HTML templates] and #link("pdf_templates.html")[PDF templates] pages document the values each layout receives.

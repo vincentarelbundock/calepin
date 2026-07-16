@@ -1,5 +1,6 @@
 #set document(title: [CSS])
 #import "/.calepin/calepin.typ" as calepin
+#metadata((tags: ("themes", "CSS", "HTML"))) <website-metadata>
 #title()
 
 = CSS tokens

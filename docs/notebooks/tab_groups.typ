@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Synchronized tab groups])
+#metadata((tags: ("notebooks", "HTML"))) <website-metadata>
 
 #title()
 

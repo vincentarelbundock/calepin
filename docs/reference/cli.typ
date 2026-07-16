@@ -1,4 +1,5 @@
 #set document(title: [CLI reference])
+#metadata((tags: ("reference", "CLI"))) <website-metadata>
 
 #title() <cli-reference>
 

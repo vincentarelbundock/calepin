@@ -1,4 +1,5 @@
 #set document(title: [Tips & tricks])
+#metadata((tags: ("tips", "notebooks", "websites"))) <website-metadata>
 
 #title()
 

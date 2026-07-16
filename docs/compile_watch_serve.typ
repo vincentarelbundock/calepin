@@ -1,4 +1,5 @@
 #set document(title: [Compile, watch, serve])
+#metadata((tags: ("getting started", "CLI"))) <website-metadata>
 
 #title() <compile-watch-serve>
 

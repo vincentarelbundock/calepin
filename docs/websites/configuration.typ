@@ -1,5 +1,5 @@
 #set document(title: [Site configuration])
-#metadata((title: "Configuration")) <website-metadata>
+#metadata((title: "Configuration", tags: ("websites", "configuration"))) <website-metadata>
 
 #title()
 

@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin
 
 #set document(title: [Code execution])
+#metadata((tags: ("notebooks", "code execution"))) <website-metadata>
 
 #calepin.setup(
   echo: true,
