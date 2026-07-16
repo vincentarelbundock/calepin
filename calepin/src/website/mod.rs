@@ -29,7 +29,7 @@ use notify::RecursiveMode;
 use serde::{Deserialize, Serialize};
 use xxhash_rust::xxh3::xxh3_64;
 
-use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs};
+use crate::cli::{set_quiet, CompileArgs, CompileFormat, WatchArgs, WatchFormat};
 use crate::config::CalepinConfig;
 use crate::html::HtmlSyntaxTheme;
 use crate::utils::path::absolutize_from;
@@ -190,7 +190,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         discover_website_config(&current_dir, &args.input, args.common.config.as_deref())?;
     let render_pdf = match args.format {
         None => None,
-        Some(CompileFormat::Html) => Some(false),
+        Some(WatchFormat::Html) => Some(false),
         Some(_) => {
             return Err(anyhow!(
                 "website directory watch does not support `--format`; only `--format html` is allowed and `--format` other values are for one-shot format control via `calepin compile`"

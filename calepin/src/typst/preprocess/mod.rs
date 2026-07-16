@@ -106,6 +106,11 @@ pub fn preprocess_plan_chunk_count(plan: &PreprocessPlan) -> usize {
     plan.chunks.len()
 }
 
+/// Consume a prepared plan without executing its chunks.
+pub fn preprocess_plan_into_chunks(plan: PreprocessPlan) -> Vec<ChunkSpec> {
+    plan.chunks
+}
+
 pub fn preprocess_cached_output(plan: PreprocessPlan) -> PreprocessOutput {
     PreprocessOutput {
         layout: plan.layout,

@@ -20,6 +20,33 @@ calepin compile paper.typ {p}.svg --format svg
 calepin compile paper.typ path/to/paper.pdf --format pdf
 ```
 
+== Extract scripts
+<extract-scripts>
+
+Use `--format script` to extract executable source code without running it or
+rendering the Typst document. Script extraction accepts one `.typ` input at a
+time; website directories and `calepin watch` are not supported.
+
+```sh
+# write paper.R, paper.py, paper.jl, or paper.sh as needed
+calepin compile paper.typ --format script
+
+# choose the output template
+calepin compile paper.typ exported/paper.{ext} --format script
+calepin compile paper.typ exported/{engine}.{ext} --format script
+```
+
+Calepin writes a separate file for each engine, preserves chunk order within
+that engine, and adds comment separators containing chunk labels. It includes
+chunks with `eval: false`, but excludes diagram chunks. The conventional
+extensions are `.R`, `.py`, `.jl`, and `.sh`. Other Jupyter kernels use `.txt`;
+use `{engine}` when more than one kernel would otherwise produce the same path.
+
+`{ext}` expands to the extension without its leading dot, while `{engine}`
+expands to a filename-safe engine name. When an explicit output has no
+placeholder, it is accepted only when the document contains one engine. An
+output template that maps multiple engines to the same path is rejected.
+
 Compile a website by pointing `calepin compile` at a source directory
 that contains `calepin.toml`:
 

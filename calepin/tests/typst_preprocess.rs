@@ -38,6 +38,57 @@ fn typst_accessible_tempdir() -> tempfile::TempDir {
 }
 
 #[test]
+fn script_format_extracts_languages_without_executing_chunks() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(fenced-chunks: true)
+
+```python
+raise RuntimeError("must not execute")
+```
+
+```r
+#| eval: false
+stop("must not execute")
+```
+
+```julia
+error("must not execute")
+```
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "--format", "script", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to extract scripts");
+
+    assert!(
+        output.status.success(),
+        "script extraction failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let python = std::fs::read_to_string(dir.path().join("paper.py")).unwrap();
+    let r = std::fs::read_to_string(dir.path().join("paper.R")).unwrap();
+    let julia = std::fs::read_to_string(dir.path().join("paper.jl")).unwrap();
+    assert!(python.contains("raise RuntimeError"));
+    assert!(!python.contains("stop("));
+    assert!(r.contains("stop(\"must not execute\")"));
+    assert!(!r.contains("RuntimeError"));
+    assert!(julia.contains("error(\"must not execute\")"));
+    assert!(!dir.path().join(".calepin/paper/results.json").exists());
+}
+
+#[test]
 fn compile_config_asset_dir_writes_no_dot_calepin_directory() {
     if !has_command("typst") {
         return;

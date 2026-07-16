@@ -14,6 +14,7 @@ mod query;
 mod results;
 mod run;
 mod runtime;
+mod script;
 mod source_rewrite;
 mod sync;
 #[cfg(test)]

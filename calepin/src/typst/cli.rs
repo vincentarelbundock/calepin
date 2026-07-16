@@ -11,6 +11,7 @@ use crate::typst::compile::{
     compile_with_typst, resolve_output_format, CompileOptions, OutputFormat,
 };
 use crate::typst::preprocess::{preprocess_cached, PreprocessOptions};
+use crate::typst::script::extract_scripts;
 
 const NEW_FILE_TEMPLATE: &str = include_str!("../assets/scaffolds/notebook/notebook.typ");
 
@@ -186,11 +187,29 @@ pub fn handle_clean(args: CleanArgs) -> Result<()> {
 
 pub fn handle_compile(args: CompileArgs) -> Result<()> {
     set_quiet(args.common.quiet);
+    if args.format == Some(crate::cli::CompileFormat::Script) {
+        if args.input.is_dir() {
+            return Err(anyhow::anyhow!(
+                "`--format script` only supports a single .typ input; compile website pages individually"
+            ));
+        }
+        if args.minify {
+            return Err(anyhow::anyhow!(
+                "`--minify` cannot be used with `--format script`"
+            ));
+        }
+        if !args.typst_args.is_empty() {
+            return Err(anyhow::anyhow!(
+                "Typst pass-through arguments cannot be used with `--format script`"
+            ));
+        }
+        return extract_scripts(args);
+    }
     if args.input.is_dir() {
         return crate::website::build_from_compile_args(args);
     }
 
-    let format = args.format.map(OutputFormat::from);
+    let format = args.format.map(OutputFormat::try_from).transpose()?;
     let mut site_context = SiteContextInput::default();
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
@@ -290,7 +309,7 @@ fn confirm_deletion() -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{Cli, Command, CommonArgs, CompileFormat};
+    use crate::cli::{Cli, Command, CommonArgs, WatchFormat};
     use clap::Parser;
 
     #[test]
@@ -544,7 +563,7 @@ mod tests {
 
     #[test]
     fn watch_rejects_serve_for_non_html_notebooks() {
-        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Pdf));
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(WatchFormat::Pdf));
         args.serve = true;
 
         let err = handle_watch(args).unwrap_err().to_string();
@@ -555,7 +574,7 @@ mod tests {
 
     #[test]
     fn watch_rejects_port_for_non_html_notebooks() {
-        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Pdf));
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(WatchFormat::Pdf));
         args.port = Some(3000);
 
         let err = handle_watch(args).unwrap_err().to_string();
@@ -566,7 +585,7 @@ mod tests {
 
     #[test]
     fn html_watch_allows_serve_and_forwards_open_and_port_to_typst() {
-        let mut args = watch_args(PathBuf::from("missing.typ"), Some(CompileFormat::Html));
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(WatchFormat::Html));
         args.serve = true;
         args.open = true;
         args.port = Some(3000);
@@ -581,7 +600,7 @@ mod tests {
             .any(|pair| pair == ["--port", "3000"]));
     }
 
-    fn watch_args(input: PathBuf, format: Option<CompileFormat>) -> WatchArgs {
+    fn watch_args(input: PathBuf, format: Option<WatchFormat>) -> WatchArgs {
         WatchArgs {
             input,
             output: None,

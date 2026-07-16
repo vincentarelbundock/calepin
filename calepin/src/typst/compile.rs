@@ -50,13 +50,29 @@ impl OutputFormat {
     }
 }
 
-impl From<crate::cli::CompileFormat> for OutputFormat {
-    fn from(value: crate::cli::CompileFormat) -> Self {
+impl TryFrom<crate::cli::CompileFormat> for OutputFormat {
+    type Error = anyhow::Error;
+
+    fn try_from(value: crate::cli::CompileFormat) -> Result<Self> {
         match value {
-            crate::cli::CompileFormat::Pdf => Self::Pdf,
-            crate::cli::CompileFormat::Png => Self::Png,
-            crate::cli::CompileFormat::Svg => Self::Svg,
-            crate::cli::CompileFormat::Html => Self::Html,
+            crate::cli::CompileFormat::Pdf => Ok(Self::Pdf),
+            crate::cli::CompileFormat::Png => Ok(Self::Png),
+            crate::cli::CompileFormat::Svg => Ok(Self::Svg),
+            crate::cli::CompileFormat::Html => Ok(Self::Html),
+            crate::cli::CompileFormat::Script => {
+                Err(anyhow!("script output is not a Typst render format"))
+            }
+        }
+    }
+}
+
+impl From<crate::cli::WatchFormat> for OutputFormat {
+    fn from(value: crate::cli::WatchFormat) -> Self {
+        match value {
+            crate::cli::WatchFormat::Pdf => Self::Pdf,
+            crate::cli::WatchFormat::Png => Self::Png,
+            crate::cli::WatchFormat::Svg => Self::Svg,
+            crate::cli::WatchFormat::Html => Self::Html,
         }
     }
 }

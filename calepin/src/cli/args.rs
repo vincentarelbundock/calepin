@@ -62,6 +62,15 @@ pub enum CompileFormat {
     Png,
     Svg,
     Html,
+    Script,
+}
+
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WatchFormat {
+    Pdf,
+    Png,
+    Svg,
+    Html,
 }
 
 impl CompileFormat {
@@ -71,6 +80,7 @@ impl CompileFormat {
             Self::Png => "png",
             Self::Svg => "svg",
             Self::Html => "html",
+            Self::Script => "script",
         }
     }
 }
@@ -145,7 +155,7 @@ pub struct CompileArgs {
     /// Output file path, or website output directory when INPUT is a directory
     pub output: Option<PathBuf>,
 
-    /// Output format passed to typst compile
+    /// Output format, including source-code script extraction
     #[arg(long, value_enum)]
     pub format: Option<CompileFormat>,
 
@@ -172,7 +182,7 @@ pub struct WatchArgs {
 
     /// Output format passed to typst watch
     #[arg(long, value_enum)]
-    pub format: Option<CompileFormat>,
+    pub format: Option<WatchFormat>,
 
     /// Serve the website while watching a directory
     #[arg(long)]
@@ -360,6 +370,27 @@ mod tests {
     }
 
     #[test]
+    fn test_typst_compile_script_format() {
+        let cli = Cli::try_parse_from([
+            "calepin",
+            "compile",
+            "paper.typ",
+            "scripts/paper.{ext}",
+            "--format",
+            "script",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Compile(args) => {
+                assert_eq!(args.format, Some(CompileFormat::Script));
+                assert_eq!(args.output, Some(PathBuf::from("scripts/paper.{ext}")));
+            }
+            other => panic!("expected compile command, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn test_typst_compile_rejects_template_alias() {
         let err = Cli::try_parse_from([
             "calepin",
@@ -433,7 +464,7 @@ mod tests {
             Command::Watch(args) => {
                 assert_eq!(args.input, PathBuf::from("paper.typ"));
                 assert_eq!(args.output, Some(PathBuf::from("out/paper.html")));
-                assert_eq!(args.format, Some(CompileFormat::Html));
+                assert_eq!(args.format, Some(WatchFormat::Html));
                 assert!(!args.serve);
                 assert!(!args.open);
                 assert!(args.common.quiet);
@@ -442,6 +473,14 @@ mod tests {
             }
             other => panic!("expected watch command, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn test_typst_watch_rejects_script_format() {
+        let error = Cli::try_parse_from(["calepin", "watch", "paper.typ", "--format", "script"])
+            .unwrap_err();
+
+        assert!(error.to_string().contains("invalid value 'script'"));
     }
 
     #[test]
