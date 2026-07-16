@@ -84,6 +84,50 @@ fn write_runtime_writes_calepin_typ() {
 }
 
 #[test]
+fn typst_compile_html_resolves_site_root_assets_relative_to_nested_page() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r#"#import ".calepin/calepin.typ"
+
+#html.elem("p")[#calepin.asset-href("/assets/root.png")]
+#html.elem("p")[#calepin.asset-href("images/local.png")]
+#calepin.elements.lightbox-video(
+  "demo",
+  "/assets/demo.mp4",
+  poster: "/assets/poster.png",
+)
+"#,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &[
+            "--features",
+            "html",
+            "--input",
+            "calepin-target=html",
+            "--input",
+            "calepin-current-href=guide/deep/page.html",
+        ],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(html.contains("../../assets/root.png"), "{html}");
+    assert!(html.contains("images/local.png"), "{html}");
+    assert!(html.contains("../../assets/demo.mp4"), "{html}");
+    assert!(html.contains("../../assets/poster.png"), "{html}");
+    assert!(!html.contains("\"/assets/"), "{html}");
+}
+
+#[test]
 fn typst_compile_html_elements_columns_uses_plain_pico_grid() {
     skip_if_no_typst!();
 

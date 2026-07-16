@@ -294,14 +294,14 @@ sum(x) / len(x)
 ```typ
 #calepin.elements.lightbox-image(
   "editor-image",
-  "../assets/screenshot_notebook.png",
+  "/assets/screenshot_notebook.png",
   "Notebook screenshot",
   width: 16em,
 )
 #calepin.elements.lightbox-video(
   "editor-video",
-  "../assets/calepin_vscode.mp4",
-  poster: "../assets/calepin_vscode-thumb.png",
+  "/assets/calepin_vscode.mp4",
+  poster: "/assets/calepin_vscode-thumb.png",
   width: 16em,
 )
 ```
@@ -312,7 +312,7 @@ sum(x) / len(x)
   [
     #calepin.elements.lightbox-image(
       "editor-image",
-      "../assets/screenshot_notebook.png",
+      "/assets/screenshot_notebook.png",
       "Notebook screenshot",
       width: 16em,
     )
@@ -320,8 +320,8 @@ sum(x) / len(x)
   [
     #calepin.elements.lightbox-video(
       "editor-video",
-      "../assets/calepin_vscode.mp4",
-      poster: "../assets/calepin_vscode-thumb.png",
+      "/assets/calepin_vscode.mp4",
+      poster: "/assets/calepin_vscode-thumb.png",
       width: 16em,
     )
   ],

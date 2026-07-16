@@ -104,7 +104,7 @@ layouts, partials, scripts, and `layouts/pdf.typ`.
 See #link("../themes/themes.html")[Themes] for the stable `--calepin-*`
 CSS tokens exposed by bundled themes.
 
-Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Avoid bare relative paths such as `#image("assets/diagram.svg")` for shared assets in nested pages. If no favicon is set, _Calepin_ writes a small default to `asset-dir`/favicon.svg; if no logo is set, bundled themes use `title` as the site name.
+Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Calepin's HTML components convert these paths to page-relative browser URLs, so they also work when the website is hosted below a URL prefix. For custom HTML attributes, use `calepin.asset-href("/assets/diagram.svg")`. Ordinary relative paths remain relative and are not rewritten. If no favicon is set, _Calepin_ writes a small default to `asset-dir`/favicon.svg; if no logo is set, bundled themes use `title` as the site name.
 
 = Syntax highlighting
 
