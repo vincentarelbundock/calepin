@@ -324,42 +324,71 @@ fn annotate_body_headings(
     let mut cursor = 0;
     let mut skipped_title_heading = false;
 
-    while let Some(relative_start) = body[cursor..].find("<h") {
+    while let Some((relative_start, role_heading)) = next_heading_start(&body[cursor..]) {
         let start = cursor + relative_start;
-        let tag_start = start + 2;
-        let Some(level_byte) = body.as_bytes().get(tag_start).copied() else {
-            break;
+        let standard_level = if role_heading {
+            None
+        } else {
+            let tag_start = start + 2;
+            let Some(level_byte) = body.as_bytes().get(tag_start).copied() else {
+                break;
+            };
+            if !(b'1'..=b'6').contains(&level_byte) {
+                out.push_str(&body[cursor..start + 2]);
+                cursor = start + 2;
+                continue;
+            }
+            let after_level = tag_start + 1;
+            let Some(after_byte) = body.as_bytes().get(after_level).copied() else {
+                break;
+            };
+            if after_byte != b'>' && !after_byte.is_ascii_whitespace() {
+                out.push_str(&body[cursor..after_level]);
+                cursor = after_level;
+                continue;
+            }
+            Some((level_byte - b'0') as usize)
         };
-        if !(b'1'..=b'6').contains(&level_byte) {
-            out.push_str(&body[cursor..start + 2]);
-            cursor = start + 2;
-            continue;
-        }
-        let level = (level_byte - b'0') as usize;
-        let after_level = tag_start + 1;
-        let Some(after_byte) = body.as_bytes().get(after_level).copied() else {
-            break;
-        };
-        if after_byte != b'>' && !after_byte.is_ascii_whitespace() {
-            out.push_str(&body[cursor..after_level]);
-            cursor = after_level;
-            continue;
-        }
 
         let Some(open_offset) = body[start..].find(">") else {
             break;
         };
         let open_end = start + open_offset + 1;
-        let close_tag = format!("</h{level}>");
+        let open_tag = &body[start..open_end];
+        let level = if role_heading {
+            let Some(level) = role_heading_level(open_tag) else {
+                out.push_str(&body[cursor..open_end]);
+                cursor = open_end;
+                continue;
+            };
+            level
+        } else {
+            let Some(level) = standard_level else {
+                break;
+            };
+            level
+        };
+        let close_tag = if role_heading {
+            "</div>".to_string()
+        } else {
+            format!("</h{level}>")
+        };
         let Some(close_offset) = body[open_end..].find(&close_tag) else {
             break;
         };
         let close_start = open_end + close_offset;
         let close_end = close_start + close_tag.len();
-        let open_tag = &body[start..open_end];
         let inner = &body[open_end..close_start];
-        let label = html_escape(&strip_html_tags(inner));
-        let base_id = slugify(&label);
+        // Derive the slug from the plain text, NOT from the re-escaped label:
+        // escaping turns a stray `&` back into `&amp;`, which slugify would then
+        // mangle into an `amp-` prefix. Keep `label` (escaped) for the TOC.
+        let text = strip_html_tags(inner);
+        let label = html_escape(&text);
+        // An explicit Typst label is ferried in by the runtime as a marker
+        // element just before the heading (see `heading_anchor_show_rule`).
+        // When present it takes precedence over the slugified text.
+        let explicit_id = trailing_heading_anchor_label(&body[cursor..start]);
+        let base_id = explicit_id.unwrap_or_else(|| slugify(&text));
         let count = counts.entry(base_id.clone()).or_insert(0);
         let id = if *count == 0 {
             base_id
@@ -374,7 +403,7 @@ fn annotate_body_headings(
         } else {
             out.push_str(&open_tag[..open_tag.len() - 1]);
             out.push_str(r#" id=""#);
-            out.push_str(&id);
+            out.push_str(&html_escape(&id));
             out.push('"');
             out.push('>');
         }
@@ -388,7 +417,7 @@ fn annotate_body_headings(
         } else if level <= toc_depth {
             toc.push(TocEntry {
                 level,
-                href: format!("#{id}"),
+                href: heading_fragment_href(&id),
                 label,
             });
         }
@@ -396,7 +425,85 @@ fn annotate_body_headings(
     }
 
     out.push_str(&body[cursor..]);
+    // Markers consumed above sit just before their heading and are removed
+    // here; malformed or otherwise unassociated markers must not reach output.
+    let out = if out.contains(HEADING_ANCHOR_OPEN) {
+        strip_heading_anchor_markers(&out)
+    } else {
+        out
+    };
     (out, toc)
+}
+
+const ROLE_HEADING_OPEN: &str = r#"<div role="heading" aria-level=""#;
+const HEADING_ANCHOR_OPEN: &str = r#"<calepin-heading-anchor data-id=""#;
+const HEADING_ANCHOR_CLOSE: &str = "</calepin-heading-anchor>";
+
+fn next_heading_start(value: &str) -> Option<(usize, bool)> {
+    let standard = value.find("<h");
+    let role = value.find(ROLE_HEADING_OPEN);
+    match (standard, role) {
+        (Some(standard), Some(role)) if standard <= role => Some((standard, false)),
+        (Some(_), Some(role)) => Some((role, true)),
+        (Some(standard), None) => Some((standard, false)),
+        (None, Some(role)) => Some((role, true)),
+        (None, None) => None,
+    }
+}
+
+fn role_heading_level(open_tag: &str) -> Option<usize> {
+    let rest = open_tag.strip_prefix(ROLE_HEADING_OPEN)?;
+    let value_end = rest.find('"')?;
+    rest[..value_end].parse().ok()
+}
+
+/// Reads the label from a heading-anchor marker that immediately precedes a
+/// heading (trailing whitespace allowed). Returns `None` when `gap` does not
+/// end with a well-formed, non-empty marker.
+fn trailing_heading_anchor_label(gap: &str) -> Option<String> {
+    let before_close = gap.trim_end().strip_suffix(HEADING_ANCHOR_CLOSE)?;
+    let open = before_close.rfind(HEADING_ANCHOR_OPEN)?;
+    let rest = &before_close[open + HEADING_ANCHOR_OPEN.len()..];
+    let value_end = rest.find('"')?;
+    // The marker is an empty element, so the attribute value is followed only
+    // by the tag's closing `>`.
+    if &rest[value_end + 1..] != ">" {
+        return None;
+    }
+    let label = decode_basic_entities(&rest[..value_end]);
+    (!label.is_empty()).then_some(label)
+}
+
+fn heading_fragment_href(id: &str) -> String {
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+
+    let mut href = String::with_capacity(id.len() + 1);
+    href.push('#');
+    for byte in id.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~' | b':') {
+            href.push(byte as char);
+        } else {
+            href.push('%');
+            href.push(HEX[(byte >> 4) as usize] as char);
+            href.push(HEX[(byte & 0x0f) as usize] as char);
+        }
+    }
+    href
+}
+
+fn strip_heading_anchor_markers(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut cursor = 0;
+    while let Some(rel) = html[cursor..].find(HEADING_ANCHOR_OPEN) {
+        let open = cursor + rel;
+        let Some(close_rel) = html[open..].find(HEADING_ANCHOR_CLOSE) else {
+            break;
+        };
+        out.push_str(&html[cursor..open]);
+        cursor = open + close_rel + HEADING_ANCHOR_CLOSE.len();
+    }
+    out.push_str(&html[cursor..]);
+    out
 }
 
 fn strip_html_tags(value: &str) -> String {
@@ -414,12 +521,44 @@ fn strip_html_tags(value: &str) -> String {
 }
 
 fn decode_basic_entities(value: &str) -> String {
-    value
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
+    let mut out = String::with_capacity(value.len());
+    let mut rest = value;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        let tail = &rest[amp..];
+        if let Some(semi) = tail.find(';') {
+            let entity = &tail[1..semi];
+            let decoded = match entity {
+                "amp" => Some('&'),
+                "lt" => Some('<'),
+                "gt" => Some('>'),
+                "quot" => Some('"'),
+                "apos" => Some('\''),
+                _ => decode_numeric_entity(entity),
+            };
+            if let Some(ch) = decoded {
+                out.push(ch);
+                rest = &tail[semi + 1..];
+                continue;
+            }
+        }
+        // Not a recognized entity: keep the '&' literally and move on.
+        out.push('&');
+        rest = &tail[1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Decode a numeric character reference body such as `#39`, `#x20`, or `#xE9`
+/// (the part between `&` and `;`). Returns `None` for non-numeric entities.
+fn decode_numeric_entity(entity: &str) -> Option<char> {
+    let digits = entity.strip_prefix('#')?;
+    let code = match digits.strip_prefix(['x', 'X']) {
+        Some(hex) => u32::from_str_radix(hex, 16).ok()?,
+        None => digits.parse::<u32>().ok()?,
+    };
+    char::from_u32(code)
 }
 
 fn slugify(value: &str) -> String {
@@ -481,7 +620,6 @@ fn html_title(head: &str) -> Option<String> {
 }
 
 /// Substitute the syntax-color placeholders inside a theme CSS asset.
-
 pub(crate) fn theme_css(source: &str, syntax_theme: &HtmlSyntaxTheme) -> String {
     source
         .replace(
@@ -503,4 +641,132 @@ fn highlight_css(syntax_theme: &HtmlSyntaxTheme) -> String {
         syntax_theme.declarations(true),
         syntax_theme.declarations(true),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn heading_id(body: &str) -> String {
+        let (out, _) = annotate_body_headings(body, None, 3);
+        let marker = r#" id=""#;
+        let start = out.find(marker).expect("heading should get an id") + marker.len();
+        let end = out[start..].find('"').unwrap() + start;
+        out[start..end].to_string()
+    }
+
+    #[test]
+    fn plain_heading_slug_is_unchanged() {
+        assert_eq!(heading_id("<h2>Plain Research</h2>"), "plain-research");
+    }
+
+    #[test]
+    fn inline_markup_does_not_leak_into_the_slug() {
+        // An icon element plus Typst's `&#x20;` spacing span used to produce
+        // `amp-x20-iconic-research`; the slug should come from the text only.
+        let body = r#"<h2><i class="bi bi-pen"></i><span style="white-space: pre-wrap">&#x20;</span>Iconic Research</h2>"#;
+        assert_eq!(heading_id(body), "iconic-research");
+    }
+
+    #[test]
+    fn numeric_character_references_are_decoded() {
+        // `&#xE9;` decodes to `é`, which the ASCII-only slugify then drops — so
+        // the slug is a clean `caf`, not the old leaked `caf-xe9`.
+        assert_eq!(heading_id("<h2>caf&#xE9;</h2>"), "caf");
+        // The decoder itself handles decimal and hex refs.
+        assert_eq!(decode_basic_entities("a&#38;b"), "a&b");
+        assert_eq!(decode_basic_entities("&#x20;hi"), " hi");
+    }
+
+    #[test]
+    fn unrecognized_ampersands_are_preserved() {
+        assert_eq!(decode_basic_entities("Tom & Jerry"), "Tom & Jerry");
+    }
+
+    fn anchor(label: &str) -> String {
+        format!(r#"<calepin-heading-anchor data-id="{label}"></calepin-heading-anchor>"#)
+    }
+
+    #[test]
+    fn explicit_label_marker_sets_the_id() {
+        let body = format!("{}<h3>Labeled Plain</h3>", anchor("plainlabel"));
+        assert_eq!(heading_id(&body), "plainlabel");
+    }
+
+    #[test]
+    fn explicit_label_wins_over_inline_content() {
+        // The label is honored even when inline markup would otherwise drive
+        // the slug — this is the case the workaround in #70 worked around.
+        let body = format!(
+            r#"{}<h3><i class="bi bi-pen"></i><span style="white-space: pre-wrap">&#x20;</span>Iconic Research</h3>"#,
+            anchor("myresearch")
+        );
+        assert_eq!(heading_id(&body), "myresearch");
+    }
+
+    #[test]
+    fn label_marker_is_stripped_and_toc_points_at_the_label_id() {
+        let body = format!("{}<h2>Intro</h2>", anchor("sec:intro"));
+        let (out, toc) = annotate_body_headings(&body, None, 3);
+        assert!(!out.contains("calepin-heading-anchor"), "{out}");
+        // Colon labels are kept verbatim (valid in HTML ids and URL fragments).
+        assert!(out.contains(r#"<h2 id="sec:intro">Intro</h2>"#), "{out}");
+        assert_eq!(toc.len(), 1);
+        assert_eq!(toc[0].href, "#sec:intro");
+        assert_eq!(toc[0].label, "Intro");
+    }
+
+    #[test]
+    fn labeled_and_slugged_ids_share_one_dedup_space() {
+        let body = format!(
+            "{}<h2>One</h2><h2>One</h2>",
+            anchor("one") // explicit "one" collides with the slug of "One"
+        );
+        let (out, _) = annotate_body_headings(&body, None, 3);
+        assert!(out.contains(r#"<h2 id="one">One</h2>"#), "{out}");
+        assert!(out.contains(r#"<h2 id="one-2">One</h2>"#), "{out}");
+    }
+
+    #[test]
+    fn explicit_label_sets_id_on_role_heading() {
+        // Typst renders a level-6 heading as a role-based <div> because HTML
+        // has no <h7>; its explicit label must still provide a stable anchor.
+        let body = format!(
+            r#"{}<div role="heading" aria-level="7">Deep</div>"#,
+            anchor("deep")
+        );
+        let (out, _) = annotate_body_headings(&body, None, 3);
+        assert!(!out.contains("calepin-heading-anchor"), "{out}");
+        assert!(
+            out.contains(r#"<div role="heading" aria-level="7" id="deep">Deep</div>"#),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn explicit_label_is_safe_in_id_and_toc_href() {
+        let body = format!("{}<h2>Unsafe</h2>", anchor("x&quot;&amp; y"));
+        let (out, toc) = annotate_body_headings(&body, None, 3);
+
+        assert!(out.contains(r#"id="x&quot;&amp; y""#), "{out}");
+        assert!(!out.contains(r#"id="x"& y""#), "{out}");
+        assert_eq!(toc[0].href, "#x%22%26%20y");
+    }
+
+    #[test]
+    fn explicit_label_preserves_surrounding_whitespace() {
+        let body = format!("{}<h2>Spaced</h2>", anchor("&#x20;space&#x20;"));
+        let (out, toc) = annotate_body_headings(&body, None, 3);
+
+        assert!(out.contains(r#"id=" space ""#), "{out}");
+        assert_eq!(toc[0].href, "#%20space%20");
+    }
+
+    #[test]
+    fn unlabeled_heading_falls_back_to_the_slug() {
+        assert_eq!(heading_id("<h2>Plain Research</h2>"), "plain-research");
+        // A malformed marker (no closing tag) is ignored, not used as an id.
+        let body = r#"<calepin-heading-anchor data-id="x"><h2>Fallback Here</h2>"#;
+        assert_eq!(heading_id(body), "fallback-here");
+    }
 }

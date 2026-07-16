@@ -303,6 +303,67 @@ Theme is a compile-time concern.
 }
 
 #[test]
+fn compile_html_assigns_safe_ids_to_all_heading_forms() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(eval: false)
+
+= #html.elem("i", "", attrs: (class: "icon")) Labeled Research <research>
+
+= #html.elem("i", "", attrs: (class: "icon")) Slugged Research
+
+#heading[Dynamic label] #label("x\" onmouseover=\"alert(1)")
+
+====== Deep heading <deep>
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.html",
+            "--format",
+            "html",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
+    assert!(html.contains(r#"<h2 id="research">"#), "{html}");
+    assert!(html.contains(r#"<h2 id="slugged-research">"#), "{html}");
+    assert!(
+        html.contains(r#"<h2 id="x&quot; onmouseover=&quot;alert(1)">Dynamic label</h2>"#),
+        "{html}"
+    );
+    assert!(
+        !html.contains(r#" id="x" onmouseover="alert(1)""#),
+        "{html}"
+    );
+    assert!(
+        html.contains(r#"<div role="heading" aria-level="7" id="deep">Deep heading</div>"#),
+        "{html}"
+    );
+    assert!(!html.contains("calepin-heading-anchor"), "{html}");
+}
+
+#[test]
 fn compile_html_respects_canonical_figure_display_dimensions() {
     if !has_command("typst")
         || Command::new("dot")

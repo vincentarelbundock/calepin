@@ -89,8 +89,11 @@ pub(super) fn write_render_wrapper(
         lines.push_str(&raw_show_rule(kernel));
     }
 
-    lines.push_str("\n");
+    lines.push('\n');
     lines.push_str(html_raw_show_rule());
+
+    lines.push('\n');
+    lines.push_str(heading_anchor_show_rule());
 
     if let Some(notebook_theme) = notebook_theme {
         lines.push_str("\n// Notebook theme\n");
@@ -132,6 +135,21 @@ fn raw_show_rule(lang: &str) -> String {
     format!(
         "#show raw.where(block: true, lang: {lang}, theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ chunk_from_raw_plain({lang}, it) }}\n"
     )
+}
+
+/// In HTML export, Typst drops a heading's explicit label, so the post-render
+/// id assignment in `html::theme` cannot honor it. Emit a tiny marker element
+/// carrying the label immediately before each labeled heading; the HTML
+/// post-processor reads it to set the heading `id` and then strips it. Only the
+/// HTML target is affected; paged/query passes re-emit the heading untouched.
+fn heading_anchor_show_rule() -> &'static str {
+    r#"#show heading: it => {
+  if _is-html() and "label" in it.fields() {
+    std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
+  }
+  it
+}
+"#
 }
 
 fn html_raw_show_rule() -> &'static str {
