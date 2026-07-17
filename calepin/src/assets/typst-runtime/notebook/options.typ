@@ -1,5 +1,5 @@
-#import "../core/state.typ": *
 #import "../core/target.typ": _is-query
+#import "defaults.typ": _base-options, _call-extra-defaults, _setup-defaults
 
 // Validate that document variables only contain JSON-serializable leaves
 // (none, bool, int, float, str) nested in arrays/dictionaries. Anything else
@@ -44,6 +44,14 @@
   fig-height: _base-options.at("fig-height"),
   fig-align: _base-options.at("fig-align"),
   fig-responsive: _base-options.at("fig-responsive"),
+  fig-link: _base-options.at("fig-link"),
+  fig-caption: _base-options.at("fig-caption"),
+  fig-cap-location: _base-options.at("fig-cap-location"),
+  fig-alt-text: _base-options.at("fig-alt-text"),
+  fig-subcaptions: _base-options.at("fig-subcaptions"),
+  fig-layout-columns: _base-options.at("fig-layout-columns"),
+  fig-layout-rows: _base-options.at("fig-layout-rows"),
+  kind: _base-options.at("kind"),
   fenced-chunks: true,
   fallback-warning: true,
   theme: none,
@@ -67,6 +75,14 @@
     "fig-height": fig-height,
     "fig-align": fig-align,
     "fig-responsive": fig-responsive,
+    "fig-link": fig-link,
+    "fig-caption": fig-caption,
+    "fig-cap-location": fig-cap-location,
+    "fig-alt-text": fig-alt-text,
+    "fig-subcaptions": fig-subcaptions,
+    "fig-layout-columns": fig-layout-columns,
+    "fig-layout-rows": fig-layout-rows,
+    kind: kind,
     "fenced-chunks": fenced-chunks,
     "fallback-warning": fallback-warning,
     theme: theme,
@@ -86,7 +102,7 @@
   }
 }
 
-#let _resolve-options(engine, args) = {
+#let _resolve-options-for(args) = {
   let defaults = _setup-defaults.get().at("default")
   let out = (:)
   for key in _base-options.keys() {
@@ -97,3 +113,6 @@
   }
   out
 }
+
+// Keep the engine argument for themes that import the historical helper.
+#let _resolve-options(engine, args) = _resolve-options-for(args)

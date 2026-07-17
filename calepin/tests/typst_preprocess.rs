@@ -212,6 +212,95 @@ print(x + 1)
 }
 
 #[test]
+fn preprocess_carries_setup_figure_defaults_into_chunk_results() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(
+  fig-height: 8cm,
+  fig-link: "https://example.com/default",
+  fig-caption: [Default caption],
+  fig-cap-location: top,
+  fig-alt-text: "Default alt",
+  fig-subcaptions: ("Left", "Right"),
+  fig-layout-columns: 2,
+  fig-layout-rows: 1,
+  kind: "figure",
+)
+
+#calepin.chunk("python", label: "inherits", eval: false)[`print("INHERITED")`]
+#calepin.chunk(
+  "python",
+  label: "clears",
+  eval: false,
+  fig-link: none,
+  fig-caption: none,
+  fig-alt-text: none,
+  fig-subcaptions: none,
+)[`print("CLEARED")`]
+
+#calepin.chunk(label: "versioned", eval: false)[```julia-1.2
+x = 41
+```]
+
+Setup defaults integration test.
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
+    )
+    .unwrap();
+    let inherited = &results["chunks"]["inherits"];
+    assert_eq!(inherited["source"], "print(\"INHERITED\")");
+    assert_ne!(inherited["options"]["fig-height"], serde_json::Value::Null);
+    assert_eq!(
+        inherited["options"]["fig-link"],
+        "https://example.com/default"
+    );
+    assert_eq!(inherited["options"]["fig-caption"], "Default caption");
+    assert_eq!(inherited["options"]["fig-cap-location"], "top");
+    assert_eq!(inherited["options"]["fig-alt-text"], "Default alt");
+    assert_eq!(
+        inherited["options"]["fig-subcaptions"],
+        serde_json::json!(["Left", "Right"])
+    );
+    assert_eq!(inherited["options"]["fig-layout-columns"], 2);
+    assert_eq!(inherited["options"]["fig-layout-rows"], 1);
+    assert_eq!(inherited["options"]["kind"], "figure");
+
+    let cleared = &results["chunks"]["clears"]["options"];
+    assert_eq!(cleared["fig-link"], serde_json::Value::Null);
+    assert_eq!(cleared["fig-caption"], serde_json::Value::Null);
+    assert_eq!(cleared["fig-alt-text"], serde_json::Value::Null);
+    assert_eq!(cleared["fig-subcaptions"], serde_json::Value::Null);
+    assert_eq!(cleared["fig-layout-columns"], 2);
+    assert_eq!(cleared["fig-layout-rows"], 1);
+
+    let versioned = &results["chunks"]["versioned"];
+    assert_eq!(versioned["engine"], "julia-1.2");
+    assert_eq!(versioned["source"], "x = 41");
+}
+
+#[test]
 fn compile_bootstraps_notebook_facade_for_plain_typst_preview() {
     if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
         return;

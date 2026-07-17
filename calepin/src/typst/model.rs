@@ -134,8 +134,26 @@ pub struct SetupDefaults {
     pub fig_device_height: Option<f64>,
     pub fig_device_aspect: f64,
     pub fig_width: Option<Value>,
+    #[serde(default)]
+    pub fig_height: Option<Value>,
     pub fig_align: Option<Value>,
     pub fig_responsive: Option<bool>,
+    #[serde(default)]
+    pub fig_link: Option<Value>,
+    #[serde(default)]
+    pub fig_caption: Option<String>,
+    #[serde(default)]
+    pub fig_cap_location: Option<Value>,
+    #[serde(default)]
+    pub fig_alt_text: Option<String>,
+    #[serde(default)]
+    pub fig_subcaptions: Option<Vec<String>>,
+    #[serde(default)]
+    pub fig_layout_columns: Option<Value>,
+    #[serde(default)]
+    pub fig_layout_rows: Option<Value>,
+    #[serde(default)]
+    pub kind: Option<String>,
     pub fenced_chunks: FencedChunks,
     /// Document-level variables from `calepin.setup(vars: (...))`, kept as a
     /// JSON object. Merged with `[vars]` config and CLI `--set vars.*` overrides, then
@@ -165,8 +183,17 @@ impl Default for SetupDefaults {
             fig_device_height: DEFAULT_FIG_DEVICE_HEIGHT,
             fig_device_aspect: DEFAULT_FIG_DEVICE_ASPECT,
             fig_width: Some(Value::String("70%".to_string())),
+            fig_height: None,
             fig_align: Some(Value::String("center".to_string())),
             fig_responsive: Some(true),
+            fig_link: None,
+            fig_caption: None,
+            fig_cap_location: None,
+            fig_alt_text: None,
+            fig_subcaptions: None,
+            fig_layout_columns: None,
+            fig_layout_rows: None,
+            kind: None,
             fenced_chunks: FencedChunks::All,
             vars: Value::Object(serde_json::Map::new()),
             theme: None,
@@ -430,6 +457,11 @@ pub struct CrossrefLabelDoc {
 pub struct ChunkResultDocument {
     pub label: String,
     pub engine: EngineName,
+    /// Canonical executable source after fence/header normalization. The
+    /// Typst runtime uses this for echoing and falls back for schema-v1 files
+    /// written by older Calepin versions.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source: String,
     pub status: ChunkStatus,
     #[serde(rename = "options")]
     pub display_options: DisplayOptions,
@@ -514,6 +546,7 @@ mod tests {
         let doc = ChunkResultDocument {
             label: "fig-x".to_string(),
             engine: EngineName::R,
+            source: "plot(x)".to_string(),
             status: ChunkStatus::Ok,
             display_options: serde_json::from_str(
                 r#"{"echo":true,"output":true,"results":"render","warning":true,
@@ -532,6 +565,28 @@ mod tests {
         let json = serde_json::to_string(&doc).unwrap();
         assert!(json.contains(r#""crossref-labels""#), "{json}");
         assert!(json.contains(r#""fig-x""#), "{json}");
+        assert!(json.contains(r#""source":"plot(x)""#), "{json}");
+    }
+
+    #[test]
+    fn chunk_result_document_accepts_legacy_documents_without_source() {
+        let json = r#"{
+          "label":"legacy",
+          "engine":"python",
+          "status":"ok",
+          "options":{
+            "echo":true,"output":true,"results":"render","warning":true,
+            "message":true,"placeholder":true,"fig-width":null,"fig-height":null,
+            "fig-align":null,"fig-responsive":null,"fig-link":null,"fig-caption":null,
+            "fig-cap-location":null,"fig-alt-text":null,"fig-subcaptions":null,
+            "fig-layout-columns":null,"fig-layout-rows":null,"kind":null
+          },
+          "items":[]
+        }"#;
+
+        let doc: ChunkResultDocument = serde_json::from_str(json).unwrap();
+        assert_eq!(doc.source, "");
+        assert_eq!(doc.label, "legacy");
     }
 
     #[test]

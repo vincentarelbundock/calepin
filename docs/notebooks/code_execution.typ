@@ -141,9 +141,9 @@ These options can be set in `#calepin.setup` as document-wide defaults and overr
   [fig-responsive], [`true`], [HTML output only: allow the figure to shrink to fit narrow viewports (sets `max-width: 100%`). No effect on paged output.],
 )
 
-== Chunk-only options
+== Additional chunk options
 
-These options are understood only on individual chunks; they are not valid keys in `#calepin.setup`. The caption and layout options live here because they apply to one chunk's specific output.
+`engine`, `body`, and `label` apply only to individual chunks. The figure caption, link, accessibility, and layout options can also be passed to `#calepin.setup` when every figure should share a document-wide default. Pass `none` on one chunk to clear an inherited caption, link, alt text, subcaption, or optional layout value for that chunk.
 
 #table(
   columns: (1.2fr, 0.9fr, 2.0fr),
@@ -153,12 +153,14 @@ These options are understood only on individual chunks; they are not valid keys 
   [engine], [inferred], [Force the engine for this chunk instead of inferring it from the fence or surrounding context.],
   [body], [from fence], [Provide the raw code body directly instead of writing a fenced block.],
   [label], [auto], [Assign a stable chunk identifier used for cross-references and result lookup.],
+  [fig-link], [`none`], [Wrap the rendered figure in a link to this URL.],
   [fig-caption], [`none`], [Caption text for the figure. When set, the output is wrapped in a numbered `figure` that can be cross-referenced.],
   [fig-cap-location], [`"auto"`], [Where the caption sits relative to the figure: `top`, `bottom`, or `margin`. `auto` uses Typst's default placement.],
   [fig-alt-text], [`none`], [Accessibility (alt) text for generated images. Empty when unset.],
   [fig-subcaptions], [`none`], [Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).],
   [fig-layout-columns], [`"auto"`], [Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or `auto` to choose a count from the number of images.],
   [fig-layout-rows], [`"auto"`], [Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or `auto`.],
+  [kind], [`none`], [Compatibility metadata carried with the chunk's display options. It is accepted in Quarto-style headers but does not currently change rendering.],
 )
 
 = Quarto-style names

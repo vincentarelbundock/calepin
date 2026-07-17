@@ -13,21 +13,36 @@ do not share scope across modules.
 3. `assets/typst-runtime/core/css.typ`
    - CSS string helpers shared by notebook rendering and elements.
 4. `assets/typst-runtime/core/assets.typ`
-   - Asset URL resolution and image metadata lookup.
-5. `assets/typst-runtime/core/state.typ`
-   - Label counters, option-default dictionaries, raw-node parsing, result
-     selection, label attachment, and website pages helpers.
-6. `assets/typst-runtime/notebook/render.typ`
-   - Styled input/output block rendering helpers (`_input-block`, `_output-block`,
-     `_raw-block`) and figure/result rendering utilities
-     (`_render-results` -> `_render-item` -> `_render-display-item`)
-7. `assets/typst-runtime/notebook/options.typ`
-   - `setup()` plus full option resolution (`_setup-options`, `_resolve-options`)
-8. `assets/typst-runtime/notebook/chunk.typ`
+   - Asset URL resolution, safe inline-JavaScript string quoting, and image
+     metadata lookup.
+5. `assets/typst-runtime/core/results.typ`
+   - Shared loading and lookup helpers for the results document.
+6. `assets/typst-runtime/core/pages.typ`
+   - Website page index loading and site-relative link resolution.
+7. `assets/typst-runtime/core/state.typ`
+   - Compatibility facade for the helpers that historically lived in this
+     module. New runtime code imports their focused modules directly.
+8. `assets/typst-runtime/notebook/defaults.typ`
+   - Document and call option defaults plus automatic-label counters.
+9. `assets/typst-runtime/notebook/chunk-support.typ`
+   - Chunk relocation state, raw-node parsing, and label derivation.
+10. `assets/typst-runtime/notebook/result-support.typ`
+    - Result representation selection, artifact paths, and label attachment.
+11. `assets/typst-runtime/notebook/code.typ`
+   - Styled input/output code rendering (`code-block`, `_input-block`,
+     `_output-block`) and HTML/paged source wrappers.
+12. `assets/typst-runtime/notebook/render.typ`
+   - Figure and result rendering utilities
+     (`_render-results` -> `_render-item` -> `_render-display-item`), with
+     compatibility re-exports for the code helpers.
+13. `assets/typst-runtime/notebook/options.typ`
+    - `setup()` plus internal option resolution, with the historical
+      `_resolve-options(engine, args)` wrapper retained for themes.
+14. `assets/typst-runtime/notebook/chunk.typ`
     - Public chunking API (`chunk`, `inline`, `chunk_from_raw_plain`)
     - Query/render dispatch (`_emit-chunk`), label handling, raw-block interception
 
-9. `assets/typst-runtime/elements/mod.typ`
+15. `assets/typst-runtime/elements/mod.typ`
    - Public element namespace and helpers, currently including `elements.gallery`
 
 `runtime.rs` writes the generated syntax theme as

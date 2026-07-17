@@ -52,6 +52,7 @@ pub fn refresh_results_metadata(
             .ok_or_else(|| anyhow!("missing cached result for chunk `{}`", chunk.label))?;
         result.label = chunk.label.clone();
         result.engine = chunk.engine.clone();
+        result.source = chunk.code.clone();
         result.display_options = chunk.display_options.clone();
         result.crossref_labels = chunk.crossref_labels.clone();
         refreshed.insert(chunk.label.clone(), result);
@@ -88,6 +89,7 @@ mod tests {
         ChunkResultDocument {
             label: label.to_string(),
             engine: EngineName::Python,
+            source: String::new(),
             status: ChunkStatus::Ok,
             display_options: display_options(ResultsMode::Render),
             items: Vec::new(),
@@ -141,6 +143,7 @@ mod tests {
             vec![ChunkResultDocument {
                 label: "fig-demo".to_string(),
                 engine: EngineName::R,
+                source: "stale source".to_string(),
                 status: ChunkStatus::Error,
                 display_options: stale_options,
                 items: items.clone(),
@@ -161,6 +164,7 @@ mod tests {
         let updated = doc.chunks.get("fig-demo").unwrap();
         assert_eq!(updated.label, "fig-demo");
         assert_eq!(updated.engine, EngineName::Python);
+        assert_eq!(updated.source, "print(1)");
         assert_eq!(updated.status, ChunkStatus::Error);
         assert_eq!(
             updated.display_options.fig_width,

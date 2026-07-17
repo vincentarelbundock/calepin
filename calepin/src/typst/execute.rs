@@ -246,6 +246,7 @@ fn unavailable_chunk_result_document(chunk: &ChunkSpec) -> ChunkResultDocument {
     ChunkResultDocument {
         label: chunk.label.clone(),
         engine: chunk.engine.clone(),
+        source: chunk.code.clone(),
         status: ChunkStatus::Skipped,
         display_options,
         items: Vec::new(),
@@ -295,6 +296,7 @@ fn chunk_result_document(
     ChunkResultDocument {
         label: chunk.label.clone(),
         engine: chunk.engine.clone(),
+        source: chunk.code.clone(),
         status,
         display_options: chunk.display_options.clone(),
         items,

@@ -70,9 +70,7 @@ fn write_runtime_writes_calepin_typ() {
     let dir = tempfile::tempdir().unwrap();
     let path = write_runtime(dir.path()).unwrap();
     assert_eq!(path, dir.path().join(".calepin").join("calepin.typ"));
-    let facade = std::fs::read_to_string(path).unwrap();
-    assert!(facade.contains("#import \"runtime/core/state.typ\" as state"));
-    assert!(facade.contains("#let elements = elementmod"));
+    assert!(path.is_file());
     assert!(dir
         .path()
         .join(".calepin/runtime/00_syntax-theme.typ")
@@ -81,6 +79,46 @@ fn write_runtime_writes_calepin_typ() {
         .path()
         .join(".calepin/runtime/elements/mod.typ")
         .is_file());
+    assert!(dir
+        .path()
+        .join(".calepin/runtime/core/results.typ")
+        .is_file());
+    assert!(dir.path().join(".calepin/runtime/core/pages.typ").is_file());
+    assert!(dir
+        .path()
+        .join(".calepin/runtime/notebook/code.typ")
+        .is_file());
+    assert!(dir
+        .path()
+        .join(".calepin/runtime/notebook/defaults.typ")
+        .is_file());
+}
+
+#[test]
+fn typst_compile_preserves_runtime_module_compatibility_facades() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r#"#import ".calepin/runtime/core/state.typ": _base-options, _call-defaults, pages
+#import ".calepin/runtime/notebook/render.typ": code-block, _html-themed-raw-block
+
+#assert(type(_base-options) == dictionary)
+#assert(type(_call-defaults) == dictionary)
+#assert(type(pages) == function)
+#assert(type(_html-themed-raw-block) == function)
+
+#code-block[Compatibility facade]
+"#,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    assert!(output.is_file());
 }
 
 #[test]
@@ -291,6 +329,7 @@ fn typst_compile_html_elements_tabs_emit_webawesome_markup() {
     assert!(html.contains("components/tab-group/tab-group.js"), "{html}");
     assert!(html.contains("wa-tab-show"), "{html}");
     assert!(html.contains("dataset.calepinTabGroup"), "{html}");
+    assert!(html.contains("dataset.calepinTabKey"), "{html}");
     assert!(html.contains("<wa-tab-group"), "{html}");
     assert!(
         html.contains(r#"data-calepin-tab-group="settings""#),
@@ -304,12 +343,331 @@ fn typst_compile_html_elements_tabs_emit_webawesome_markup() {
     assert!(!html.contains("placement="), "{html}");
     assert!(!html.contains("activation="), "{html}");
     assert!(html.contains("<wa-tab"), "{html}");
-    assert!(html.contains(r#"panel="calepin-tab-General""#), "{html}");
-    assert!(html.contains(r#"panel="calepin-tab-Advanced""#), "{html}");
+    assert!(html.contains(r#"panel="calepin-tab-General-1""#), "{html}");
+    assert!(html.contains(r#"panel="calepin-tab-Advanced-2""#), "{html}");
     assert!(html.contains("disabled"), "{html}");
     assert!(html.contains("<wa-tab-panel"), "{html}");
-    assert!(html.contains(r#"name="calepin-tab-Advanced""#), "{html}");
+    assert!(html.contains(r#"name="calepin-tab-Advanced-2""#), "{html}");
     assert!(html.contains("This is the advanced tab panel."), "{html}");
+}
+
+#[test]
+fn typst_compile_html_elements_tabs_emit_unique_panel_names_and_sync_keys() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.tabs(group: "examples")[
+  #calepin.elements.tab("Example")[One]
+  #calepin.elements.tab("Example")[Two]
+  #calepin.elements.tab("Named", name: "stable")[Three]
+  #calepin.elements.tab("A B")[Spaced]
+  #calepin.elements.tab("A-B")[Hyphenated]
+]
+
+#calepin.elements.tabs(group: "examples")[
+  #calepin.elements.tab("Example")[Four]
+  #calepin.elements.tab("Example")[Five]
+  #calepin.elements.tab("A B")[Spaced again]
+  #calepin.elements.tab("A-B")[Hyphenated again]
+]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(html.contains(r#"panel="calepin-tab-Example-1""#), "{html}");
+    assert!(html.contains(r#"panel="calepin-tab-Example-2""#), "{html}");
+    assert!(html.contains(r#"panel="calepin-tab-Example-5""#), "{html}");
+    assert!(html.contains(r#"panel="calepin-tab-Example-6""#), "{html}");
+    assert_eq!(
+        html.matches(r#"data-calepin-tab-key="Example""#).count(),
+        4,
+        "{html}"
+    );
+    assert_eq!(
+        html.matches(r#"data-calepin-tab-key="A B""#).count(),
+        2,
+        "{html}"
+    );
+    assert_eq!(
+        html.matches(r#"data-calepin-tab-key="A-B""#).count(),
+        2,
+        "{html}"
+    );
+    assert!(html.contains(r#"panel="stable""#), "{html}");
+}
+
+#[test]
+fn typst_compile_html_elements_tabs_escape_module_url() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.tabs(module-url: "/assets/tabs'o</script>.js")[
+  #calepin.elements.tab("Example")[One]
+]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains(r#"import "/assets/tabs'o\u003c/script>.js";"#),
+        "{html}"
+    );
+    assert!(!html.contains(r#"<script>.js"#), "{html}");
+}
+
+#[test]
+fn typst_compile_html_elements_tabs_synchronize_repeated_enabled_tabs() {
+    skip_if_no_typst!();
+    if !command_available("node") {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.tabs(group: "examples")[
+  #calepin.elements.tab("Example", disabled: true)[Disabled]
+  #calepin.elements.tab("Example")[One]
+  #calepin.elements.tab("Example", active: true)[Two]
+]
+#calepin.elements.tabs(group: "examples")[
+  #calepin.elements.tab("Example", disabled: true)[Disabled]
+  #calepin.elements.tab("Example", active: true)[One]
+  #calepin.elements.tab("Example")[Two]
+]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    let needle = "document.addEventListener('wa-tab-show'";
+    let needle_at = html.find(needle).expect("tab synchronization script");
+    let script_at = html[..needle_at]
+        .rfind("<script")
+        .expect("opening script tag");
+    let body_at = script_at
+        + html[script_at..]
+            .find('>')
+            .expect("end of opening script tag")
+        + 1;
+    let body_end = needle_at
+        + html[needle_at..]
+            .find("</script>")
+            .expect("closing script tag");
+    let emitted_script = &html[body_at..body_end];
+    let (_, synchronization_script) = emitted_script
+        .split_once(';')
+        .expect("module import before synchronization script");
+
+    let harness = r#"
+const listeners = new Map();
+const tab = (panel, key, disabled = false) => ({
+  panel,
+  disabled,
+  dataset: { calepinTabKey: key },
+});
+const sourceTabsFixture = [
+  tab('source-disabled', 'Example', true),
+  tab('source-first', 'Example'),
+  tab('source-second', 'Example'),
+];
+const targetTabsFixture = [
+  tab('target-disabled', 'Example', true),
+  tab('target-first', 'Example'),
+  tab('target-second', 'Example'),
+];
+const sourceGroup = {
+  active: 'source-second',
+  dataset: { calepinTabGroup: 'examples' },
+  querySelectorAll: () => sourceTabsFixture,
+};
+const targetGroup = {
+  active: 'target-first',
+  dataset: { calepinTabGroup: 'examples' },
+  querySelectorAll: () => targetTabsFixture,
+};
+globalThis.document = {
+  addEventListener: (name, listener) => listeners.set(name, listener),
+  querySelectorAll: () => [sourceGroup, targetGroup],
+};
+"#;
+    let assertion = r#"
+listeners.get('wa-tab-show')({ target: sourceGroup });
+if (targetGroup.active !== 'target-second') {
+  throw new Error(`expected target-second, got ${targetGroup.active}`);
+}
+"#;
+    let script = format!("{harness}\n{synchronization_script}\n{assertion}");
+    let script_path = dir.path().join("tab-sync.mjs");
+    std::fs::write(&script_path, script).unwrap();
+    let result = Command::new("node").arg(script_path).output().unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn typst_compile_html_elements_tabs_reject_conflicting_asset_urls() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.tabs(module-url: "/assets/one.js")[
+  #calepin.elements.tab("One")[First]
+]
+#calepin.elements.tabs(module-url: "/assets/two.js")[
+  #calepin.elements.tab("Two")[Second]
+]
+"##,
+    )
+    .unwrap();
+
+    let result = typst_compile_output(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    assert!(!result.status.success());
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(
+        stderr.contains("calepin.elements.tabs: every tabs container must use the same module-url"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn typst_compile_html_gallery_escapes_and_validates_asset_urls() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    std::fs::write(
+        dir.path().join("pixel.svg"),
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>"#,
+    )
+    .unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.gallery(
+  (("pixel.svg", "A pixel"),),
+  styles-url: "/assets/photo'swipe.css",
+  lightbox-url: "/assets/photo'swipe-lightbox</script>.js",
+  module-url: "/assets/photo'swipe</script>.js",
+)
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(html.contains(r#"href="/assets/photo'swipe.css""#), "{html}");
+    assert!(
+        html.contains(
+            r#"import PhotoSwipeLightbox from "/assets/photo'swipe-lightbox\u003c/script>.js";"#
+        ),
+        "{html}"
+    );
+    assert!(
+        html.contains(r#"pswpModule: () => import("/assets/photo'swipe\u003c/script>.js")"#),
+        "{html}"
+    );
+    assert!(!html.contains(r#"<script>.js"#), "{html}");
+}
+
+#[test]
+fn typst_compile_html_gallery_rejects_conflicting_asset_urls() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    std::fs::write(
+        dir.path().join("pixel.svg"),
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>"#,
+    )
+    .unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.gallery((("pixel.svg", "One"),), module-url: "/assets/one.js")
+#calepin.elements.gallery((("pixel.svg", "Two"),), module-url: "/assets/two.js")
+"##,
+    )
+    .unwrap();
+
+    let result = typst_compile_output(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    assert!(!result.status.success());
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(
+        stderr.contains(
+            "calepin.elements.gallery: every gallery must use the same frontend asset URLs"
+        ),
+        "{stderr}"
+    );
 }
 
 #[test]
@@ -564,7 +922,15 @@ fn typst_query_emits_chunk_metadata() {
         &input,
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(fig-device-format: "png", fig-device-width: 5)
+#calepin.setup(
+  fig-device-format: "png",
+  fig-device-width: 5,
+  fig-link: "https://example.com",
+  fig-caption: [Default caption],
+  fig-alt-text: "Default alt",
+  fig-layout-columns: 2,
+  kind: "figure",
+)
 
 #calepin.chunk("r", fig-caption: [R caption], fig-alt-text: "R alt")[```
 x <- 1
@@ -588,6 +954,45 @@ print("hello")
     assert!(stdout.contains(r#""label": "chunk-2""#));
     assert!(stdout.contains(r#""engine": "python""#));
     assert!(stdout.contains(r#""text": "print(\"hello\")""#));
+
+    let setup = typst_query(dir.path(), &input, "<calepin-config>");
+    assert!(
+        setup.contains(r#""fig-link": "https://example.com""#),
+        "{setup}"
+    );
+    assert!(
+        setup.contains(r#""fig-alt-text": "Default alt""#),
+        "{setup}"
+    );
+    assert!(setup.contains(r#""fig-layout-columns": 2"#), "{setup}");
+    assert!(setup.contains(r#""kind": "figure""#), "{setup}");
+}
+
+#[test]
+fn typst_compile_paged_gallery_resolves_bound_source_directory() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    std::fs::create_dir_all(dir.path().join("images")).unwrap();
+    std::fs::write(
+        dir.path().join("images/pixel.svg"),
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>"#,
+    )
+    .unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+#let bound = calepin.bind(("source-dir": "images"))
+#(bound.elements.gallery)((("pixel.svg", "A pixel"),))
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    assert!(output.is_file());
 }
 
 #[test]
@@ -908,6 +1313,80 @@ print("VISIBLE_CODE_12345")
     assert!(extracted.contains("print(\"VISIBLE_CODE_12345\")"));
     assert!(!extracted.contains("#| label"));
     assert!(!extracted.contains("#| echo"));
+}
+
+#[test]
+fn typst_compile_echo_uses_canonical_source_and_supports_legacy_results() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let results = dir.path().join(".calepin/paper/results.json");
+    std::fs::create_dir_all(results.parent().unwrap()).unwrap();
+    std::fs::write(
+        &results,
+        r#"{
+  "schema": 1,
+  "calepin_version": "test",
+  "input": "paper.typ",
+  "chunks": {
+    "canonical": {
+      "label": "canonical",
+      "engine": "julia-1.2",
+      "source": "println(\"CANONICAL_SOURCE_12345\")",
+      "status": "ok",
+      "items": []
+    },
+    "legacy": {
+      "label": "legacy",
+      "engine": "julia-1.2",
+      "status": "ok",
+      "items": []
+    }
+  }
+}"#,
+    )
+    .unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("julia-1", label: "canonical", results: "hide")[```
+.2
+println("UNCANONICAL_SOURCE_12345")
+```]
+
+#calepin.chunk("julia-1", label: "legacy", results: "hide")[```
+.2
+println("LEGACY_SOURCE_12345")
+```]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", "calepin-results=/.calepin/paper/results.json"],
+    );
+    let extracted = pdf_text(&output);
+    assert!(extracted.contains("CANONICAL_SOURCE_12345"), "{extracted}");
+    assert!(
+        !extracted.contains("UNCANONICAL_SOURCE_12345"),
+        "{extracted}"
+    );
+    assert!(extracted.contains("LEGACY_SOURCE_12345"), "{extracted}");
+    assert!(
+        !extracted.lines().any(|line| line.trim() == ".2"),
+        "{extracted}"
+    );
 }
 
 #[test]

@@ -136,7 +136,7 @@ fn parse_chunk_metadata(
     validate_chunk_arguments(value, label)?;
 
     let ParsedChunkSource {
-        code,
+        code: raw_code,
         overrides: chunk_options,
         warnings: mut header_warnings,
         fence_label,
@@ -152,6 +152,11 @@ fn parse_chunk_metadata(
 
     let value = Value::Object(value_with_options);
     let engine = parse_engine(&value)?;
+    let language = engine.as_str().to_string();
+    // Explicit `calepin.chunk[...]` calls carry their raw body inside chunk
+    // metadata instead of through the standalone-raw path below, but Typst
+    // applies the same period split to their fenced language identifier.
+    let (engine, code) = reattach_version_suffix(engine, &language, &raw_code);
     let defaults = &config.defaults;
     let (exec_options, display_options) = parse_chunk_options(&value, defaults)?;
     let mut crossref_labels = parse_crossref_labels(&value)
@@ -920,8 +925,17 @@ mod tests {
             fig_device_height: Some(4.0),
             fig_device_aspect: 0.5,
             fig_width: Some(Value::String("70%".to_string())),
+            fig_height: Some(Value::String("12cm".to_string())),
             fig_align: Some(Value::String("center".to_string())),
             fig_responsive: Some(true),
+            fig_link: Some(Value::String("https://example.com/full".to_string())),
+            fig_caption: Some("Default caption".to_string()),
+            fig_cap_location: Some(Value::String("top".to_string())),
+            fig_alt_text: Some("Default alt text".to_string()),
+            fig_subcaptions: Some(vec!["Left".to_string(), "Right".to_string()]),
+            fig_layout_columns: Some(Value::from(2)),
+            fig_layout_rows: Some(Value::from(1)),
+            kind: Some("figure".to_string()),
             fenced_chunks: FencedChunks::Off,
             vars: serde_json::json!({}),
             theme: None,
@@ -938,6 +952,63 @@ mod tests {
         assert_eq!(chunk.exec_options.fig_device_width, 8.0);
         assert_eq!(chunk.exec_options.fig_device_height, Some(4.0));
         assert_eq!(chunk.exec_options.fig_device_aspect, 0.5);
+        assert_eq!(chunk.display_options.fig_height.as_ref().unwrap(), "12cm");
+        assert_eq!(
+            chunk.display_options.fig_link.as_ref().unwrap(),
+            "https://example.com/full"
+        );
+        // Explicit `none` in the chunk clears optional setup defaults.
+        assert_eq!(chunk.display_options.fig_caption, None);
+        assert_eq!(chunk.display_options.fig_alt_text, None);
+        assert_eq!(chunk.display_options.fig_subcaptions, None);
+        assert_eq!(
+            chunk.display_options.fig_cap_location.as_ref().unwrap(),
+            "top"
+        );
+        assert_eq!(
+            chunk.display_options.fig_layout_columns,
+            Some(Value::from(2))
+        );
+        assert_eq!(chunk.display_options.fig_layout_rows, Some(Value::from(1)));
+        assert_eq!(chunk.display_options.kind.as_deref(), Some("figure"));
+    }
+
+    #[test]
+    fn parses_figure_defaults_from_setup_metadata() {
+        let json = setup_metadata(
+            r#"{
+              "fig-height":"10cm",
+              "fig-link":"https://example.com/figure",
+              "fig-caption":{"func":"text","text":"Overview"},
+              "fig-cap-location":"bottom",
+              "fig-alt-text":"Accessible overview",
+              "fig-subcaptions":["First","Second"],
+              "fig-layout-columns":2,
+              "fig-layout-rows":[1,2],
+              "kind":"figure"
+            }"#,
+        );
+
+        let config = parse_setup_config(&json).unwrap().unwrap();
+        let defaults = config.defaults;
+        assert_eq!(defaults.fig_height.as_ref().unwrap(), "10cm");
+        assert_eq!(
+            defaults.fig_link.as_ref().unwrap(),
+            "https://example.com/figure"
+        );
+        assert_eq!(defaults.fig_caption.as_deref(), Some("Overview"));
+        assert_eq!(defaults.fig_cap_location.as_ref().unwrap(), "bottom");
+        assert_eq!(
+            defaults.fig_alt_text.as_deref(),
+            Some("Accessible overview")
+        );
+        assert_eq!(
+            defaults.fig_subcaptions.unwrap(),
+            vec!["First".to_string(), "Second".to_string()]
+        );
+        assert_eq!(defaults.fig_layout_columns, Some(Value::from(2)));
+        assert_eq!(defaults.fig_layout_rows, Some(serde_json::json!([1, 2])));
+        assert_eq!(defaults.kind.as_deref(), Some("figure"));
     }
 
     #[test]
@@ -1417,5 +1488,25 @@ mod tests {
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].engine, EngineName::Jupyter("julia-1.2".into()));
         assert_eq!(chunks[0].code, "x = 41\nprint(x + 1)");
+    }
+
+    #[test]
+    fn metadata_chunk_with_period_in_lang_is_normalized() {
+        let json = metadata(
+            r#"{
+              "body":{"func":"raw","text":".2\nx = 41","block":true,"lang":"julia-1"},
+              "engine":"julia-1",
+              "label":"versioned",
+              "eval":false
+            }"#,
+        );
+
+        let chunks = parse_chunks(&json, None).unwrap();
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(
+            chunks[0].engine,
+            EngineName::Jupyter("julia-1.2".to_string())
+        );
+        assert_eq!(chunks[0].code, "x = 41");
     }
 }

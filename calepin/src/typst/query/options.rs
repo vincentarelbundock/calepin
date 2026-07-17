@@ -33,6 +33,10 @@ pub(super) fn parse_chunk_options(
     value: &Value,
     defaults: &SetupDefaults,
 ) -> Result<(ExecOptions, DisplayOptions)> {
+    // These three options predate explicit-clear semantics: both Typst `auto`
+    // and `none` inherit the setup value. Keep that behavior for compatibility;
+    // newer optional display fields use `option_with_default`, where `none`
+    // explicitly clears an inherited value.
     let fig_width = raw_option(value, "fig-width").or_else(|| defaults.fig_width.clone());
     let fig_align = raw_option(value, "fig-align").or_else(|| defaults.fig_align.clone());
     let fig_responsive = opt_bool_option(value, "fig-responsive")?.or(defaults.fig_responsive);
@@ -79,17 +83,33 @@ fn parse_display_options(
         message: bool_option(value, "message", defaults.message)?,
         placeholder: bool_option(value, "placeholder", defaults.placeholder)?,
         fig_width,
-        fig_height: raw_option(value, "fig-height"),
+        fig_height: raw_option_with_default(value, "fig-height", &defaults.fig_height)?,
         fig_align,
         fig_responsive,
-        fig_link: raw_option(value, "fig-link"),
-        fig_caption: caption_option(value, "fig-caption")?,
-        fig_cap_location: raw_option(value, "fig-cap-location"),
-        fig_alt_text: caption_option(value, "fig-alt-text")?,
-        fig_subcaptions: caption_list_option(value, "fig-subcaptions")?,
-        fig_layout_columns: raw_option(value, "fig-layout-columns"),
-        fig_layout_rows: raw_option(value, "fig-layout-rows"),
-        kind: opt_string_option(value, "kind")?,
+        fig_link: raw_option_with_default(value, "fig-link", &defaults.fig_link)?,
+        fig_caption: caption_option_with_default(value, "fig-caption", &defaults.fig_caption)?,
+        fig_cap_location: raw_option_with_default(
+            value,
+            "fig-cap-location",
+            &defaults.fig_cap_location,
+        )?,
+        fig_alt_text: caption_option_with_default(value, "fig-alt-text", &defaults.fig_alt_text)?,
+        fig_subcaptions: caption_list_option_with_default(
+            value,
+            "fig-subcaptions",
+            &defaults.fig_subcaptions,
+        )?,
+        fig_layout_columns: raw_option_with_default(
+            value,
+            "fig-layout-columns",
+            &defaults.fig_layout_columns,
+        )?,
+        fig_layout_rows: raw_option_with_default(
+            value,
+            "fig-layout-rows",
+            &defaults.fig_layout_rows,
+        )?,
+        kind: string_option_with_default(value, "kind", &defaults.kind)?,
     })
 }
 
@@ -109,8 +129,29 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         fig_device_height: opt_f64_option(value, "fig-device-height", base.fig_device_height)?,
         fig_device_aspect: f64_option(value, "fig-device-aspect", base.fig_device_aspect)?,
         fig_width: raw_option(value, "fig-width").or_else(|| base.fig_width.clone()),
+        fig_height: raw_option_with_default(value, "fig-height", &base.fig_height)?,
         fig_align: raw_option(value, "fig-align").or_else(|| base.fig_align.clone()),
         fig_responsive: opt_bool_option(value, "fig-responsive")?.or(base.fig_responsive),
+        fig_link: raw_option_with_default(value, "fig-link", &base.fig_link)?,
+        fig_caption: caption_option_with_default(value, "fig-caption", &base.fig_caption)?,
+        fig_cap_location: raw_option_with_default(
+            value,
+            "fig-cap-location",
+            &base.fig_cap_location,
+        )?,
+        fig_alt_text: caption_option_with_default(value, "fig-alt-text", &base.fig_alt_text)?,
+        fig_subcaptions: caption_list_option_with_default(
+            value,
+            "fig-subcaptions",
+            &base.fig_subcaptions,
+        )?,
+        fig_layout_columns: raw_option_with_default(
+            value,
+            "fig-layout-columns",
+            &base.fig_layout_columns,
+        )?,
+        fig_layout_rows: raw_option_with_default(value, "fig-layout-rows", &base.fig_layout_rows)?,
+        kind: string_option_with_default(value, "kind", &base.kind)?,
         fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
         vars: vars_option(value, "vars", &base.vars)?,
         theme: raw_option(value, "theme").or_else(|| base.theme.clone()),
@@ -160,12 +201,40 @@ fn string_option(object: &Value, key: &str, default: &str) -> Result<String> {
     )
 }
 
-fn opt_string_option(object: &Value, key: &str) -> Result<Option<String>> {
-    optional_option(object, key, value_to_string, "a string")
+fn string_option_with_default(
+    object: &Value,
+    key: &str,
+    default: &Option<String>,
+) -> Result<Option<String>> {
+    option_with_default(object, key, default, |value| {
+        value_to_string(value).ok_or_else(|| anyhow!("`{}` must be a string", key))
+    })
 }
 
 fn raw_option(object: &Value, key: &str) -> Option<Value> {
     value_for(object, key).cloned()
+}
+
+fn raw_option_with_default(
+    object: &Value,
+    key: &str,
+    default: &Option<Value>,
+) -> Result<Option<Value>> {
+    option_with_default(object, key, default, |value| Ok(value.clone()))
+}
+
+fn option_with_default<T: Clone>(
+    object: &Value,
+    key: &str,
+    default: &Option<T>,
+    parse: impl FnOnce(&Value) -> Result<T>,
+) -> Result<Option<T>> {
+    match object.get(key) {
+        None => Ok(default.clone()),
+        Some(value) if super::value::is_auto(value) => Ok(default.clone()),
+        Some(Value::Null) => Ok(None),
+        Some(value) => parse(value).map(Some),
+    }
 }
 
 fn opt_bool_option(object: &Value, key: &str) -> Result<Option<bool>> {
@@ -294,19 +363,17 @@ fn value_to_string(value: &Value) -> Option<String> {
     value.as_str().map(ToOwned::to_owned)
 }
 
-fn caption_option(object: &Value, key: &str) -> Result<Option<String>> {
-    let Some(value) = value_for(object, key) else {
-        return Ok(None);
-    };
-    extract_text(value)
-        .map(Some)
-        .ok_or_else(|| anyhow!("`{}` must be text content or a string", key))
+fn caption_option_with_default(
+    object: &Value,
+    key: &str,
+    default: &Option<String>,
+) -> Result<Option<String>> {
+    option_with_default(object, key, default, |value| {
+        extract_text(value).ok_or_else(|| anyhow!("`{}` must be text content or a string", key))
+    })
 }
 
-fn caption_list_option(object: &Value, key: &str) -> Result<Option<Vec<String>>> {
-    let Some(value) = value_for(object, key) else {
-        return Ok(None);
-    };
+fn caption_list_value(value: &Value, key: &str) -> Result<Vec<String>> {
     if let Some(array) = value.as_array() {
         let mut captions = Vec::with_capacity(array.len());
         for item in array {
@@ -315,9 +382,17 @@ fn caption_list_option(object: &Value, key: &str) -> Result<Option<Vec<String>>>
                     .ok_or_else(|| anyhow!("`{}` array values must be text content", key))?,
             );
         }
-        return Ok(Some(captions));
+        return Ok(captions);
     }
     extract_text(value)
-        .map(|caption| Some(vec![caption]))
+        .map(|caption| vec![caption])
         .ok_or_else(|| anyhow!("`{}` must be text content or an array", key))
+}
+
+fn caption_list_option_with_default(
+    object: &Value,
+    key: &str,
+    default: &Option<Vec<String>>,
+) -> Result<Option<Vec<String>>> {
+    option_with_default(object, key, default, |value| caption_list_value(value, key))
 }

@@ -1160,6 +1160,7 @@ mod tests {
             vec![crate::typst::model::ChunkResultDocument {
                 label: chunk.label.clone(),
                 engine: chunk.engine.clone(),
+                source: chunk.code.clone(),
                 status: crate::typst::model::ChunkStatus::Ok,
                 display_options: chunk.display_options.clone(),
                 items: Vec::new(),
