@@ -31,7 +31,10 @@ use crate::utils::progress::Progress;
 
 const PAGE_META_FILE: &str = "page-meta.json";
 
-use fingerprint::{preprocess_cache_hit, preprocess_fingerprint, write_preprocess_fingerprint};
+use fingerprint::{
+    preprocess_cache_hit, preprocess_fingerprint, write_preprocess_fingerprint,
+    ExecutionFingerprintInputs,
+};
 use image_meta::write_image_meta;
 use staging::{
     notebook_template_context, raw_chunk_langs, write_query_source, write_render_wrapper,
@@ -288,9 +291,11 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         &layout,
         &config.executables,
         &chunks,
-        &cwd,
-        timeout,
-        &vars,
+        ExecutionFingerprintInputs {
+            cwd: &cwd,
+            timeout,
+            vars: &vars,
+        },
         &effective_theme,
         asset_dir,
         image_meta.signature()?,
@@ -561,18 +566,67 @@ fn publish_staged_figures(staged: &Path, final_dir: &Path) -> Result<()> {
         let entry = entry.with_context(|| format!("failed to read {}", staged.display()))?;
         let path = entry.path();
         let target = final_dir.join(entry.file_name());
-        if entry
+        let source_is_dir = entry
             .file_type()
             .with_context(|| format!("failed to stat {}", path.display()))?
-            .is_dir()
-        {
+            .is_dir();
+        remove_mismatched_figure_target(&target, source_is_dir)?;
+        if source_is_dir {
             publish_staged_figures(&path, &target)?;
         } else {
             publish_staged_file(&path, &target)?;
         }
     }
 
+    prune_stale_figures(staged, final_dir)?;
     Ok(())
+}
+
+fn remove_mismatched_figure_target(target: &Path, source_is_dir: bool) -> Result<()> {
+    let metadata = match std::fs::symlink_metadata(target) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(error).with_context(|| format!("failed to stat {}", target.display()))
+        }
+    };
+    let target_is_dir = metadata.file_type().is_dir();
+    if source_is_dir == target_is_dir {
+        return Ok(());
+    }
+    remove_figure_artifact(target, target_is_dir)
+}
+
+fn prune_stale_figures(staged: &Path, final_dir: &Path) -> Result<()> {
+    let entries = match std::fs::read_dir(final_dir) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(error).with_context(|| format!("failed to read {}", final_dir.display()))
+        }
+    };
+    for entry in entries {
+        let entry = entry.with_context(|| format!("failed to read {}", final_dir.display()))?;
+        if staged.join(entry.file_name()).exists() {
+            continue;
+        }
+        let path = entry.path();
+        let is_dir = entry
+            .file_type()
+            .with_context(|| format!("failed to stat {}", path.display()))?
+            .is_dir();
+        remove_figure_artifact(&path, is_dir)?;
+    }
+    Ok(())
+}
+
+fn remove_figure_artifact(path: &Path, is_dir: bool) -> Result<()> {
+    if is_dir {
+        std::fs::remove_dir_all(path)
+    } else {
+        std::fs::remove_file(path)
+    }
+    .with_context(|| format!("failed to remove stale figure {}", path.display()))
 }
 
 fn publish_staged_file(source: &Path, target: &Path) -> Result<()> {
@@ -627,6 +681,17 @@ mod tests {
     use crate::typst::paths::slash_path;
     use crate::typst::testfixtures;
     use crate::utils::testutil::command_available;
+
+    fn fingerprint_execution<'a>(
+        cwd: &'a Path,
+        vars: &'a serde_json::Value,
+    ) -> ExecutionFingerprintInputs<'a> {
+        ExecutionFingerprintInputs {
+            cwd,
+            timeout: Some(Duration::from_secs(5)),
+            vars,
+        }
+    }
 
     #[test]
     fn page_meta_roundtrips_and_detects_stale_source() {
@@ -868,9 +933,7 @@ mod tests {
             &layout,
             &executables,
             std::slice::from_ref(&chunk),
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -886,9 +949,7 @@ mod tests {
             &layout,
             &executables,
             &[chunk],
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -908,9 +969,7 @@ mod tests {
             &layout,
             &executables,
             std::slice::from_ref(&chunk),
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({"region": "NY"}),
+            fingerprint_execution(dir.path(), &serde_json::json!({"region": "NY"})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -920,9 +979,7 @@ mod tests {
             &layout,
             &executables,
             &[chunk],
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({"region": "CA"}),
+            fingerprint_execution(dir.path(), &serde_json::json!({"region": "CA"})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -941,9 +998,7 @@ mod tests {
             &layout,
             &executables,
             std::slice::from_ref(&chunk),
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -954,9 +1009,7 @@ mod tests {
             &layout,
             &executables,
             &[test_chunk("print(2)")],
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -970,9 +1023,7 @@ mod tests {
             &layout,
             &executables,
             &[exec_changed],
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -986,9 +1037,7 @@ mod tests {
             &layout,
             &executables_changed,
             &[chunk],
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -1007,9 +1056,7 @@ mod tests {
             &layout,
             &executables,
             std::slice::from_ref(&chunk),
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -1019,9 +1066,7 @@ mod tests {
             &layout,
             &executables,
             &[chunk],
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Typst,
             Path::new(CALEPIN_DIR),
             0,
@@ -1040,9 +1085,7 @@ mod tests {
             &layout,
             &executables,
             std::slice::from_ref(&chunk),
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new(CALEPIN_DIR),
             0,
@@ -1052,9 +1095,7 @@ mod tests {
             &layout,
             &executables,
             &[chunk],
-            dir.path(),
-            Some(Duration::from_secs(5)),
-            &serde_json::json!({}),
+            fingerprint_execution(dir.path(), &serde_json::json!({})),
             &crate::theme::ThemeSelection::Default,
             Path::new("_runtime"),
             0,
@@ -1133,6 +1174,41 @@ mod tests {
             std::fs::read_to_string(final_dir.path().join("nested/detail.svg")).unwrap(),
             "<svg>detail</svg>"
         );
+    }
+
+    #[test]
+    fn publish_staged_figures_prunes_stale_files_and_directories() {
+        let staged = tempfile::tempdir().unwrap();
+        let final_dir = tempfile::tempdir().unwrap();
+        let staged_figures = staged.path().join("figures");
+        std::fs::create_dir_all(&staged_figures).unwrap();
+        std::fs::write(staged_figures.join("current.svg"), "current").unwrap();
+        std::fs::write(final_dir.path().join("stale.svg"), "stale").unwrap();
+        std::fs::create_dir_all(final_dir.path().join("stale-nested")).unwrap();
+        std::fs::write(final_dir.path().join("stale-nested/old.svg"), "old").unwrap();
+
+        publish_staged_figures(&staged_figures, final_dir.path()).unwrap();
+
+        assert!(final_dir.path().join("current.svg").is_file());
+        assert!(!final_dir.path().join("stale.svg").exists());
+        assert!(!final_dir.path().join("stale-nested").exists());
+    }
+
+    #[test]
+    fn publish_staged_figures_replaces_mismatched_artifact_types() {
+        let staged = tempfile::tempdir().unwrap();
+        let final_dir = tempfile::tempdir().unwrap();
+        let staged_figures = staged.path().join("figures");
+        std::fs::create_dir_all(staged_figures.join("now-dir")).unwrap();
+        std::fs::write(staged_figures.join("now-dir/current.svg"), "current").unwrap();
+        std::fs::write(staged_figures.join("now-file.svg"), "current").unwrap();
+        std::fs::write(final_dir.path().join("now-dir"), "old file").unwrap();
+        std::fs::create_dir_all(final_dir.path().join("now-file.svg")).unwrap();
+
+        publish_staged_figures(&staged_figures, final_dir.path()).unwrap();
+
+        assert!(final_dir.path().join("now-dir/current.svg").is_file());
+        assert!(final_dir.path().join("now-file.svg").is_file());
     }
 
     #[test]

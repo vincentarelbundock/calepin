@@ -4,7 +4,7 @@ mod watcher;
 
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::sync::Arc;
@@ -137,6 +137,7 @@ fn watch_preprocess_changes(
     args: &WatchArgs,
     root: &Path,
     excluded_output: &Path,
+    artifact_root: &Path,
     stop: Arc<AtomicBool>,
     sync_pages: bool,
     action: &'static str,
@@ -146,6 +147,7 @@ fn watch_preprocess_changes(
     watcher::watch_root(
         root,
         excluded_output,
+        artifact_root,
         args.common.config.as_deref(),
         stop,
         move |changed| match prepare_preprocess_plan(options.clone()) {
@@ -193,6 +195,7 @@ fn run_eval_only_watch(args: WatchArgs) -> Result<()> {
         &args,
         &initial.layout.root,
         &initial.layout.results_path,
+        &initial.layout.artifact_root(),
         stop,
         false,
         "checking",
@@ -314,11 +317,13 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let watcher_args = args.clone();
     let watcher_root = root.clone();
     let watcher_output = resolved_output.clone();
+    let watcher_artifact_root = initial.layout.artifact_root();
     let watcher = thread::spawn(move || {
         let result = watch_preprocess_changes(
             &watcher_args,
             &watcher_root,
             &watcher_output,
+            &watcher_artifact_root,
             Arc::clone(&watcher_stop),
             sync_pages,
             "rebuilding",
@@ -328,23 +333,22 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         }
     });
 
-    loop {
+    let child_outcome = loop {
         if stop.load(Ordering::Relaxed) {
-            break;
+            break WatchChildOutcome::StopRequested;
         }
         match child.try_wait() {
-            Ok(Some(_status)) => break,
+            Ok(Some(status)) => break WatchChildOutcome::Exited(status),
             Ok(None) => thread::sleep(Duration::from_millis(200)),
-            Err(error) => {
-                cwarn!("failed to poll typst watch: {}", error);
-                break;
-            }
+            Err(error) => break WatchChildOutcome::PollFailed(error),
         }
-    }
+    };
 
     stop.store(true, Ordering::Relaxed);
-    let _ = child.kill();
-    let _ = child.wait();
+    if !matches!(&child_outcome, WatchChildOutcome::Exited(_)) {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
     join_relay("stdout", stdout_relay);
     join_relay("stderr", stderr_relay);
     let _ = watcher.join();
@@ -354,5 +358,53 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     if let Some(server) = asset_server {
         server.join();
     }
-    Ok(())
+    child_outcome.into_result()
+}
+
+enum WatchChildOutcome {
+    StopRequested,
+    Exited(ExitStatus),
+    PollFailed(io::Error),
+}
+
+impl WatchChildOutcome {
+    fn into_result(self) -> Result<()> {
+        match self {
+            Self::StopRequested => Ok(()),
+            Self::Exited(status) if status.success() => Ok(()),
+            Self::Exited(status) => Err(anyhow::anyhow!("typst watch exited with {status}")),
+            Self::PollFailed(error) => Err(error).context("failed to poll typst watch"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn requested_watch_stop_is_successful() {
+        assert!(WatchChildOutcome::StopRequested.into_result().is_ok());
+    }
+
+    #[cfg(any(unix, windows))]
+    #[test]
+    fn failed_typst_watch_exit_is_reported() {
+        #[cfg(unix)]
+        use std::os::unix::process::ExitStatusExt;
+        #[cfg(windows)]
+        use std::os::windows::process::ExitStatusExt;
+
+        #[cfg(unix)]
+        let status = ExitStatus::from_raw(23 << 8);
+        #[cfg(windows)]
+        let status = ExitStatus::from_raw(23);
+
+        let error = WatchChildOutcome::Exited(status)
+            .into_result()
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("typst watch exited with"), "{error}");
+    }
 }

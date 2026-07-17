@@ -16,9 +16,7 @@ pub(super) fn preprocess_fingerprint(
     layout: &LayoutPaths,
     executables: &ExecutablePaths,
     chunks: &[ChunkSpec],
-    cwd: &Path,
-    timeout: Option<Duration>,
-    vars: &serde_json::Value,
+    execution: ExecutionFingerprintInputs<'_>,
     theme: &crate::theme::ThemeSelection,
     asset_dir: &Path,
     image_meta_signature: u64,
@@ -28,20 +26,26 @@ pub(super) fn preprocess_fingerprint(
         calepin_version: env!("CARGO_PKG_VERSION"),
         input_rel: path_fingerprint(&layout.input_rel),
         figures_dir: path_fingerprint(&layout.figures_dir),
-        cwd: path_fingerprint(cwd),
-        timeout_secs: timeout.map(|duration| duration.as_secs()),
+        cwd: path_fingerprint(execution.cwd),
+        timeout_secs: execution.timeout.map(|duration| duration.as_secs()),
         executables: ExecutableFingerprint::from(executables),
         chunks: chunks
             .iter()
             .map(ChunkFingerprint::from)
             .collect::<Vec<_>>(),
-        vars: vars.clone(),
+        vars: execution.vars.clone(),
         theme: theme_fingerprint(theme),
         asset_dir: path_fingerprint(asset_dir),
         image_meta: format!("{image_meta_signature:016x}"),
     };
     let bytes = serde_json::to_vec(&payload)?;
     Ok(xxh3_64(&bytes))
+}
+
+pub(super) struct ExecutionFingerprintInputs<'a> {
+    pub cwd: &'a Path,
+    pub timeout: Option<Duration>,
+    pub vars: &'a serde_json::Value,
 }
 
 pub(super) fn preprocess_cache_hit(layout: &LayoutPaths, fingerprint: u64) -> Result<bool> {

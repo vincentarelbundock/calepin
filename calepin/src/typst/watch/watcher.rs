@@ -13,10 +13,12 @@ use crate::utils::watch::run_debounced_watch;
 pub(crate) fn is_watch_candidate(
     root: &Path,
     preview_output: &Path,
+    artifact_root: &Path,
     config_path: Option<&Path>,
     path: &Path,
 ) -> bool {
     if path == preview_output
+        || path.starts_with(artifact_root)
         || is_typst_temporary_output(preview_output, path)
         || is_editor_backup(path)
     {
@@ -68,6 +70,7 @@ fn is_editor_backup(path: &Path) -> bool {
 pub(crate) fn watch_root(
     root: &Path,
     preview_output: &Path,
+    artifact_root: &Path,
     config_path: Option<&Path>,
     stop: Arc<AtomicBool>,
     on_change: impl FnMut(&[PathBuf]),
@@ -88,13 +91,25 @@ pub(crate) fn watch_root(
     let excluded = preview_output
         .canonicalize()
         .unwrap_or_else(|_| preview_output.clone());
+    let artifact_root = artifact_root
+        .canonicalize()
+        .unwrap_or_else(|_| artifact_root.to_path_buf());
     run_debounced_watch(
         &[(root.clone(), RecursiveMode::Recursive)],
         Duration::from_millis(300),
         Duration::from_millis(200),
         stop,
         is_write_event,
-        |path| is_watch_candidate(&root, &excluded, config_path.as_deref(), &path).then_some(path),
+        |path| {
+            is_watch_candidate(
+                &root,
+                &excluded,
+                &artifact_root,
+                config_path.as_deref(),
+                &path,
+            )
+            .then_some(path)
+        },
         on_change,
     )
 }
@@ -108,73 +123,24 @@ mod tests {
     fn watcher_ignores_generated_and_repository_paths() {
         let root = Path::new("/tmp/project");
         let output = root.join("paper.pdf");
-        assert!(!is_watch_candidate(root, &output, None, &output));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join("XXfo4zsx")
-        ));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join("paper.typ~")
-        ));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join(".git/index")
-        ));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join("target/debug/x")
-        ));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join("node_modules/pkg/index.js")
-        ));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join(".venv/bin/python")
-        ));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join("editors/vscode/out/extension.js")
-        ));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
+        let artifact_root = root.join("_calepin");
+        let candidate = |path: &Path| is_watch_candidate(root, &output, &artifact_root, None, path);
+
+        assert!(!candidate(&output));
+        assert!(!candidate(&root.join("_calepin/paper/results.json")));
+        assert!(!candidate(&root.join("XXfo4zsx")));
+        assert!(!candidate(&root.join("paper.typ~")));
+        assert!(!candidate(&root.join(".git/index")));
+        assert!(!candidate(&root.join("target/debug/x")));
+        assert!(!candidate(&root.join("node_modules/pkg/index.js")));
+        assert!(!candidate(&root.join(".venv/bin/python")));
+        assert!(!candidate(&root.join("editors/vscode/out/extension.js")));
+        assert!(!candidate(
             &root.join("editors/vscode/media/pdfjs/build/pdf.min.mjs")
         ));
-        assert!(!is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join("editors/vscode/dist/calepin.vsix")
-        ));
-        assert!(is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join("paper.typ")
-        ));
-        assert!(is_watch_candidate(
-            root,
-            &output,
-            None,
-            &root.join("data/input.csv")
-        ));
+        assert!(!candidate(&root.join("editors/vscode/dist/calepin.vsix")));
+        assert!(candidate(&root.join("paper.typ")));
+        assert!(candidate(&root.join("data/input.csv")));
     }
 
     #[test]

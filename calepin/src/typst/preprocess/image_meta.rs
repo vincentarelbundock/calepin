@@ -76,7 +76,7 @@ fn collect_image_meta(layout: &LayoutPaths) -> Result<ImageMetaDocument> {
 }
 
 fn collect_project_image_keys(layout: &LayoutPaths) -> Result<BTreeMap<PathBuf, BTreeSet<String>>> {
-    let mut out = BTreeMap::new();
+    let mut out: BTreeMap<PathBuf, BTreeSet<String>> = BTreeMap::new();
     let mut queue = VecDeque::from([layout.root.clone()]);
 
     while let Some(dir) = queue.pop_front() {
@@ -98,7 +98,7 @@ fn collect_project_image_keys(layout: &LayoutPaths) -> Result<BTreeMap<PathBuf, 
                 queue.push_back(path);
             } else if file_type.is_file() && is_supported_image_path(&path) {
                 if let Some(rel) = project_relative(layout, &path) {
-                    let keys = out.entry(path).or_insert_with(BTreeSet::new);
+                    let keys = out.entry(path).or_default();
                     keys.insert(rel.clone());
                     keys.insert(format!("/{rel}"));
                 }
@@ -125,18 +125,14 @@ fn collect_literal_image_keys(
         if !path.is_file() {
             continue;
         }
-        let keys = keys_by_path.entry(path).or_insert_with(BTreeSet::new);
+        let keys = keys_by_path.entry(path).or_default();
         keys.insert(literal);
     }
     Ok(())
 }
 
 fn should_skip_dir(layout: &LayoutPaths, path: &Path) -> bool {
-    if layout
-        .artifact_dir
-        .parent()
-        .is_some_and(|generated_root| path.starts_with(generated_root))
-    {
+    if path.starts_with(layout.artifact_root()) {
         return true;
     }
     path.file_name()
@@ -432,12 +428,13 @@ mod tests {
     fn skips_generated_artifact_root() {
         let dir = tempfile::tempdir().unwrap();
         let mut layout = testfixtures::layout(dir.path());
-        layout.artifact_dir = layout.root.join("_calepin/paper");
+        layout.input_rel = PathBuf::from("chapters/intro.typ");
+        layout.artifact_dir = layout.root.join("_calepin/chapters/intro");
 
         assert!(should_skip_dir(&layout, &layout.root.join("_calepin")));
         assert!(should_skip_dir(
             &layout,
-            &layout.root.join("_calepin/paper")
+            &layout.root.join("_calepin/chapters/intro")
         ));
         assert!(!should_skip_dir(&layout, &layout.root.join("assets")));
     }

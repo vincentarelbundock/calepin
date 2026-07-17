@@ -80,16 +80,14 @@ fn strip_ansi_codes(line: &str) -> String {
     let mut chars = line.chars().peekable();
 
     while let Some(ch) = chars.next() {
-        if ch == '\x1b' {
-            if matches!(chars.peek(), Some('[')) {
-                chars.next();
-                for next in chars.by_ref() {
-                    if next == 'm' {
-                        break;
-                    }
+        if ch == '\x1b' && matches!(chars.peek(), Some('[')) {
+            chars.next();
+            for next in chars.by_ref() {
+                if next == 'm' {
+                    break;
                 }
-                continue;
             }
+            continue;
         }
         out.push(ch);
     }
