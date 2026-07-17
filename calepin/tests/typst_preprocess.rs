@@ -232,6 +232,7 @@ fn preprocess_carries_setup_figure_defaults_into_chunk_results() {
   fig-layout-columns: 2,
   fig-layout-rows: 1,
   kind: "figure",
+  fenced-chunks: "julia-1.2",
 )
 
 #calepin.chunk("python", label: "inherits", eval: false)[`print("INHERITED")`]
@@ -246,8 +247,16 @@ fn preprocess_carries_setup_figure_defaults_into_chunk_results() {
 )[`print("CLEARED")`]
 
 #calepin.chunk(label: "versioned", eval: false)[```julia-1.2
+.2
 x = 41
 ```]
+
+```julia-1.2
+#| label: bare-versioned
+#| eval: false
+.2
+x = 42
+```
 
 Setup defaults integration test.
 "##,
@@ -297,7 +306,11 @@ Setup defaults integration test.
 
     let versioned = &results["chunks"]["versioned"];
     assert_eq!(versioned["engine"], "julia-1.2");
-    assert_eq!(versioned["source"], "x = 41");
+    assert_eq!(versioned["source"], ".2\nx = 41\n");
+
+    let bare_versioned = &results["chunks"]["bare-versioned"];
+    assert_eq!(bare_versioned["engine"], "julia-1.2");
+    assert_eq!(bare_versioned["source"], ".2\nx = 42\n");
 }
 
 #[test]

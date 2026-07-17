@@ -377,7 +377,19 @@ fn svg_viewbox_dimensions(tag: &str) -> Option<(u32, u32)> {
     if values.len() != 4 {
         return None;
     }
-    Some((values[2].round() as u32, values[3].round() as u32))
+    let width = values[2];
+    let height = values[3];
+    let max = f64::from(u32::MAX);
+    if !width.is_finite()
+        || !height.is_finite()
+        || width <= 0.0
+        || height <= 0.0
+        || width > max
+        || height > max
+    {
+        return None;
+    }
+    Some((width.round() as u32, height.round() as u32))
 }
 
 fn svg_attr(tag: &str, name: &str) -> Option<String> {
@@ -435,5 +447,11 @@ mod tests {
         let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" stroke-width="4" width="120" height="80"></svg>"#;
 
         assert_eq!(svg_dimensions(svg), Some((120, 80)));
+    }
+
+    #[test]
+    fn svg_dimensions_reject_negative_viewbox_sizes() {
+        let svg = br#"<svg viewBox="0 0 -120 80"></svg>"#;
+        assert_eq!(svg_dimensions(svg), None);
     }
 }

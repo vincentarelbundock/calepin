@@ -267,6 +267,24 @@ pub struct FigureSpec {
     pub height: f64,
 }
 
+/// Encodes a semantic chunk label as one collision-resistant filename stem.
+/// Labels remain unchanged in results and cross-reference metadata.
+pub(crate) fn artifact_label_stem(label: &str) -> String {
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+
+    let mut stem = String::with_capacity(label.len());
+    for byte in label.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_') {
+            stem.push(char::from(byte));
+        } else {
+            stem.push('%');
+            stem.push(char::from(HEX[(byte >> 4) as usize]));
+            stem.push(char::from(HEX[(byte & 0x0f) as usize]));
+        }
+    }
+    stem
+}
+
 impl FigureSpec {
     pub fn from_exec_options(engine: &EngineName, options: &ExecOptions) -> Result<Self> {
         let format = if engine.is_diagram() {
@@ -313,11 +331,11 @@ impl FigureSpec {
     }
 
     pub fn numbered_filename(&self, label: &str) -> String {
-        format!("{}-1.{}", label, self.extension())
+        format!("{}-1.{}", artifact_label_stem(label), self.extension())
     }
 
     pub fn artifact_filename(&self, label: &str) -> String {
-        format!("{}.{}", label, self.extension())
+        format!("{}.{}", artifact_label_stem(label), self.extension())
     }
 }
 
@@ -566,6 +584,15 @@ mod tests {
         assert!(json.contains(r#""crossref-labels""#), "{json}");
         assert!(json.contains(r#""fig-x""#), "{json}");
         assert!(json.contains(r#""source":"plot(x)""#), "{json}");
+    }
+
+    #[test]
+    fn artifact_label_stems_are_safe_and_collision_resistant() {
+        assert_eq!(artifact_label_stem("fig-demo_1.2"), "fig-demo_1.2");
+        assert_eq!(artifact_label_stem("../fig/demo"), "..%2Ffig%2Fdemo");
+        assert_eq!(artifact_label_stem(r"fig\demo"), "fig%5Cdemo");
+        assert_eq!(artifact_label_stem("fig%2Fdemo"), "fig%252Fdemo");
+        assert_eq!(artifact_label_stem("café"), "caf%C3%A9");
     }
 
     #[test]

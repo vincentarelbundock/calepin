@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix Typst chunk handling for dotted kernel names, duplicate labels, numeric label overflow, and path-like artifact labels; invalidate preprocessing caches when local theme files change and reject invalid SVG dimensions.
 - Improve the Typst helper runtime with complete document-level figure defaults, source-aware paged galleries, collision-safe grouped tabs, safely configurable frontend assets, shared code/results modules, and canonical dotted-engine source echo with legacy-results compatibility.
 - Slim down the VS Code and Positron extension by removing its bundled PDF.js preview assets and delegating Typst preview to Tinymist or another dedicated preview extension.
 - Add `calepin compile --format script` to extract a single Typst notebook's executable chunks into separate language-specific `.R`, `.py`, `.jl`, and `.sh` files, with `{ext}` and `{engine}` output templates ([#32](https://github.com/vincentarelbundock/calepin/issues/32)).

@@ -166,14 +166,78 @@ fn theme_fingerprint(theme: &crate::theme::ThemeSelection) -> String {
         match layer {
             crate::theme::ThemeLayer::Builtin(name) => parts.push(format!("builtin:{name}")),
             crate::theme::ThemeLayer::Dir(path) => {
-                let manifest = path.join("theme.toml");
-                let manifest_hash = std::fs::read(&manifest)
-                    .ok()
-                    .map(|bytes| format!("{:016x}", xxh3_64(&bytes)))
-                    .unwrap_or_else(|| "missing".to_string());
-                parts.push(format!("dir:{}:{manifest_hash}", path.display()));
+                parts.push(format!(
+                    "dir:{}:{}",
+                    path.display(),
+                    theme_dir_fingerprint(&path)
+                ));
             }
         }
     }
     parts.join("|")
+}
+
+fn theme_dir_fingerprint(path: &Path) -> String {
+    let mut files = Vec::new();
+    if let Err(error) = collect_theme_files(path, path, &mut files) {
+        return format!("error:{error}");
+    }
+    files.sort_by(|left, right| left.0.cmp(&right.0));
+
+    let mut payload = Vec::new();
+    for (relative, hash) in files {
+        payload.extend_from_slice(relative.as_bytes());
+        payload.push(0);
+        payload.extend_from_slice(&hash.to_le_bytes());
+    }
+    format!("{:016x}", xxh3_64(&payload))
+}
+
+fn collect_theme_files(
+    root: &Path,
+    directory: &Path,
+    files: &mut Vec<(String, u64)>,
+) -> Result<()> {
+    let mut entries = std::fs::read_dir(directory)
+        .with_context(|| format!("failed to read theme directory {}", directory.display()))?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    entries.sort_by_key(|entry| entry.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            collect_theme_files(root, &path, files)?;
+        } else if file_type.is_file() {
+            let bytes = std::fs::read(&path)
+                .with_context(|| format!("failed to read theme file {}", path.display()))?;
+            let relative = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .into_owned();
+            files.push((relative, xxh3_64(&bytes)));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn theme_fingerprint_tracks_all_local_theme_files() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("theme.toml"), "extends = \"typst\"\n").unwrap();
+        std::fs::create_dir_all(dir.path().join("layouts")).unwrap();
+        std::fs::write(dir.path().join("layouts/pdf.typ"), "#let value = 1\n").unwrap();
+        let theme = crate::theme::ThemeSelection::Dir(dir.path().to_path_buf());
+
+        let first = theme_fingerprint(&theme);
+        std::fs::write(dir.path().join("layouts/pdf.typ"), "#let value = 2\n").unwrap();
+        let second = theme_fingerprint(&theme);
+
+        assert_ne!(first, second);
+    }
 }

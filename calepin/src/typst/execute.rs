@@ -10,8 +10,8 @@ use crate::engines::{
 };
 use crate::typst::io::write_if_changed;
 use crate::typst::model::{
-    ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName, FigureSpec,
-    ResultItem, ResultItemName, ResultItemType, ResultsMode, DEFAULT_FIG_DEVICE_ASPECT,
+    artifact_label_stem, ChunkResultDocument, ChunkSpec, ChunkStatus, DiagnosticLevel, EngineName,
+    FigureSpec, ResultItem, ResultItemName, ResultItemType, ResultsMode, DEFAULT_FIG_DEVICE_ASPECT,
     DEFAULT_FIG_DEVICE_DPI, DEFAULT_FIG_DEVICE_WIDTH,
 };
 
@@ -133,7 +133,7 @@ impl EnginePool {
         figure: &FigureSpec,
     ) -> Result<Vec<EngineResult>> {
         let results = if engine.is_diagram() {
-            let fig_path = figures_dir.join(format!("{}-1.svg", chunk.label));
+            let fig_path = figures_dir.join(figure.numbered_filename(&chunk.label));
             engines::diagram::execute_diagram(
                 &chunk.code,
                 engine.clone(),
@@ -378,10 +378,11 @@ where
     }
 
     fn write_typst_result(&mut self, text: String) -> Result<Value> {
+        let label_stem = artifact_label_stem(&self.chunk.label);
         let filename = if self.typst_result_index == 1 {
-            format!("{}.typ", self.chunk.label)
+            format!("{label_stem}.typ")
         } else {
-            format!("{}-{}.typ", self.chunk.label, self.typst_result_index)
+            format!("{label_stem}-{}.typ", self.typst_result_index)
         };
         self.typst_result_index += 1;
         let artifact = self.figures_dir.join(filename);
@@ -464,7 +465,11 @@ fn plot_artifact_filename(label: &str, figure: &FigureSpec, index: usize) -> Str
     if index <= 1 {
         figure.artifact_filename(label)
     } else {
-        format!("{label}-{index}.{}", figure.extension())
+        format!(
+            "{}-{index}.{}",
+            artifact_label_stem(label),
+            figure.extension()
+        )
     }
 }
 
@@ -605,6 +610,29 @@ mod tests {
     }
 
     #[test]
+    fn path_like_labels_stay_inside_the_figures_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut chunk = chunk(ResultsMode::Typst);
+        chunk.label = "../outside/%2F".to_string();
+        let figure = figure_for(&chunk);
+        let items = normalize_engine_results(
+            &chunk,
+            dir.path(),
+            &figure,
+            vec![EngineResult::Output("#table()[safe]".to_string())],
+            artifact_file_name,
+        )
+        .unwrap();
+
+        let filename = "..%2Foutside%2F%252F.typ";
+        assert_eq!(
+            items[0].data.as_ref().unwrap()["text/x-typst"]["path"],
+            filename
+        );
+        assert!(dir.path().join(filename).is_file());
+    }
+
+    #[test]
     fn stdout_is_stored_independent_of_results_mode() {
         let dir = tempfile::tempdir().unwrap();
         let chunk = chunk(ResultsMode::Hide);
@@ -670,6 +698,32 @@ mod tests {
         );
         assert!(dir.path().join("fig-demo.svg").exists());
         assert!(dir.path().join("fig-demo-2.svg").exists());
+    }
+
+    #[test]
+    fn path_like_labels_produce_safe_plot_artifact_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("source.svg");
+        std::fs::write(&source, "<svg></svg>").unwrap();
+        let mut chunk = chunk(ResultsMode::Verbatim);
+        chunk.label = "../outside/%2F".to_string();
+        let figure = figure_for(&chunk);
+
+        let items = normalize_engine_results(
+            &chunk,
+            dir.path(),
+            &figure,
+            vec![EngineResult::Plot(source)],
+            artifact_file_name,
+        )
+        .unwrap();
+
+        let filename = "..%2Foutside%2F%252F.svg";
+        assert_eq!(
+            items[0].data.as_ref().unwrap()["image/svg+xml"]["path"],
+            filename
+        );
+        assert!(dir.path().join(filename).is_file());
     }
 
     #[test]

@@ -40,7 +40,6 @@ pub fn parse_chunks_with_warnings(
         .context("failed to parse calepin chunk metadata from typst query output")?;
     let has_chunk_metadata = values.iter().any(is_calepin_chunk_metadata);
     let mut seen = HashSet::new();
-    let mut raw_labels = HashSet::new();
     let mut chunks = Vec::with_capacity(values.len());
     let mut auto_label_index = 1usize;
     let mut warnings = Vec::new();
@@ -68,7 +67,6 @@ pub fn parse_chunks_with_warnings(
                 has_chunk_metadata,
                 lookahead_fence_label.clone(),
             )? {
-                raw_labels.insert(chunk.label.clone());
                 chunks.push(chunk);
             }
             if lookahead_fence_label.is_some() {
@@ -89,16 +87,12 @@ pub fn parse_chunks_with_warnings(
                 .get("value")
                 .context("chunk metadata is missing `value` field")?;
             let label = parse_label(value)?;
-            let label = normalize_chunk_label(label.as_str(), &mut seen, &mut auto_label_index);
+            let label = normalize_chunk_label(label.as_str(), &mut seen, &mut auto_label_index)?;
             if !seen.insert(label.clone()) {
-                if raw_labels.remove(&label) {
-                    chunks.retain(|chunk| chunk.label != label);
-                } else {
-                    return Err(anyhow!("duplicate label `{}`", label));
-                }
+                return Err(anyhow!("duplicate label `{}`", label));
             }
             parse_chunk_metadata(value, &config, &label, &mut chunks, ordinal, &mut warnings)?;
-            bump_auto_label(&mut auto_label_index, &label);
+            bump_auto_label(&mut auto_label_index, &label)?;
         }
         index += 1;
     }
@@ -136,7 +130,7 @@ fn parse_chunk_metadata(
     validate_chunk_arguments(value, label)?;
 
     let ParsedChunkSource {
-        code: raw_code,
+        code,
         overrides: chunk_options,
         warnings: mut header_warnings,
         fence_label,
@@ -152,11 +146,6 @@ fn parse_chunk_metadata(
 
     let value = Value::Object(value_with_options);
     let engine = parse_engine(&value)?;
-    let language = engine.as_str().to_string();
-    // Explicit `calepin.chunk[...]` calls carry their raw body inside chunk
-    // metadata instead of through the standalone-raw path below, but Typst
-    // applies the same period split to their fenced language identifier.
-    let (engine, code) = reattach_version_suffix(engine, &language, &raw_code);
     let defaults = &config.defaults;
     let (exec_options, display_options) = parse_chunk_options(&value, defaults)?;
     let mut crossref_labels = parse_crossref_labels(&value)
@@ -198,9 +187,9 @@ fn normalize_chunk_label(
     label: &str,
     seen: &mut HashSet<String>,
     auto_label_index: &mut usize,
-) -> String {
+) -> Result<String> {
     let Some(label_index) = parse_chunk_label_index(label) else {
-        return label.to_string();
+        return Ok(label.to_string());
     };
 
     if label_index < *auto_label_index {
@@ -208,10 +197,10 @@ fn normalize_chunk_label(
         if seen.contains(&next_label) {
             return next_available_label(seen, auto_label_index);
         }
-        return next_label;
+        return Ok(next_label);
     }
 
-    label.to_string()
+    Ok(label.to_string())
 }
 
 fn parse_chunk_raw_block(
@@ -248,14 +237,9 @@ fn parse_chunk_raw_block(
         value_with_options.insert(key, value);
     }
     let value = Value::Object(value_with_options);
-    let raw_text = raw_code;
-
-    // Reattach any version suffix Typst split from the lang identifier
-    // (e.g. ```julia-1.2 → lang="julia-1", text=".2\n...").
-    let (engine, code) = reattach_version_suffix(engine, lang, &raw_text);
-    // Allow if the original lang OR the reattached engine name is permitted.
+    let code = raw_code;
     let defaults = &config.defaults;
-    if !defaults.fenced_chunks.allows(lang) && !defaults.fenced_chunks.allows(engine.as_str()) {
+    if !defaults.fenced_chunks.allows(lang) {
         return Ok(None);
     }
     if has_chunk_metadata && !matches!(engine, EngineName::Jupyter(_)) {
@@ -291,7 +275,7 @@ fn parse_chunk_raw_block(
             "invalid trailing fence label for fenced chunk",
         )?
     } else {
-        let label = next_available_label(state.seen, state.auto_label_index);
+        let label = next_available_label(state.seen, state.auto_label_index)?;
         state.seen.insert(label.clone());
         (label, vec![])
     };
@@ -317,12 +301,13 @@ fn resolve_named_label(
         .first()
         .cloned()
         .ok_or_else(|| anyhow!("fenced chunk label list is empty"))?;
+    validate_chunk_label(&label)?;
     let crossref_labels =
         parse_prefixed_label_docs(&names).map_err(|err| anyhow!("{error_context}: {err}"))?;
     if !seen.insert(label.clone()) {
         return Err(anyhow!("duplicate label `{}`", label));
     }
-    bump_auto_label(auto_label_index, &label);
+    bump_auto_label(auto_label_index, &label)?;
     Ok((label, crossref_labels))
 }
 
@@ -330,22 +315,30 @@ fn is_typst_fence(lang: &str) -> bool {
     matches!(lang, "typ" | "typst")
 }
 
-fn bump_auto_label(auto_label_index: &mut usize, label: &str) {
+fn bump_auto_label(auto_label_index: &mut usize, label: &str) -> Result<()> {
     let Some(suffix) = label.strip_prefix("chunk-") else {
-        return;
+        return Ok(());
     };
     if let Ok(idx) = suffix.parse::<usize>() {
-        *auto_label_index = (*auto_label_index).max(idx + 1);
+        let next = idx
+            .checked_add(1)
+            .ok_or_else(|| anyhow!("chunk label `{label}` exceeds the supported numeric range"))?;
+        *auto_label_index = (*auto_label_index).max(next);
     }
+    Ok(())
 }
 
-fn next_available_label(seen: &mut HashSet<String>, counter: &mut usize) -> String {
+fn next_available_label(seen: &mut HashSet<String>, counter: &mut usize) -> Result<String> {
     while seen.contains(&format!("chunk-{counter}")) {
-        *counter += 1;
+        *counter = (*counter)
+            .checked_add(1)
+            .ok_or_else(|| anyhow!("automatic chunk label counter exhausted"))?;
     }
     let label = format!("chunk-{counter}");
-    *counter += 1;
-    label
+    *counter = (*counter)
+        .checked_add(1)
+        .ok_or_else(|| anyhow!("automatic chunk label counter exhausted"))?;
+    Ok(label)
 }
 
 fn parse_label(value: &Value) -> Result<String> {
@@ -355,7 +348,25 @@ fn parse_label(value: &Value) -> Result<String> {
     if label.trim().is_empty() {
         return Err(anyhow!("missing label"));
     }
+    validate_chunk_label(label)?;
     Ok(label.to_string())
+}
+
+fn validate_chunk_label(label: &str) -> Result<()> {
+    if label.is_empty() {
+        return Err(anyhow!("chunk label must not be empty"));
+    }
+    if label.trim() != label {
+        return Err(anyhow!(
+            "chunk label `{label}` must not contain leading or trailing whitespace"
+        ));
+    }
+    if label.chars().any(char::is_control) {
+        return Err(anyhow!(
+            "chunk label `{label}` must not contain control characters"
+        ));
+    }
+    Ok(())
 }
 
 fn parse_engine(value: &Value) -> Result<EngineName> {
@@ -406,52 +417,6 @@ fn label_names_from_value(value: &Value) -> Result<Vec<String>> {
             .collect::<Result<Vec<_>>>(),
         _ => Err(anyhow!("label must be a string or an array")),
     }
-}
-
-/// Typst's raw-block fence parser stops the `lang` identifier at the first
-/// period, so ` ```julia-1.2 ` produces `lang="julia-1"` and a code text
-/// that begins with `".2\n"`.  This function detects that pattern and
-/// re-attaches the split suffix to the engine name while stripping it from
-/// the code.
-///
-/// The heuristic is conservative: the leading line must consist solely of a
-/// dot followed by one or more groups of `.<digits>` (a pure version suffix
-/// like `.2`, `.11`, `.2.1`).  Anything else is left untouched.
-fn reattach_version_suffix(engine: EngineName, lang: &str, raw_text: &str) -> (EngineName, String) {
-    // Typst may include the fence line's trailing newline as the first byte
-    // of the text field.  For the period-split case (```julia-1.12 →
-    // lang="julia-1") the remainder ".12" may appear either right at the
-    // start or after that leading newline.  Strip it before inspecting.
-    let text = raw_text.strip_prefix('\n').unwrap_or(raw_text);
-
-    // Only relevant for Jupyter kernels (unknown engine names).
-    if !matches!(engine, EngineName::Jupyter(_)) {
-        return (engine, text.to_string());
-    }
-
-    // The text must start with a version-like suffix (".N[.N...]") on its
-    // own line.
-    let (first_line, rest) = match text.split_once('\n') {
-        Some((f, r)) => (f, r),
-        // No newline: the entire (stripped) text is the first line.
-        None => (text, ""),
-    };
-
-    // The first line must look like ".<digits>[.<digits>]*" – pure version.
-    let is_version_suffix = first_line.starts_with('.')
-        && first_line.len() > 1
-        && first_line[1..]
-            .split('.')
-            .all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()));
-
-    if !is_version_suffix {
-        return (engine, text.to_string());
-    }
-
-    // Reconstruct the full kernel name (lang + the suffix that Typst split off).
-    let full_name = format!("{}{}", lang, first_line);
-    let new_engine = EngineName::Jupyter(full_name);
-    (new_engine, rest.to_string())
 }
 
 #[cfg(test)]
@@ -1417,96 +1382,83 @@ mod tests {
         assert!(err.contains("exactly one raw element"));
     }
 
-    // reattach_version_suffix ---------------------------------------------------
-
     #[test]
-    fn reattaches_minor_version_suffix_no_leading_newline() {
-        // Typst puts ".2" at the very start of the text (no leading newline).
-        let (engine, code) = reattach_version_suffix(
-            EngineName::Jupyter("julia-1".into()),
-            "julia-1",
-            ".2\nx = 41\nprint(x + 1)",
-        );
-        assert_eq!(engine, EngineName::Jupyter("julia-1.2".into()));
-        assert_eq!(code, "x = 41\nprint(x + 1)");
-    }
-
-    #[test]
-    fn reattaches_minor_version_suffix_with_leading_newline() {
-        // Typst may include the fence line's trailing newline before ".2".
-        let (engine, code) = reattach_version_suffix(
-            EngineName::Jupyter("julia-1".into()),
-            "julia-1",
-            "\n.2\nx = 41\nprint(x + 1)",
-        );
-        assert_eq!(engine, EngineName::Jupyter("julia-1.2".into()));
-        assert_eq!(code, "x = 41\nprint(x + 1)");
-    }
-
-    #[test]
-    fn reattaches_two_part_version_suffix() {
-        // ```some-kernel-1.2.3 → lang="some-kernel-1", text=".2.3\ncode"
-        let (engine, code) = reattach_version_suffix(
-            EngineName::Jupyter("some-kernel-1".into()),
-            "some-kernel-1",
-            ".2.3\ncode",
-        );
-        assert_eq!(engine, EngineName::Jupyter("some-kernel-1.2.3".into()));
-        assert_eq!(code, "code");
-    }
-
-    #[test]
-    fn no_reattach_when_first_line_is_not_version() {
-        // A leading newline with normal code (no version suffix to strip).
-        let (engine, code) =
-            reattach_version_suffix(EngineName::Jupyter("julia-1".into()), "julia-1", "\nx = 41");
-        assert_eq!(engine, EngineName::Jupyter("julia-1".into()));
-        assert_eq!(code, "x = 41");
-    }
-
-    #[test]
-    fn no_reattach_for_builtin_engine() {
-        // Built-in engines like Python are not Jupyter and must not be touched.
-        let (engine, code) = reattach_version_suffix(EngineName::Python, "python", ".2\nprint(1)");
-        assert_eq!(engine, EngineName::Python);
-        assert_eq!(code, ".2\nprint(1)");
-    }
-
-    #[test]
-    fn raw_block_with_period_in_lang_parsed_correctly() {
-        // Simulate what Typst produces for ```julia-1.2\nx = 41\n```
-        // (lang truncated to "julia-1", ".2\n" prepended to text). Jupyter
-        // kernels are opted in by name (they are not auto-run under `All`).
+    fn preserves_raw_code_that_starts_with_a_decimal() {
         let defaults = SetupDefaults {
-            fenced_chunks: FencedChunks::Only(vec!["julia-1.2".to_string()]),
+            fenced_chunks: FencedChunks::Only(vec!["python3".to_string()]),
             ..SetupDefaults::default()
         };
         let json = r#"[
-          {"func":"raw","text":".2\nx = 41\nprint(x + 1)","block":true,"lang":"julia-1"}
+          {"func":"raw","text":".2\nprint(1)","block":true,"lang":"python3"}
         ]"#;
+
         let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
         assert_eq!(chunks.len(), 1);
-        assert_eq!(chunks[0].engine, EngineName::Jupyter("julia-1.2".into()));
-        assert_eq!(chunks[0].code, "x = 41\nprint(x + 1)");
+        assert_eq!(chunks[0].engine, EngineName::Jupyter("python3".into()));
+        assert_eq!(chunks[0].code, ".2\nprint(1)");
     }
 
     #[test]
-    fn metadata_chunk_with_period_in_lang_is_normalized() {
+    fn preserves_metadata_code_that_starts_with_a_decimal() {
         let json = metadata(
             r#"{
-              "body":{"func":"raw","text":".2\nx = 41","block":true,"lang":"julia-1"},
-              "engine":"julia-1",
-              "label":"versioned",
+              "body":{"func":"raw","text":".2\nprint(1)","block":true,"lang":"python3"},
+              "engine":"python3",
+              "label":"decimal",
               "eval":false
             }"#,
         );
 
         let chunks = parse_chunks(&json, None).unwrap();
         assert_eq!(chunks.len(), 1);
-        assert_eq!(
-            chunks[0].engine,
-            EngineName::Jupyter("julia-1.2".to_string())
+        assert_eq!(chunks[0].engine, EngineName::Jupyter("python3".into()));
+        assert_eq!(chunks[0].code, ".2\nprint(1)");
+    }
+
+    #[test]
+    fn rejects_duplicate_raw_and_metadata_labels() {
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::Only(vec!["julia".to_string()]),
+            ..SetupDefaults::default()
+        };
+        let json = r##"[
+          {"func":"raw","text":"#| label: dup\nprintln(1)","block":true,"lang":"julia"},
+          {"func":"metadata","value":{"body":{"func":"raw","text":"println(2)","block":true},"engine":"julia","label":"dup"},"label":"<calepin-chunk>"}
+        ]"##;
+
+        let err = parse_chunks(json, Some(setup_config_with(defaults)))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("duplicate label `dup`"), "{err}");
+    }
+
+    #[test]
+    fn rejects_labels_with_surrounding_whitespace_or_controls() {
+        for label in [" leading", "trailing ", "line\nbreak"] {
+            let json = metadata(
+                &serde_json::json!({
+                    "body":{"func":"raw","text":"x","block":false},
+                    "engine":"r",
+                    "label":label
+                })
+                .to_string(),
+            );
+            assert!(parse_chunks(&json, None).is_err(), "accepted {label:?}");
+        }
+    }
+
+    #[test]
+    fn rejects_chunk_label_numeric_overflow() {
+        let json = metadata(
+            &serde_json::json!({
+                "body":{"func":"raw","text":"x","block":false},
+                "engine":"r",
+                "label":format!("chunk-{}", usize::MAX)
+            })
+            .to_string(),
         );
-        assert_eq!(chunks[0].code, "x = 41");
+
+        let err = parse_chunks(&json, None).unwrap_err().to_string();
+        assert!(err.contains("supported numeric range"), "{err}");
     }
 }

@@ -156,17 +156,27 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
 
         if let Some(block) = raw_block.as_mut() {
             block.segments.push(segment.to_string());
-            if is_closing_fence(trimmed, block.fence_len) {
+            let closes_block = is_closing_fence(trimmed, block.fence_len)
+                || (!block.opening_prefix.is_empty()
+                    && leading_backtick_count(trimmed) >= block.fence_len
+                    && closing_fence_tail(line, block.fence_len)
+                        .trim_start()
+                        .starts_with(']'));
+            if closes_block {
+                let parser_tail = closing_fence_tail(line, block.fence_len).to_string();
                 let block = raw_block.take().expect("raw block exists");
                 let rewritten = rewrite_raw_block(block);
                 needs_runtime_alias |= rewritten.needs_runtime_alias;
                 out.push_str(&rewritten.source);
+                if !parser_tail.trim().is_empty() {
+                    let _ = parse_state.scan_line(parser_tail.trim_start());
+                }
             }
             continue;
         }
 
         if parse_state.raw_fence_len.is_some() {
-            parse_state.scan_line(line);
+            let _ = parse_state.scan_line(line);
             out.push_str(segment);
             continue;
         }
@@ -178,6 +188,7 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
                     lang: lang.map(str::to_string),
                     segments: vec![segment.to_string()],
                     in_calepin_chunk: parse_state.in_calepin_chunk(),
+                    opening_prefix: String::new(),
                 });
                 continue;
             }
@@ -189,13 +200,29 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
             runtime_import,
             &mut saw_runtime_import,
         );
-        parse_state.scan_line(&rewritten);
+        let inline_fence = parse_state.scan_line(&rewritten);
+        if let Some(offset) = inline_fence {
+            let opening = &rewritten[offset..];
+            if let Some((fence_len, Some(lang))) = opening_fence(opening) {
+                if parse_state.in_calepin_chunk() && lang.contains('.') {
+                    parse_state.raw_fence_len = None;
+                    raw_block = Some(RawBlock {
+                        fence_len,
+                        lang: Some(lang.to_string()),
+                        segments: vec![format!("{opening}{newline}")],
+                        in_calepin_chunk: true,
+                        opening_prefix: rewritten[..offset].to_string(),
+                    });
+                    continue;
+                }
+            }
+        }
         out.push_str(&rewritten);
         out.push_str(newline);
     }
 
     if let Some(block) = raw_block {
-        out.push_str(&block.segments.concat());
+        out.push_str(&block.original_source());
     }
     RewriteResult {
         source: out,
@@ -209,6 +236,13 @@ struct RawBlock {
     lang: Option<String>,
     segments: Vec<String>,
     in_calepin_chunk: bool,
+    opening_prefix: String,
+}
+
+impl RawBlock {
+    fn original_source(&self) -> String {
+        format!("{}{}", self.opening_prefix, self.segments.concat())
+    }
 }
 
 #[derive(Default)]
@@ -292,12 +326,10 @@ enum PendingChunkCallState {
 
 impl TypstParseState {
     fn in_calepin_chunk(&self) -> bool {
-        self.brackets
-            .iter()
-            .any(|context| *context == BracketContext::CalepinChunk)
+        self.brackets.contains(&BracketContext::CalepinChunk)
     }
 
-    fn scan_line(&mut self, line: &str) {
+    fn scan_line(&mut self, line: &str) -> Option<usize> {
         if let Some(fence_len) = self.raw_fence_len {
             let trimmed = line.trim_start();
             let closing_len = leading_backtick_count(trimmed);
@@ -305,10 +337,10 @@ impl TypstParseState {
                 self.raw_fence_len = None;
                 let tail = trimmed[closing_len..].trim_start();
                 if !tail.is_empty() {
-                    self.scan_line(tail);
+                    let _ = self.scan_line(tail);
                 }
             }
-            return;
+            return None;
         }
 
         let mut idx = 0;
@@ -328,7 +360,7 @@ impl TypstParseState {
                 let fence_len = leading_backtick_count(&line[idx..]);
                 if fence_len >= 3 {
                     self.raw_fence_len = Some(fence_len);
-                    break;
+                    return Some(idx);
                 }
             }
 
@@ -391,6 +423,7 @@ impl TypstParseState {
             }
             idx += ch.len_utf8();
         }
+        None
     }
 }
 
@@ -445,17 +478,31 @@ fn opening_fence(trimmed_line: &str) -> Option<(usize, Option<&str>)> {
     Some((fence_len, lang))
 }
 
+fn closing_fence_tail(line: &str, fence_len: usize) -> &str {
+    let trimmed = line.trim_start();
+    let closing_len = leading_backtick_count(trimmed);
+    if closing_len < fence_len {
+        return "";
+    }
+    &trimmed[closing_len..]
+}
+
 struct RewrittenRawBlock {
     source: String,
     needs_runtime_alias: bool,
 }
 
 fn rewrite_raw_block(mut block: RawBlock) -> RewrittenRawBlock {
-    let should_rewrite_as_chunk =
-        !block.in_calepin_chunk && is_source_rewritten_chunk_lang(block.lang.as_deref());
-    if !should_rewrite_as_chunk && !is_executable_label_candidate_lang(block.lang.as_deref()) {
+    let dotted_lang = block.lang.as_deref().is_some_and(|lang| lang.contains('.'));
+    let should_rewrite_as_chunk = !block.in_calepin_chunk
+        && (dotted_lang || is_source_rewritten_chunk_lang(block.lang.as_deref()));
+    let should_rewrite_as_raw = block.in_calepin_chunk && dotted_lang;
+    if !should_rewrite_as_chunk
+        && !should_rewrite_as_raw
+        && !is_executable_label_candidate_lang(block.lang.as_deref())
+    {
         return RewrittenRawBlock {
-            source: block.segments.concat(),
+            source: block.original_source(),
             needs_runtime_alias: false,
         };
     }
@@ -466,8 +513,14 @@ fn rewrite_raw_block(mut block: RawBlock) -> RewrittenRawBlock {
             needs_runtime_alias: true,
         };
     }
+    if should_rewrite_as_raw {
+        return RewrittenRawBlock {
+            source: rewrite_raw_block_as_raw_call(&block, had_trailing_label),
+            needs_runtime_alias: false,
+        };
+    }
     RewrittenRawBlock {
-        source: block.segments.concat(),
+        source: block.original_source(),
         needs_runtime_alias: false,
     }
 }
@@ -505,33 +558,69 @@ fn rewrite_trailing_fence_label(block: &mut RawBlock, rewrite_plain_labels: bool
 
 fn rewrite_raw_block_as_chunk_from_raw_plain(block: &RawBlock, had_trailing_label: bool) -> String {
     let Some(lang) = block.lang.as_deref() else {
-        return block.segments.concat();
+        return block.original_source();
     };
-    let code = if block.segments.len() > 2 {
-        block.segments[1..block.segments.len() - 1].concat()
-    } else {
-        String::new()
-    };
-    let label_metadata = if had_trailing_label {
-        String::new()
-    } else {
-        trailing_label_metadata(&block.segments)
-            .map(|label| {
-                format!(
-                    " #metadata((label: {})) {}",
-                    qmd_string_literal(label),
-                    FENCE_LABEL_METADATA_LABEL
-                )
-            })
-            .unwrap_or_default()
-    };
+    let code = raw_block_code(block);
+    let label_metadata = raw_block_label_metadata(block, had_trailing_label);
     format!(
-        "#{RUNTIME_ALIAS}.chunk_from_raw_plain({}, raw({}, block: true, lang: {})){}\n",
+        "{}#{RUNTIME_ALIAS}.chunk_from_raw_plain({}, raw({}, block: true, lang: {})){}{}",
+        block.opening_prefix,
         qmd_string_literal(lang),
         qmd_string_literal(&code),
         qmd_string_literal(lang),
-        label_metadata
+        label_metadata,
+        raw_block_closing_suffix(block)
     )
+}
+
+fn rewrite_raw_block_as_raw_call(block: &RawBlock, had_trailing_label: bool) -> String {
+    let Some(lang) = block.lang.as_deref() else {
+        return block.original_source();
+    };
+    let code = raw_block_code(block);
+    let label_metadata = raw_block_label_metadata(block, had_trailing_label);
+    format!(
+        "{}#raw({}, block: true, lang: {}){}{}",
+        block.opening_prefix,
+        qmd_string_literal(&code),
+        qmd_string_literal(lang),
+        label_metadata,
+        raw_block_closing_suffix(block)
+    )
+}
+
+fn raw_block_closing_suffix(block: &RawBlock) -> String {
+    let Some(last) = block.segments.last() else {
+        return String::new();
+    };
+    let (line, newline) = split_segment(last);
+    if block.opening_prefix.is_empty() {
+        return newline.to_string();
+    }
+    format!("{}{}", closing_fence_tail(line, block.fence_len), newline)
+}
+
+fn raw_block_code(block: &RawBlock) -> String {
+    if block.segments.len() > 2 {
+        block.segments[1..block.segments.len() - 1].concat()
+    } else {
+        String::new()
+    }
+}
+
+fn raw_block_label_metadata(block: &RawBlock, had_trailing_label: bool) -> String {
+    if had_trailing_label {
+        return String::new();
+    }
+    trailing_label_metadata(&block.segments)
+        .map(|label| {
+            format!(
+                " #metadata((label: {})) {}",
+                qmd_string_literal(label),
+                FENCE_LABEL_METADATA_LABEL
+            )
+        })
+        .unwrap_or_default()
 }
 
 fn trailing_label_metadata(segments: &[String]) -> Option<&str> {
@@ -1060,6 +1149,17 @@ print("comment")
     }
 
     #[test]
+    fn rewrites_dotted_fence_language_before_typst_parses_it() {
+        let source = "```julia-1.2\nprintln(1)\n```\n";
+        let rewritten = rewrite_calepin_imports(source);
+
+        assert_eq!(
+            rewritten,
+            "#calepin_runtime.chunk_from_raw_plain(\"julia-1.2\", raw(\"println(1)\\n\", block: true, lang: \"julia-1.2\"))\n"
+        );
+    }
+
+    #[test]
     fn rewrites_routed_executable_fence_label_to_qmd_header() {
         let source = "```r\nplot(1)\n```<fig-plot>\n";
         let rewritten = rewrite_calepin_imports(source);
@@ -1107,6 +1207,28 @@ print("comment")
         let source = "#calepin.chunk(\"python\")[\n```python\nprint(\"x\")\n```\n]\n";
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(rewritten, source);
+    }
+
+    #[test]
+    fn preserves_dotted_language_and_decimal_code_inside_explicit_chunks() {
+        let source = "#calepin.chunk()[\n```julia-1.2\n.2\nprintln(1)\n```\n]\n";
+        let rewritten = rewrite_calepin_imports(source);
+
+        assert_eq!(
+            rewritten,
+            "#calepin.chunk()[\n#raw(\".2\\nprintln(1)\\n\", block: true, lang: \"julia-1.2\")\n]\n"
+        );
+    }
+
+    #[test]
+    fn preserves_inline_dotted_fence_inside_explicit_chunks() {
+        let source = "#calepin.chunk(label: \"versioned\")[```julia-1.2\n.2\nprintln(1)\n```]\n";
+        let rewritten = rewrite_calepin_imports(source);
+
+        assert_eq!(
+            rewritten,
+            "#calepin.chunk(label: \"versioned\")[#raw(\".2\\nprintln(1)\\n\", block: true, lang: \"julia-1.2\")]\n"
+        );
     }
 
     #[test]
