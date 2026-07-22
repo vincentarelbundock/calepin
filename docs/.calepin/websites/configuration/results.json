@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "websites/configuration.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "toml",
+      "source": "# Site name shown by bundled themes and page metadata.\n# Default: none.\ntitle = \"My Site\"\n\n# Short site description for metadata and previews.\n# Default: none.\ndescription = \"A static website built from Typst documents.\"\n\n# Public site URL, used for sitemap.xml and canonical URLs.\n# Default: none.\nbase_url = \"https://example.com\"\n\n# Theme: \"calepin\", \"academic\", a local theme directory, or false for raw output.\n# Default: \"calepin\".\ntheme = \"calepin\"\n\n# Render .pdf files for every page.\n# Default: false.\npdf = false\n\n# Minify generated HTML, including inline CSS and JavaScript.\n# Default: false.\nminify = true\n\n# Static search engine. Set to \"pagefind\" to generate a search index.\n# Default: none.\nsearch = \"pagefind\"\n\n# Logo image path for the top bar.\n# Default: none.\nlogo = \"assets/logo.svg\"\n\n# Alternative text for the logo image. Defaults to `title` when omitted.\n# Default: none.\nlogo_alt = \"My Site\"\n\n# Output directory for browser-facing generated assets.\n# Also controls where the Calepin runtime is written.\n# Default: \".calepin\".\nasset-dir = \"_calepin\"\n\n# Browser favicon path. Omit this to use Calepin's generated default.\n# Default: `asset-dir`/favicon.svg.\nfavicon = \"assets/favicon.ico\"\n\n# HTML syntax highlighting themes. Paths are relative to calepin.toml.\n# Default: built-in Calepin light and dark themes.\nhighlight-light = \"themes/syntax/light.tmTheme\"\nhighlight-dark = \"themes/syntax/dark.tmTheme\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "toml",
+      "source": "# Site name shown by bundled themes and page metadata.\n# Default: none.\ntitle = \"My Site\"\n\n# Short site description for metadata and previews.\n# Default: none.\ndescription = \"A static website built from Typst documents.\"\n\n# Public site URL, used for sitemap.xml and canonical URLs.\n# Default: none.\nbase_url = \"https://example.com\"\n\n# Theme: \"calepin\", \"academic\", a local theme directory, or false for raw output.\n# Default: \"calepin\".\ntheme = \"calepin\"\n\n# Render .pdf files for every page.\n# Default: false.\npdf = false\n\n# Minify generated HTML, including inline CSS and JavaScript.\n# Default: false.\nminify = true\n\n# Static search engine. Set to \"pagefind\" to generate a search index.\n# Default: none.\nsearch = \"pagefind\"\n\n# Logo image path for the top bar.\n# Default: none.\nlogo = \"assets/logo.svg\"\n\n# Alternative text for the logo image. Defaults to `title` when omitted.\n# Default: none.\nlogo_alt = \"My Site\"\n\n# Output directory for browser-facing generated assets.\n# Also controls where the Calepin runtime is written.\n# Default: \".calepin\".\nasset-dir = \"_calepin\"\n\n# Browser favicon path. Omit this to use Calepin's generated default.\n# Default: `asset-dir`/favicon.svg.\nfavicon = \"assets/favicon.ico\"\n\n# HTML syntax highlighting themes. Paths are relative to calepin.toml.\n# Default: built-in Calepin light and dark themes.\nhighlight-light = \"themes/syntax/light.tmTheme\"\nhighlight-dark = \"themes/syntax/dark.tmTheme\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -58,6 +60,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "toml",
+      "source": "# calepin.toml\ntheme = \"themes/my-site\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -84,6 +87,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "toml",
+      "source": "# calepin.toml\ntheme = \"themes/my-site\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -110,6 +114,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "toml",
+      "source": "# themes/my-site/theme.toml\nextends = \"academic\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -136,6 +141,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "toml",
+      "source": "# themes/my-site/theme.toml\nextends = \"academic\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -162,6 +168,7 @@
     "chunk-7": {
       "label": "chunk-7",
       "engine": "toml",
+      "source": "highlight-light = \"themes/syntax/light.tmTheme\"\nhighlight-dark = \"themes/syntax/dark.tmTheme\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -188,6 +195,7 @@
     "chunk-8": {
       "label": "chunk-8",
       "engine": "toml",
+      "source": "highlight-light = \"themes/syntax/light.tmTheme\"\nhighlight-dark = \"themes/syntax/dark.tmTheme\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -214,6 +222,7 @@
     "chunk-9": {
       "label": "chunk-9",
       "engine": "txt",
+      "source": "User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -240,6 +249,7 @@
     "chunk-10": {
       "label": "chunk-10",
       "engine": "txt",
+      "source": "User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -266,6 +276,7 @@
     "chunk-11": {
       "label": "chunk-11",
       "engine": "toml",
+      "source": "robots = false",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -292,6 +303,7 @@
     "chunk-12": {
       "label": "chunk-12",
       "engine": "toml",
+      "source": "robots = false",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -318,6 +330,7 @@
     "chunk-13": {
       "label": "chunk-13",
       "engine": "toml",
+      "source": "[robots]\nenabled = false",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -344,6 +357,7 @@
     "chunk-14": {
       "label": "chunk-14",
       "engine": "toml",
+      "source": "[robots]\nenabled = false",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -370,6 +384,7 @@
     "chunk-15": {
       "label": "chunk-15",
       "engine": "txt",
+      "source": "User-agent: *\nDisallow: /drafts/\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -396,6 +411,7 @@
     "chunk-16": {
       "label": "chunk-16",
       "engine": "txt",
+      "source": "User-agent: *\nDisallow: /drafts/\n{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -422,6 +438,7 @@
     "chunk-17": {
       "label": "chunk-17",
       "engine": "txt",
+      "source": "{% extends \"base.txt\" %}\n{% block body %}\nUser-agent: *\nAllow: /\n{% endblock %}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -448,6 +465,7 @@
     "chunk-18": {
       "label": "chunk-18",
       "engine": "txt",
+      "source": "{% extends \"base.txt\" %}\n{% block body %}\nUser-agent: *\nAllow: /\n{% endblock %}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -474,6 +492,7 @@
     "chunk-19": {
       "label": "chunk-19",
       "engine": "toml",
+      "source": "[static]\ninclude = [\n  \"assets/**\",\n  \"CNAME\",\n  \"downloads/**\",\n]\nexclude = [\n  \"assets/drafts/**\",\n]",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -500,6 +519,7 @@
     "chunk-20": {
       "label": "chunk-20",
       "engine": "toml",
+      "source": "[static]\ninclude = [\n  \"assets/**\",\n  \"CNAME\",\n  \"downloads/**\",\n]\nexclude = [\n  \"assets/drafts/**\",\n]",
       "status": "skipped",
       "options": {
         "echo": true,

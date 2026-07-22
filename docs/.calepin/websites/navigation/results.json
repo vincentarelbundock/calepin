@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "websites/navigation.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "toml",
+      "source": "[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  target = \"install.typ\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "toml",
+      "source": "[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  target = \"install.typ\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -58,6 +60,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "toml",
+      "source": "[[sidebar.section.item]]\nglob = \"guide/*.typ\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -84,6 +87,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "toml",
+      "source": "[[sidebar.section.item]]\nglob = \"guide/*.typ\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -110,6 +114,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "toml",
+      "source": "[sidebar]\n\n[[sidebar.section]]\n  [[sidebar.section.item]]\n  target = \"index.typ\"\n\n  [[sidebar.section.item]]\n  target = \"getting-started.typ\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -136,6 +141,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "toml",
+      "source": "[sidebar]\n\n[[sidebar.section]]\n  [[sidebar.section.item]]\n  target = \"index.typ\"\n\n  [[sidebar.section.item]]\n  target = \"getting-started.typ\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -162,6 +168,7 @@
     "chunk-7": {
       "label": "chunk-7",
       "engine": "toml",
+      "source": "[[sidebar.section.item]]\ntarget = \"https://example.com/reference\"\nlabel = \"External reference\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -188,6 +195,7 @@
     "chunk-8": {
       "label": "chunk-8",
       "engine": "toml",
+      "source": "[[sidebar.section.item]]\ntarget = \"https://example.com/reference\"\nlabel = \"External reference\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -214,6 +222,7 @@
     "chunk-9": {
       "label": "chunk-9",
       "engine": "toml",
+      "source": "[[sidebar.section.item]]\nlabel = \"Language\"\n\n[[sidebar.section.item]]\ntarget = \"reference/syntax.typ\"\n\n[[sidebar.section.item]]\ntarget = \"reference/styling.typ\"\n\n[[sidebar.section.item]]\nlabel = \"Library\"\n\n[[sidebar.section.item]]\ntarget = \"reference/model.typ\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -240,6 +249,7 @@
     "chunk-10": {
       "label": "chunk-10",
       "engine": "toml",
+      "source": "[[sidebar.section.item]]\nlabel = \"Language\"\n\n[[sidebar.section.item]]\ntarget = \"reference/syntax.typ\"\n\n[[sidebar.section.item]]\ntarget = \"reference/styling.typ\"\n\n[[sidebar.section.item]]\nlabel = \"Library\"\n\n[[sidebar.section.item]]\ntarget = \"reference/model.typ\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -266,6 +276,7 @@
     "chunk-11": {
       "label": "chunk-11",
       "engine": "toml",
+      "source": "[sidebar]\nfold = false",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -292,6 +303,7 @@
     "chunk-12": {
       "label": "chunk-12",
       "engine": "toml",
+      "source": "[sidebar]\nfold = false",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -318,6 +330,7 @@
     "chunk-13": {
       "label": "chunk-13",
       "engine": "toml",
+      "source": "[toc]\nenabled = true\ndepth = 2\nfloating = true",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -344,6 +357,7 @@
     "chunk-14": {
       "label": "chunk-14",
       "engine": "toml",
+      "source": "[toc]\nenabled = true\ndepth = 2\nfloating = true",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -370,6 +384,7 @@
     "chunk-15": {
       "label": "chunk-15",
       "engine": "toml",
+      "source": "[[menus.main]]\ntarget = \"index.typ\"\nlabel = \"Home\"\nweight = 10\n\n[[menus.social]]\ntarget = \"https://github.com/user/repo\"\nlabel = \"{icon:github}\"\naria-label = \"GitHub\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -396,6 +411,7 @@
     "chunk-16": {
       "label": "chunk-16",
       "engine": "toml",
+      "source": "[[menus.main]]\ntarget = \"index.typ\"\nlabel = \"Home\"\nweight = 10\n\n[[menus.social]]\ntarget = \"https://github.com/user/repo\"\nlabel = \"{icon:github}\"\naria-label = \"GitHub\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -422,6 +438,7 @@
     "chunk-17": {
       "label": "chunk-17",
       "engine": "toml",
+      "source": "[[footer.item]]\nlabel = \"© 2026 Example\"\n\n[[footer.item]]\ntarget = \"https://example.com/privacy\"\nlabel = \"Privacy\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -448,6 +465,7 @@
     "chunk-18": {
       "label": "chunk-18",
       "engine": "toml",
+      "source": "[[footer.item]]\nlabel = \"© 2026 Example\"\n\n[[footer.item]]\ntarget = \"https://example.com/privacy\"\nlabel = \"Privacy\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -474,6 +492,7 @@
     "chunk-19": {
       "label": "chunk-19",
       "engine": "toml",
+      "source": "aria-label = \"GitHub\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -500,6 +519,7 @@
     "chunk-20": {
       "label": "chunk-20",
       "engine": "toml",
+      "source": "aria-label = \"GitHub\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -526,6 +546,7 @@
     "chunk-21": {
       "label": "chunk-21",
       "engine": "toml",
+      "source": "[[menus.social]]\ntarget = \"https://example.com/project\"\nlabel = \"{icon:assets/icons/project.svg} Project\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -552,6 +573,7 @@
     "chunk-22": {
       "label": "chunk-22",
       "engine": "toml",
+      "source": "[[menus.social]]\ntarget = \"https://example.com/project\"\nlabel = \"{icon:assets/icons/project.svg} Project\"",
       "status": "skipped",
       "options": {
         "echo": true,

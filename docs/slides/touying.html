@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4470,7 +4521,7 @@ The same label can be reused multiple times, anywhere in the deck.
 #calepin<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">results</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"next-slide-claim"</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><h2 id="rendered-pdf">Rendered PDF</h2><p><iframe src="../assets/slides.pdf" title="Rendered Touying slides PDF" style="display: block; width: 100%; height: min(78vh, 52rem); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);"></iframe></p>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -5408,6 +5459,74 @@ The same label can be reused multiple times, anywhere in the deck.
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

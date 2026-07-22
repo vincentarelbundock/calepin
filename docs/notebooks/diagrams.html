@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4412,7 +4463,7 @@ api -> worker: job
 worker -> database: write</code></pre></div><h2 id="adding-a-new-diagram-engine">Adding a new diagram engine</h2><p>Diagram support is intentionally small. Each diagram engine is a stateless wrapper around an external command-line tool. <em>Calepin</em> writes the chunk source to a temporary file, asks the tool to produce SVG, and records that SVG as the figure output. Diagram engines do not keep a persistent session like Python, R, Julia, or shell chunks.</p><p>The main entry point is <code>calepin/src/engines/diagram.rs</code>. Add a <code>DiagramSpec</code> with:</p><ul><li><code>name</code>: the fenced-code language users will write, such as <code>mermaid</code> or <code>dot</code>.</li><li><code>input_ext</code>: the temporary source-file extension passed to the external tool.</li><li><code>prepare_source</code>: usually <code>identity_source</code>, unless the tool needs a wrapper like TikZ.</li><li><code>render</code>: a function that runs the external tool and writes <code>run.fig_path</code>.</li></ul><p>Simple tools can use the <code>simple_diagram_renderer!</code> helper in <code>diagram.rs</code>. More complex tools should get a small module under <code>calepin/src/engines/diagram/</code>, like <code>mermaid.rs</code> or <code>tikz.rs</code>, so retries, generated config files, or multi-step conversions stay out of the common path.</p><p>If the new engine uses a new executable, also register it in the surrounding plumbing:</p><ul><li><code>calepin/src/config.rs</code> for the configurable executable path.</li><li><code>calepin/src/utils/tools.rs</code> for the default command name and install hint.</li><li><code>calepin/src/health/mod.rs</code> so <code>calepin health</code> can report whether the tool is available.</li><li><code>calepin/src/typst/preprocess/fingerprint.rs</code> so cached results are invalidated when the tool path changes.</li></ul><p>Finally, make the chunk language visible to Typst and source rewriting by updating the built-in engine lists in <code>calepin/src/assets/typst-runtime/notebook/chunk.typ</code>, <code>calepin/src/typst/preprocess/staging.rs</code>, and any parser or execution tests that enumerate diagram engines. Add a small example to this page and tests for the renderer behavior.</p><p>Pull requests for new diagram engines are welcome. Open a pull request with the implementation, tests, and documentation example so the engine can be reviewed against the same notebook behavior as the built-in diagram tools.</p>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -5356,6 +5407,74 @@ worker -> database: write</code></pre></div><h2 id="adding-a-new-diagram-engine"
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

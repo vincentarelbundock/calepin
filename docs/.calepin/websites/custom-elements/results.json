@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "websites/custom-elements.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "css",
+      "source": ".calepin-elements-gallery {}\n.calepin-elements-gallery__item {}\n.calepin-elements-gallery__image {}\n.calepin-elements-gallery__caption {}\n.calepin-elements-gallery--lightbox {}\n.calepin-elements-card {}\n.calepin-elements-tabs {}\n.calepin-screenshot-thumb {}\n.calepin-screenshot-dialog {}\n.calepin-video-thumb {}\n.calepin-video-dialog {}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "css",
+      "source": ".calepin-elements-gallery {}\n.calepin-elements-gallery__item {}\n.calepin-elements-gallery__image {}\n.calepin-elements-gallery__caption {}\n.calepin-elements-gallery--lightbox {}\n.calepin-elements-card {}\n.calepin-elements-tabs {}\n.calepin-screenshot-thumb {}\n.calepin-screenshot-dialog {}\n.calepin-video-thumb {}\n.calepin-video-dialog {}",
       "status": "skipped",
       "options": {
         "echo": true,

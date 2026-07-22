@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "themes/pdf_templates.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "text",
+      "source": "themes/my-theme/\n  layouts/\n    pdf.typ",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "text",
+      "source": "themes/my-theme/\n  layouts/\n    pdf.typ",
       "status": "skipped",
       "options": {
         "echo": true,

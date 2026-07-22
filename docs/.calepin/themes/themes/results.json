@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "themes/themes.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "sh",
+      "source": "calepin compile notebook.typ --set theme=calepin\ncalepin compile notebook.typ --set theme=academic\ncalepin compile notebook.typ --set theme=typst\ncalepin compile notebook.typ --set theme=themes/my-theme\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "text",
+      "source": "my-theme/\n  theme.toml\n  css/\n    site.css",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -58,6 +60,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "text",
+      "source": "my-theme/\n  theme.toml\n  css/\n    site.css",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -84,6 +87,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "toml",
+      "source": "extends = \"academic\"\n# extends = \"calepin\" # full website with navigation\n# extends = \"typst\"   # bare bones HTML and PDF; no styling",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -110,6 +114,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "toml",
+      "source": "extends = \"academic\"\n# extends = \"calepin\" # full website with navigation\n# extends = \"typst\"   # bare bones HTML and PDF; no styling",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -136,6 +141,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "text",
+      "source": "my-theme/\n  theme.toml            # theme metadata and inheritance\n  layouts/\n    site.html           # website page wrapper\n    document.html       # standalone notebook HTML wrapper\n    site-landing.html   # optional page-specific website layout\n    pdf.typ             # PDF/SVG Typst layout around notebook source\n  partials/\n    ...                 # reusable MiniJinja fragments\n  css/\n    ...                 # theme CSS\n  js/\n    ...                 # theme JavaScript",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -162,6 +168,7 @@
     "chunk-7": {
       "label": "chunk-7",
       "engine": "text",
+      "source": "my-theme/\n  theme.toml            # theme metadata and inheritance\n  layouts/\n    site.html           # website page wrapper\n    document.html       # standalone notebook HTML wrapper\n    site-landing.html   # optional page-specific website layout\n    pdf.typ             # PDF/SVG Typst layout around notebook source\n  partials/\n    ...                 # reusable MiniJinja fragments\n  css/\n    ...                 # theme CSS\n  js/\n    ...                 # theme JavaScript",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -188,6 +195,7 @@
     "chunk-8": {
       "label": "chunk-8",
       "engine": "sh",
+      "source": "calepin new theme /path/to/my_theme --theme=academic\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -214,6 +222,7 @@
     "chunk-9": {
       "label": "chunk-9",
       "engine": "sh",
+      "source": "calepin compile notebook.typ --set theme=/path/to/my_theme/\n",
       "status": "skipped",
       "options": {
         "echo": true,

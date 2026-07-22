@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "notebooks/notebooks.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "sh",
+      "source": "calepin compile paper.typ\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "python",
+      "source": "print(40 + 2)\n",
       "status": "ok",
       "options": {
         "echo": true,
@@ -64,6 +66,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "python",
+      "source": "x = 41\n",
       "status": "ok",
       "options": {
         "echo": true,
@@ -90,6 +93,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "python",
+      "source": "print(x + 1)\n",
       "status": "ok",
       "options": {
         "echo": true,
@@ -122,6 +126,7 @@
     "inline-1": {
       "label": "inline-1",
       "engine": "python",
+      "source": "print(40 + 2)",
       "status": "ok",
       "options": {
         "echo": false,

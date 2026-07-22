@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "notebooks/parameters.typ",
   "chunks": {
     "inline-1": {
       "label": "inline-1",
       "engine": "r",
+      "source": "cat(vars$Species)",
       "status": "ok",
       "options": {
         "echo": false,
@@ -38,6 +39,7 @@
     "chunk-1": {
       "label": "chunk-1",
       "engine": "r",
+      "source": "filtered <- subset(\n  iris,\n  Species == vars$Species & Petal.Length >= vars$min_petal_length\n)\n\ncolors <- hcl.colors(3, palette = vars$palette)\n\nplot(\n  Sepal.Length ~ Petal.Length,\n  data = filtered,\n  pch = 19,\n  col = colors[2],\n  xlab = \"Petal length\",\n  ylab = \"Sepal length\",\n  main = paste(vars$Species, \"with Petal.Length >=\", vars$min_petal_length)\n)\n",
       "status": "ok",
       "options": {
         "echo": true,
@@ -73,6 +75,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "sh",
+      "source": "calepin compile iris.typ --var Species=setosa --var min_petal_length=1.5 --var palette=magma\n",
       "status": "skipped",
       "options": {
         "echo": true,

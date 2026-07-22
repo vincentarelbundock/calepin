@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4395,10 +4446,10 @@ html:not([data-theme]) {
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
             <h1 id="static-website-generator">Static website generator</h1><p><em>Calepin</em> can turn a directory of Typst documents into a website. In fact, the website you are reading now was entirely generated with <em>Calepin</em>.</p><h2 id="new-website">New website</h2><p>Use this command to scaffold an example site:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span>
-</code></pre></div><p>This creates a website source directory with enough structure to exercise the bundled themes:</p><ul><li><code>calepin_website/calepin.toml</code>: the site configuration file, where you set the title, base URL, navigation, theme, and output options.</li><li><code>calepin_website/index.typ</code>: the home page source file, which builds to <code>index.html</code>.</li><li><code>calepin_website/404.typ</code>: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.</li><li><code>calepin_website/about.typ</code>, <code>calepin_website/guide/*.typ</code>, and <code>calepin_website/fr/*.typ</code>: regular pages in two languages, with site menu and sidebar entries.</li><li><code>calepin_website/blog.typ</code> and <code>calepin_website/posts/*.typ</code>: a small blog index and post source files using <code>calepin.pages()</code>.</li></ul><p>The scaffold uses the <code>calepin</code> theme by default. Use <code>--theme</code> to start from another built-in theme:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">theme</span><span class="calepin-syntax-scope-1"> academic</span></code></pre></div><h2 id="build">Build</h2><p>Compile a website directory with the same <code>compile</code> command used for a single Typst document:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/</span></code></pre></div><p>This compiles the website in place: source files are read from <code>my_site/</code>, and generated outputs are written back into <code>my_site/</code>.</p><p>To compile the same source directory somewhere else, pass an output directory as the second path:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/ public/</span></code></pre></div><p>When the input path is a directory, <em>Calepin</em> looks for <code>calepin.toml</code> at the root of that directory. An explicit <code>--config &lt;path></code> supersedes the automatic lookup; if no config is found either way, the build fails.</p><p>By default, website pages render to HTML. Configure PDF output and site settings in <a href="configuration.html">Site configuration</a>.</p><h2 id="serve">Serve</h2><p>Serve the built site locally with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span></code></pre></div><p>This is useful for a quick preview after <code>calepin compile</code>. By default, <em>Calepin</em> uses <code>127.0.0.1</code> and the first available port from 8000.</p><p>Use <code>--host</code> and <code>--port</code> when you need a specific address:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">host</span><span class="calepin-syntax-scope-1"> 127.0.0.1</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">port</span><span class="calepin-syntax-scope-1"> 8001</span></code></pre></div><p>Add <code>--open</code> to launch the served site in your default browser:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">open</span></code></pre></div><h2 id="watch">Watch</h2><p>During development, watch the website source directory for changes, and re-compile automatically:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch my_site/ my_site/</span></code></pre></div><p>As with <code>compile</code>, the first positional argument is the source directory and the optional second positional argument is the output directory. The first build renders the whole site. After that, <em>Calepin</em> hashes each edited page and rebuilds only the pages whose content actually changed; files that were touched but not modified are skipped.</p><p>Changes that can affect more than one page trigger a full rebuild instead. This includes edits to <code>calepin.toml</code>, themes, or assets, pages that are added, removed, or renamed, and edits that change the site navigation or page metadata.</p><p>Add <code>--serve</code> to run the local server while watching; it uses the same <code>--host</code>, <code>--port</code>, and <code>--open</code> options as <code>calepin serve</code>.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch my_site/ my_site/</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">serve</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">open</span></code></pre></div><h2 id="features">Features</h2><ul><li>Directory builds from Typst source files.</li><li>In-place or separate output directories.</li><li>Sidebar and site menu navigation from configuration or discovered pages.</li><li>HTML output with optional PDF twins.</li><li>Page metadata and <code>calepin.pages()</code> for listings and indexes.</li><li>Multilingual site navigation.</li><li>Static file copying for assets, downloads, and host-specific files.</li><li>Generated <code>sitemap.xml</code> and <code>robots.txt</code>, with template overrides for <code>robots.txt</code>.</li><li>Optional Pagefind search index generation, with cached no-op rebuilds.</li><li>Optional HTML minification, including inline CSS and JavaScript.</li><li>Local serving and incremental watch builds.</li></ul>
+</code></pre></div><p>This creates a website source directory with enough structure to exercise the bundled themes:</p><ul><li><code>calepin_website/calepin.toml</code>: the site configuration file, where you set the title, base URL, navigation, theme, and output options.</li><li><code>calepin_website/index.typ</code>: the home page source file, which builds to <code>index.html</code>.</li><li><code>calepin_website/404.typ</code>: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.</li><li><code>calepin_website/about.typ</code>, <code>calepin_website/guide/*.typ</code>, and <code>calepin_website/fr/*.typ</code>: regular pages in two languages, with site menu and sidebar entries.</li><li><code>calepin_website/blog.typ</code> and <code>calepin_website/posts/*.typ</code>: a small blog index and post source files using <code>calepin.pages()</code>.</li></ul><p>The scaffold uses the <code>calepin</code> theme by default. Use <code>--theme</code> to start from another built-in theme:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">theme</span><span class="calepin-syntax-scope-1"> academic</span></code></pre></div><h2 id="build">Build</h2><p>Compile a website directory with the same <code>compile</code> command used for a single Typst document:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">theme</span><span class="calepin-syntax-scope-1"> academic</span></code></pre></div><p>This compiles the website in place: source files are read from <code>my_site/</code>, and generated outputs are written back into <code>my_site/</code>.</p><p>To compile the same source directory somewhere else, pass an output directory as the second path:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/</span></code></pre></div><p>When the input path is a directory, <em>Calepin</em> looks for <code>calepin.toml</code> at the root of that directory. An explicit <code>--config &lt;path></code> supersedes the automatic lookup; if no config is found either way, the build fails.</p><p>By default, website pages render to HTML. Configure PDF output and site settings in <a href="configuration.html">Site configuration</a>.</p><h2 id="serve">Serve</h2><p>Serve the built site locally with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/</span></code></pre></div><p>This is useful for a quick preview after <code>calepin compile</code>. By default, <em>Calepin</em> uses <code>127.0.0.1</code> and the first available port from 8000.</p><p>Use <code>--host</code> and <code>--port</code> when you need a specific address:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/ public/</span></code></pre></div><p>Add <code>--open</code> to launch the served site in your default browser:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/ public/</span></code></pre></div><h2 id="watch">Watch</h2><p>During development, watch the website source directory for changes, and re-compile automatically:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span></code></pre></div><p>As with <code>compile</code>, the first positional argument is the source directory and the optional second positional argument is the output directory. The first build renders the whole site. After that, <em>Calepin</em> hashes each edited page and rebuilds only the pages whose content actually changed; files that were touched but not modified are skipped.</p><p>Changes that can affect more than one page trigger a full rebuild instead. This includes edits to <code>calepin.toml</code>, themes, or assets, pages that are added, removed, or renamed, and edits that change the site navigation or page metadata.</p><p>Add <code>--serve</code> to run the local server while watching; it uses the same <code>--host</code>, <code>--port</code>, and <code>--open</code> options as <code>calepin serve</code>.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span></code></pre></div><h2 id="features">Features</h2><ul><li>Directory builds from Typst source files.</li><li>In-place or separate output directories.</li><li>Sidebar and site menu navigation from configuration or discovered pages.</li><li>HTML output with optional PDF twins.</li><li>Page metadata and <code>calepin.pages()</code> for listings and indexes.</li><li>Multilingual site navigation.</li><li>Static file copying for assets, downloads, and host-specific files.</li><li>Generated <code>sitemap.xml</code> and <code>robots.txt</code>, with template overrides for <code>robots.txt</code>.</li><li>Optional Pagefind search index generation, with cached no-op rebuilds.</li><li>Optional HTML minification, including inline CSS and JavaScript.</li><li>Local serving and incremental watch builds.</li></ul>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -5342,6 +5393,74 @@ html:not([data-theme]) {
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

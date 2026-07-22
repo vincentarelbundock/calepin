@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4394,15 +4445,15 @@ html:not([data-theme]) {
             </nav>
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
-            <h1 id="health-checks">Health checks</h1><p><code>calepin health</code> runs quick diagnostic checks on the current project (notebook or website) and reports anything that could break rendering or execution.</p><p>It checks the following by default:</p><ul><li>executable availability for configured engines and diagram tools</li><li>Python/Jupyter kernel metadata consistency</li><li>local literal links inside <code>.typ</code> files</li><li>local literal images inside <code>.typ</code> files</li><li>missing alt text on literal Typst images</li><li>duplicate explicit page routes from <code>slug</code> and <code>url</code> page metadata</li></ul><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin health [OPTIONS]</code></pre></div><p>Use <code>--json</code> for machine-readable output.</p><h2 id="link-checking">Link checking</h2><p><code>health</code> scans <code>#link("...")</code> literals in Typst source files and verifies targets.</p><ul><li>A bad local target (for example <code>#link("missing.html")</code>) is reported as an <strong></strong>error<strong></strong>.</li><li>External <code>http://</code> and <code>https://</code> links are ignored by default.</li><li>Pass <code>--check-external-links</code> to validate HTTP(S) links too.</li></ul><p>By default, <code>health</code> walks directories recursively from the current directory, ignoring <code>.calepin</code>, <code>.git</code>, <code>target</code>, <code>node_modules</code>, and <code>.venv</code>. You can limit recursion depth with <code>--depth</code>:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin health --depth 2</code></pre></div><p>With recursive links that may refer to generated outputs, run <code>calepin health</code> after a build so referenced pages exist.</p><h2 id="image-checking">Image checking</h2><p><code>health</code> scans literal <code>#image("...")</code> calls in Typst source files. Missing local image files are reported as <strong></strong>errors<strong></strong>. Images without non-empty <code>alt:</code> text are reported as <strong></strong>warnings<strong></strong>.</p><p>Relative image paths are resolved from the source file that contains the image call. Root-relative paths are resolved from the project root. External and special targets such as <code>http://</code>, <code>https://</code>, <code>data:</code>, <code>mailto:</code>, and fragment-only targets are ignored.</p><p>Alt text is considered present when the image call has an <code>alt:</code> argument with a non-empty string or a computed value. These calls pass the accessibility check:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">image</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"assets/chart.png"</span><span class="calepin-syntax-scope-2">,</span> alt<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Line chart of quarterly revenue"</span><span class="calepin-syntax-scope-2">)</span>
+            <h1 id="health-checks">Health checks</h1><p><code>calepin health</code> runs quick diagnostic checks on the current project (notebook or website) and reports anything that could break rendering or execution.</p><p>It checks the following by default:</p><ul><li>executable availability for configured engines and diagram tools</li><li>Python/Jupyter kernel metadata consistency</li><li>local literal links inside <code>.typ</code> files</li><li>local literal images inside <code>.typ</code> files</li><li>missing alt text on literal Typst images</li><li>duplicate explicit page routes from <code>slug</code> and <code>url</code> page metadata</li></ul><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin health [OPTIONS]</code></pre></div><p>Use <code>--json</code> for machine-readable output.</p><h2 id="link-checking">Link checking</h2><p><code>health</code> scans <code>#link("...")</code> literals in Typst source files and verifies targets.</p><ul><li>A bad local target (for example <code>#link("missing.html")</code>) is reported as an <strong></strong>error<strong></strong>.</li><li>External <code>http://</code> and <code>https://</code> links are ignored by default.</li><li>Pass <code>--check-external-links</code> to validate HTTP(S) links too.</li></ul><p>By default, <code>health</code> walks directories recursively from the current directory, ignoring <code>.calepin</code>, <code>.git</code>, <code>target</code>, <code>node_modules</code>, and <code>.venv</code>. You can limit recursion depth with <code>--depth</code>:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin health [OPTIONS]</code></pre></div><p>With recursive links that may refer to generated outputs, run <code>calepin health</code> after a build so referenced pages exist.</p><h2 id="image-checking">Image checking</h2><p><code>health</code> scans literal <code>#image("...")</code> calls in Typst source files. Missing local image files are reported as <strong></strong>errors<strong></strong>. Images without non-empty <code>alt:</code> text are reported as <strong></strong>warnings<strong></strong>.</p><p>Relative image paths are resolved from the source file that contains the image call. Root-relative paths are resolved from the project root. External and special targets such as <code>http://</code>, <code>https://</code>, <code>data:</code>, <code>mailto:</code>, and fragment-only targets are ignored.</p><p>Alt text is considered present when the image call has an <code>alt:</code> argument with a non-empty string or a computed value. These calls pass the accessibility check:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">image</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"assets/chart.png"</span><span class="calepin-syntax-scope-2">,</span> alt<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Line chart of quarterly revenue"</span><span class="calepin-syntax-scope-2">)</span>
 <span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">image</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"assets/logo.svg"</span><span class="calepin-syntax-scope-2">,</span> alt<span class="calepin-syntax-scope-2">:</span> figure_alt<span class="calepin-syntax-scope-2">)</span></code></pre></div><p>These calls produce warnings:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">image</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"assets/chart.png"</span><span class="calepin-syntax-scope-2">)</span>
 <span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">image</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"assets/chart.png"</span><span class="calepin-syntax-scope-2">,</span> alt<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">""</span><span class="calepin-syntax-scope-2">)</span>
 <span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">image</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"assets/chart.png"</span><span class="calepin-syntax-scope-2">,</span> alt<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">none</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><h2 id="page-route-checking">Page route checking</h2><p><code>health</code> scans <code>&lt;website-metadata></code> for literal <code>slug</code> and <code>url</code> values and reports duplicate or unsafe output routes as <strong></strong>errors<strong></strong>. The check compares the rendered HTML route, so pages in different directories can use the same slug as long as they do not write the same output path.</p><p>For example, these two pages collide because they both render to <code>same.html</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>slug<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"same"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span>
 <span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>url<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"same.html"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><p>Routes that escape the output directory are also errors:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>slug<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"../outside"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span>
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>url<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"/absolute/path"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><h2 id="source-scanning">Source scanning</h2><p>Raw Typst code spans and blocks are ignored by source checks, so documentation examples do not need to point at real files.</p><p>The source checks are intentionally conservative: they only inspect literal <code>#link("...")</code>, <code>#image("...")</code>, <code>slug: "..."</code>, and <code>url: "..."</code> values. Dynamic expressions are left to the normal build process.</p><p><code>--strict</code> turns warnings into failures (in addition to errors).</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin health --strict --check-external-links</code></pre></div>
+<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>url<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"/absolute/path"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><h2 id="source-scanning">Source scanning</h2><p>Raw Typst code spans and blocks are ignored by source checks, so documentation examples do not need to point at real files.</p><p>The source checks are intentionally conservative: they only inspect literal <code>#link("...")</code>, <code>#image("...")</code>, <code>slug: "..."</code>, and <code>url: "..."</code> values. Dynamic expressions are left to the normal build process.</p><p><code>--strict</code> turns warnings into failures (in addition to errors).</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin health --depth 2</code></pre></div>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -5344,6 +5395,74 @@ html:not([data-theme]) {
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

@@ -2,20 +2,23 @@
 
 #import "runtime/core/assets.typ" as assets
 #import "runtime/core/config.typ" as runtimeconfig
-#import "runtime/core/state.typ" as state
+#import "runtime/core/pages.typ" as pagesmod
 #import "runtime/core/target.typ" as target
+#import "runtime/notebook/chunk-support.typ" as chunksupport
+#import "runtime/notebook/code.typ" as code
+#import "runtime/notebook/defaults.typ" as defaults
 #import "runtime/notebook/render.typ" as render
 #import "runtime/notebook/options.typ" as options
 #import "runtime/notebook/chunk.typ" as chunks
 #import "runtime/elements/mod.typ" as elementmod
 
-#let pages = state.pages
+#let pages = pagesmod.pages
 #let setup = options.setup
 #let chunk = chunks.chunk
 #let inline = chunks.inline
 #let results = chunks.results
 #let chunk_from_raw_plain = chunks.chunk_from_raw_plain
-#let code-block = render.code-block
+#let code-block = code.code-block
 #let elements = elementmod
 #let asset-href = assets._resolve-asset-href
 
@@ -25,13 +28,13 @@
   show raw.where(block: true, theme: auto): it => {
     let lang = if it.has("lang") { it.lang } else { none }
     if chunks._disable-raw-chunk-transforms.get() {
-      render._html-themed-raw-block(it)
+      code._html-themed-raw-block(it)
     } else if lang in ("typ", "typst") {
-      chunks._without-raw-chunk-transforms(() => render._html-themed-raw-block(it))
+      chunks._without-raw-chunk-transforms(() => code._html-themed-raw-block(it))
     } else if lang != none and raw-langs.contains(lang) {
       chunks._chunk-from-raw-plain(config, lang, it)
     } else {
-      render._html-themed-raw-block(it)
+      code._html-themed-raw-block(it)
     }
   }
   body
@@ -42,13 +45,13 @@
 #let bind(config) = {
   let config = runtimeconfig._runtime-config(bound: config)
   (
-    pages: state.pages,
+    pages: pagesmod.pages,
     setup: options.setup,
     chunk: (..args) => chunks._chunk(config, ..args),
     inline: (engine, body, ..args) => chunks._inline(config, engine, body, ..args),
     results: (..args) => chunks._results(config, ..args),
     chunk_from_raw_plain: (engine, body) => chunks._chunk-from-raw-plain(config, engine, body),
-    code-block: render.code-block,
+    code-block: code.code-block,
     elements: elementmod.bind(config),
     asset-href: (path) => assets._resolve-asset-href(path, config: config),
     document: body => _document(config, body),
@@ -60,10 +63,10 @@
 #let _is-paged = target._is-paged
 #let _is-query = target._is-query
 #let _is-render = target._is-render
-#let _call-defaults = state._call-defaults
-#let _disable-raw-chunk-transforms = state._disable-raw-chunk-transforms
+#let _call-defaults = defaults._call-defaults
+#let _disable-raw-chunk-transforms = chunksupport._disable-raw-chunk-transforms
 #let _resolve-options = options._resolve-options
-#let _html-themed-raw-block = render._html-themed-raw-block
+#let _html-themed-raw-block = code._html-themed-raw-block
 #let _without-raw-chunk-transforms = chunks._without-raw-chunk-transforms
 #let _fenced-chunks-runs = chunks._fenced-chunks-runs
 #let _resolve-asset-href = assets._resolve-asset-href

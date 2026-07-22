@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4127,7 +4178,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#import \"/.calepin/calepin.typ\" as calepin\n\n#set document(title: [Code execution])\n#metadata((tags: (\"notebooks\", \"code execution\"))) <website-metadata>\n\n#calepin.setup(\n  echo: true,\n  eval: true,\n  results: \"verbatim\",\n)\n\n#title()\n\nThis page is the reference for controlling how _Calepin_ runs chunks and displays their output. If you are starting from scratch, read #link(\"notebooks.html\")[Notebooks] first for the basic document structure, runtime import, code chunks, and inline results.\n\n= Execution model\n\n_Calepin_ collects executable chunks before Typst renders the document, runs them, writes their results to `.calepin`, and then asks Typst to render with those results available. Each programming language runs in a persistent session for the duration of the document build, so objects created in one chunk are available in later chunks with the same engine.\n\nUse chunk options when you need to change what runs, what is shown, or where the output appears.\n\nTo extract the source chunks into separate language-specific files without\nrunning them, use `calepin compile document.typ --format script`. See\n#link(\"../compile_watch_serve.html#extract-scripts\")[Extract scripts] for output\ntemplates and extension rules.\n\n= Output elsewhere\n\nSometimes you want to run a chunk in one place but show its result somewhere else. Set `results: \"hide\"` so the chunk runs without showing anything where it is written, give it a `label`, then print its output later with `#calepin.results`:\n\n````typ\n#calepin.chunk(\"python\", label: \"summary\", echo: false, results: \"hide\")[\n```python\ntotal = 40 + 2\nprint(f\"The total is {total}.\")\n```\n]\n\nRun live, the chunk above shows nothing where it is defined, and its output appears here on request:\n\n#calepin.results(\"summary\")\n````\n\n`#calepin.results(\"summary\")` prints that chunk's full output: text, figures, warnings, everything it would have shown in place. You can put the call before or after the chunk, and you can call it more than once to repeat the output.\n\nWhen the chunk produces a cross-referenced figure or table (a `fig-`, `tbl-`, or `lst-` label), the `@label` reference points to where the figure is shown: the chunk's own position when it is visible, or the relocation when the chunk is hidden. Printing the same figure in more than one place and then referencing it is ambiguous, so Typst reports an error.\n\nRun live, the hidden chunk below shows nothing where it is defined, and its output is printed on request:\n\n#calepin.chunk(\"python\", label: \"summary\", echo: false, results: \"hide\")[\n```python\ntotal = 40 + 2\nprint(f\"The total is {total}.\")\n```\n]\n#calepin.results(\"summary\")\n\n= Supported languages\n\n_Calepin_ has built-in engines for *Python* and *R*, and built-in diagram engines for *Mermaid*, *Graphviz DOT*, *TikZ*, and *D2*.\n\nAny language with a #link(\"https://github.com/jupyter/jupyter/wiki/Jupyter-kernels\")[Jupyter kernel] also works: use the kernel name as the block language. Popular examples include *Bash* (`bash`), *Julia* (`julia`), *Octave* (`octave`), *Gnuplot* (`gnuplot`), and *Ruby* (`ruby`). Install kernels as described in the #link(\"../getting-started/install.html#jupyter-support\")[Jupyter install section].\n\nRun `jupyter kernelspec list` to see what is registered. Whatever name appears there can be used as a block language directly:\n\n````typ\n```bash\necho \"hello from bash\"\n```\n````\n\n= Options\n\nOptions can be set in three places: as document-wide defaults, as arguments to one chunk, or as `#|` header lines inside a block.\n\n== Document defaults\n\n`#calepin.setup` sets defaults for every chunk in the document:\n\n````typ\n#calepin.setup(echo: true, eval: true, results: \"verbatim\")\n````\n\n== Chunk arguments\n\n`#calepin.chunk(...)` overrides options for a single chunk. Pass the body as a fenced block and _Calepin_ infers the engine from the fence:\n\n````typ\n#calepin.chunk(echo: false, results: \"typst\")[\n```python\nprint(\"#strong[42 in Typst]\")\n```\n]\n````\n\n#calepin.chunk(echo: false, results: \"typst\")[\n```python\nprint(\"#strong[42 in Typst]\")\n```\n]\n\n== `#|` header lines\n\nYou can also place options at the top of a plain fenced block, one per line, each prefixed with `#|`:\n\n````typ\n```r\n#| echo: false\n#| fig-align: right\nplot(mpg ~ hp, data = mtcars)\n```\n````\n\nThe `#|` form keeps options next to the code. Its downside is outside _Calepin_: compiling the `.typ` file directly with `typst` shows the `#|` lines as text inside the code block, while options passed to `#calepin.chunk(...)` do not.\n\n= Options reference\n\n== Global and chunk options\n\nThese options can be set in `#calepin.setup` as document-wide defaults and overridden per chunk.\n\n#table(\n  columns: (1.5fr, 0.9fr, 2.2fr),\n  stroke: none,\n  inset: 0.55em,\n  [*Option*], [*Default*], [*Meaning*],\n  [echo], [`true`], [Show the chunk's source code in the rendered document.],\n  [eval], [`true`], [Execute the code. When `false`, nothing runs and no output is produced (the source can still be shown via `echo`).],\n  [error], [`false`], [When `true`, capture an execution error and render it as output. When `false`, an error in the chunk aborts the build.],\n  [warning], [`true`], [Include warnings emitted by the engine in the output. When `false`, they are suppressed.],\n  [message], [`true`], [Include informational messages emitted by the engine (for example R's `message()` output). When `false`, they are suppressed.],\n  [results], [`\"render\"`], [How results are shown: `render` (pretty display of values, images, and tables), `verbatim` (raw output in a code block), `typst` (treat output text as Typst markup and render it), or `hide` (run the code but omit its output).],\n  [fig-device-format], [`\"svg\"`], [Format for figure files written by the engine: `svg`, `png`, `jpeg` (alias `jpg`), or `pdf`. Diagram engines always emit `svg` regardless of this setting.],\n  [fig-device-dpi], [`150`], [Resolution in dots per inch for raster formats (`png`, `jpeg`). Ignored for vector formats (`svg`, `pdf`).],\n  [fig-device-width], [`6`], [Width of the plotting device, in inches.],\n  [fig-device-height], [`\"auto\"`], [Height of the plotting device, in inches. `auto` derives it from the width and `fig-device-aspect`.],\n  [fig-device-aspect], [`0.618`], [Height-to-width ratio used when `fig-device-height` is `auto`: device height = `fig-device-width` × `fig-device-aspect`.],\n  [fig-width], [`\"70%\"`], [Width of the figure as rendered in the document. Accepts a Typst length or ratio (for example `70%` or `12cm`) or `auto`.],\n  [fig-height], [`\"auto\"`], [Height of the figure as rendered in the document. Accepts a Typst length or `auto`.],\n  [fig-align], [`\"center\"`], [Horizontal alignment of the figure in the document: `left`, `center`, or `right`.],\n  [fig-responsive], [`true`], [HTML output only: allow the figure to shrink to fit narrow viewports (sets `max-width: 100%`). No effect on paged output.],\n)\n\n== Chunk-only options\n\nThese options are understood only on individual chunks; they are not valid keys in `#calepin.setup`. The caption and layout options live here because they apply to one chunk's specific output.\n\n#table(\n  columns: (1.2fr, 0.9fr, 2.0fr),\n  stroke: none,\n  inset: 0.55em,\n  [*Option*], [*Default*], [*Meaning*],\n  [engine], [inferred], [Force the engine for this chunk instead of inferring it from the fence or surrounding context.],\n  [body], [from fence], [Provide the raw code body directly instead of writing a fenced block.],\n  [label], [auto], [Assign a stable chunk identifier used for cross-references and result lookup.],\n  [fig-caption], [`none`], [Caption text for the figure. When set, the output is wrapped in a numbered `figure` that can be cross-referenced.],\n  [fig-cap-location], [`\"auto\"`], [Where the caption sits relative to the figure: `top`, `bottom`, or `margin`. `auto` uses Typst's default placement.],\n  [fig-alt-text], [`none`], [Accessibility (alt) text for generated images. Empty when unset.],\n  [fig-subcaptions], [`none`], [Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).],\n  [fig-layout-columns], [`\"auto\"`], [Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or `auto` to choose a count from the number of images.],\n  [fig-layout-rows], [`\"auto\"`], [Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or `auto`.],\n)\n\n= Quarto-style names\n\nChunk options have different names in _Calepin_ and Quarto. Some Quarto aliases are accepted, but using them is not recommended, and _Calepin_ emits a warning when it meets an unsupported name. The accepted aliases are:\n\n- `out-width` maps to `fig-width`\n- `out-height` maps to `fig-height`\n- `out-align` maps to `fig-align`\n- `fig-alt` maps to `fig-alt-text`\n- `fig-subcap` maps to `fig-subcaptions`\n- `fig-format` maps to `fig-device-format`\n- `fig-dpi` maps to `fig-device-dpi`\n- `layout-ncol` maps to `fig-layout-columns`\n- `layout-nrow` maps to `fig-layout-rows`\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#import \"/.calepin/calepin.typ\" as calepin\n\n#set document(title: [Code execution])\n#metadata((tags: (\"notebooks\", \"code execution\"))) <website-metadata>\n\n#calepin.setup(\n  echo: true,\n  eval: true,\n  results: \"verbatim\",\n)\n\n#title()\n\nThis page is the reference for controlling how _Calepin_ runs chunks and displays their output. If you are starting from scratch, read #link(\"notebooks.html\")[Notebooks] first for the basic document structure, runtime import, code chunks, and inline results.\n\n= Execution model\n\n_Calepin_ collects executable chunks before Typst renders the document, runs them, writes their results to `.calepin`, and then asks Typst to render with those results available. Each programming language runs in a persistent session for the duration of the document build, so objects created in one chunk are available in later chunks with the same engine.\n\nUse chunk options when you need to change what runs, what is shown, or where the output appears.\n\nTo extract the source chunks into separate language-specific files without\nrunning them, use `calepin compile document.typ --format script`. See\n#link(\"../compile_watch_serve.html#extract-scripts\")[Extract scripts] for output\ntemplates and extension rules.\n\n= Output elsewhere\n\nSometimes you want to run a chunk in one place but show its result somewhere else. Set `results: \"hide\"` so the chunk runs without showing anything where it is written, give it a `label`, then print its output later with `#calepin.results`:\n\n````typ\n#calepin.chunk(\"python\", label: \"summary\", echo: false, results: \"hide\")[\n```python\ntotal = 40 + 2\nprint(f\"The total is {total}.\")\n```\n]\n\nRun live, the chunk above shows nothing where it is defined, and its output appears here on request:\n\n#calepin.results(\"summary\")\n````\n\n`#calepin.results(\"summary\")` prints that chunk's full output: text, figures, warnings, everything it would have shown in place. You can put the call before or after the chunk, and you can call it more than once to repeat the output.\n\nWhen the chunk produces a cross-referenced figure or table (a `fig-`, `tbl-`, or `lst-` label), the `@label` reference points to where the figure is shown: the chunk's own position when it is visible, or the relocation when the chunk is hidden. Printing the same figure in more than one place and then referencing it is ambiguous, so Typst reports an error.\n\nRun live, the hidden chunk below shows nothing where it is defined, and its output is printed on request:\n\n#calepin.chunk(\"python\", label: \"summary\", echo: false, results: \"hide\")[\n```python\ntotal = 40 + 2\nprint(f\"The total is {total}.\")\n```\n]\n#calepin.results(\"summary\")\n\n= Supported languages\n\n_Calepin_ has built-in engines for *Python* and *R*, and built-in diagram engines for *Mermaid*, *Graphviz DOT*, *TikZ*, and *D2*.\n\nAny language with a #link(\"https://github.com/jupyter/jupyter/wiki/Jupyter-kernels\")[Jupyter kernel] also works: use the kernel name as the block language. Popular examples include *Bash* (`bash`), *Julia* (`julia`), *Octave* (`octave`), *Gnuplot* (`gnuplot`), and *Ruby* (`ruby`). Install kernels as described in the #link(\"../getting-started/install.html#jupyter-support\")[Jupyter install section].\n\nRun `jupyter kernelspec list` to see what is registered. Whatever name appears there can be used as a block language directly:\n\n````typ\n```bash\necho \"hello from bash\"\n```\n````\n\n= Options\n\nOptions can be set in three places: as document-wide defaults, as arguments to one chunk, or as `#|` header lines inside a block.\n\n== Document defaults\n\n`#calepin.setup` sets defaults for every chunk in the document:\n\n````typ\n#calepin.setup(echo: true, eval: true, results: \"verbatim\")\n````\n\n== Chunk arguments\n\n`#calepin.chunk(...)` overrides options for a single chunk. Pass the body as a fenced block and _Calepin_ infers the engine from the fence:\n\n````typ\n#calepin.chunk(echo: false, results: \"typst\")[\n```python\nprint(\"#strong[42 in Typst]\")\n```\n]\n````\n\n#calepin.chunk(echo: false, results: \"typst\")[\n```python\nprint(\"#strong[42 in Typst]\")\n```\n]\n\n== `#|` header lines\n\nYou can also place options at the top of a plain fenced block, one per line, each prefixed with `#|`:\n\n````typ\n```r\n#| echo: false\n#| fig-align: right\nplot(mpg ~ hp, data = mtcars)\n```\n````\n\nThe `#|` form keeps options next to the code. Its downside is outside _Calepin_: compiling the `.typ` file directly with `typst` shows the `#|` lines as text inside the code block, while options passed to `#calepin.chunk(...)` do not.\n\n= Options reference\n\n== Global and chunk options\n\nThese options can be set in `#calepin.setup` as document-wide defaults and overridden per chunk.\n\n#table(\n  columns: (1.5fr, 0.9fr, 2.2fr),\n  stroke: none,\n  inset: 0.55em,\n  [*Option*], [*Default*], [*Meaning*],\n  [echo], [`true`], [Show the chunk's source code in the rendered document.],\n  [eval], [`true`], [Execute the code. When `false`, nothing runs and no output is produced (the source can still be shown via `echo`).],\n  [error], [`false`], [When `true`, capture an execution error and render it as output. When `false`, an error in the chunk aborts the build.],\n  [warning], [`true`], [Include warnings emitted by the engine in the output. When `false`, they are suppressed.],\n  [message], [`true`], [Include informational messages emitted by the engine (for example R's `message()` output). When `false`, they are suppressed.],\n  [results], [`\"render\"`], [How results are shown: `render` (pretty display of values, images, and tables), `verbatim` (raw output in a code block), `typst` (treat output text as Typst markup and render it), or `hide` (run the code but omit its output).],\n  [fig-device-format], [`\"svg\"`], [Format for figure files written by the engine: `svg`, `png`, `jpeg` (alias `jpg`), or `pdf`. Diagram engines always emit `svg` regardless of this setting.],\n  [fig-device-dpi], [`150`], [Resolution in dots per inch for raster formats (`png`, `jpeg`). Ignored for vector formats (`svg`, `pdf`).],\n  [fig-device-width], [`6`], [Width of the plotting device, in inches.],\n  [fig-device-height], [`\"auto\"`], [Height of the plotting device, in inches. `auto` derives it from the width and `fig-device-aspect`.],\n  [fig-device-aspect], [`0.618`], [Height-to-width ratio used when `fig-device-height` is `auto`: device height = `fig-device-width` × `fig-device-aspect`.],\n  [fig-width], [`\"70%\"`], [Width of the figure as rendered in the document. Accepts a Typst length or ratio (for example `70%` or `12cm`) or `auto`.],\n  [fig-height], [`\"auto\"`], [Height of the figure as rendered in the document. Accepts a Typst length or `auto`.],\n  [fig-align], [`\"center\"`], [Horizontal alignment of the figure in the document: `left`, `center`, or `right`.],\n  [fig-responsive], [`true`], [HTML output only: allow the figure to shrink to fit narrow viewports (sets `max-width: 100%`). No effect on paged output.],\n)\n\n== Additional chunk options\n\n`engine`, `body`, and `label` apply only to individual chunks. The figure caption, link, accessibility, and layout options can also be passed to `#calepin.setup` when every figure should share a document-wide default. Pass `none` on one chunk to clear an inherited caption, link, alt text, subcaption, or optional layout value for that chunk.\n\n#table(\n  columns: (1.2fr, 0.9fr, 2.0fr),\n  stroke: none,\n  inset: 0.55em,\n  [*Option*], [*Default*], [*Meaning*],\n  [engine], [inferred], [Force the engine for this chunk instead of inferring it from the fence or surrounding context.],\n  [body], [from fence], [Provide the raw code body directly instead of writing a fenced block.],\n  [label], [auto], [Assign a stable chunk identifier used for cross-references and result lookup.],\n  [fig-link], [`none`], [Wrap the rendered figure in a link to this URL.],\n  [fig-caption], [`none`], [Caption text for the figure. When set, the output is wrapped in a numbered `figure` that can be cross-referenced.],\n  [fig-cap-location], [`\"auto\"`], [Where the caption sits relative to the figure: `top`, `bottom`, or `margin`. `auto` uses Typst's default placement.],\n  [fig-alt-text], [`none`], [Accessibility (alt) text for generated images. Empty when unset.],\n  [fig-subcaptions], [`none`], [Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).],\n  [fig-layout-columns], [`\"auto\"`], [Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or `auto` to choose a count from the number of images.],\n  [fig-layout-rows], [`\"auto\"`], [Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or `auto`.],\n  [kind], [`none`], [Compatibility metadata carried with the chunk's display options. It is accepted in Quarto-style headers but does not currently change rendering.],\n)\n\n= Quarto-style names\n\nChunk options have different names in _Calepin_ and Quarto. Some Quarto aliases are accepted, but using them is not recommended, and _Calepin_ emits a warning when it meets an unsupported name. The accepted aliases are:\n\n- `out-width` maps to `fig-width`\n- `out-height` maps to `fig-height`\n- `out-align` maps to `fig-align`\n- `fig-alt` maps to `fig-alt-text`\n- `fig-subcap` maps to `fig-subcaptions`\n- `fig-format` maps to `fig-device-format`\n- `fig-dpi` maps to `fig-device-dpi`\n- `layout-ncol` maps to `fig-layout-columns`\n- `layout-nrow` maps to `fig-layout-rows`\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4413,10 +4464,10 @@ print("#strong[42 in Typst]")
 #| echo: false
 #| fig-align: right
 plot(mpg ~ hp, data = mtcars)
-```</code></pre></div><p>The <code>#|</code> form keeps options next to the code. Its downside is outside <em>Calepin</em>: compiling the <code>.typ</code> file directly with <code>typst</code> shows the <code>#|</code> lines as text inside the code block, while options passed to <code>#calepin.chunk(...)</code> do not.</p><h2 id="options-reference">Options reference</h2><h3 id="global-and-chunk-options">Global and chunk options</h3><p>These options can be set in <code>#calepin.setup</code> as document-wide defaults and overridden per chunk.</p><table><tr><td><strong>Option</strong></td><td><strong>Default</strong></td><td><strong>Meaning</strong></td></tr><tr><td>echo</td><td><code>true</code></td><td>Show the chunk’s source code in the rendered document.</td></tr><tr><td>eval</td><td><code>true</code></td><td>Execute the code. When <code>false</code>, nothing runs and no output is produced (the source can still be shown via <code>echo</code>).</td></tr><tr><td>error</td><td><code>false</code></td><td>When <code>true</code>, capture an execution error and render it as output. When <code>false</code>, an error in the chunk aborts the build.</td></tr><tr><td>warning</td><td><code>true</code></td><td>Include warnings emitted by the engine in the output. When <code>false</code>, they are suppressed.</td></tr><tr><td>message</td><td><code>true</code></td><td>Include informational messages emitted by the engine (for example R’s <code>message()</code> output). When <code>false</code>, they are suppressed.</td></tr><tr><td>results</td><td><code>"render"</code></td><td>How results are shown: <code>render</code> (pretty display of values, images, and tables), <code>verbatim</code> (raw output in a code block), <code>typst</code> (treat output text as Typst markup and render it), or <code>hide</code> (run the code but omit its output).</td></tr><tr><td>fig-device-format</td><td><code>"svg"</code></td><td>Format for figure files written by the engine: <code>svg</code>, <code>png</code>, <code>jpeg</code> (alias <code>jpg</code>), or <code>pdf</code>. Diagram engines always emit <code>svg</code> regardless of this setting.</td></tr><tr><td>fig-device-dpi</td><td><code>150</code></td><td>Resolution in dots per inch for raster formats (<code>png</code>, <code>jpeg</code>). Ignored for vector formats (<code>svg</code>, <code>pdf</code>).</td></tr><tr><td>fig-device-width</td><td><code>6</code></td><td>Width of the plotting device, in inches.</td></tr><tr><td>fig-device-height</td><td><code>"auto"</code></td><td>Height of the plotting device, in inches. <code>auto</code> derives it from the width and <code>fig-device-aspect</code>.</td></tr><tr><td>fig-device-aspect</td><td><code>0.618</code></td><td>Height-to-width ratio used when <code>fig-device-height</code> is <code>auto</code>: device height = <code>fig-device-width</code> × <code>fig-device-aspect</code>.</td></tr><tr><td>fig-width</td><td><code>"70%"</code></td><td>Width of the figure as rendered in the document. Accepts a Typst length or ratio (for example <code>70%</code> or <code>12cm</code>) or <code>auto</code>.</td></tr><tr><td>fig-height</td><td><code>"auto"</code></td><td>Height of the figure as rendered in the document. Accepts a Typst length or <code>auto</code>.</td></tr><tr><td>fig-align</td><td><code>"center"</code></td><td>Horizontal alignment of the figure in the document: <code>left</code>, <code>center</code>, or <code>right</code>.</td></tr><tr><td>fig-responsive</td><td><code>true</code></td><td>HTML output only: allow the figure to shrink to fit narrow viewports (sets <code>max-width: 100%</code>). No effect on paged output.</td></tr></table><h3 id="chunk-only-options">Chunk-only options</h3><p>These options are understood only on individual chunks; they are not valid keys in <code>#calepin.setup</code>. The caption and layout options live here because they apply to one chunk’s specific output.</p><table><tr><td><strong>Option</strong></td><td><strong>Default</strong></td><td><strong>Meaning</strong></td></tr><tr><td>engine</td><td>inferred</td><td>Force the engine for this chunk instead of inferring it from the fence or surrounding context.</td></tr><tr><td>body</td><td>from fence</td><td>Provide the raw code body directly instead of writing a fenced block.</td></tr><tr><td>label</td><td>auto</td><td>Assign a stable chunk identifier used for cross-references and result lookup.</td></tr><tr><td>fig-caption</td><td><code>none</code></td><td>Caption text for the figure. When set, the output is wrapped in a numbered <code>figure</code> that can be cross-referenced.</td></tr><tr><td>fig-cap-location</td><td><code>"auto"</code></td><td>Where the caption sits relative to the figure: <code>top</code>, <code>bottom</code>, or <code>margin</code>. <code>auto</code> uses Typst’s default placement.</td></tr><tr><td>fig-alt-text</td><td><code>none</code></td><td>Accessibility (alt) text for generated images. Empty when unset.</td></tr><tr><td>fig-subcaptions</td><td><code>none</code></td><td>Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).</td></tr><tr><td>fig-layout-columns</td><td><code>"auto"</code></td><td>Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or <code>auto</code> to choose a count from the number of images.</td></tr><tr><td>fig-layout-rows</td><td><code>"auto"</code></td><td>Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or <code>auto</code>.</td></tr></table><h2 id="quarto-style-names">Quarto-style names</h2><p>Chunk options have different names in <em>Calepin</em> and Quarto. Some Quarto aliases are accepted, but using them is not recommended, and <em>Calepin</em> emits a warning when it meets an unsupported name. The accepted aliases are:</p><ul><li><code>out-width</code> maps to <code>fig-width</code></li><li><code>out-height</code> maps to <code>fig-height</code></li><li><code>out-align</code> maps to <code>fig-align</code></li><li><code>fig-alt</code> maps to <code>fig-alt-text</code></li><li><code>fig-subcap</code> maps to <code>fig-subcaptions</code></li><li><code>fig-format</code> maps to <code>fig-device-format</code></li><li><code>fig-dpi</code> maps to <code>fig-device-dpi</code></li><li><code>layout-ncol</code> maps to <code>fig-layout-columns</code></li><li><code>layout-nrow</code> maps to <code>fig-layout-rows</code></li></ul>
+```</code></pre></div><p>The <code>#|</code> form keeps options next to the code. Its downside is outside <em>Calepin</em>: compiling the <code>.typ</code> file directly with <code>typst</code> shows the <code>#|</code> lines as text inside the code block, while options passed to <code>#calepin.chunk(...)</code> do not.</p><h2 id="options-reference">Options reference</h2><h3 id="global-and-chunk-options">Global and chunk options</h3><p>These options can be set in <code>#calepin.setup</code> as document-wide defaults and overridden per chunk.</p><table><tr><td><strong>Option</strong></td><td><strong>Default</strong></td><td><strong>Meaning</strong></td></tr><tr><td>echo</td><td><code>true</code></td><td>Show the chunk’s source code in the rendered document.</td></tr><tr><td>eval</td><td><code>true</code></td><td>Execute the code. When <code>false</code>, nothing runs and no output is produced (the source can still be shown via <code>echo</code>).</td></tr><tr><td>error</td><td><code>false</code></td><td>When <code>true</code>, capture an execution error and render it as output. When <code>false</code>, an error in the chunk aborts the build.</td></tr><tr><td>warning</td><td><code>true</code></td><td>Include warnings emitted by the engine in the output. When <code>false</code>, they are suppressed.</td></tr><tr><td>message</td><td><code>true</code></td><td>Include informational messages emitted by the engine (for example R’s <code>message()</code> output). When <code>false</code>, they are suppressed.</td></tr><tr><td>results</td><td><code>"render"</code></td><td>How results are shown: <code>render</code> (pretty display of values, images, and tables), <code>verbatim</code> (raw output in a code block), <code>typst</code> (treat output text as Typst markup and render it), or <code>hide</code> (run the code but omit its output).</td></tr><tr><td>fig-device-format</td><td><code>"svg"</code></td><td>Format for figure files written by the engine: <code>svg</code>, <code>png</code>, <code>jpeg</code> (alias <code>jpg</code>), or <code>pdf</code>. Diagram engines always emit <code>svg</code> regardless of this setting.</td></tr><tr><td>fig-device-dpi</td><td><code>150</code></td><td>Resolution in dots per inch for raster formats (<code>png</code>, <code>jpeg</code>). Ignored for vector formats (<code>svg</code>, <code>pdf</code>).</td></tr><tr><td>fig-device-width</td><td><code>6</code></td><td>Width of the plotting device, in inches.</td></tr><tr><td>fig-device-height</td><td><code>"auto"</code></td><td>Height of the plotting device, in inches. <code>auto</code> derives it from the width and <code>fig-device-aspect</code>.</td></tr><tr><td>fig-device-aspect</td><td><code>0.618</code></td><td>Height-to-width ratio used when <code>fig-device-height</code> is <code>auto</code>: device height = <code>fig-device-width</code> × <code>fig-device-aspect</code>.</td></tr><tr><td>fig-width</td><td><code>"70%"</code></td><td>Width of the figure as rendered in the document. Accepts a Typst length or ratio (for example <code>70%</code> or <code>12cm</code>) or <code>auto</code>.</td></tr><tr><td>fig-height</td><td><code>"auto"</code></td><td>Height of the figure as rendered in the document. Accepts a Typst length or <code>auto</code>.</td></tr><tr><td>fig-align</td><td><code>"center"</code></td><td>Horizontal alignment of the figure in the document: <code>left</code>, <code>center</code>, or <code>right</code>.</td></tr><tr><td>fig-responsive</td><td><code>true</code></td><td>HTML output only: allow the figure to shrink to fit narrow viewports (sets <code>max-width: 100%</code>). No effect on paged output.</td></tr></table><h3 id="additional-chunk-options">Additional chunk options</h3><p><code>engine</code>, <code>body</code>, and <code>label</code> apply only to individual chunks. The figure caption, link, accessibility, and layout options can also be passed to <code>#calepin.setup</code> when every figure should share a document-wide default. Pass <code>none</code> on one chunk to clear an inherited caption, link, alt text, subcaption, or optional layout value for that chunk.</p><table><tr><td><strong>Option</strong></td><td><strong>Default</strong></td><td><strong>Meaning</strong></td></tr><tr><td>engine</td><td>inferred</td><td>Force the engine for this chunk instead of inferring it from the fence or surrounding context.</td></tr><tr><td>body</td><td>from fence</td><td>Provide the raw code body directly instead of writing a fenced block.</td></tr><tr><td>label</td><td>auto</td><td>Assign a stable chunk identifier used for cross-references and result lookup.</td></tr><tr><td>fig-link</td><td><code>none</code></td><td>Wrap the rendered figure in a link to this URL.</td></tr><tr><td>fig-caption</td><td><code>none</code></td><td>Caption text for the figure. When set, the output is wrapped in a numbered <code>figure</code> that can be cross-referenced.</td></tr><tr><td>fig-cap-location</td><td><code>"auto"</code></td><td>Where the caption sits relative to the figure: <code>top</code>, <code>bottom</code>, or <code>margin</code>. <code>auto</code> uses Typst’s default placement.</td></tr><tr><td>fig-alt-text</td><td><code>none</code></td><td>Accessibility (alt) text for generated images. Empty when unset.</td></tr><tr><td>fig-subcaptions</td><td><code>none</code></td><td>Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).</td></tr><tr><td>fig-layout-columns</td><td><code>"auto"</code></td><td>Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or <code>auto</code> to choose a count from the number of images.</td></tr><tr><td>fig-layout-rows</td><td><code>"auto"</code></td><td>Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or <code>auto</code>.</td></tr><tr><td>kind</td><td><code>none</code></td><td>Compatibility metadata carried with the chunk’s display options. It is accepted in Quarto-style headers but does not currently change rendering.</td></tr></table><h2 id="quarto-style-names">Quarto-style names</h2><p>Chunk options have different names in <em>Calepin</em> and Quarto. Some Quarto aliases are accepted, but using them is not recommended, and <em>Calepin</em> emits a warning when it meets an unsupported name. The accepted aliases are:</p><ul><li><code>out-width</code> maps to <code>fig-width</code></li><li><code>out-height</code> maps to <code>fig-height</code></li><li><code>out-align</code> maps to <code>fig-align</code></li><li><code>fig-alt</code> maps to <code>fig-alt-text</code></li><li><code>fig-subcap</code> maps to <code>fig-subcaptions</code></li><li><code>fig-format</code> maps to <code>fig-device-format</code></li><li><code>fig-dpi</code> maps to <code>fig-device-dpi</code></li><li><code>layout-ncol</code> maps to <code>fig-layout-columns</code></li><li><code>layout-nrow</code> maps to <code>fig-layout-rows</code></li></ul>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -4439,7 +4490,7 @@ plot(mpg ~ hp, data = mtcars)
                     
                     <li class="level-3"><a href="#global-and-chunk-options">Global and chunk options</a></li>
                     
-                    <li class="level-3"><a href="#chunk-only-options">Chunk-only options</a></li>
+                    <li class="level-3"><a href="#additional-chunk-options">Additional chunk options</a></li>
                     
                     <li class="level-2"><a href="#quarto-style-names">Quarto-style names</a></li>
                     
@@ -5372,6 +5423,74 @@ plot(mpg ~ hp, data = mtcars)
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

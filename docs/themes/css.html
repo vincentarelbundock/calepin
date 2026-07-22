@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4410,38 +4461,56 @@ html:not([data-theme]) {
 
 <span class="calepin-syntax-scope-67">pre</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-23">border</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">1</span><span class="calepin-syntax-scope-7">px</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">solid</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-10">var</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-border</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">;</span>
-<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>In Calepin HTML output, <code>#title()</code> is rendered as the page <code>&lt;h1></code>, so the first Typst heading <code>=</code> becomes <code>&lt;h2></code>, <code>==</code> as <code>&lt;h3></code>, and so on. If you target heading selectors in CSS, use this mapping unless your theme remaps heading markup.</p><h2 id="light-and-dark-themes">Light and dark themes</h2><p>To define distinct values for light and dark mode, use <code>html[data-theme="light"]</code> and <code>html[data-theme="dark"]</code> selectors in your local theme stylesheet:</p><div class="sourceCode" data-lang="css"><pre><code data-lang="css"><span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-69">data-theme</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">light</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
+<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>In Calepin HTML output, <code>#title()</code> is rendered as the page <code>&lt;h1></code>, so the first Typst heading <code>=</code> becomes <code>&lt;h2></code>, <code>==</code> as <code>&lt;h3></code>, and so on. If you target heading selectors in CSS, use this mapping unless your theme remaps heading markup.</p><h2 id="light-and-dark-themes">Light and dark themes</h2><p>To define distinct values for light and dark mode, use <code>html[data-theme="light"]</code> and <code>html[data-theme="dark"]</code> selectors in your local theme stylesheet:</p><div class="sourceCode" data-lang="css"><pre><code data-lang="css"><span class="calepin-syntax-scope-3">/*</span><span class="calepin-syntax-scope-3"> themes/my-theme/css/custom.css </span><span class="calepin-syntax-scope-3">*/</span>
+<span class="calepin-syntax-scope-2">:</span><span class="calepin-syntax-scope-1">root</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-background</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">f6f7f9</span><span class="calepin-syntax-scope-2">;</span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-text</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">111827</span><span class="calepin-syntax-scope-2">;</span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">2563eb</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-border</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">d1d5db</span><span class="calepin-syntax-scope-2">;</span>
 <span class="calepin-syntax-scope-2">}</span>
 
-<span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-69">data-theme</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">dark</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-background</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">101826</span><span class="calepin-syntax-scope-2">;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-text</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">f8fafc</span><span class="calepin-syntax-scope-2">;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">60a5fa</span><span class="calepin-syntax-scope-2">;</span>
-<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>Calepin sets <code>html[data-theme="light"]</code> or <code>html[data-theme="dark"]</code> when the theme toggle is forced by user preference, explicit control, or URL/state storage. If no explicit mode is set, the browser preference is used for initial mode.</p><h2 id="style-raw-html">Style raw HTML</h2><p>Use a local theme that extends <code>typst</code> when you want a simple, unstyled HTML base.</p><p>Create a directory with a manifest, a layout, and a stylesheet:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">raw/
-  theme.toml
-  layouts/
-    document.html
-  css/
-    raw.css</code></pre></div><p>Edit the manifest <code>raw/theme.toml</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">typst</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Edit <code>raw/layouts/document.html</code> to wrap Typst’s generated HTML and inline the theme CSS files:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{{ doc.head }}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">meta</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">charset</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">UTF-8</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ doc.title }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  {% for file in css %}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">{ </span><span class="calepin-syntax-scope-1">file</span><span class="calepin-syntax-scope-1">.</span><span class="calepin-syntax-scope-23">content</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-1">}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  {% endfor %}</span>
-<span class="calepin-syntax-scope-1">{{ doc.body_open }}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">main</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">class</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">page</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">    {{ doc.body }}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">main</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">{{ doc.body_close }}</span></code></pre></div><p>The important pieces are <code>doc.head</code>, <code>doc.body_open</code>, <code>doc.body</code>, and <code>doc.body_close</code>, which preserve the HTML shell Typst produced. The <code>css</code> loop loads files from the theme’s <code>css/</code> directory, including <code>raw.css</code>.</p><p>Compile the notebook:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile notebook.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> html</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=raw</span>
-</code></pre></div><h2 id="list-of-tokens">List of tokens</h2><table><tr><td><strong>Group</strong></td><td><strong>Token</strong></td><td><strong>Purpose</strong></td></tr><tr><td>Colors</td><td><code>--calepin-color-background</code></td><td>Page background in normal UI surfaces.</td></tr><tr><td></td><td><code>--calepin-color-text</code></td><td>Primary body text color.</td></tr><tr><td></td><td><code>--calepin-color-muted</code></td><td>Muted/de-emphasized text.</td></tr><tr><td></td><td><code>--calepin-color-border</code></td><td>UI border color.</td></tr><tr><td></td><td><code>--calepin-color-accent</code></td><td>Primary accent color (links, buttons, highlights).</td></tr><tr><td></td><td><code>--calepin-color-accent-hover</code></td><td>Accent color for hover states.</td></tr><tr><td></td><td><code>--calepin-color-accent-soft</code></td><td>Soft tint derived from accent.</td></tr><tr><td></td><td><code>--calepin-color-accent-contrast</code></td><td>Text/icon contrast color on accent backgrounds.</td></tr><tr><td></td><td><code>--calepin-color-link</code></td><td>Default link color.</td></tr><tr><td></td><td><code>--calepin-color-link-hover</code></td><td>Link hover color.</td></tr><tr><td></td><td><code>--calepin-color-focus</code></td><td>Focus ring/text emphasis color.</td></tr><tr><td></td><td><code>--calepin-color-selection</code></td><td>Text-selection background color.</td></tr><tr><td></td><td><code>--calepin-color-info</code></td><td>Info state color.</td></tr><tr><td></td><td><code>--calepin-color-success</code></td><td>Success state color.</td></tr><tr><td></td><td><code>--calepin-color-warning</code></td><td>Warning state color.</td></tr><tr><td></td><td><code>--calepin-color-danger</code></td><td>Danger/error state color.</td></tr><tr><td></td><td><code>--calepin-color-important</code></td><td>Important state color.</td></tr><tr><td></td><td><code>--calepin-color-info-soft</code></td><td>Translucent info variant.</td></tr><tr><td></td><td><code>--calepin-color-success-soft</code></td><td>Translucent success variant.</td></tr><tr><td></td><td><code>--calepin-color-warning-soft</code></td><td>Translucent warning variant.</td></tr><tr><td></td><td><code>--calepin-color-danger-soft</code></td><td>Translucent danger variant.</td></tr><tr><td></td><td><code>--calepin-color-important-soft</code></td><td>Translucent important variant.</td></tr><tr><td>Callouts</td><td><code>--calepin-callout-note-color</code></td><td>Callout tone for note blocks.</td></tr><tr><td></td><td><code>--calepin-callout-tip-color</code></td><td>Callout tone for tip blocks.</td></tr><tr><td></td><td><code>--calepin-callout-warning-color</code></td><td>Callout tone for warning blocks.</td></tr><tr><td></td><td><code>--calepin-callout-caution-color</code></td><td>Callout tone for caution blocks.</td></tr><tr><td></td><td><code>--calepin-callout-important-color</code></td><td>Callout tone for important blocks.</td></tr><tr><td>Surfaces</td><td><code>--calepin-surface</code></td><td>Primary surface color for cards/panels.</td></tr><tr><td></td><td><code>--calepin-surface-muted</code></td><td>Muted surface tone.</td></tr><tr><td></td><td><code>--calepin-surface-raised</code></td><td>Raised surface tone.</td></tr><tr><td></td><td><code>--calepin-surface-inset</code></td><td>Inset surface tone.</td></tr><tr><td></td><td><code>--calepin-surface-code</code></td><td>Code block background.</td></tr><tr><td></td><td><code>--calepin-surface-output</code></td><td>Code/output container background.</td></tr><tr><td>Typography</td><td><code>--calepin-font-body</code></td><td>Primary text font stack.</td></tr><tr><td></td><td><code>--calepin-font-heading</code></td><td>Heading font stack.</td></tr><tr><td></td><td><code>--calepin-font-mono</code></td><td>Monospace font stack.</td></tr><tr><td></td><td><code>--calepin-font-size</code></td><td>Base font size multiplier.</td></tr><tr><td></td><td><code>--calepin-font-size-sm</code></td><td>Small text font size.</td></tr><tr><td></td><td><code>--calepin-font-size-aside</code></td><td>Aside/sidenote font size.</td></tr><tr><td></td><td><code>--calepin-line-height</code></td><td>Default line height for body text.</td></tr><tr><td></td><td><code>--calepin-line-height-tight</code></td><td>Tighter line height for headings.</td></tr><tr><td></td><td><code>--calepin-heading-weight</code></td><td>Default heading weight.</td></tr><tr><td></td><td><code>--calepin-code-font-size</code></td><td>Code and preformatted font size.</td></tr><tr><td>Spacing</td><td><code>--calepin-space-xs</code></td><td>Extra-small spacing token.</td></tr><tr><td></td><td><code>--calepin-space-sm</code></td><td>Small spacing token.</td></tr><tr><td></td><td><code>--calepin-space-md</code></td><td>Medium spacing token.</td></tr><tr><td></td><td><code>--calepin-space-lg</code></td><td>Large spacing token.</td></tr><tr><td></td><td><code>--calepin-space-xl</code></td><td>Extra-large spacing token.</td></tr><tr><td></td><td><code>--calepin-space-2xl</code></td><td>2XL spacing token.</td></tr><tr><td></td><td><code>--calepin-block-gap</code></td><td>Vertical block spacing.</td></tr><tr><td></td><td><code>--calepin-inline-gap</code></td><td>Horizontal inline spacing.</td></tr><tr><td></td><td><code>--calepin-section-gap</code></td><td>Vertical section spacing.</td></tr><tr><td>Layout</td><td><code>--calepin-content-width</code></td><td>Max width for main content regions.</td></tr><tr><td></td><td><code>--calepin-wide-width</code></td><td>Max width for wide content regions.</td></tr><tr><td></td><td><code>--calepin-page-width</code></td><td>Computed page width for two-column layout.</td></tr><tr><td></td><td><code>--calepin-margin-width</code></td><td>Sidenote/margin note width.</td></tr><tr><td></td><td><code>--calepin-margin-gap</code></td><td>Gap between body and margin region.</td></tr><tr><td></td><td><code>--calepin-page-padding-inline</code></td><td>Inline page padding.</td></tr><tr><td></td><td><code>--calepin-topbar-height</code></td><td>Topbar height token.</td></tr><tr><td></td><td><code>--calepin-sidebar-width</code></td><td>Desktop sidebar width.</td></tr><tr><td></td><td><code>--calepin-sidebar-mobile-width</code></td><td>Mobile drawer width.</td></tr><tr><td></td><td><code>--calepin-shell-gap</code></td><td>Gap between shell grid tracks.</td></tr><tr><td></td><td><code>--calepin-toc-indent</code></td><td>Indent used by generated TOC trees.</td></tr><tr><td>Borders</td><td><code>--calepin-border-width</code></td><td>Border width used across theme.</td></tr><tr><td></td><td><code>--calepin-border</code></td><td>Shorthand border style using `--calepin-color-border`.</td></tr><tr><td></td><td><code>--calepin-radius-sm</code></td><td>Small corner radius.</td></tr><tr><td></td><td><code>--calepin-radius-md</code></td><td>Medium corner radius.</td></tr><tr><td></td><td><code>--calepin-radius-lg</code></td><td>Large corner radius.</td></tr><tr><td>Shadows</td><td><code>--calepin-shadow-card</code></td><td>Default card shadow.</td></tr><tr><td></td><td><code>--calepin-focus-ring</code></td><td>Focus ring style.</td></tr><tr><td>Layers</td><td><code>--calepin-z-topbar</code></td><td>Z-index for top bar.</td></tr><tr><td></td><td><code>--calepin-z-backdrop</code></td><td>Backdrop and overlays.</td></tr><tr><td></td><td><code>--calepin-z-drawer</code></td><td>Side drawer z-index.</td></tr><tr><td></td><td><code>--calepin-z-popover</code></td><td>Popover/dialog z-index.</td></tr><tr><td></td><td><code>--calepin-z-modal</code></td><td>Modal z-index.</td></tr><tr><td>Syntax</td><td><code>--calepin-syntax-foreground</code></td><td>Syntax text color for code blocks.</td></tr><tr><td></td><td><code>--calepin-syntax-background</code></td><td>Syntax background color for code blocks.</td></tr><tr><td></td><td><code>--calepin-syntax-border</code></td><td>Syntax border color derived from foreground/background.</td></tr></table>
+<span class="calepin-syntax-scope-67">body</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-23">font-family</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">Inter</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">system-ui</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">sans-serif</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-23">background</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-10">var</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-background</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-23">color</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-10">var</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-text</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-2">}</span>
+
+<span class="calepin-syntax-scope-67">pre</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-23">border</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">1</span><span class="calepin-syntax-scope-7">px</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">solid</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-10">var</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-border</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>Calepin sets <code>html[data-theme="light"]</code> or <code>html[data-theme="dark"]</code> when the theme toggle is forced by user preference, explicit control, or URL/state storage. If no explicit mode is set, the browser preference is used for initial mode.</p><h2 id="style-raw-html">Style raw HTML</h2><p>Use a local theme that extends <code>typst</code> when you want a simple, unstyled HTML base.</p><p>Create a directory with a manifest, a layout, and a stylesheet:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">html[data-theme="light"] {
+  --calepin-color-background: #f6f7f9;
+  --calepin-color-text: #111827;
+  --calepin-color-accent: #2563eb;
+}
+
+html[data-theme="dark"] {
+  --calepin-color-background: #101826;
+  --calepin-color-text: #f8fafc;
+  --calepin-color-accent: #60a5fa;
+}</code></pre></div><p>Edit the manifest <code>raw/theme.toml</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-1">[</span><span class="calepin-syntax-scope-67">data-theme</span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">light</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">] {</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-background</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#f6f7f9;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-text</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#111827;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-accent</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#2563eb;</span>
+<span class="calepin-syntax-scope-1">}</span>
+
+<span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-1">[</span><span class="calepin-syntax-scope-67">data-theme</span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">dark</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">] {</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-background</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#101826;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-text</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#f8fafc;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-accent</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#60a5fa;</span>
+<span class="calepin-syntax-scope-1">}</span></code></pre></div><p>Edit <code>raw/layouts/document.html</code> to wrap Typst’s generated HTML and inline the theme CSS files:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">raw/</span>
+<span class="calepin-syntax-scope-1">  theme.toml</span>
+<span class="calepin-syntax-scope-1">  layouts/</span>
+<span class="calepin-syntax-scope-1">    document.html</span>
+<span class="calepin-syntax-scope-1">  css/</span>
+<span class="calepin-syntax-scope-1">    raw.css</span></code></pre></div><p>The important pieces are <code>doc.head</code>, <code>doc.body_open</code>, <code>doc.body</code>, and <code>doc.body_close</code>, which preserve the HTML shell Typst produced. The <code>css</code> loop loads files from the theme’s <code>css/</code> directory, including <code>raw.css</code>.</p><p>Compile the notebook:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">raw/</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-10">theme.toml</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-10">layouts/</span>
+<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-10">document.html</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-10">css/</span>
+<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-10">raw.css</span></code></pre></div><h2 id="list-of-tokens">List of tokens</h2><table><tr><td><strong>Group</strong></td><td><strong>Token</strong></td><td><strong>Purpose</strong></td></tr><tr><td>Colors</td><td><code>--calepin-color-background</code></td><td>Page background in normal UI surfaces.</td></tr><tr><td></td><td><code>--calepin-color-text</code></td><td>Primary body text color.</td></tr><tr><td></td><td><code>--calepin-color-muted</code></td><td>Muted/de-emphasized text.</td></tr><tr><td></td><td><code>--calepin-color-border</code></td><td>UI border color.</td></tr><tr><td></td><td><code>--calepin-color-accent</code></td><td>Primary accent color (links, buttons, highlights).</td></tr><tr><td></td><td><code>--calepin-color-accent-hover</code></td><td>Accent color for hover states.</td></tr><tr><td></td><td><code>--calepin-color-accent-soft</code></td><td>Soft tint derived from accent.</td></tr><tr><td></td><td><code>--calepin-color-accent-contrast</code></td><td>Text/icon contrast color on accent backgrounds.</td></tr><tr><td></td><td><code>--calepin-color-link</code></td><td>Default link color.</td></tr><tr><td></td><td><code>--calepin-color-link-hover</code></td><td>Link hover color.</td></tr><tr><td></td><td><code>--calepin-color-focus</code></td><td>Focus ring/text emphasis color.</td></tr><tr><td></td><td><code>--calepin-color-selection</code></td><td>Text-selection background color.</td></tr><tr><td></td><td><code>--calepin-color-info</code></td><td>Info state color.</td></tr><tr><td></td><td><code>--calepin-color-success</code></td><td>Success state color.</td></tr><tr><td></td><td><code>--calepin-color-warning</code></td><td>Warning state color.</td></tr><tr><td></td><td><code>--calepin-color-danger</code></td><td>Danger/error state color.</td></tr><tr><td></td><td><code>--calepin-color-important</code></td><td>Important state color.</td></tr><tr><td></td><td><code>--calepin-color-info-soft</code></td><td>Translucent info variant.</td></tr><tr><td></td><td><code>--calepin-color-success-soft</code></td><td>Translucent success variant.</td></tr><tr><td></td><td><code>--calepin-color-warning-soft</code></td><td>Translucent warning variant.</td></tr><tr><td></td><td><code>--calepin-color-danger-soft</code></td><td>Translucent danger variant.</td></tr><tr><td></td><td><code>--calepin-color-important-soft</code></td><td>Translucent important variant.</td></tr><tr><td>Callouts</td><td><code>--calepin-callout-note-color</code></td><td>Callout tone for note blocks.</td></tr><tr><td></td><td><code>--calepin-callout-tip-color</code></td><td>Callout tone for tip blocks.</td></tr><tr><td></td><td><code>--calepin-callout-warning-color</code></td><td>Callout tone for warning blocks.</td></tr><tr><td></td><td><code>--calepin-callout-caution-color</code></td><td>Callout tone for caution blocks.</td></tr><tr><td></td><td><code>--calepin-callout-important-color</code></td><td>Callout tone for important blocks.</td></tr><tr><td>Surfaces</td><td><code>--calepin-surface</code></td><td>Primary surface color for cards/panels.</td></tr><tr><td></td><td><code>--calepin-surface-muted</code></td><td>Muted surface tone.</td></tr><tr><td></td><td><code>--calepin-surface-raised</code></td><td>Raised surface tone.</td></tr><tr><td></td><td><code>--calepin-surface-inset</code></td><td>Inset surface tone.</td></tr><tr><td></td><td><code>--calepin-surface-code</code></td><td>Code block background.</td></tr><tr><td></td><td><code>--calepin-surface-output</code></td><td>Code/output container background.</td></tr><tr><td>Typography</td><td><code>--calepin-font-body</code></td><td>Primary text font stack.</td></tr><tr><td></td><td><code>--calepin-font-heading</code></td><td>Heading font stack.</td></tr><tr><td></td><td><code>--calepin-font-mono</code></td><td>Monospace font stack.</td></tr><tr><td></td><td><code>--calepin-font-size</code></td><td>Base font size multiplier.</td></tr><tr><td></td><td><code>--calepin-font-size-sm</code></td><td>Small text font size.</td></tr><tr><td></td><td><code>--calepin-font-size-aside</code></td><td>Aside/sidenote font size.</td></tr><tr><td></td><td><code>--calepin-line-height</code></td><td>Default line height for body text.</td></tr><tr><td></td><td><code>--calepin-line-height-tight</code></td><td>Tighter line height for headings.</td></tr><tr><td></td><td><code>--calepin-heading-weight</code></td><td>Default heading weight.</td></tr><tr><td></td><td><code>--calepin-code-font-size</code></td><td>Code and preformatted font size.</td></tr><tr><td>Spacing</td><td><code>--calepin-space-xs</code></td><td>Extra-small spacing token.</td></tr><tr><td></td><td><code>--calepin-space-sm</code></td><td>Small spacing token.</td></tr><tr><td></td><td><code>--calepin-space-md</code></td><td>Medium spacing token.</td></tr><tr><td></td><td><code>--calepin-space-lg</code></td><td>Large spacing token.</td></tr><tr><td></td><td><code>--calepin-space-xl</code></td><td>Extra-large spacing token.</td></tr><tr><td></td><td><code>--calepin-space-2xl</code></td><td>2XL spacing token.</td></tr><tr><td></td><td><code>--calepin-block-gap</code></td><td>Vertical block spacing.</td></tr><tr><td></td><td><code>--calepin-inline-gap</code></td><td>Horizontal inline spacing.</td></tr><tr><td></td><td><code>--calepin-section-gap</code></td><td>Vertical section spacing.</td></tr><tr><td>Layout</td><td><code>--calepin-content-width</code></td><td>Max width for main content regions.</td></tr><tr><td></td><td><code>--calepin-wide-width</code></td><td>Max width for wide content regions.</td></tr><tr><td></td><td><code>--calepin-page-width</code></td><td>Computed page width for two-column layout.</td></tr><tr><td></td><td><code>--calepin-margin-width</code></td><td>Sidenote/margin note width.</td></tr><tr><td></td><td><code>--calepin-margin-gap</code></td><td>Gap between body and margin region.</td></tr><tr><td></td><td><code>--calepin-page-padding-inline</code></td><td>Inline page padding.</td></tr><tr><td></td><td><code>--calepin-topbar-height</code></td><td>Topbar height token.</td></tr><tr><td></td><td><code>--calepin-sidebar-width</code></td><td>Desktop sidebar width.</td></tr><tr><td></td><td><code>--calepin-sidebar-mobile-width</code></td><td>Mobile drawer width.</td></tr><tr><td></td><td><code>--calepin-shell-gap</code></td><td>Gap between shell grid tracks.</td></tr><tr><td></td><td><code>--calepin-toc-indent</code></td><td>Indent used by generated TOC trees.</td></tr><tr><td>Borders</td><td><code>--calepin-border-width</code></td><td>Border width used across theme.</td></tr><tr><td></td><td><code>--calepin-border</code></td><td>Shorthand border style using `--calepin-color-border`.</td></tr><tr><td></td><td><code>--calepin-radius-sm</code></td><td>Small corner radius.</td></tr><tr><td></td><td><code>--calepin-radius-md</code></td><td>Medium corner radius.</td></tr><tr><td></td><td><code>--calepin-radius-lg</code></td><td>Large corner radius.</td></tr><tr><td>Shadows</td><td><code>--calepin-shadow-card</code></td><td>Default card shadow.</td></tr><tr><td></td><td><code>--calepin-focus-ring</code></td><td>Focus ring style.</td></tr><tr><td>Layers</td><td><code>--calepin-z-topbar</code></td><td>Z-index for top bar.</td></tr><tr><td></td><td><code>--calepin-z-backdrop</code></td><td>Backdrop and overlays.</td></tr><tr><td></td><td><code>--calepin-z-drawer</code></td><td>Side drawer z-index.</td></tr><tr><td></td><td><code>--calepin-z-popover</code></td><td>Popover/dialog z-index.</td></tr><tr><td></td><td><code>--calepin-z-modal</code></td><td>Modal z-index.</td></tr><tr><td>Syntax</td><td><code>--calepin-syntax-foreground</code></td><td>Syntax text color for code blocks.</td></tr><tr><td></td><td><code>--calepin-syntax-background</code></td><td>Syntax background color for code blocks.</td></tr><tr><td></td><td><code>--calepin-syntax-border</code></td><td>Syntax border color derived from foreground/background.</td></tr></table>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -5383,6 +5452,74 @@ html:not([data-theme]) {
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

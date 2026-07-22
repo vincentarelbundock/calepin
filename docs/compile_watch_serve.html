@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4127,7 +4178,7 @@ html:not([data-theme]) {
     <script src="pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Compile, watch, serve])\n#metadata((tags: (\"getting started\", \"CLI\"))) <website-metadata>\n\n#title() <compile-watch-serve>\n\n= Compile\n<compile>\n\nUse `calepin compile` when you want to execute code chunks and render a\ndocument. The command line shape is intentionally the same as\n`typst compile`: same output-first/format-driven arguments, with `--`\npass-through for Typst flags, plus Calepin preprocessing.\n\n```sh\ncalepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n```\n\n== Extract scripts\n<extract-scripts>\n\nUse `--format script` to extract executable source code without running it or\nrendering the Typst document. Script extraction accepts one `.typ` input at a\ntime; website directories and `calepin watch` are not supported.\n\n```sh\n# write paper.R, paper.py, paper.jl, or paper.sh as needed\ncalepin compile paper.typ --format script\n\n# choose the output template\ncalepin compile paper.typ exported/paper.{ext} --format script\ncalepin compile paper.typ exported/{engine}.{ext} --format script\n```\n\nCalepin writes a separate file for each engine, preserves chunk order within\nthat engine, and adds comment separators containing chunk labels. It includes\nchunks with `eval: false`, but excludes diagram chunks. The conventional\nextensions are `.R`, `.py`, `.jl`, and `.sh`. Other Jupyter kernels use `.txt`;\nuse `{engine}` when more than one kernel would otherwise produce the same path.\n\n`{ext}` expands to the extension without its leading dot, while `{engine}`\nexpands to a filename-safe engine name. When an explicit output has no\nplaceholder, it is accepted only when the document contains one engine. An\noutput template that maps multiple engines to the same path is rejected.\n\nCompile a website by pointing `calepin compile` at a source directory\nthat contains `calepin.toml`:\n\n```sh\ncalepin compile docs docs\ncalepin compile my_site public\n```\n\nArguments after `--` are forwarded to Typst, so project-specific Typst\nflags can stay in the same command.\n\n```sh\n# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n```\n\n== Progress output\n<progress-output>\n\nCalepin shows animated progress when the terminal supports it, using the\nsame terminal detection as the underlying progress renderer. When output\nis redirected, the terminal is not interactive, or the terminal reports\nlimited capabilities, Calepin falls back to plain status lines.\n\nSome terminal panes and command runners report themselves as interactive\nbut render spinner redraws as separate lines. Set `CALEPIN_PROGRESS` to\n`plain` to disable animated progress while keeping status messages:\n\n```sh\nCALEPIN_PROGRESS=plain calepin compile paper.typ\n```\n\nIn PowerShell:\n\n```powershell\n$env:CALEPIN_PROGRESS = \"plain\"\ncalepin compile paper.typ\n```\n\n= Watch\n<watch>\n\nUse `calepin watch` while editing. It watches your source for changes,\nre-runs preprocessing, and delegates recompilation and previewing to\n`typst watch`. The command form is the same as `typst watch`: same\npositional arguments and pass-through flags, with Calepin running its\npreprocessing step first.\n\n```sh\ncalepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n```\n\nThe default output format is PDF. Choose another format with `--format`,\nor let the output extension select the format.\n\nArguments after `--` are passed through to `typst watch`. Typst's\n`--open` flag opens the rendered output in the operating system's\ndefault viewer, and Typst's `--port` flag chooses the HTML preview port.\n\n```sh\ncalepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n```\n\nWatch a website directory by passing the source and output directories:\n\n```sh\ncalepin watch docs docs\ncalepin watch my_site public\n```\n\nAdd `--serve` to run the local server while watching a website. It uses\nthe same `--host`, `--port`, and `--open` options as `calepin serve`.\n\n```sh\ncalepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n```\n\n== Eval-only watch\n<eval-only-watch>\n\nWhen Tinymist or another editor already provides Typst preview, use\n`--eval-only` to refresh Calepin's computational artifacts without starting\na second `typst watch` process or writing a rendered output file:\n\n```sh\ncalepin watch paper.typ --eval-only\n```\n\nCalepin performs an initial preprocessing pass, publishes the notebook for\nexternal preview, and then monitors changes. It runs a lightweight Typst query\nto detect chunk definitions, but Python, R, Jupyter, shell, and diagram engines\nrun only when the computational fingerprint changes. Prose-only edits use the\nexisting results cache; display-only chunk options can refresh stored rendering\nmetadata without re-executing code.\n\nThis single-file mode does not accept an output path, `--format`, serving\noptions, or Typst pass-through arguments. Tinymist remains responsible for\nrendering and live preview.\n\n== PDF viewer auto-refresh\n<pdf-viewer-auto-refresh>\n\nSome PDF viewers do not automatically refresh a document when it is\nregenerated on disk. For example, macOS Preview may keep showing an\nolder PDF until the window is focused, the file is reopened, or the\napplication is restarted.\n\nFor smoother live preview, use a PDF viewer that reloads the file when\nit changes. On macOS, Skim is a good option. Other platforms have\nsimilar auto-reloading viewers, which are useful when working with tools\nthat repeatedly rebuild PDFs.\n\n= Serve\n<serve>\n\nUse `calepin serve` to preview a compiled website directory locally.\nThis is useful for checking routing, assets, Pagefind search, and links\nafter a static build.\n\n```sh\ncalepin serve docs\ncalepin serve public\n```\n\nBy default, Calepin uses `127.0.0.1` and the first available port from\n8000. Set the host and port explicitly when you need a stable preview\nURL:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\nOpen the served website in your default browser:\n\n```sh\ncalepin serve docs --open\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Compile, watch, serve])\n#metadata((tags: (\"getting started\", \"CLI\"))) <website-metadata>\n\n#title() <compile-watch-serve>\n\n= Compile\n<compile>\n\nUse `calepin compile` when you want to execute code chunks and render a\ndocument. The command line shape is intentionally the same as\n`typst compile`: same output-first/format-driven arguments, with `--`\npass-through for Typst flags, plus Calepin preprocessing.\n\n```sh\ncalepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n```\n\n== Extract scripts\n<extract-scripts>\n\nUse `--format script` to extract executable source code without running it or\nrendering the Typst document. Script extraction accepts one `.typ` input at a\ntime; website directories and `calepin watch` are not supported.\n\n```sh\n# write paper.R, paper.py, paper.jl, or paper.sh as needed\ncalepin compile paper.typ --format script\n\n# choose the output template\ncalepin compile paper.typ exported/paper.{ext} --format script\ncalepin compile paper.typ exported/{engine}.{ext} --format script\n```\n\nCalepin writes a separate file for each engine and preserves chunk order within\nthat engine. It includes chunks with `eval: false`, but excludes diagram\nchunks. Recognized languages use conventional extensions, including `.R`,\n`.py`, `.jl`, `.sh`, `.rs`, `.yaml`, `.js`, `.ts`, `.c`, `.cpp`, `.java`,\n`.go`, `.rb`, `.sql`, `.lua`, `.toml`, `.json`, `.html`, and `.css`.\nUnrecognized Jupyter kernels use `.txt`; use `{engine}` when more than one\nkernel would otherwise produce the same path.\n\nChunk-label separators use the recognized language's comment syntax: `#` for\nPython and YAML, `//` for Rust and JavaScript, `--` for SQL, and block comments\nfor HTML and CSS, for example. Languages such as JSON that do not support\ncomments, and unknown languages whose syntax Calepin cannot safely infer, are\njoined with blank lines and no label separator. For an unknown engine with an\nexplicit output path, Calepin can infer known comment syntax from the file\nextension; a recognized engine name always takes precedence.\n\n`{ext}` expands to the extension without its leading dot, while `{engine}`\nexpands to a filename-safe engine name. When an explicit output has no\nplaceholder, it is accepted only when the document contains one engine. An\noutput template that maps multiple engines to the same path is rejected.\n\n=== Choose chunks and output files\n<script-chunks>\n\nUse the `script` chunk option to exclude code from extraction or route chunks\nto named files. Chunks that name the same file are appended in document order.\n\n````typ\n```python\n#| script: scripts/prepare.py\nprint(\"first part\")\n```\n\n```python\n#| script: false\nprint(\"shown in the notebook, but not exported\")\n```\n\n```python\n#| script: scripts/analyze.py\nprint(\"a different Python script\")\n```\n````\n\nThe option accepts `true`, `false`, or a relative path. Missing options and\n`script: true` use the default engine-specific output described above.\n`script: false` excludes a chunk. A path writes to that exact destination,\nrelative to the input `.typ` file's directory; absolute paths and paths that\nescape that directory are rejected.\n\nTo export only explicitly selected chunks, disable script extraction in the\ndocument setup and opt chunks back in individually:\n\n````typ\n#calepin.setup(script: false)\n\n```yaml\n#| script: docker-compose.yml\nservices:\n```\n\n```yaml\n#| script: docker-compose.yml\n  api:\n    image: example/api\n```\n````\n\nAn output template passed on the command line applies only to chunks using the\ndefault engine-specific destination. Explicit `script: path` destinations are\nkept as written. Calepin reports an error if explicit and generated\ndestinations resolve to the same file.\n\nCompile a website by pointing `calepin compile` at a source directory\nthat contains `calepin.toml`:\n\n```sh\ncalepin compile docs docs\ncalepin compile my_site public\n```\n\nArguments after `--` are forwarded to Typst, so project-specific Typst\nflags can stay in the same command.\n\n```sh\n# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n```\n\n== Progress output\n<progress-output>\n\nCalepin shows animated progress when the terminal supports it, using the\nsame terminal detection as the underlying progress renderer. When output\nis redirected, the terminal is not interactive, or the terminal reports\nlimited capabilities, Calepin falls back to plain status lines.\n\nSome terminal panes and command runners report themselves as interactive\nbut render spinner redraws as separate lines. Set `CALEPIN_PROGRESS` to\n`plain` to disable animated progress while keeping status messages:\n\n```sh\nCALEPIN_PROGRESS=plain calepin compile paper.typ\n```\n\nIn PowerShell:\n\n```powershell\n$env:CALEPIN_PROGRESS = \"plain\"\ncalepin compile paper.typ\n```\n\n= Watch\n<watch>\n\nUse `calepin watch` while editing. It watches your source for changes,\nre-runs preprocessing, and delegates recompilation and previewing to\n`typst watch`. The command form is the same as `typst watch`: same\npositional arguments and pass-through flags, with Calepin running its\npreprocessing step first.\n\n```sh\ncalepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n```\n\nThe default output format is PDF. Choose another format with `--format`,\nor let the output extension select the format.\n\nArguments after `--` are passed through to `typst watch`. Typst's\n`--open` flag opens the rendered output in the operating system's\ndefault viewer, and Typst's `--port` flag chooses the HTML preview port.\n\n```sh\ncalepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n```\n\nWatch a website directory by passing the source and output directories:\n\n```sh\ncalepin watch docs docs\ncalepin watch my_site public\n```\n\nAdd `--serve` to run the local server while watching a website. It uses\nthe same `--host`, `--port`, and `--open` options as `calepin serve`.\n\n```sh\ncalepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n```\n\n== Eval-only watch\n<eval-only-watch>\n\nWhen Tinymist or another editor already provides Typst preview, use\n`--eval-only` to refresh Calepin's computational artifacts without starting\na second `typst watch` process or writing a rendered output file:\n\n```sh\ncalepin watch paper.typ --eval-only\n```\n\nCalepin performs an initial preprocessing pass, publishes the notebook for\nexternal preview, and then monitors changes. It runs a lightweight Typst query\nto detect chunk definitions, but Python, R, Jupyter, shell, and diagram engines\nrun only when the computational fingerprint changes. Prose-only edits use the\nexisting results cache; display-only chunk options can refresh stored rendering\nmetadata without re-executing code.\n\nThis single-file mode does not accept an output path, `--format`, serving\noptions, or Typst pass-through arguments. Tinymist remains responsible for\nrendering and live preview.\n\n== PDF viewer auto-refresh\n<pdf-viewer-auto-refresh>\n\nSome PDF viewers do not automatically refresh a document when it is\nregenerated on disk. For example, macOS Preview may keep showing an\nolder PDF until the window is focused, the file is reopened, or the\napplication is restarted.\n\nFor smoother live preview, use a PDF viewer that reloads the file when\nit changes. On macOS, Skim is a good option. Other platforms have\nsimilar auto-reloading viewers, which are useful when working with tools\nthat repeatedly rebuild PDFs.\n\n= Serve\n<serve>\n\nUse `calepin serve` to preview a compiled website directory locally.\nThis is useful for checking routing, assets, Pagefind search, and links\nafter a static build.\n\n```sh\ncalepin serve docs\ncalepin serve public\n```\n\nBy default, Calepin uses `127.0.0.1` and the first available port from\n8000. Set the host and port explicitly when you need a stable preview\nURL:\n\n```sh\ncalepin serve docs --host 127.0.0.1 --port 8001\n```\n\nOpen the served website in your default browser:\n\n```sh\ncalepin serve docs --open\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4406,7 +4457,31 @@ html:not([data-theme]) {
 <span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> choose the output template</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile paper.typ exported/paper.</span><span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">ext</span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> script</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile paper.typ exported/</span><span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">engine</span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-1">.</span><span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">ext</span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> script</span>
-</code></pre></div><p>Calepin writes a separate file for each engine, preserves chunk order within that engine, and adds comment separators containing chunk labels. It includes chunks with <code>eval: false</code>, but excludes diagram chunks. The conventional extensions are <code>.R</code>, <code>.py</code>, <code>.jl</code>, and <code>.sh</code>. Other Jupyter kernels use <code>.txt</code>; use <code>{engine}</code> when more than one kernel would otherwise produce the same path.</p><p><code>{ext}</code> expands to the extension without its leading dot, while <code>{engine}</code> expands to a filename-safe engine name. When an explicit output has no placeholder, it is accepted only when the document contains one engine. An output template that maps multiple engines to the same path is rejected.</p><p>Compile a website by pointing <code>calepin compile</code> at a source directory that contains <code>calepin.toml</code>:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile docs docs</span>
+</code></pre></div><p>Calepin writes a separate file for each engine and preserves chunk order within that engine. It includes chunks with <code>eval: false</code>, but excludes diagram chunks. Recognized languages use conventional extensions, including <code>.R</code>, <code>.py</code>, <code>.jl</code>, <code>.sh</code>, <code>.rs</code>, <code>.yaml</code>, <code>.js</code>, <code>.ts</code>, <code>.c</code>, <code>.cpp</code>, <code>.java</code>, <code>.go</code>, <code>.rb</code>, <code>.sql</code>, <code>.lua</code>, <code>.toml</code>, <code>.json</code>, <code>.html</code>, and <code>.css</code>. Unrecognized Jupyter kernels use <code>.txt</code>; use <code>{engine}</code> when more than one kernel would otherwise produce the same path.</p><p>Chunk-label separators use the recognized language’s comment syntax: <code>#</code> for Python and YAML, <code>//</code> for Rust and JavaScript, <code>--</code> for SQL, and block comments for HTML and CSS, for example. Languages such as JSON that do not support comments, and unknown languages whose syntax Calepin cannot safely infer, are joined with blank lines and no label separator. For an unknown engine with an explicit output path, Calepin can infer known comment syntax from the file extension; a recognized engine name always takes precedence.</p><p><code>{ext}</code> expands to the extension without its leading dot, while <code>{engine}</code> expands to a filename-safe engine name. When an explicit output has no placeholder, it is accepted only when the document contains one engine. An output template that maps multiple engines to the same path is rejected.</p><h4 id="script-chunks">Choose chunks and output files</h4><p>Use the <code>script</code> chunk option to exclude code from extraction or route chunks to named files. Chunks that name the same file are appended in document order.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">```python
+#| script: scripts/prepare.py
+print("first part")
+```
+
+```python
+#| script: false
+print("shown in the notebook, but not exported")
+```
+
+```python
+#| script: scripts/analyze.py
+print("a different Python script")
+```</code></pre></div><p>The option accepts <code>true</code>, <code>false</code>, or a relative path. Missing options and <code>script: true</code> use the default engine-specific output described above. <code>script: false</code> excludes a chunk. A path writes to that exact destination, relative to the input <code>.typ</code> file’s directory; absolute paths and paths that escape that directory are rejected.</p><p>To export only explicitly selected chunks, disable script extraction in the document setup and opt chunks back in individually:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">#calepin<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">setup</span><span class="calepin-syntax-scope-2">(</span>script<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">false</span><span class="calepin-syntax-scope-2">)</span>
+
+```yaml
+#| script: docker-compose.yml
+services:
+```
+
+```yaml
+#| script: docker-compose.yml
+  api:
+    image: example/api
+```</code></pre></div><p>An output template passed on the command line applies only to chunks using the default engine-specific destination. Explicit <code>script: path</code> destinations are kept as written. Calepin reports an error if explicit and generated destinations resolve to the same file.</p><p>Compile a website by pointing <code>calepin compile</code> at a source directory that contains <code>calepin.toml</code>:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile docs docs</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site public</span>
 </code></pre></div><p>Arguments after <code>--</code> are forwarded to Typst, so project-specific Typst flags can stay in the same command.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> open PDF in system viewer</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile paper.typ</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> --open</span>
@@ -4415,24 +4490,24 @@ html:not([data-theme]) {
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile paper.typ</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> --font-path fonts</span>
 </code></pre></div><h3 id="progress-output">Progress output</h3><p>Calepin shows animated progress when the terminal supports it, using the same terminal detection as the underlying progress renderer. When output is redirected, the terminal is not interactive, or the terminal reports limited capabilities, Calepin falls back to plain status lines.</p><p>Some terminal panes and command runners report themselves as interactive but render spinner redraws as separate lines. Set <code>CALEPIN_PROGRESS</code> to <code>plain</code> to disable animated progress while keeping status messages:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-1">CALEPIN_PROGRESS</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">plain</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile paper.typ</span>
 </code></pre></div><p>In PowerShell:</p><div class="sourceCode" data-lang="powershell"><pre><code data-lang="powershell">$env:CALEPIN_PROGRESS = "plain"
-calepin compile paper.typ</code></pre></div><h2 id="watch">Watch</h2><p>Use <code>calepin watch</code> while editing. It watches your source for changes, re-runs preprocessing, and delegates recompilation and previewing to <code>typst watch</code>. The command form is the same as <code>typst watch</code>: same positional arguments and pass-through flags, with Calepin running its preprocessing step first.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ</span>
+calepin compile paper.typ</code></pre></div><h2 id="watch">Watch</h2><p>Use <code>calepin watch</code> while editing. It watches your source for changes, re-runs preprocessing, and delegates recompilation and previewing to <code>typst watch</code>. The command form is the same as <code>typst watch</code>: same positional arguments and pass-through flags, with Calepin running its preprocessing step first.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-1">$</span><span class="calepin-syntax-scope-1">env</span><span class="calepin-syntax-scope-10">:CALEPIN_PROGRESS</span><span class="calepin-syntax-scope-1"> = </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">plain</span><span class="calepin-syntax-scope-4">"</span>
+<span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile paper.typ</span></code></pre></div><p>The default output format is PDF. Choose another format with <code>--format</code>, or let the output extension select the format.</p><p>Arguments after <code>--</code> are passed through to <code>typst watch</code>. Typst’s <code>--open</code> flag opens the rendered output in the operating system’s default viewer, and Typst’s <code>--port</code> flag chooses the HTML preview port.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> html</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ </span><span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">p</span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-1">.svg</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> svg</span>
-</code></pre></div><p>The default output format is PDF. Choose another format with <code>--format</code>, or let the output extension select the format.</p><p>Arguments after <code>--</code> are passed through to <code>typst watch</code>. Typst’s <code>--open</code> flag opens the rendered output in the operating system’s default viewer, and Typst’s <code>--port</code> flag chooses the HTML preview port.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch example.typ</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> --open</span>
+</code></pre></div><p>Watch a website directory by passing the source and output directories:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch example.typ</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> --open</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ paper.html</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> html</span><span class="calepin-syntax-scope-9"> --</span><span class="calepin-syntax-scope-1"> --port 3001 --open</span>
-</code></pre></div><p>Watch a website directory by passing the source and output directories:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch docs docs</span>
+</code></pre></div><p>Add <code>--serve</code> to run the local server while watching a website. It uses the same <code>--host</code>, <code>--port</code>, and <code>--open</code> options as <code>calepin serve</code>.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch docs docs</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch my_site public</span>
-</code></pre></div><p>Add <code>--serve</code> to run the local server while watching a website. It uses the same <code>--host</code>, <code>--port</code>, and <code>--open</code> options as <code>calepin serve</code>.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch docs docs</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">serve</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">open</span>
+</code></pre></div><h3 id="eval-only-watch">Eval-only watch</h3><p>When Tinymist or another editor already provides Typst preview, use <code>--eval-only</code> to refresh Calepin’s computational artifacts without starting a second <code>typst watch</code> process or writing a rendered output file:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch docs docs</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">serve</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">open</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch my_site public</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">serve</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">host</span><span class="calepin-syntax-scope-1"> 127.0.0.1</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">port</span><span class="calepin-syntax-scope-1"> 8001</span>
-</code></pre></div><h3 id="eval-only-watch">Eval-only watch</h3><p>When Tinymist or another editor already provides Typst preview, use <code>--eval-only</code> to refresh Calepin’s computational artifacts without starting a second <code>typst watch</code> process or writing a rendered output file:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">eval-only</span>
-</code></pre></div><p>Calepin performs an initial preprocessing pass, publishes the notebook for external preview, and then monitors changes. It runs a lightweight Typst query to detect chunk definitions, but Python, R, Jupyter, shell, and diagram engines run only when the computational fingerprint changes. Prose-only edits use the existing results cache; display-only chunk options can refresh stored rendering metadata without re-executing code.</p><p>This single-file mode does not accept an output path, <code>--format</code>, serving options, or Typst pass-through arguments. Tinymist remains responsible for rendering and live preview.</p><h3 id="pdf-viewer-auto-refresh">PDF viewer auto-refresh</h3><p>Some PDF viewers do not automatically refresh a document when it is regenerated on disk. For example, macOS Preview may keep showing an older PDF until the window is focused, the file is reopened, or the application is restarted.</p><p>For smoother live preview, use a PDF viewer that reloads the file when it changes. On macOS, Skim is a good option. Other platforms have similar auto-reloading viewers, which are useful when working with tools that repeatedly rebuild PDFs.</p><h2 id="serve">Serve</h2><p>Use <code>calepin serve</code> to preview a compiled website directory locally. This is useful for checking routing, assets, Pagefind search, and links after a static build.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve docs</span>
+</code></pre></div><p>Calepin performs an initial preprocessing pass, publishes the notebook for external preview, and then monitors changes. It runs a lightweight Typst query to detect chunk definitions, but Python, R, Jupyter, shell, and diagram engines run only when the computational fingerprint changes. Prose-only edits use the existing results cache; display-only chunk options can refresh stored rendering metadata without re-executing code.</p><p>This single-file mode does not accept an output path, <code>--format</code>, serving options, or Typst pass-through arguments. Tinymist remains responsible for rendering and live preview.</p><h3 id="pdf-viewer-auto-refresh">PDF viewer auto-refresh</h3><p>Some PDF viewers do not automatically refresh a document when it is regenerated on disk. For example, macOS Preview may keep showing an older PDF until the window is focused, the file is reopened, or the application is restarted.</p><p>For smoother live preview, use a PDF viewer that reloads the file when it changes. On macOS, Skim is a good option. Other platforms have similar auto-reloading viewers, which are useful when working with tools that repeatedly rebuild PDFs.</p><h2 id="serve">Serve</h2><p>Use <code>calepin serve</code> to preview a compiled website directory locally. This is useful for checking routing, assets, Pagefind search, and links after a static build.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch paper.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">eval-only</span>
+</code></pre></div><p>By default, Calepin uses <code>127.0.0.1</code> and the first available port from</p><ol><li value="8000">Set the host and port explicitly when you need a stable preview</li></ol><p>URL:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve docs</span>
 <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve public</span>
-</code></pre></div><p>By default, Calepin uses <code>127.0.0.1</code> and the first available port from</p><ol><li value="8000">Set the host and port explicitly when you need a stable preview</li></ol><p>URL:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve docs</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">host</span><span class="calepin-syntax-scope-1"> 127.0.0.1</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">port</span><span class="calepin-syntax-scope-1"> 8001</span>
-</code></pre></div><p>Open the served website in your default browser:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve docs</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">open</span>
+</code></pre></div><p>Open the served website in your default browser:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve docs</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">host</span><span class="calepin-syntax-scope-1"> 127.0.0.1</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">port</span><span class="calepin-syntax-scope-1"> 8001</span>
 </code></pre></div>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -5380,6 +5455,74 @@ calepin compile paper.typ</code></pre></div><h2 id="watch">Watch</h2><p>Use <cod
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

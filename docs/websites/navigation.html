@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4127,7 +4178,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Website navigation])\n#metadata((title: \"Navigation\", tags: (\"websites\", \"navigation\"))) <website-metadata>\n\n#title()\n\n= Side bar\n\nThe sidebar is the main navigation for documentation-style sites. Configure it with `[sidebar]`; a section can list pages one by one:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  target = \"install.typ\"\n```\n\nor include several pages with a glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nUse `target` for one source page and `glob` for a list of source pages. Page targets point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site.\n\nSidebar items must be nested under `[[sidebar.section]]`, but the section does not need a title. Use an untitled section when you want items to appear as a plain unheaded list:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\n  [[sidebar.section.item]]\n  target = \"index.typ\"\n\n  [[sidebar.section.item]]\n  target = \"getting-started.typ\"\n```\n\nThe sidebar label comes from the page source, not from `calepin.toml`. Put the label in the page's website metadata:\n\n```typ\n#set document(title: [Install])\n#metadata((title: \"Install\")) <website-metadata>\n\n#title()\n```\n\nIf a page has no `website-metadata.title`, _Calepin_ falls back to the document title, then the filename stem. This keeps multilingual sidebars in one place: each translated page carries its own translated title.\n\nUse an external URL as `target` when you want a sidebar link to leave the site. External targets must set `label` because there is no page metadata to read:\n\n```toml\n[[sidebar.section.item]]\ntarget = \"https://example.com/reference\"\nlabel = \"External reference\"\n```\n\nAdd non-link subheadings inside a section with an item that sets only `label`:\n\n```toml\n[[sidebar.section.item]]\nlabel = \"Language\"\n\n[[sidebar.section.item]]\ntarget = \"reference/syntax.typ\"\n\n[[sidebar.section.item]]\ntarget = \"reference/styling.typ\"\n\n[[sidebar.section.item]]\nlabel = \"Library\"\n\n[[sidebar.section.item]]\ntarget = \"reference/model.typ\"\n```\n\nSubheadings are rendered in sidebar order with the `calepin-website-sidebar-subheading` class so themes can style them separately. They do not link anywhere, add build pages, or affect which folded section opens. A sidebar item with a `.typ` `target` or `glob` cannot also set `label`; page labels still come from page metadata.\n\nIf you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.\n\nTitled sections are foldable: each page loads with the section that contains it open and the others folded. Opening a different section folds the previous one. To keep every section expanded instead, disable folding:\n\n```toml\n[sidebar]\nfold = false\n```\n\n= Table of contents\n\nPages can show an \"On this page\" table of contents built from their own headings (levels 1-3 by default). The `calepin` theme shows one by default; other themes, including `academic`, are opt-in.\n\nSet a site-wide default with `[toc]`:\n\n```toml\n[toc]\nenabled = true\ndepth = 2\n```\n\n`depth` is the maximum heading level included, from 1 to 6.\n\nOverride either field for a single page with `<website-metadata>`:\n\n```typ\n#metadata((toc: (enabled: false))) <website-metadata>\n```\n\n```typ\n#metadata((toc: (depth: 2))) <website-metadata>\n```\n\nPage metadata and `calepin.toml` merge field by field: a page can override just `depth` and still inherit `enabled` from `calepin.toml`, or the reverse. Whatever is left unset falls back to the theme's own default.\n\n= Site menus\n\nUse `[menus]` for named navigation groups. Menu names describe what the links\nmean; themes decide where to render them. The bundled themes understand\n`main` and `social`. Custom themes can use any additional menu name.\n\n```toml\n[[menus.main]]\ntarget = \"index.typ\"\nlabel = \"Home\"\nweight = 10\n\n[[menus.social]]\ntarget = \"https://github.com/user/repo\"\nlabel = \"{icon:github}\"\naria-label = \"GitHub\"\n```\n\nMenu items use `target` or `glob`. Use a `.typ` `target` or `glob` for internal\nsource pages; use any other `target` for external links or a literal\nalready-rendered URL. Omit `label` for internal pages to use the page metadata\ntitle, document title, or filename stem.\n\n= Footer\n\nConfigure the site footer with `[[footer.item]]`. Footer items can be links or\nplain text rows for copyright and legal notices:\n\n```toml\n[[footer.item]]\nlabel = \"© 2026 Example\"\n\n[[footer.item]]\ntarget = \"https://example.com/privacy\"\nlabel = \"Privacy\"\n```\n\nA footer row with only `label` is rendered as text (no hyperlink).\n\nUse `weight` to control ordering within one menu or footer. Lower weights appear first.\nItems without weights keep their config order after weighted items.\n\nLabels can include Iconify icons with `{icon:...}`. If the prefix is omitted,\n_Calepin_ uses `lucide`, so `{icon:github}` means `{icon:lucide:github}`.\nIcon prefixes are Iconify collection names. Search available icons in the\n#link(\"https://icon-sets.iconify.design/\")[Iconify icon sets] browser.\n\nFor icon-only visible labels, set `aria-label` so screen readers get a human-readable name:\n\n```toml\naria-label = \"GitHub\"\n```\n\n(If you omit `aria-label`, Calepin uses fallback text if available; for an icon-only label with no fallback text this will be less readable.)\n\nLocal SVG icons are also supported with source-relative paths:\n\n```toml\n[[menus.social]]\ntarget = \"https://example.com/project\"\nlabel = \"{icon:assets/icons/project.svg} Project\"\n```\n\nLocal icon paths must stay inside the website source directory. _Calepin_\nsanitizes local and downloaded SVGs before inlining them.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Website navigation])\n#metadata((title: \"Navigation\", tags: (\"websites\", \"navigation\"))) <website-metadata>\n\n#title()\n\n= Side bar\n\nThe sidebar is the main navigation for documentation-style sites. Configure it with `[sidebar]`; a section can list pages one by one:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\ntitle = \"Guide\"\n\n  [[sidebar.section.item]]\n  target = \"install.typ\"\n```\n\nor include several pages with a glob:\n\n```toml\n[[sidebar.section.item]]\nglob = \"guide/*.typ\"\n```\n\nUse `target` for one source page and `glob` for a list of source pages. Page targets point to Typst source files, not rendered `.html` files. _Calepin_ resolves those pages and writes the right `.html` links in the generated site.\n\nSidebar items must be nested under `[[sidebar.section]]`, but the section does not need a title. Use an untitled section when you want items to appear as a plain unheaded list:\n\n```toml\n[sidebar]\n\n[[sidebar.section]]\n  [[sidebar.section.item]]\n  target = \"index.typ\"\n\n  [[sidebar.section.item]]\n  target = \"getting-started.typ\"\n```\n\nThe sidebar label comes from the page source, not from `calepin.toml`. Put the label in the page's website metadata:\n\n```typ\n#set document(title: [Install])\n#metadata((title: \"Install\")) <website-metadata>\n\n#title()\n```\n\nIf a page has no `website-metadata.title`, _Calepin_ falls back to the document title, then the filename stem. This keeps multilingual sidebars in one place: each translated page carries its own translated title.\n\nUse an external URL as `target` when you want a sidebar link to leave the site. External targets must set `label` because there is no page metadata to read:\n\n```toml\n[[sidebar.section.item]]\ntarget = \"https://example.com/reference\"\nlabel = \"External reference\"\n```\n\nAdd non-link subheadings inside a section with an item that sets only `label`:\n\n```toml\n[[sidebar.section.item]]\nlabel = \"Language\"\n\n[[sidebar.section.item]]\ntarget = \"reference/syntax.typ\"\n\n[[sidebar.section.item]]\ntarget = \"reference/styling.typ\"\n\n[[sidebar.section.item]]\nlabel = \"Library\"\n\n[[sidebar.section.item]]\ntarget = \"reference/model.typ\"\n```\n\nSubheadings are rendered in sidebar order with the `calepin-website-sidebar-subheading` class so themes can style them separately. They do not link anywhere, add build pages, or affect which folded section opens. A sidebar item with a `.typ` `target` or `glob` cannot also set `label`; page labels still come from page metadata.\n\nIf you do not configure a sidebar, _Calepin_ builds one from `.typ` files in the source directory. Hidden files are skipped.\n\nTitled sections are foldable: each page loads with the section that contains it open and the others folded. Opening a different section folds the previous one. To keep every section expanded instead, disable folding:\n\n```toml\n[sidebar]\nfold = false\n```\n\n= Table of contents\n\nPages can show an \"On this page\" table of contents built from their own headings (levels 1-3 by default). The `calepin` theme shows one by default; other themes, including `academic`, are opt-in.\n\nSet a site-wide default with `[toc]`:\n\n```toml\n[toc]\nenabled = true\ndepth = 2\nfloating = true\n```\n\n`depth` is the maximum heading level included, from 1 to 6.\nThe table of contents floats with the viewport by default. Set `floating = false`\nto keep it in the normal page flow.\n\nOverride any field for a single page with `<website-metadata>`:\n\n```typ\n#metadata((toc: (enabled: false))) <website-metadata>\n```\n\n```typ\n#metadata((toc: (depth: 2))) <website-metadata>\n```\n\n```typ\n#metadata((toc: (floating: false))) <website-metadata>\n```\n\nPage metadata and `calepin.toml` merge field by field, so a page can override any TOC setting while inheriting the others. Unset `enabled` and `depth` values fall back to the theme defaults; `floating` defaults to `true`.\n\n= Site menus\n\nUse `[menus]` for named navigation groups. Menu names describe what the links\nmean; themes decide where to render them. The bundled themes understand\n`main` and `social`. Custom themes can use any additional menu name.\n\n```toml\n[[menus.main]]\ntarget = \"index.typ\"\nlabel = \"Home\"\nweight = 10\n\n[[menus.social]]\ntarget = \"https://github.com/user/repo\"\nlabel = \"{icon:github}\"\naria-label = \"GitHub\"\n```\n\nMenu items use `target` or `glob`. Use a `.typ` `target` or `glob` for internal\nsource pages; use any other `target` for external links or a literal\nalready-rendered URL. Omit `label` for internal pages to use the page metadata\ntitle, document title, or filename stem.\n\n= Footer\n\nConfigure the site footer with `[[footer.item]]`. Footer items can be links or\nplain text rows for copyright and legal notices:\n\n```toml\n[[footer.item]]\nlabel = \"© 2026 Example\"\n\n[[footer.item]]\ntarget = \"https://example.com/privacy\"\nlabel = \"Privacy\"\n```\n\nA footer row with only `label` is rendered as text (no hyperlink).\n\nUse `weight` to control ordering within one menu or footer. Lower weights appear first.\nItems without weights keep their config order after weighted items.\n\nLabels can include Iconify icons with `{icon:...}`. If the prefix is omitted,\n_Calepin_ uses `lucide`, so `{icon:github}` means `{icon:lucide:github}`.\nIcon prefixes are Iconify collection names. Search available icons in the\n#link(\"https://icon-sets.iconify.design/\")[Iconify icon sets] browser.\n\nFor icon-only visible labels, set `aria-label` so screen readers get a human-readable name:\n\n```toml\naria-label = \"GitHub\"\n```\n\n(If you omit `aria-label`, Calepin uses fallback text if available; for an icon-only label with no fallback text this will be less readable.)\n\nLocal SVG icons are also supported with source-relative paths:\n\n```toml\n[[menus.social]]\ntarget = \"https://example.com/project\"\nlabel = \"{icon:assets/icons/project.svg} Project\"\n```\n\nLocal icon paths must stay inside the website source directory. _Calepin_\nsanitizes local and downloaded SVGs before inlining them.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4400,20 +4451,36 @@ html:not([data-theme]) {
 <span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Guide</span><span class="calepin-syntax-scope-4">"</span>
 
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">install.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>or include several pages with a glob:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-67">glob</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">guide/*.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Use <code>target</code> for one source page and <code>glob</code> for a list of source pages. Page targets point to Typst source files, not rendered <code>.html</code> files. <em>Calepin</em> resolves those pages and writes the right <code>.html</code> links in the generated site.</p><p>Sidebar items must be nested under <code>[[sidebar.section]]</code>, but the section does not need a title. Use an untitled section when you want items to appear as a plain unheaded list:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">]</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">install.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>or include several pages with a glob:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">]</span>
+
+<span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Guide</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">install.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Use <code>target</code> for one source page and <code>glob</code> for a list of source pages. Page targets point to Typst source files, not rendered <code>.html</code> files. <em>Calepin</em> resolves those pages and writes the right <code>.html</code> links in the generated site.</p><p>Sidebar items must be nested under <code>[[sidebar.section]]</code>, but the section does not need a title. Use an untitled section when you want items to appear as a plain unheaded list:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">glob</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">guide/*.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>The sidebar label comes from the page source, not from <code>calepin.toml</code>. Put the label in the page’s website metadata:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">document</span><span class="calepin-syntax-scope-2">(</span>title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span>Install<span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
+<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Install"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span>
+
+<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">title</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><p>If a page has no <code>website-metadata.title</code>, <em>Calepin</em> falls back to the document title, then the filename stem. This keeps multilingual sidebars in one place: each translated page carries its own translated title.</p><p>Use an external URL as <code>target</code> when you want a sidebar link to leave the site. External targets must set <code>label</code> because there is no page metadata to read:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">glob</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">guide/*.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Add non-link subheadings inside a section with an item that sets only <code>label</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">]</span>
 
 <span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">]]</span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">index.typ</span><span class="calepin-syntax-scope-4">"</span>
 
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">getting-started.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>The sidebar label comes from the page source, not from <code>calepin.toml</code>. Put the label in the page’s website metadata:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">document</span><span class="calepin-syntax-scope-2">(</span>title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">[</span>Install<span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-2">)</span>
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Install"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">getting-started.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Subheadings are rendered in sidebar order with the <code>calepin-website-sidebar-subheading</code> class so themes can style them separately. They do not link anywhere, add build pages, or affect which folded section opens. A sidebar item with a <code>.typ</code> <code>target</code> or <code>glob</code> cannot also set <code>label</code>; page labels still come from page metadata.</p><p>If you do not configure a sidebar, <em>Calepin</em> builds one from <code>.typ</code> files in the source directory. Hidden files are skipped.</p><p>Titled sections are foldable: each page loads with the section that contains it open and the others folded. Opening a different section folds the previous one. To keep every section expanded instead, disable folding:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">]</span>
 
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">title</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><p>If a page has no <code>website-metadata.title</code>, <em>Calepin</em> falls back to the document title, then the filename stem. This keeps multilingual sidebars in one place: each translated page carries its own translated title.</p><p>Use an external URL as <code>target</code> when you want a sidebar link to leave the site. External targets must set <code>label</code> because there is no page metadata to read:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">index.typ</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">getting-started.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><h2 id="table-of-contents">Table of contents</h2><p>Pages can show an “On this page” table of contents built from their own headings (levels 1-3 by default). The <code>calepin</code> theme shows one by default; other themes, including <code>academic</code>, are opt-in.</p><p>Set a site-wide default with <code>[toc]</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
 <span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">https://example.com/reference</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">External reference</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Add non-link subheadings inside a section with an item that sets only <code>label</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">External reference</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p><code>depth</code> is the maximum heading level included, from 1 to 6. The table of contents floats with the viewport by default. Set <code>floating = false</code> to keep it in the normal page flow.</p><p>Override any field for a single page with <code>&lt;website-metadata></code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>toc<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span>enabled<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">false</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>toc<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span>depth<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-6">2</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>toc<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span>floating<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">false</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><p>Page metadata and <code>calepin.toml</code> merge field by field, so a page can override any TOC setting while inheriting the others. Unset <code>enabled</code> and <code>depth</code> values fall back to the theme defaults; <code>floating</code> defaults to <code>true</code>.</p><h2 id="site-menus">Site menus</h2><p>Use <code>[menus]</code> for named navigation groups. Menu names describe what the links mean; themes decide where to render them. The bundled themes understand <code>main</code> and <code>social</code>. Custom themes can use any additional menu name.</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">https://example.com/reference</span><span class="calepin-syntax-scope-4">"</span>
+<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">External reference</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Menu items use <code>target</code> or <code>glob</code>. Use a <code>.typ</code> <code>target</code> or <code>glob</code> for internal source pages; use any other <code>target</code> for external links or a literal already-rendered URL. Omit <code>label</code> for internal pages to use the page metadata title, document title, or filename stem.</p><h2 id="footer">Footer</h2><p>Configure the site footer with <code>[[footer.item]]</code>. Footer items can be links or plain text rows for copyright and legal notices:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
 <span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Language</span><span class="calepin-syntax-scope-4">"</span>
 
 <span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
@@ -4426,28 +4493,24 @@ html:not([data-theme]) {
 <span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Library</span><span class="calepin-syntax-scope-4">"</span>
 
 <span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">reference/model.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Subheadings are rendered in sidebar order with the <code>calepin-website-sidebar-subheading</code> class so themes can style them separately. They do not link anywhere, add build pages, or affect which folded section opens. A sidebar item with a <code>.typ</code> <code>target</code> or <code>glob</code> cannot also set <code>label</code>; page labels still come from page metadata.</p><p>If you do not configure a sidebar, <em>Calepin</em> builds one from <code>.typ</code> files in the source directory. Hidden files are skipped.</p><p>Titled sections are foldable: each page loads with the section that contains it open and the others folded. Opening a different section folds the previous one. To keep every section expanded instead, disable folding:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">fold</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-18">false</span></code></pre></div><h2 id="table-of-contents">Table of contents</h2><p>Pages can show an “On this page” table of contents built from their own headings (levels 1-3 by default). The <code>calepin</code> theme shows one by default; other themes, including <code>academic</code>, are opt-in.</p><p>Set a site-wide default with <code>[toc]</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">toc</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">enabled</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-18">true</span>
-<span class="calepin-syntax-scope-67">depth</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">2</span></code></pre></div><p><code>depth</code> is the maximum heading level included, from 1 to 6.</p><p>Override either field for a single page with <code>&lt;website-metadata></code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>toc<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span>enabled<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">false</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>toc<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span>depth<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-6">2</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><p>Page metadata and <code>calepin.toml</code> merge field by field: a page can override just <code>depth</code> and still inherit <code>enabled</code> from <code>calepin.toml</code>, or the reverse. Whatever is left unset falls back to the theme’s own default.</p><h2 id="site-menus">Site menus</h2><p>Use <code>[menus]</code> for named navigation groups. Menu names describe what the links mean; themes decide where to render them. The bundled themes understand <code>main</code> and <code>social</code>. Custom themes can use any additional menu name.</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">menus</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">main</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">index.typ</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Home</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">weight</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">10</span>
+<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">reference/model.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>A footer row with only <code>label</code> is rendered as text (no hyperlink).</p><p>Use <code>weight</code> to control ordering within one menu or footer. Lower weights appear first. Items without weights keep their config order after weighted items.</p><p>Labels can include Iconify icons with <code>{icon:...}</code>. If the prefix is omitted, <em>Calepin</em> uses <code>lucide</code>, so <code>{icon:github}</code> means <code>{icon:lucide:github}</code>. Icon prefixes are Iconify collection names. Search available icons in the <a href="https://icon-sets.iconify.design/">Iconify icon sets</a> browser.</p><p>For icon-only visible labels, set <code>aria-label</code> so screen readers get a human-readable name:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Language</span><span class="calepin-syntax-scope-4">"</span>
 
-<span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">menus</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">social</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">https://github.com/user/repo</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">{icon:github}</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">aria-label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">GitHub</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Menu items use <code>target</code> or <code>glob</code>. Use a <code>.typ</code> <code>target</code> or <code>glob</code> for internal source pages; use any other <code>target</code> for external links or a literal already-rendered URL. Omit <code>label</code> for internal pages to use the page metadata title, document title, or filename stem.</p><h2 id="footer">Footer</h2><p>Configure the site footer with <code>[[footer.item]]</code>. Footer items can be links or plain text rows for copyright and legal notices:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">footer</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">© 2026 Example</span><span class="calepin-syntax-scope-4">"</span>
+<span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">reference/syntax.typ</span><span class="calepin-syntax-scope-4">"</span>
 
-<span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">footer</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">https://example.com/privacy</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Privacy</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>A footer row with only <code>label</code> is rendered as text (no hyperlink).</p><p>Use <code>weight</code> to control ordering within one menu or footer. Lower weights appear first. Items without weights keep their config order after weighted items.</p><p>Labels can include Iconify icons with <code>{icon:...}</code>. If the prefix is omitted, <em>Calepin</em> uses <code>lucide</code>, so <code>{icon:github}</code> means <code>{icon:lucide:github}</code>. Icon prefixes are Iconify collection names. Search available icons in the <a href="https://icon-sets.iconify.design/">Iconify icon sets</a> browser.</p><p>For icon-only visible labels, set <code>aria-label</code> so screen readers get a human-readable name:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">aria-label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">GitHub</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>(If you omit <code>aria-label</code>, Calepin uses fallback text if available; for an icon-only label with no fallback text this will be less readable.)</p><p>Local SVG icons are also supported with source-relative paths:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">menus</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">social</span><span class="calepin-syntax-scope-2">]]</span>
-<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">https://example.com/project</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">{icon:assets/icons/project.svg} Project</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Local icon paths must stay inside the website source directory. <em>Calepin</em> sanitizes local and downloaded SVGs before inlining them.</p>
+<span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">reference/styling.typ</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">label</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Library</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-2">[[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">section</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-183">item</span><span class="calepin-syntax-scope-2">]]</span>
+<span class="calepin-syntax-scope-67">target</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">reference/model.typ</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>(If you omit <code>aria-label</code>, Calepin uses fallback text if available; for an icon-only label with no fallback text this will be less readable.)</p><p>Local SVG icons are also supported with source-relative paths:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">sidebar</span><span class="calepin-syntax-scope-2">]</span>
+<span class="calepin-syntax-scope-67">fold</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-18">false</span></code></pre></div><p>Local icon paths must stay inside the website source directory. <em>Calepin</em> sanitizes local and downloaded SVGs before inlining them.</p>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -5389,6 +5452,74 @@ html:not([data-theme]) {
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "notebooks/figures.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "r",
+      "source": "plot(mpg ~ hp, data = mtcars)\n",
       "status": "ok",
       "options": {
         "echo": true,
@@ -41,6 +42,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "r",
+      "source": "suppressPackageStartupMessages(suppressWarnings(library(ggplot2)))\nggplot(mtcars, aes(hp, mpg)) +\n  geom_point()\n",
       "status": "ok",
       "options": {
         "echo": true,
@@ -76,6 +78,7 @@
     "fig-mpg": {
       "label": "fig-mpg",
       "engine": "r",
+      "source": "plot(mpg ~ hp, data = mtcars)",
       "status": "ok",
       "options": {
         "echo": false,
@@ -117,6 +120,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "r",
+      "source": "plot(mpg ~ hp, data = mtcars)",
       "status": "ok",
       "options": {
         "echo": false,
@@ -152,6 +156,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "r",
+      "source": "plot(mpg ~ hp, data = mtcars, pch = 19)",
       "status": "ok",
       "options": {
         "echo": false,
@@ -187,6 +192,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "r",
+      "source": "plot(mpg ~ hp, data = mtcars, pch = 19)",
       "status": "ok",
       "options": {
         "echo": false,
@@ -222,6 +228,7 @@
     "fig-diagnostics": {
       "label": "fig-diagnostics",
       "engine": "r",
+      "source": "model <- lm(mpg ~ wt + hp, data = mtcars)\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)",
       "status": "ok",
       "options": {
         "echo": false,
@@ -295,6 +302,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "r",
+      "source": "library(tinytable)\ntt(head(iris), caption = \"First rows of iris\") |>\n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\") ",
       "status": "ok",
       "options": {
         "echo": false,

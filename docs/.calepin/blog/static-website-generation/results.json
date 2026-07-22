@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "blog/static-website-generation.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "sh",
+      "source": "calepin new website my_site/\ncalepin compile my_site/\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "sh",
+      "source": "  calepin watch my_site/ my_site/ --serve --open\n",
       "status": "skipped",
       "options": {
         "echo": true,

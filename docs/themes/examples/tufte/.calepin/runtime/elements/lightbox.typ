@@ -8,6 +8,17 @@
   "aria-label": label,
 ))
 
+#let _dialog(id, class, close-label, body) = {
+  std.html.elem("dialog", attrs: (id: id, class: class))[
+    #std.html.elem("article")[
+      #std.html.elem("header")[
+        #_dialog-close(close-label)
+      ]
+      #body
+    ]
+  ]
+}
+
 #let _lightbox-image(
   config,
   id,
@@ -44,17 +55,12 @@
         ))[↗]
       ]
     ]
-    #std.html.elem("dialog", attrs: (id: id, class: "calepin-screenshot-dialog"))[
-      #std.html.elem("article")[
-        #std.html.elem("header")[
-          #_dialog-close(close-label)
-        ]
-        #std.html.elem("img", attrs: (
-          class: "calepin-screenshot-dialog__media",
-          src: href,
-          alt: alt,
-        ))
-      ]
+    #_dialog(id, "calepin-screenshot-dialog", close-label)[
+      #std.html.elem("img", attrs: (
+        class: "calepin-screenshot-dialog__media",
+        src: href,
+        alt: alt,
+      ))
     ]
   ]
 }
@@ -120,21 +126,16 @@
         ))[▶]
       ]
     ]
-    #std.html.elem("dialog", attrs: (id: id, class: "calepin-video-dialog"))[
-      #std.html.elem("article")[
-        #std.html.elem("header")[
-          #_dialog-close(close-label)
-        ]
-        #std.html.elem("video", attrs: (
-          class: "calepin-video-dialog__media",
-          src: href,
-          muted: "",
-          autoplay: "",
-          controls: "",
-          playsinline: "",
-          preload: "metadata",
-        ))
-      ]
+    #_dialog(id, "calepin-video-dialog", close-label)[
+      #std.html.elem("video", attrs: (
+        class: "calepin-video-dialog__media",
+        src: href,
+        muted: "",
+        autoplay: "",
+        controls: "",
+        playsinline: "",
+        preload: "metadata",
+      ))
     ]
   ]
 }

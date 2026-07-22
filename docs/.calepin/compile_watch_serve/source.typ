@@ -24,16 +24,78 @@ time; website directories and `calepin watch` are not supported.
 
 #calepin_runtime.chunk_from_raw_plain("sh", raw("# write paper.R, paper.py, paper.jl, or paper.sh as needed\ncalepin compile paper.typ --format script\n\n# choose the output template\ncalepin compile paper.typ exported/paper.{ext} --format script\ncalepin compile paper.typ exported/{engine}.{ext} --format script\n", block: true, lang: "sh"))
 
-Calepin writes a separate file for each engine, preserves chunk order within
-that engine, and adds comment separators containing chunk labels. It includes
-chunks with `eval: false`, but excludes diagram chunks. The conventional
-extensions are `.R`, `.py`, `.jl`, and `.sh`. Other Jupyter kernels use `.txt`;
-use `{engine}` when more than one kernel would otherwise produce the same path.
+Calepin writes a separate file for each engine and preserves chunk order within
+that engine. It includes chunks with `eval: false`, but excludes diagram
+chunks. Recognized languages use conventional extensions, including `.R`,
+`.py`, `.jl`, `.sh`, `.rs`, `.yaml`, `.js`, `.ts`, `.c`, `.cpp`, `.java`,
+`.go`, `.rb`, `.sql`, `.lua`, `.toml`, `.json`, `.html`, and `.css`.
+Unrecognized Jupyter kernels use `.txt`; use `{engine}` when more than one
+kernel would otherwise produce the same path.
+
+Chunk-label separators use the recognized language's comment syntax: `#` for
+Python and YAML, `//` for Rust and JavaScript, `--` for SQL, and block comments
+for HTML and CSS, for example. Languages such as JSON that do not support
+comments, and unknown languages whose syntax Calepin cannot safely infer, are
+joined with blank lines and no label separator. For an unknown engine with an
+explicit output path, Calepin can infer known comment syntax from the file
+extension; a recognized engine name always takes precedence.
 
 `{ext}` expands to the extension without its leading dot, while `{engine}`
 expands to a filename-safe engine name. When an explicit output has no
 placeholder, it is accepted only when the document contains one engine. An
 output template that maps multiple engines to the same path is rejected.
+
+=== Choose chunks and output files
+<script-chunks>
+
+Use the `script` chunk option to exclude code from extraction or route chunks
+to named files. Chunks that name the same file are appended in document order.
+
+````typ
+```python
+#| script: scripts/prepare.py
+print("first part")
+```
+
+```python
+#| script: false
+print("shown in the notebook, but not exported")
+```
+
+```python
+#| script: scripts/analyze.py
+print("a different Python script")
+```
+````
+
+The option accepts `true`, `false`, or a relative path. Missing options and
+`script: true` use the default engine-specific output described above.
+`script: false` excludes a chunk. A path writes to that exact destination,
+relative to the input `.typ` file's directory; absolute paths and paths that
+escape that directory are rejected.
+
+To export only explicitly selected chunks, disable script extraction in the
+document setup and opt chunks back in individually:
+
+````typ
+#calepin.setup(script: false)
+
+```yaml
+#| script: docker-compose.yml
+services:
+```
+
+```yaml
+#| script: docker-compose.yml
+  api:
+    image: example/api
+```
+````
+
+An output template passed on the command line applies only to chunks using the
+default engine-specific destination. Explicit `script: path` destinations are
+kept as written. Calepin reports an error if explicit and generated
+destinations resolve to the same file.
 
 Compile a website by pointing `calepin compile` at a source directory
 that contains `calepin.toml`:

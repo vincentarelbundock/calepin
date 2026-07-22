@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "websites/health.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "text",
+      "source": "calepin health [OPTIONS]",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "text",
+      "source": "calepin health [OPTIONS]",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -58,6 +60,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "text",
+      "source": "calepin health --depth 2",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -84,6 +87,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "text",
+      "source": "calepin health --depth 2",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -110,6 +114,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "text",
+      "source": "calepin health --strict --check-external-links",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -136,6 +141,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "text",
+      "source": "calepin health --strict --check-external-links",
       "status": "skipped",
       "options": {
         "echo": true,

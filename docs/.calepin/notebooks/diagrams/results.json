@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "notebooks/diagrams.typ",
   "chunks": {
     "fig-mermaid": {
       "label": "fig-mermaid",
       "engine": "mermaid",
+      "source": "%%{init: {\"htmlLabels\": false}}%%\nflowchart LR\n  Source[\"Typst document\"] --> Query[\"Calepin query\"]\n  Query --> Execute[\"Run chunks\"]\n  Execute --> Render[\"Typst render\"]",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -38,6 +39,7 @@
     "fig-dot": {
       "label": "fig-dot",
       "engine": "dot",
+      "source": "digraph {\n  rankdir=LR\n  Draft -> Review -> Publish\n  Review -> Draft [label=\"revise\"]\n}",
       "status": "ok",
       "options": {
         "echo": true,
@@ -79,6 +81,7 @@
     "fig-tikz": {
       "label": "fig-tikz",
       "engine": "tikz",
+      "source": "\\begin{tikzpicture}\n  \\draw[thick, blue] (0,0) -- (2,1) -- (4,0);\n  \\fill[red] (2,1) circle (2pt);\n\\end{tikzpicture}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -111,6 +114,7 @@
     "fig-d2": {
       "label": "fig-d2",
       "engine": "d2",
+      "source": "direction: right\n\nclient -> api: request\napi -> worker: job\nworker -> database: write",
       "status": "skipped",
       "options": {
         "echo": true,

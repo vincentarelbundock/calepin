@@ -1,11 +1,12 @@
-#import "../core/state.typ": _auto-inline-label-index, _base-options, _call-defaults
-#import "../core/state.typ": _derive-label, _disable-raw-chunk-transforms
-#import "../core/state.typ": _raw-node, _raw-text, _sync-auto-label-counter
-#import "../core/state.typ": _relocate-opts
 #import "../core/config.typ": _runtime-config
+#import "../core/results.typ": _result-chunk, _results-document
 #import "../core/target.typ": _is-query
-#import "render.typ": _html-themed-raw-block, _input-block, _render-results, _results-hidden
-#import "options.typ": _resolve-options
+#import "chunk-support.typ": _derive-label, _disable-raw-chunk-transforms
+#import "chunk-support.typ": _raw-node, _raw-text, _relocate-opts, _sync-auto-label-counter
+#import "code.typ": _html-themed-raw-block, _input-block
+#import "defaults.typ": _auto-inline-label-index, _base-options, _call-defaults
+#import "options.typ": _resolve-options-for
+#import "render.typ": _render-results, _results-hidden
 
 
 #let _chunk-spec(body, engine, label, crossref-labels, options) = {
@@ -144,26 +145,6 @@
   out
 }
 
-// Detect and strip a version suffix that Typst's fence parser split from
-// the lang identifier.  For example, ```julia-1.2 produces lang="julia-1"
-// with ".2\n" prepended to the code text.  This mirrors the
-// reattach_version_suffix() logic in query.rs so the echo shows clean code.
-#let _strip-lang-version-suffix(engine, code) = {
-  let builtin-engines = ("python", "r", "mermaid", "dot", "tikz", "d2")
-  if engine in builtin-engines { return code }
-  let nl = code.position("\n")
-  if nl == none { return code }
-  let first-line = code.slice(0, nl)
-  if not first-line.starts-with(".") or first-line.len() < 2 { return code }
-  let tail = first-line.slice(1)
-  let parts = tail.split(".")
-  let is-version = parts.all(part =>
-    part.len() > 0 and part.match(regex("^[0-9]+$")) != none
-  )
-  if not is-version { return code }
-  code.slice(nl + 1)
-}
-
 #let _emit-chunk(config, engine, body, ..args) = context {
   let options = _call-defaults + args.named()
   let label-opt = options.at("label")
@@ -206,9 +187,8 @@
   } else {
     let code = _raw-text(body)
     let code = if code.starts-with("\n") { code.slice(1) } else { code }
-    let code = _strip-lang-version-suffix(engine, code)
     let code = _strip-qmd-header(code)
-    let options = _resolve-options(engine, options)
+    let options = _resolve-options-for(options)
     let runtime-config = _runtime-config(bound: config)
     let results-path = runtime-config.at("results", default: none)
     // The runtime parses only `#| label` from the fence header itself; the
@@ -221,9 +201,25 @@
     // target. Function-call options already match what is stored, so this is a
     // no-op for them.
     if results-path != none and results-path != "" {
-      let results-doc = json(results-path)
-      let chunk = results-doc.at("chunks", default: (:)).at(label, default: none)
+      let chunk = _result-chunk(_results-document(config: runtime-config), label)
       if chunk != none {
+        let stored-source = chunk.at("source", default: "")
+        if stored-source != "" {
+          code = stored-source
+        } else {
+          // Results written before canonical source was stored can still
+          // contain the tail of a dotted engine version at the start of the
+          // raw body (for example `.2` for `julia-1.2`). Recover it from the
+          // already-canonical engine name instead of duplicating Rust's
+          // language/version parser in Typst.
+          let canonical-engine = chunk.at("engine", default: engine)
+          if canonical-engine != engine and canonical-engine.starts-with(engine + ".") {
+            let suffix = canonical-engine.slice(engine.len())
+            if code.starts-with(suffix + "\n") {
+              code = code.slice(suffix.len() + 1)
+            }
+          }
+        }
         let stored = chunk.at("options", default: (:))
         for key in ("echo", "results", "warning", "message") {
           if key in stored {
@@ -288,7 +284,7 @@
 }
 
 #let _chunk-from-raw-plain(config, engine, it) = context {
-  let defaults = _resolve-options(engine, _call-defaults)
+  let defaults = _resolve-options-for(_call-defaults)
   if _fenced-chunks-runs(engine, defaults.at("fenced-chunks")) {
     _emit-chunk(config, engine, it, ..defaults)
   } else {
@@ -373,8 +369,7 @@
       let runtime-config = _runtime-config(bound: config)
       let results-path = runtime-config.at("results", default: none)
       if results-path != none and results-path != "" {
-        let results-doc = json(results-path)
-        let chunk = results-doc.at("chunks", default: (:)).at(label, default: none)
+        let chunk = _result-chunk(_results-document(config: runtime-config), label)
         if chunk == none {
           panic("calepin.results: no chunk is labeled `" + label + "`")
         }

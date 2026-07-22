@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "notebooks/cross-references.typ",
   "chunks": {
     "fig-cross-scatter": {
       "label": "fig-cross-scatter",
       "engine": "r",
+      "source": "plot(mpg ~ hp, data = mtcars)",
       "status": "ok",
       "options": {
         "echo": true,
@@ -47,6 +48,7 @@
     "fig-cross-qmd": {
       "label": "fig-cross-qmd",
       "engine": "r",
+      "source": "hist(mtcars$wt, col = \"gray80\", border = \"white\")",
       "status": "ok",
       "options": {
         "echo": true,
@@ -88,6 +90,7 @@
     "fig-cross-trailing": {
       "label": "fig-cross-trailing",
       "engine": "r",
+      "source": "plot(dist ~ speed, data = cars)",
       "status": "ok",
       "options": {
         "echo": true,

@@ -99,11 +99,14 @@ Set a site-wide default with `[toc]`:
 [toc]
 enabled = true
 depth = 2
+floating = true
 ```
 
 `depth` is the maximum heading level included, from 1 to 6.
+The table of contents floats with the viewport by default. Set `floating = false`
+to keep it in the normal page flow.
 
-Override either field for a single page with `<website-metadata>`:
+Override any field for a single page with `<website-metadata>`:
 
 ```typ
 #metadata((toc: (enabled: false))) <website-metadata>
@@ -113,7 +116,11 @@ Override either field for a single page with `<website-metadata>`:
 #metadata((toc: (depth: 2))) <website-metadata>
 ```
 
-Page metadata and `calepin.toml` merge field by field: a page can override just `depth` and still inherit `enabled` from `calepin.toml`, or the reverse. Whatever is left unset falls back to the theme's own default.
+```typ
+#metadata((toc: (floating: false))) <website-metadata>
+```
+
+Page metadata and `calepin.toml` merge field by field, so a page can override any TOC setting while inheriting the others. Unset `enabled` and `depth` values fall back to the theme defaults; `floating` defaults to `true`.
 
 = Site menus
 

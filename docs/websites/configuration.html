@@ -37,6 +37,8 @@
       
     
       
+    
+      
     <script
       data-calepin-theme-storage-key="calepin-website-theme"
       data-calepin-theme-param="theme">
@@ -2730,6 +2732,104 @@ a:has(.calepin-nav-icon) {
     </style>
 
     <style>
+/* Shared on-page table of contents. Theme styles should only position the
+   component; its typography, spacing, hierarchy, and state live here. */
+.calepin-website-toc {
+  align-self: start;
+  color: var(--calepin-color-muted);
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.calepin-website-toc.is-floating {
+  position: sticky;
+  top: calc(var(--calepin-topbar-height) + 1rem);
+  max-height: calc(100vh - var(--calepin-topbar-height) - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.calepin-website-toc-title {
+  margin: 0 0 0.7rem;
+  color: var(--calepin-color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calepin-website-toc nav {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.calepin-website-toc nav ul {
+  display: grid;
+  gap: 0.04rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calepin-website-toc nav li {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.calepin-website-toc a {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding-block: 0.12rem;
+  padding-inline: calc(0.45rem + var(--calepin-toc-indent, 0rem)) 0.45rem;
+  border-radius: var(--calepin-radius-sm);
+  color: inherit;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus,
+.calepin-website-toc a:active,
+.calepin-website-toc a:visited {
+  color: inherit;
+}
+
+.calepin-website-toc a:hover,
+.calepin-website-toc a:focus {
+  background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
+}
+
+.calepin-website-toc a.active {
+  background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
+.calepin-website-toc li.level-2 a { --calepin-toc-indent: 0rem; }
+.calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }
+.calepin-website-toc li.level-4 a { --calepin-toc-indent: 1.8rem; }
+.calepin-website-toc li.level-5 a { --calepin-toc-indent: 2.7rem; }
+.calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }
+
+    </style>
+
+    <style>
 /* Bundled website theme.
  *
  * The shared theme stylesheet defines the public --calepin-* token contract and
@@ -2783,8 +2883,7 @@ a:has(.calepin-nav-icon) {
   grid-area: toc;
 }
 
-.calepin-website-sidebar,
-.calepin-website-toc {
+.calepin-website-sidebar {
   position: sticky;
   top: calc(var(--calepin-topbar-height) + 1rem);
   align-self: start;
@@ -3335,17 +3434,11 @@ html:not([data-theme]) {
 #calepin-website-sidebar nav,
 #calepin-website-sidebar nav ul,
 #calepin-website-sidebar nav li,
-#calepin-website-sidebar nav li a,
-#calepin-website-toc,
-#calepin-website-toc nav,
-#calepin-website-toc nav ul,
-#calepin-website-toc nav li,
-#calepin-website-toc nav li a {
+#calepin-website-sidebar nav li a {
   text-align: left !important;
 }
 
-.calepin-website-sidebar nav,
-.calepin-website-toc nav {
+.calepin-website-sidebar nav {
   display: block;
   font-size: 0.875rem;
   text-align: left !important;
@@ -3353,8 +3446,7 @@ html:not([data-theme]) {
   justify-content: flex-start;
 }
 
-.calepin-website-sidebar nav ul,
-.calepin-website-toc nav ul {
+.calepin-website-sidebar nav ul {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -3368,8 +3460,7 @@ html:not([data-theme]) {
   min-width: 0;
 }
 
-.calepin-website-sidebar nav li,
-.calepin-website-toc nav li {
+.calepin-website-sidebar nav li {
   display: block;
   margin: 0;
   padding: 0;
@@ -3378,8 +3469,7 @@ html:not([data-theme]) {
   text-align: left !important;
 }
 
-.calepin-website-sidebar a,
-.calepin-website-toc a {
+.calepin-website-sidebar a {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
@@ -3400,20 +3490,15 @@ html:not([data-theme]) {
 }
 
 .calepin-website-sidebar a:hover,
-.calepin-website-toc a:hover,
 .calepin-website-sidebar a:focus,
-.calepin-website-toc a:focus,
 .calepin-website-sidebar a:active,
-.calepin-website-toc a:active,
-.calepin-website-sidebar a:visited,
-.calepin-website-toc a:visited {
+.calepin-website-sidebar a:visited {
   color: inherit;
   background: color-mix(in srgb, var(--calepin-color-accent) 12%, transparent);
 }
 
 .calepin-website-sidebar a.active,
-.calepin-website-sidebar a[aria-current],
-.calepin-website-toc a.active {
+.calepin-website-sidebar a[aria-current] {
   background: color-mix(in srgb, var(--calepin-color-accent) 14%, transparent);
   font-weight: 600;
   color: inherit;
@@ -3435,8 +3520,7 @@ html:not([data-theme]) {
 }
 
 /* Section labels rendered as <p><strong>…</strong></p> by the website builder. */
-.calepin-website-sidebar nav p,
-.calepin-website-toc-title {
+.calepin-website-sidebar nav p {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3520,39 +3604,6 @@ html:not([data-theme]) {
 
 .calepin-website-sidebar nav details > ul {
   margin-bottom: 0;
-}
-
-.calepin-website-toc-title {
-  margin: 0 0 0.9rem;
-}
-
-.calepin-website-toc li.level-2 a {
-  --calepin-toc-indent: 0rem;
-}
-
-.calepin-website-toc li.level-3 a {
-  --calepin-toc-indent: 0.75rem;
-}
-
-.calepin-website-toc li.level-4 a {
-  --calepin-toc-indent: 1.5rem;
-}
-
-.calepin-website-toc li.level-5 a {
-  --calepin-toc-indent: 2.25rem;
-}
-
-.calepin-website-toc li.level-6 a {
-  --calepin-toc-indent: 3rem;
-}
-
-.calepin-website-toc li.level-2 a,
-.calepin-website-toc li.level-3 a,
-.calepin-website-toc li.level-4 a,
-.calepin-website-toc li.level-5 a,
-.calepin-website-toc li.level-6 a {
-  padding-left: calc(0.45rem + var(--calepin-toc-indent, 0rem));
-  line-height: 1.55;
 }
 
 .calepin-site-footer {
@@ -4442,34 +4493,72 @@ html:not([data-theme]) {
 <span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> HTML syntax highlighting themes. Paths are relative to calepin.toml.</span>
 <span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: built-in Calepin light and dark themes.</span>
 <span class="calepin-syntax-scope-67">highlight-light</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/light.tmTheme</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">highlight-dark</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/dark.tmTheme</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Use <code>--format html</code> for a one-time HTML-only build, regardless of <code>pdf</code>. Use <code>--minify</code> to minify HTML for a single build without changing <code>calepin.toml</code>.</p><p>Set <code>search = "pagefind"</code> to add static search to bundled website themes. <em>Calepin</em> writes the Pagefind search bundle to <code>pagefind/</code> after rendering the site and links the bundled themes to the generated component script and stylesheet. Bundled themes mark the main page content with <code>data-pagefind-body</code>, so navigation, toolbars, and footers are excluded from the search index.</p><p>Paths in <code>calepin.toml</code> are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit <code>--config</code>. This includes <code>logo</code>, <code>favicon</code>, page <code>target</code> values ending in <code>.typ</code>, page <code>glob</code> patterns, page and static <code>include</code> and <code>exclude</code> patterns, and local theme paths. During the build, <em>Calepin</em> rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as <code>https://example.com</code> are left unchanged.</p><h2 id="auto-generated-metadata">Auto-generated metadata</h2><p>Bundled website themes emit a small set of page-level head tags from config:</p><ul><li><code>&lt;title></code> (fallback when no <code>&lt;title></code> is present in the rendered page)</li><li><code>&lt;meta name="description"></code> and <code>&lt;meta property="og:description"></code> from <code>description</code></li><li><code>&lt;meta property="og:title"></code> from page title and site title</li><li><code>&lt;meta property="og:site_name"></code> from <code>title</code></li><li><code>&lt;meta property="og:url"></code> and <code>&lt;link rel="canonical"></code> from <code>base_url</code> plus the page route</li></ul><p>If you inject your own tags for these fields in a theme override, check for duplication with what the theme already emits.</p><h2 id="theme-customization">Theme customization</h2><p>Use a local theme when you want project CSS or template overrides. Point <code>theme</code> at the local theme directory and declare the bundled theme you want to extend in <code>theme.toml</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> calepin.toml</span>
-<span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/my-site</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> themes/my-site/theme.toml</span>
-<span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">academic</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Place project CSS in <code>themes/my-site/css/</code>. Local theme styles load after the parent theme’s shared and local styles, so they can adjust colors, fonts, spacing, or component rules. The same theme directory can override HTML layouts, partials, scripts, and <code>layouts/pdf.typ</code>.</p><p>See <a href="../themes/themes.html">Themes</a> for the stable <code>--calepin-*</code> CSS tokens exposed by bundled themes.</p><p>Paths inside <code>.typ</code> files follow Typst path rules, not <code>calepin.toml</code> rules. In website builds, use root-relative Typst paths for shared website assets, such as <code>#image("/assets/diagram.svg")</code>; the leading <code>/</code> points at the website source directory, so the same source works from pages in subdirectories. Calepin’s HTML components convert these paths to page-relative browser URLs, so they also work when the website is hosted below a URL prefix. For custom HTML attributes, use <code>calepin.asset-href("/assets/diagram.svg")</code>. Ordinary relative paths remain relative and are not rewritten. If no favicon is set, <em>Calepin</em> writes a small default to <code>asset-dir</code>/favicon.svg; if no logo is set, bundled themes use <code>title</code> as the site name.</p><h2 id="syntax-highlighting">Syntax highlighting</h2><p>Configure HTML syntax highlighting with full TextMate <code>.tmTheme</code> files:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">highlight-light</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/light.tmTheme</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">highlight-dark</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/dark.tmTheme</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Paths are resolved relative to <code>calepin.toml</code>. The light theme is used for light browser mode, and the dark theme is used for dark browser mode.</p><p>Paged output is different: PDF, SVG, and PNG are rendered directly by Typst, so they use Typst’s standard <code>raw</code> highlighting. If you want a fixed paged syntax theme, customize it in Typst:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> paper-code-theme <span class="calepin-syntax-scope-9">=</span> <span class="calepin-syntax-scope-10">read</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"themes/syntax/paper.tmTheme"</span><span class="calepin-syntax-scope-2">,</span> encoding<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">none</span><span class="calepin-syntax-scope-2">)</span>
+<span class="calepin-syntax-scope-67">highlight-dark</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/dark.tmTheme</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Use <code>--format html</code> for a one-time HTML-only build, regardless of <code>pdf</code>. Use <code>--minify</code> to minify HTML for a single build without changing <code>calepin.toml</code>.</p><p>Set <code>search = "pagefind"</code> to add static search to bundled website themes. <em>Calepin</em> writes the Pagefind search bundle to <code>pagefind/</code> after rendering the site and links the bundled themes to the generated component script and stylesheet. Bundled themes mark the main page content with <code>data-pagefind-body</code>, so navigation, toolbars, and footers are excluded from the search index.</p><p>Paths in <code>calepin.toml</code> are interpreted from the website source directory: the directory that contains the config file, unless you pass an explicit <code>--config</code>. This includes <code>logo</code>, <code>favicon</code>, page <code>target</code> values ending in <code>.typ</code>, page <code>glob</code> patterns, page and static <code>include</code> and <code>exclude</code> patterns, and local theme paths. During the build, <em>Calepin</em> rewrites internal files and generated assets as page-relative URLs, so links and images continue to work from nested pages. Literal URLs such as <code>https://example.com</code> are left unchanged.</p><h2 id="auto-generated-metadata">Auto-generated metadata</h2><p>Bundled website themes emit a small set of page-level head tags from config:</p><ul><li><code>&lt;title></code> (fallback when no <code>&lt;title></code> is present in the rendered page)</li><li><code>&lt;meta name="description"></code> and <code>&lt;meta property="og:description"></code> from <code>description</code></li><li><code>&lt;meta property="og:title"></code> from page title and site title</li><li><code>&lt;meta property="og:site_name"></code> from <code>title</code></li><li><code>&lt;meta property="og:url"></code> and <code>&lt;link rel="canonical"></code> from <code>base_url</code> plus the page route</li></ul><p>If you inject your own tags for these fields in a theme override, check for duplication with what the theme already emits.</p><h2 id="theme-customization">Theme customization</h2><p>Use a local theme when you want project CSS or template overrides. Point <code>theme</code> at the local theme directory and declare the bundled theme you want to extend in <code>theme.toml</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Site name shown by bundled themes and page metadata.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: none.</span>
+<span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">My Site</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Short site description for metadata and previews.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: none.</span>
+<span class="calepin-syntax-scope-67">description</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">A static website built from Typst documents.</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Public site URL, used for sitemap.xml and canonical URLs.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: none.</span>
+<span class="calepin-syntax-scope-67">base_url</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">https://example.com</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Theme: "calepin", "academic", a local theme directory, or false for raw output.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: "calepin".</span>
+<span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">calepin</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Render .pdf files for every page.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: false.</span>
+<span class="calepin-syntax-scope-67">pdf</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-18">false</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Minify generated HTML, including inline CSS and JavaScript.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: false.</span>
+<span class="calepin-syntax-scope-67">minify</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-18">true</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Static search engine. Set to "pagefind" to generate a search index.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: none.</span>
+<span class="calepin-syntax-scope-67">search</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">pagefind</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Logo image path for the top bar.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: none.</span>
+<span class="calepin-syntax-scope-67">logo</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">assets/logo.svg</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Alternative text for the logo image. Defaults to `title` when omitted.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: none.</span>
+<span class="calepin-syntax-scope-67">logo_alt</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">My Site</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Output directory for browser-facing generated assets.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Also controls where the Calepin runtime is written.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: ".calepin".</span>
+<span class="calepin-syntax-scope-67">asset-dir</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">_calepin</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Browser favicon path. Omit this to use Calepin's generated default.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: `asset-dir`/favicon.svg.</span>
+<span class="calepin-syntax-scope-67">favicon</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">assets/favicon.ico</span><span class="calepin-syntax-scope-4">"</span>
+
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> HTML syntax highlighting themes. Paths are relative to calepin.toml.</span>
+<span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> Default: built-in Calepin light and dark themes.</span>
+<span class="calepin-syntax-scope-67">highlight-light</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/light.tmTheme</span><span class="calepin-syntax-scope-4">"</span>
+<span class="calepin-syntax-scope-67">highlight-dark</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/dark.tmTheme</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> calepin.toml</span>
+<span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/my-site</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Place project CSS in <code>themes/my-site/css/</code>. Local theme styles load after the parent theme’s shared and local styles, so they can adjust colors, fonts, spacing, or component rules. The same theme directory can override HTML layouts, partials, scripts, and <code>layouts/pdf.typ</code>.</p><p>See <a href="../themes/themes.html">Themes</a> for the stable <code>--calepin-*</code> CSS tokens exposed by bundled themes.</p><p>Paths inside <code>.typ</code> files follow Typst path rules, not <code>calepin.toml</code> rules. In website builds, use root-relative Typst paths for shared website assets, such as <code>#image("/assets/diagram.svg")</code>; the leading <code>/</code> points at the website source directory, so the same source works from pages in subdirectories. Calepin’s HTML components convert these paths to page-relative browser URLs, so they also work when the website is hosted below a URL prefix. For custom HTML attributes, use <code>calepin.asset-href("/assets/diagram.svg")</code>. Ordinary relative paths remain relative and are not rewritten. If no favicon is set, <em>Calepin</em> writes a small default to <code>asset-dir</code>/favicon.svg; if no logo is set, bundled themes use <code>title</code> as the site name.</p><h2 id="syntax-highlighting">Syntax highlighting</h2><p>Configure HTML syntax highlighting with full TextMate <code>.tmTheme</code> files:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> calepin.toml</span>
+<span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/my-site</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Paths are resolved relative to <code>calepin.toml</code>. The light theme is used for light browser mode, and the dark theme is used for dark browser mode.</p><p>Paged output is different: PDF, SVG, and PNG are rendered directly by Typst, so they use Typst’s standard <code>raw</code> highlighting. If you want a fixed paged syntax theme, customize it in Typst:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> paper-code-theme <span class="calepin-syntax-scope-9">=</span> <span class="calepin-syntax-scope-10">read</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"themes/syntax/paper.tmTheme"</span><span class="calepin-syntax-scope-2">,</span> encoding<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">none</span><span class="calepin-syntax-scope-2">)</span>
 
 <span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> raw<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">where</span><span class="calepin-syntax-scope-2">(</span>block<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">true</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> <span class="calepin-syntax-scope-2">{</span>
   <span class="calepin-syntax-scope-10">raw</span><span class="calepin-syntax-scope-2">(</span>it<span class="calepin-syntax-scope-2">.</span>text<span class="calepin-syntax-scope-2">,</span> block<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">true</span><span class="calepin-syntax-scope-2">,</span> lang<span class="calepin-syntax-scope-2">:</span> it<span class="calepin-syntax-scope-2">.</span>lang<span class="calepin-syntax-scope-2">,</span> theme<span class="calepin-syntax-scope-2">:</span> paper-code-theme<span class="calepin-syntax-scope-2">)</span>
-<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>For HTML, <em>Calepin</em> keeps syntax tokenization consistent with Typst. Typst still reads Sublime syntax definitions (<code>.sublime-syntax</code>) and highlights the code; <em>Calepin</em> then maps the generated HTML colors to CSS classes so the final colors can depend on light or dark mode.</p><p>The HTML mapping uses the TextMate settings that affect rendered spans: <code>foreground</code>, <code>background</code>, and <code>fontStyle</code> values such as <code>bold</code>, <code>italic</code>, and <code>underline</code>. Use light and dark themes with similar scope rules for the most predictable result. If a scope exists in one theme but not the other, <em>Calepin</em> falls back to that theme’s global foreground.</p><h2 id="robots-txt">Robots.txt</h2><p><em>Calepin</em> writes <code>robots.txt</code> by default:</p><div class="sourceCode" data-lang="txt"><pre><code data-lang="txt"><span class="calepin-syntax-scope-1">User-agent: *</span>
+<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>For HTML, <em>Calepin</em> keeps syntax tokenization consistent with Typst. Typst still reads Sublime syntax definitions (<code>.sublime-syntax</code>) and highlights the code; <em>Calepin</em> then maps the generated HTML colors to CSS classes so the final colors can depend on light or dark mode.</p><p>The HTML mapping uses the TextMate settings that affect rendered spans: <code>foreground</code>, <code>background</code>, and <code>fontStyle</code> values such as <code>bold</code>, <code>italic</code>, and <code>underline</code>. Use light and dark themes with similar scope rules for the most predictable result. If a scope exists in one theme but not the other, <em>Calepin</em> falls back to that theme’s global foreground.</p><h2 id="robots-txt">Robots.txt</h2><p><em>Calepin</em> writes <code>robots.txt</code> by default:</p><div class="sourceCode" data-lang="txt"><pre><code data-lang="txt"><span class="calepin-syntax-scope-1"># themes/my-site/theme.toml</span>
+<span class="calepin-syntax-scope-1">extends = "academic"</span></code></pre></div><p>The <code>Sitemap:</code> line is included when <code>base_url</code> is set. To disable generation:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> themes/my-site/theme.toml</span>
+<span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">academic</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>or:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">highlight-light</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/light.tmTheme</span><span class="calepin-syntax-scope-4">"</span>
+<span class="calepin-syntax-scope-67">highlight-dark</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">themes/syntax/dark.tmTheme</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>To override the generated file, create <code>templates/robots.txt</code> in the website source directory. The template uses MiniJinja syntax and receives <code>config</code> and <code>sitemap_url</code>:</p><div class="sourceCode" data-lang="txt"><pre><code data-lang="txt"><span class="calepin-syntax-scope-1">highlight-light = "themes/syntax/light.tmTheme"</span>
+<span class="calepin-syntax-scope-1">highlight-dark = "themes/syntax/dark.tmTheme"</span></code></pre></div><p>Files under <code>templates/</code> can be included or extended from the robots template:</p><div class="sourceCode" data-lang="txt"><pre><code data-lang="txt"><span class="calepin-syntax-scope-1">User-agent: *</span>
 <span class="calepin-syntax-scope-1">Allow: /</span>
-<span class="calepin-syntax-scope-1">Sitemap: https://example.com/sitemap.xml</span></code></pre></div><p>The <code>Sitemap:</code> line is included when <code>base_url</code> is set. To disable generation:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">robots</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-18">false</span></code></pre></div><p>or:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">robots</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">enabled</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-18">false</span></code></pre></div><p>To override the generated file, create <code>templates/robots.txt</code> in the website source directory. The template uses MiniJinja syntax and receives <code>config</code> and <code>sitemap_url</code>:</p><div class="sourceCode" data-lang="txt"><pre><code data-lang="txt"><span class="calepin-syntax-scope-1">User-agent: *</span>
-<span class="calepin-syntax-scope-1">Disallow: /drafts/</span>
-<span class="calepin-syntax-scope-1">{% if sitemap_url %}Sitemap: {{ sitemap_url }}{% endif %}</span></code></pre></div><p>Files under <code>templates/</code> can be included or extended from the robots template:</p><div class="sourceCode" data-lang="txt"><pre><code data-lang="txt"><span class="calepin-syntax-scope-1">{% extends "base.txt" %}</span>
-<span class="calepin-syntax-scope-1">{% block body %}</span>
-<span class="calepin-syntax-scope-1">User-agent: *</span>
-<span class="calepin-syntax-scope-1">Allow: /</span>
-<span class="calepin-syntax-scope-1">{% endblock %}</span></code></pre></div><h2 id="static-files">Static files</h2><p>Use <code>[static]</code> for files that should be copied to the built website without being rendered as Typst pages:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">static</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">include</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">[</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">assets/**</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">CNAME</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">downloads/**</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">exclude</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">[</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">assets/drafts/**</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-2">]</span></code></pre></div><p>Each included file keeps its source-relative path in the output directory: <code>assets/logo.svg</code> becomes <code>assets/logo.svg</code>, <code>CNAME</code> becomes <code>CNAME</code>, and <code>downloads/manual.pdf</code> becomes <code>downloads/manual.pdf</code>. <code>include</code> entries can be files, directories, or glob patterns. <code>exclude</code> patterns are applied after includes. Paths must stay inside the website source directory.</p>
+<span class="calepin-syntax-scope-1">Sitemap: https://example.com/sitemap.xml</span></code></pre></div><h2 id="static-files">Static files</h2><p>Use <code>[static]</code> for files that should be copied to the built website without being rendered as Typst pages:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">User-agent</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">*</span>
+<span class="calepin-syntax-scope-67">Allow</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">/</span>
+<span class="calepin-syntax-scope-67">Sitemap</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">https://example.com/sitemap.xml</span></code></pre></div><p>Each included file keeps its source-relative path in the output directory: <code>assets/logo.svg</code> becomes <code>assets/logo.svg</code>, <code>CNAME</code> becomes <code>CNAME</code>, and <code>downloads/manual.pdf</code> becomes <code>downloads/manual.pdf</code>. <code>include</code> entries can be files, directories, or glob patterns. <code>exclude</code> patterns are applied after includes. Paths must stay inside the website source directory.</p>
         </main>
                 
-        <aside class="calepin-website-toc">
+        <aside class="calepin-website-toc is-floating">
             <p class="calepin-website-toc-title">On this page</p>
             <nav aria-label="On this page">
                 <ul>
@@ -5415,6 +5504,74 @@ html:not([data-theme]) {
   initMobileSearchTriggers();
   initNavbarSearch();
   initPagefindLocalLinks();
+})();
+
+    </script>
+    
+    <script>
+(() => {
+  "use strict";
+
+  const toc = document.querySelector(".calepin-website-toc");
+  if (!toc) return;
+
+  const entries = Array.from(toc.querySelectorAll('a[href^="#"]'))
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+  if (!entries.length) return;
+
+  let activeLink = null;
+  let ticking = false;
+
+  function revealInToc(link) {
+    const tocBox = toc.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const padding = 12;
+
+    if (linkBox.top < tocBox.top + padding) {
+      toc.scrollBy({ top: linkBox.top - tocBox.top - padding, behavior: "smooth" });
+    } else if (linkBox.bottom > tocBox.bottom - padding) {
+      toc.scrollBy({ top: linkBox.bottom - tocBox.bottom + padding, behavior: "smooth" });
+    }
+  }
+
+  function setActive(link) {
+    if (link === activeLink) return;
+    activeLink?.classList.remove("active");
+    activeLink?.removeAttribute("aria-current");
+    activeLink = link;
+    activeLink.classList.add("active");
+    activeLink.setAttribute("aria-current", "location");
+    revealInToc(activeLink);
+  }
+
+  function update() {
+    const topbar = document.querySelector(".calepin-website-topbar, .academic-topbar");
+    const threshold = (topbar?.offsetHeight || 0) + 24;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top > threshold) break;
+      current = entry;
+    }
+
+    setActive(current.link);
+    ticking = false;
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+  window.addEventListener("hashchange", requestUpdate);
+  requestUpdate();
 })();
 
     </script>

@@ -1,5 +1,10 @@
-#import "state.typ": _site-root-prefix
+#import "pages.typ": _site-root-prefix
 #import "config.typ": _runtime-config
+
+// Quote a value for an inline JavaScript string. JSON encoding handles quotes,
+// backslashes, and control characters; escaping `<` additionally prevents an
+// embedded `</script>` sequence from terminating the HTML script element.
+#let _js-string-literal(value) = json.encode(value).replace("<", "\\u003c")
 
 #let _resolve-asset-href(path, config: none) = {
   let base = sys.inputs.at("calepin-assets", default: "")

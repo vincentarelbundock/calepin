@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "websites/websites.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "sh",
+      "source": "calepin new website\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "sh",
+      "source": "calepin new website --theme academic",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -58,6 +60,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "sh",
+      "source": "calepin new website --theme academic",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -84,6 +87,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "sh",
+      "source": "calepin compile my_site/",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -110,6 +114,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "sh",
+      "source": "calepin compile my_site/",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -136,6 +141,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "sh",
+      "source": "calepin compile my_site/ public/",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -162,6 +168,7 @@
     "chunk-7": {
       "label": "chunk-7",
       "engine": "sh",
+      "source": "calepin compile my_site/ public/",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -188,6 +195,7 @@
     "chunk-8": {
       "label": "chunk-8",
       "engine": "sh",
+      "source": "calepin serve my_site/",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -214,6 +222,7 @@
     "chunk-9": {
       "label": "chunk-9",
       "engine": "sh",
+      "source": "calepin serve my_site/",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -240,6 +249,7 @@
     "chunk-10": {
       "label": "chunk-10",
       "engine": "sh",
+      "source": "calepin serve my_site/ --host 127.0.0.1 --port 8001",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -266,6 +276,7 @@
     "chunk-11": {
       "label": "chunk-11",
       "engine": "sh",
+      "source": "calepin serve my_site/ --host 127.0.0.1 --port 8001",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -292,6 +303,7 @@
     "chunk-12": {
       "label": "chunk-12",
       "engine": "sh",
+      "source": "calepin serve my_site/ --open",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -318,6 +330,7 @@
     "chunk-13": {
       "label": "chunk-13",
       "engine": "sh",
+      "source": "calepin serve my_site/ --open",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -344,6 +357,7 @@
     "chunk-14": {
       "label": "chunk-14",
       "engine": "sh",
+      "source": "calepin watch my_site/ my_site/",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -370,6 +384,7 @@
     "chunk-15": {
       "label": "chunk-15",
       "engine": "sh",
+      "source": "calepin watch my_site/ my_site/",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -396,6 +411,7 @@
     "chunk-16": {
       "label": "chunk-16",
       "engine": "sh",
+      "source": "calepin watch my_site/ my_site/ --serve --open",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -422,6 +438,7 @@
     "chunk-17": {
       "label": "chunk-17",
       "engine": "sh",
+      "source": "calepin watch my_site/ my_site/ --serve --open",
       "status": "skipped",
       "options": {
         "echo": true,

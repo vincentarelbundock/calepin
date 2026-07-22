@@ -160,6 +160,12 @@ Text#calepin.elements.sidenote[A margin note.] continues.
 
 `calepin.elements.gallery` accepts image items as tuples or dictionaries and handles local image metadata automatically in static outputs. In HTML output, it can activate lightbox behavior.
 
+For offline sites or a strict Content Security Policy, override `styles-url`,
+`lightbox-url`, and `module-url` with locally hosted PhotoSwipe assets. Their
+defaults remain the pinned PhotoSwipe 5.4.4 files on unpkg. Frontend assets are
+emitted once, so every gallery on a page must use the same three URLs; Calepin
+reports conflicting configurations at compile time.
+
 ```typ
 #calepin.elements.gallery(
   (
@@ -244,9 +250,9 @@ You can also request more than two columns:
 
 = Tabs
 
-`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the container and `calepin.elements.tab("Label", active: true)[...]` for each panel. Panel names are generated automatically; pass `name: "..."` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed.
+`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the container and `calepin.elements.tab("Label", active: true)[...]` for each panel. Panel names are generated automatically and uniquely; pass `name: "..."` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed. For offline or CSP-restricted HTML, pass `module-url` to the tabs container to use a locally hosted Web Awesome tab-group module. The module is emitted once, so every tabs container on a page must use the same URL; conflicting values produce a compile-time error.
 
-Pass the same `group: "..."` value to multiple tab containers to keep their selection synchronized by panel name. As in Quarto tabset groups, selecting a panel in one container selects the panel with the same name in every other container in the group. Containers without `group` remain independent.
+Pass the same `group: "..."` value to multiple tab containers to keep their selection synchronized by panel name. As in Quarto tabset groups, selecting a panel in one container selects the corresponding panel in every other container in the group. Repeated labels are matched by their occurrence among enabled tabs, while their generated DOM panel ids remain unique. Containers without `group` remain independent.
 
 ````typ
 #calepin.elements.tabs[

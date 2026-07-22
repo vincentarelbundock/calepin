@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "compile_watch_serve.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "sh",
+      "source": "calepin compile paper.typ --format pdf\ncalepin compile paper.typ --format html\ncalepin compile paper.typ {p}.svg --format svg\n\n# explicit output path\ncalepin compile paper.typ path/to/paper.pdf --format pdf\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "sh",
+      "source": "# write paper.R, paper.py, paper.jl, or paper.sh as needed\ncalepin compile paper.typ --format script\n\n# choose the output template\ncalepin compile paper.typ exported/paper.{ext} --format script\ncalepin compile paper.typ exported/{engine}.{ext} --format script\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -58,6 +60,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "sh",
+      "source": "calepin compile docs docs\ncalepin compile my_site public\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -84,6 +87,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "sh",
+      "source": "# open PDF in system viewer\ncalepin compile paper.typ -- --open\n\n# set path to font directory\ncalepin compile paper.typ -- --font-path fonts\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -110,6 +114,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "sh",
+      "source": "CALEPIN_PROGRESS=plain calepin compile paper.typ\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -136,6 +141,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "powershell",
+      "source": "$env:CALEPIN_PROGRESS = \"plain\"\ncalepin compile paper.typ",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -162,6 +168,7 @@
     "chunk-7": {
       "label": "chunk-7",
       "engine": "powershell",
+      "source": "$env:CALEPIN_PROGRESS = \"plain\"\ncalepin compile paper.typ",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -188,6 +195,7 @@
     "chunk-8": {
       "label": "chunk-8",
       "engine": "sh",
+      "source": "calepin watch paper.typ\ncalepin watch paper.typ --format html\ncalepin watch paper.typ {p}.svg --format svg\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -214,6 +222,7 @@
     "chunk-9": {
       "label": "chunk-9",
       "engine": "sh",
+      "source": "calepin watch example.typ -- --open\ncalepin watch paper.typ paper.html --format html -- --port 3001 --open\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -240,6 +249,7 @@
     "chunk-10": {
       "label": "chunk-10",
       "engine": "sh",
+      "source": "calepin watch docs docs\ncalepin watch my_site public\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -266,6 +276,7 @@
     "chunk-11": {
       "label": "chunk-11",
       "engine": "sh",
+      "source": "calepin watch docs docs --serve --open\ncalepin watch my_site public --serve --host 127.0.0.1 --port 8001\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -292,6 +303,7 @@
     "chunk-12": {
       "label": "chunk-12",
       "engine": "sh",
+      "source": "calepin watch paper.typ --eval-only\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -318,6 +330,7 @@
     "chunk-13": {
       "label": "chunk-13",
       "engine": "sh",
+      "source": "calepin serve docs\ncalepin serve public\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -344,6 +357,7 @@
     "chunk-14": {
       "label": "chunk-14",
       "engine": "sh",
+      "source": "calepin serve docs --host 127.0.0.1 --port 8001\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -370,6 +384,7 @@
     "chunk-15": {
       "label": "chunk-15",
       "engine": "sh",
+      "source": "calepin serve docs --open\n",
       "status": "skipped",
       "options": {
         "echo": true,

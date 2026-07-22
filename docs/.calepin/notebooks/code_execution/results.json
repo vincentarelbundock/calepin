@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "notebooks/code_execution.typ",
   "chunks": {
     "summary": {
       "label": "summary",
       "engine": "python",
+      "source": "total = 40 + 2\nprint(f\"The total is {total}.\")",
       "status": "ok",
       "options": {
         "echo": false,
@@ -38,6 +39,7 @@
     "chunk-1": {
       "label": "chunk-1",
       "engine": "python",
+      "source": "print(\"#strong[42 in Typst]\")",
       "status": "ok",
       "options": {
         "echo": false,

@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "calepin_version": "0.0.32",
+  "calepin_version": "0.0.34",
   "input": "themes/css.typ",
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "css",
+      "source": "/* themes/my-theme/css/custom.css */\n:root {\n  --calepin-color-background: #f6f7f9;\n  --calepin-color-text: #111827;\n  --calepin-color-accent: #2563eb;\n  --calepin-color-border: #d1d5db;\n}\n\nbody {\n  font-family: Inter, system-ui, sans-serif;\n  background: var(--calepin-color-background);\n  color: var(--calepin-color-text);\n}\n\npre {\n  border: 1px solid var(--calepin-color-border);\n}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -32,6 +33,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "css",
+      "source": "/* themes/my-theme/css/custom.css */\n:root {\n  --calepin-color-background: #f6f7f9;\n  --calepin-color-text: #111827;\n  --calepin-color-accent: #2563eb;\n  --calepin-color-border: #d1d5db;\n}\n\nbody {\n  font-family: Inter, system-ui, sans-serif;\n  background: var(--calepin-color-background);\n  color: var(--calepin-color-text);\n}\n\npre {\n  border: 1px solid var(--calepin-color-border);\n}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -58,6 +60,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "css",
+      "source": "html[data-theme=\"light\"] {\n  --calepin-color-background: #f6f7f9;\n  --calepin-color-text: #111827;\n  --calepin-color-accent: #2563eb;\n}\n\nhtml[data-theme=\"dark\"] {\n  --calepin-color-background: #101826;\n  --calepin-color-text: #f8fafc;\n  --calepin-color-accent: #60a5fa;\n}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -84,6 +87,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "css",
+      "source": "html[data-theme=\"light\"] {\n  --calepin-color-background: #f6f7f9;\n  --calepin-color-text: #111827;\n  --calepin-color-accent: #2563eb;\n}\n\nhtml[data-theme=\"dark\"] {\n  --calepin-color-background: #101826;\n  --calepin-color-text: #f8fafc;\n  --calepin-color-accent: #60a5fa;\n}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -110,6 +114,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "text",
+      "source": "raw/\n  theme.toml\n  layouts/\n    document.html\n  css/\n    raw.css",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -136,6 +141,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "text",
+      "source": "raw/\n  theme.toml\n  layouts/\n    document.html\n  css/\n    raw.css",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -162,6 +168,7 @@
     "chunk-7": {
       "label": "chunk-7",
       "engine": "toml",
+      "source": "extends = \"typst\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -188,6 +195,7 @@
     "chunk-8": {
       "label": "chunk-8",
       "engine": "toml",
+      "source": "extends = \"typst\"",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -214,6 +222,7 @@
     "chunk-9": {
       "label": "chunk-9",
       "engine": "html",
+      "source": "{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <main class=\"page\">\n    {{ doc.body }}\n  </main>\n{{ doc.body_close }}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -240,6 +249,7 @@
     "chunk-10": {
       "label": "chunk-10",
       "engine": "html",
+      "source": "{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <main class=\"page\">\n    {{ doc.body }}\n  </main>\n{{ doc.body_close }}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -266,6 +276,7 @@
     "chunk-11": {
       "label": "chunk-11",
       "engine": "sh",
+      "source": "calepin compile notebook.typ --format html --set theme=raw\n",
       "status": "skipped",
       "options": {
         "echo": true,
