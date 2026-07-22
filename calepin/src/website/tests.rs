@@ -94,6 +94,7 @@ fn website_config_accepts_toc_table() {
         r#"[toc]
 enabled = true
 depth = 2
+floating = false
 "#,
     );
 }

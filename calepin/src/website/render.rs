@@ -74,6 +74,16 @@ fn ensure_parent_directory(path: &Path) -> Result<()> {
     Ok(())
 }
 
+fn apply_toc_context(
+    site_context: &mut crate::html::SiteContextInput,
+    page: Option<&crate::config::TocConfig>,
+    config: &crate::config::TocConfig,
+    theme: &crate::theme::ThemeSelection,
+) {
+    site_context.toc_depth = Some(crate::theme::resolve_toc_depth(page, config, theme));
+    site_context.toc_floating = Some(crate::theme::resolve_toc_floating(page, config));
+}
+
 fn escape_script_payload(payload: &str) -> String {
     let mut payload = payload;
     let mut escaped = String::with_capacity(payload.len());
@@ -151,11 +161,12 @@ fn render_document(
     // Each page's HTML template sees its merged variables (config < setup < CLI),
     // resolved during that page's preprocessing.
     site_context.vars = preprocessed.vars.clone();
-    site_context.toc_depth = Some(crate::theme::resolve_toc_depth(
+    apply_toc_context(
+        &mut site_context,
         page_meta.and_then(|meta| meta.toc.as_ref()),
         &context.toc,
         &preprocessed.theme,
-    ));
+    );
     let page_site_entry = if let Some(layout) = page_meta.and_then(|meta| meta.layout.as_deref()) {
         crate::theme::resolve_explicit_site_html_entry(&preprocessed.theme, layout)?
     } else {
@@ -252,6 +263,24 @@ fn embed_source_blob(html_output: &Path, source_path: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use tempfile::tempdir;
+
+    #[test]
+    fn toc_context_uses_resolved_floating_setting() {
+        let mut site_context = crate::html::SiteContextInput::default();
+        let config = crate::config::TocConfig {
+            floating: Some(false),
+            ..crate::config::TocConfig::default()
+        };
+
+        apply_toc_context(
+            &mut site_context,
+            None,
+            &config,
+            &crate::theme::ThemeSelection::Default,
+        );
+
+        assert_eq!(site_context.toc_floating, Some(false));
+    }
 
     #[test]
     fn embed_source_blob_inserts_source_data_before_head_and_escapes_script_end_tag_case_insensitive(

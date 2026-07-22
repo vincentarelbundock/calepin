@@ -70,6 +70,15 @@ fn theme_default_toc_enabled(theme: &ThemeSelection) -> bool {
         || matches!(theme, ThemeSelection::Builtin(name) if *name == DEFAULT_THEME_NAME)
 }
 
+pub(crate) fn resolve_toc_floating(
+    page: Option<&crate::config::TocConfig>,
+    config: &crate::config::TocConfig,
+) -> bool {
+    page.and_then(|toc| toc.floating)
+        .or(config.floating)
+        .unwrap_or(true)
+}
+
 /// Resolves the effective on-page TOC depth for a page, merging field-by-field
 /// (page metadata wins, then `calepin.toml`, then the theme's built-in
 /// default). Returns `0` to mean "no TOC" so callers can treat it as a single
@@ -95,6 +104,35 @@ pub(crate) fn resolve_toc_depth(
 mod toc_tests {
     use super::*;
     use crate::config::TocConfig;
+
+    #[test]
+    fn toc_floating_defaults_to_true() {
+        assert!(resolve_toc_floating(None, &TocConfig::default()));
+    }
+
+    #[test]
+    fn config_can_disable_floating_toc() {
+        let config = TocConfig {
+            floating: Some(false),
+            ..TocConfig::default()
+        };
+
+        assert!(!resolve_toc_floating(None, &config));
+    }
+
+    #[test]
+    fn page_metadata_overrides_floating_config() {
+        let config = TocConfig {
+            floating: Some(false),
+            ..TocConfig::default()
+        };
+        let page = TocConfig {
+            floating: Some(true),
+            ..TocConfig::default()
+        };
+
+        assert!(resolve_toc_floating(Some(&page), &config));
+    }
 
     #[test]
     fn calepin_theme_defaults_to_enabled() {
@@ -129,6 +167,7 @@ mod toc_tests {
         let config = TocConfig {
             enabled: Some(true),
             depth: Some(2),
+            floating: None,
         };
         assert_eq!(
             resolve_toc_depth(None, &config, &ThemeSelection::Builtin("academic")),
@@ -141,10 +180,12 @@ mod toc_tests {
         let config = TocConfig {
             enabled: Some(true),
             depth: Some(2),
+            floating: None,
         };
         let page = TocConfig {
             enabled: None,
             depth: Some(5),
+            floating: None,
         };
         // enabled inherited from config, depth overridden by the page.
         assert_eq!(
@@ -158,10 +199,12 @@ mod toc_tests {
         let config = TocConfig {
             enabled: Some(true),
             depth: Some(2),
+            floating: None,
         };
         let page = TocConfig {
             enabled: Some(false),
             depth: None,
+            floating: None,
         };
         assert_eq!(
             resolve_toc_depth(Some(&page), &config, &ThemeSelection::Builtin("calepin")),

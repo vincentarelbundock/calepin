@@ -16,14 +16,14 @@ pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/Scripts/python.exe";
 pub const PROJECT_VENV_PYTHON_RELATIVE_PATH: &str = ".venv/bin/python";
 
 /// Site-wide or per-page on-page table-of-contents settings (HTML website
-/// builds only). `enabled`/`depth` are independently optional so a page can
-/// override just one of them and inherit the other from `calepin.toml` or the
-/// theme's built-in default.
+/// builds only). Fields are independently optional so a page can override one
+/// and inherit the others from `calepin.toml` or their built-in defaults.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(default)]
 pub struct TocConfig {
     pub enabled: Option<bool>,
     pub depth: Option<usize>,
+    pub floating: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -834,7 +834,7 @@ credits = 3
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("calepin.toml"),
-            "[toc]\nenabled = false\ndepth = 2\n",
+            "[toc]\nenabled = false\ndepth = 2\nfloating = false\n",
         )
         .unwrap();
 
@@ -843,6 +843,7 @@ credits = 3
 
         assert_eq!(config.toc.enabled, Some(false));
         assert_eq!(config.toc.depth, Some(2));
+        assert_eq!(config.toc.floating, Some(false));
     }
 
     #[test]

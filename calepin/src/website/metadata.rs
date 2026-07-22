@@ -295,12 +295,13 @@ pub(super) fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
     }
 }
 
-/// Parses a `toc: (enabled: ..., depth: ...)` page-metadata entry leniently:
+/// Parses a `toc: (enabled: ..., depth: ..., floating: ...)` page-metadata entry leniently:
 /// malformed or out-of-range fields are ignored (left `None`) rather than
 /// failing the whole page, matching the rest of this lenient metadata parser.
 fn toc_field(value: &serde_json::Value) -> Option<TocConfig> {
     let object = value.as_object()?;
     let enabled = object.get("enabled").and_then(serde_json::Value::as_bool);
+    let floating = object.get("floating").and_then(serde_json::Value::as_bool);
     let depth = object
         .get("depth")
         .and_then(serde_json::Value::as_u64)
@@ -308,10 +309,14 @@ fn toc_field(value: &serde_json::Value) -> Option<TocConfig> {
         .filter(|depth| {
             (crate::config::TOC_MIN_DEPTH..=crate::config::TOC_MAX_DEPTH).contains(depth)
         });
-    if enabled.is_none() && depth.is_none() {
+    if enabled.is_none() && depth.is_none() && floating.is_none() {
         return None;
     }
-    Some(TocConfig { enabled, depth })
+    Some(TocConfig {
+        enabled,
+        depth,
+        floating,
+    })
 }
 
 #[cfg(test)]
@@ -320,14 +325,16 @@ mod toc_field_tests {
     use serde_json::json;
 
     #[test]
-    fn page_meta_parses_toc_enabled_and_depth() {
-        let meta = page_meta_from_value(&json!({"toc": {"enabled": false, "depth": 2}}));
+    fn page_meta_parses_toc_enabled_depth_and_floating() {
+        let meta =
+            page_meta_from_value(&json!({"toc": {"enabled": false, "depth": 2, "floating": true}}));
 
         assert_eq!(
             meta.toc,
             Some(TocConfig {
                 enabled: Some(false),
                 depth: Some(2),
+                floating: Some(true),
             })
         );
     }
@@ -341,6 +348,7 @@ mod toc_field_tests {
             Some(TocConfig {
                 enabled: None,
                 depth: Some(2),
+                floating: None,
             })
         );
     }

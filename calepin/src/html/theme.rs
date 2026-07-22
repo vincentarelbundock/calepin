@@ -69,6 +69,8 @@ pub(crate) struct SiteContextInput {
     /// reads it, the computed `site.toc` entries are what templates see.
     #[serde(skip)]
     pub(crate) toc_depth: Option<usize>,
+    #[serde(skip)]
+    pub(crate) toc_floating: Option<bool>,
 }
 
 /// The site context handed to the template: the caller-supplied input (or a
@@ -78,6 +80,7 @@ struct SiteContext {
     #[serde(flatten)]
     input: SiteContextInput,
     toc: Vec<TocEntry>,
+    toc_floating: bool,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -242,7 +245,12 @@ fn site_context(
     let input = site_context_input
         .cloned()
         .unwrap_or_else(|| default_site_context(project_root, output_path));
-    SiteContext { input, toc }
+    let toc_floating = input.toc_floating.unwrap_or(true);
+    SiteContext {
+        input,
+        toc,
+        toc_floating,
+    }
 }
 
 /// Fallback site context used when no website orchestrator supplied one: a

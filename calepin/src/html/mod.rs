@@ -1248,7 +1248,89 @@ mod tests {
         .unwrap();
 
         assert!(themed.contains("On this page"));
+        assert!(themed.contains(r#"class="calepin-website-toc is-floating""#));
         assert!(themed.contains(r##"<li class="level-2"><a href="#section">Section</a></li>"##));
+    }
+
+    #[test]
+    fn academic_site_theme_can_disable_floating_toc() {
+        let site_context = SiteContextInput {
+            toc_depth: Some(3),
+            toc_floating: Some(false),
+            ..SiteContextInput::default()
+        };
+        let html = "<html><head><title>Title</title></head><body><h1>Title</h1><h2>Section</h2></body></html>";
+        let entry = entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            html,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(themed.contains(r#"class="calepin-website-toc""#));
+        assert!(!themed.contains("calepin-website-toc is-floating"));
+    }
+
+    #[test]
+    fn bundled_toc_css_uses_compact_content_driven_rows() {
+        let calepin = theme_stylesheet(
+            &entry_for(&ThemeSelection::Default, HtmlScope::Site),
+            &HtmlSyntaxTheme::builtin(),
+        );
+        let academic = theme_stylesheet(
+            &entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site),
+            &HtmlSyntaxTheme::builtin(),
+        );
+
+        for (theme_name, css) in [("calepin", calepin), ("academic", academic)] {
+            assert!(
+                css.contains(".calepin-website-toc nav ul {\n  display: grid;\n  gap: 0.04rem;"),
+                "{theme_name}: TOC rows should use a compact content-driven grid"
+            );
+            assert!(
+                css.contains(".calepin-website-toc nav li {")
+                    && css.contains("  min-height: 0;"),
+                "{theme_name}: TOC items should not inherit a fixed minimum height"
+            );
+            assert!(
+                css.contains("height: auto;")
+                    && css.contains("margin: 0;")
+                    && css.contains("padding-block: 0.12rem;")
+                    && css.contains("line-height: 1.3;")
+                    && css.contains("overflow-wrap: anywhere;")
+                    && css.contains("word-break: normal;"),
+                "{theme_name}: wrapped TOC links should expand without overlapping"
+            );
+            assert!(
+                css.contains(".calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }")
+                    && css.contains(".calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }"),
+                "{theme_name}: nested TOC levels should have clearly stepped indentation"
+            );
+        }
+    }
+
+    #[test]
+    fn bundled_toc_css_floats_only_the_modifier_class() {
+        let calepin = theme_stylesheet(
+            &entry_for(&ThemeSelection::Default, HtmlScope::Site),
+            &HtmlSyntaxTheme::builtin(),
+        );
+        let academic = theme_stylesheet(
+            &entry_for(&ThemeSelection::Builtin("academic"), HtmlScope::Site),
+            &HtmlSyntaxTheme::builtin(),
+        );
+
+        let shared_rule = ".calepin-website-toc.is-floating {\n  position: sticky;";
+        assert!(calepin.contains(shared_rule));
+        assert!(academic.contains(shared_rule));
+        assert!(!academic.contains(".academic-page .calepin-website-toc.is-floating"));
+        assert!(!calepin
+            .contains(".calepin-website-sidebar,\n.calepin-website-toc {\n  position: sticky;"));
     }
 
     #[test]
