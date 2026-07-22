@@ -2,6 +2,7 @@
 #let _auto-inline-label-index = state("calepin-auto-inline-label-index", 1)
 
 #let _base-options = (
+  script: true,
   echo: true,
   eval: true,
   results: "render",

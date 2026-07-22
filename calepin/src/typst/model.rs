@@ -108,6 +108,19 @@ pub enum FencedChunks {
     Only(Vec<String>),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ScriptDestination {
+    Enabled(bool),
+    Path(String),
+}
+
+impl Default for ScriptDestination {
+    fn default() -> Self {
+        Self::Enabled(true)
+    }
+}
+
 impl FencedChunks {
     pub fn allows(&self, lang: &str) -> bool {
         match self {
@@ -120,6 +133,8 @@ impl FencedChunks {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SetupDefaults {
+    #[serde(default)]
+    pub script: ScriptDestination,
     pub echo: bool,
     pub eval: bool,
     pub output: bool,
@@ -169,6 +184,7 @@ pub struct SetupDefaults {
 impl Default for SetupDefaults {
     fn default() -> Self {
         Self {
+            script: ScriptDestination::default(),
             echo: true,
             eval: true,
             output: true,
@@ -252,6 +268,8 @@ pub struct ChunkSpec {
     pub label: String,
     pub engine: EngineName,
     pub code: String,
+    #[serde(default)]
+    pub script: ScriptDestination,
     pub exec_options: ExecOptions,
     pub display_options: DisplayOptions,
     pub ordinal: usize,

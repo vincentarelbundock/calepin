@@ -2,7 +2,9 @@ use anyhow::{anyhow, Context, Result};
 use serde_json::Value;
 
 use super::value::{extract_text, parse_metadata_values, value_for};
-use crate::typst::model::{DisplayOptions, ExecOptions, FencedChunks, ResultsMode, SetupDefaults};
+use crate::typst::model::{
+    DisplayOptions, ExecOptions, FencedChunks, ResultsMode, ScriptDestination, SetupDefaults,
+};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SetupConfig {
@@ -44,6 +46,21 @@ pub(super) fn parse_chunk_options(
     let display_options =
         parse_display_options(value, defaults, fig_width, fig_align, fig_responsive)?;
     Ok((exec_options, display_options))
+}
+
+pub(super) fn parse_script_destination(
+    value: &Value,
+    default: &ScriptDestination,
+) -> Result<ScriptDestination> {
+    match value_for(value, "script") {
+        None => Ok(default.clone()),
+        Some(Value::Bool(enabled)) => Ok(ScriptDestination::Enabled(*enabled)),
+        Some(Value::String(path)) if !path.trim().is_empty() => {
+            Ok(ScriptDestination::Path(path.clone()))
+        }
+        Some(Value::String(_)) => Err(anyhow!("`script` path must not be empty")),
+        Some(_) => Err(anyhow!("`script` must be a boolean or a path string")),
+    }
 }
 
 fn parse_exec_options(
@@ -115,6 +132,7 @@ fn parse_display_options(
 
 fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefaults> {
     Ok(SetupDefaults {
+        script: parse_script_destination(value, &base.script)?,
         echo: bool_option(value, "echo", base.echo)?,
         eval: bool_option(value, "eval", base.eval)?,
         output: bool_option(value, "output", base.output)?,

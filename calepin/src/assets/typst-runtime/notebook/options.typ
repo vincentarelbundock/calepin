@@ -28,6 +28,7 @@
 // Per-option defaults come from `_base-options` so there is a single source of
 // truth for all document-level configuration.
 #let setup(
+  script: _base-options.at("script"),
   echo: _base-options.at("echo"),
   eval: _base-options.at("eval"),
   results: _base-options.at("results"),
@@ -59,6 +60,7 @@
   ) = {
   _validate-vars(vars, "")
   let setup-opts = (
+    script: script,
     echo: echo,
     eval: eval,
     results: results,

@@ -62,6 +62,14 @@ stop("must not execute")
 ```julia
 error("must not execute")
 ```
+
+```rust
+fn main() {}
+```
+
+```mystery
+BEGIN UNKNOWN END
+```
 "#,
     )
     .unwrap();
@@ -80,12 +88,100 @@ error("must not execute")
     let python = std::fs::read_to_string(dir.path().join("paper.py")).unwrap();
     let r = std::fs::read_to_string(dir.path().join("paper.R")).unwrap();
     let julia = std::fs::read_to_string(dir.path().join("paper.jl")).unwrap();
+    let rust = std::fs::read_to_string(dir.path().join("paper.rs")).unwrap();
+    let unknown = std::fs::read_to_string(dir.path().join("paper.txt")).unwrap();
     assert!(python.contains("raise RuntimeError"));
     assert!(!python.contains("stop("));
     assert!(r.contains("stop(\"must not execute\")"));
     assert!(!r.contains("RuntimeError"));
     assert!(julia.contains("error(\"must not execute\")"));
+    assert_eq!(julia.matches("error(\"must not execute\")").count(), 1);
+    assert!(rust.starts_with("// ---- chunk-"));
+    assert_eq!(rust.matches("fn main() {}").count(), 1);
+    assert_eq!(unknown, "BEGIN UNKNOWN END\n");
     assert!(!dir.path().join(".calepin/paper/results.json").exists());
+}
+
+#[test]
+fn script_format_routes_and_excludes_chunks() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(fenced-chunks: true, script: false)
+
+```python
+#| label: first
+#| script: scripts/first.py
+print("first")
+```
+
+```python
+#| label: omitted
+print("omitted")
+```
+
+```python
+#| label: first-continuation
+#| script: scripts/first.py
+print("first continuation")
+```
+
+```python
+#| label: second
+#| script: scripts/second.py
+print("second")
+```
+
+```python
+#| label: default
+#| script: true
+print("default")
+```
+
+#calepin.chunk(
+  "python",
+  label: "function-call",
+  script: "scripts/function.py",
+)[```python
+print("function")
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "--format", "script", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to extract routed scripts");
+
+    assert!(
+        output.status.success(),
+        "script extraction failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let first = std::fs::read_to_string(dir.path().join("scripts/first.py")).unwrap();
+    let second = std::fs::read_to_string(dir.path().join("scripts/second.py")).unwrap();
+    let function = std::fs::read_to_string(dir.path().join("scripts/function.py")).unwrap();
+    let default = std::fs::read_to_string(dir.path().join("paper.py")).unwrap();
+    assert!(first.contains("print(\"first\")"));
+    assert!(first.contains("print(\"first continuation\")"));
+    assert!(
+        first.find("print(\"first\")") < first.find("print(\"first continuation\")"),
+        "chunks targeting one script should retain document order"
+    );
+    assert!(second.contains("print(\"second\")"));
+    assert!(function.contains("print(\"function\")"));
+    assert!(default.contains("print(\"default\")"));
+    assert!(!first.contains("omitted"));
+    assert!(!second.contains("omitted"));
+    assert!(!default.contains("omitted"));
 }
 
 #[test]

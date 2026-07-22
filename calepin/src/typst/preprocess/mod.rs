@@ -355,6 +355,7 @@ fn merge_chunk_parse_results(
 fn same_chunk_definition(left: &ChunkSpec, right: &ChunkSpec) -> bool {
     left.engine == right.engine
         && left.code == right.code
+        && left.script == right.script
         && left.exec_options == right.exec_options
         && left.display_options == right.display_options
         && left.crossref_labels == right.crossref_labels

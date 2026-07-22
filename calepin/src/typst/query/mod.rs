@@ -13,7 +13,7 @@ use crate::typst::crossref::parse_prefixed_label_docs;
 use crate::typst::fence_label::{label_name, metadata_node_label};
 use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName};
 
-use options::parse_chunk_options;
+use options::{parse_chunk_options, parse_script_destination};
 pub use options::{parse_setup_config, SetupConfig};
 use value::{
     is_auto, is_calepin_chunk_metadata, is_calepin_fence_label_metadata, is_raw_code_block,
@@ -148,6 +148,7 @@ fn parse_chunk_metadata(
     let engine = parse_engine(&value)?;
     let defaults = &config.defaults;
     let (exec_options, display_options) = parse_chunk_options(&value, defaults)?;
+    let script = parse_script_destination(&value, &defaults.script)?;
     let mut crossref_labels = parse_crossref_labels(&value)
         .map_err(|err| anyhow!("invalid cross-reference labels for chunk `{label}`: {err}"))?;
     if let Some(fence_label) = fence_label {
@@ -170,6 +171,7 @@ fn parse_chunk_metadata(
         label: label.to_string(),
         engine,
         code,
+        script,
         exec_options,
         display_options,
         ordinal,
@@ -280,10 +282,12 @@ fn parse_chunk_raw_block(
         (label, vec![])
     };
     let (exec_options, display_options) = parse_chunk_options(&value, defaults)?;
+    let script = parse_script_destination(&value, &defaults.script)?;
     Ok(Some(ChunkSpec {
         label,
         engine,
         code,
+        script,
         exec_options,
         display_options,
         ordinal,
@@ -876,6 +880,7 @@ mod tests {
             }"#,
         );
         let defaults = SetupDefaults {
+            script: Default::default(),
             echo: false,
             eval: true,
             output: true,

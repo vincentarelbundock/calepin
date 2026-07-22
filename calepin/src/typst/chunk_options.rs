@@ -246,6 +246,7 @@ fn native_chunk_option_names() -> &'static [&'static str] {
         "error",
         "output",
         "results",
+        "script",
         "warning",
         "message",
         "placeholder",
@@ -485,6 +486,27 @@ mod tests {
         assert_eq!(
             override_value(&parsed, "kind"),
             &Value::String("fig".to_string())
+        );
+    }
+
+    #[test]
+    fn qmd_header_accepts_script_path_and_exclusion() {
+        let routed =
+            parse_chunk_source_with_qmd_header("#| script: scripts/main.py\nprint(1)", "routed")
+                .unwrap();
+        assert_eq!(
+            routed.overrides,
+            vec![(
+                "script".to_string(),
+                Value::String("scripts/main.py".to_string())
+            )]
+        );
+
+        let excluded =
+            parse_chunk_source_with_qmd_header("#| script: false\nprint(2)", "excluded").unwrap();
+        assert_eq!(
+            excluded.overrides,
+            vec![("script".to_string(), Value::Bool(false))]
         );
     }
 }

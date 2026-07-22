@@ -47,6 +47,7 @@ pub fn chunk(label: &str, code: &str, results: ResultsMode) -> ChunkSpec {
         label: label.to_string(),
         engine: EngineName::Python,
         code: code.to_string(),
+        script: Default::default(),
         exec_options: exec_options(),
         display_options: display_options(results),
         ordinal: 0,
