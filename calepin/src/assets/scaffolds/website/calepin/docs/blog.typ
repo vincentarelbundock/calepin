@@ -54,9 +54,9 @@
   } else if path.starts-with("http://") or path.starts-with("https://") {
     path
   } else if path.starts-with("/") {
-    calepin._resolve-asset-href(path)
+    calepin._resolve-asset-path(path)
   } else {
-    calepin._resolve-asset-href("/" + path)
+    calepin._resolve-asset-path("/" + path)
   }
 }
 

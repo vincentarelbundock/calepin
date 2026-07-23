@@ -30,6 +30,46 @@ fn has_python_module(module: &str) -> bool {
         .unwrap_or(false)
 }
 
+#[test]
+fn academic_website_scaffold_builds_blog_with_local_thumbnail() {
+    if !has_command("typst") || !has_command("Rscript") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    let create = Command::new(calepin_bin())
+        .args(["new", "website", "site", "--theme", "academic"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to create academic website scaffold");
+    assert!(
+        create.status.success(),
+        "website scaffold creation failed:\n{}",
+        String::from_utf8_lossy(&create.stderr)
+    );
+
+    let site = dir.path().join("site");
+    assert!(
+        site.join("assets/flowers_01.jpg").is_file(),
+        "academic scaffold should include its local listing thumbnail"
+    );
+
+    let build = Command::new(calepin_bin())
+        .args(["compile", "site", "--format", "html", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to build academic website scaffold");
+    assert!(
+        build.status.success(),
+        "website build failed:\n{}",
+        String::from_utf8_lossy(&build.stderr)
+    );
+    assert!(
+        site.join("blog.html").is_file(),
+        "website build should produce blog.html"
+    );
+}
+
 fn typst_accessible_tempdir() -> tempfile::TempDir {
     tempfile::Builder::new()
         .prefix("calepin-typst-test-")

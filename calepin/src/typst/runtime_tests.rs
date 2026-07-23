@@ -133,8 +133,6 @@ fn typst_compile_html_resolves_site_root_assets_relative_to_nested_page() {
         &input,
         r#"#import ".calepin/calepin.typ"
 
-#html.elem("p")[#calepin.asset-href("/assets/root.png")]
-#html.elem("p")[#calepin.asset-href("images/local.png")]
 #calepin.elements.lightbox-video(
   "demo",
   "/assets/demo.mp4",
@@ -158,8 +156,6 @@ fn typst_compile_html_resolves_site_root_assets_relative_to_nested_page() {
         ],
     );
     let html = std::fs::read_to_string(output).unwrap();
-    assert!(html.contains("../../assets/root.png"), "{html}");
-    assert!(html.contains("images/local.png"), "{html}");
     assert!(html.contains("../../assets/demo.mp4"), "{html}");
     assert!(html.contains("../../assets/poster.png"), "{html}");
     assert!(!html.contains("\"/assets/"), "{html}");
