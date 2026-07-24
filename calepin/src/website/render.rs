@@ -131,7 +131,7 @@ fn bytes_is_ascii_equal_ignore_case(left: &[u8], right: &[u8]) -> bool {
         && left
             .iter()
             .zip(right)
-            .all(|(left, right)| left.to_ascii_lowercase() == right.to_ascii_lowercase())
+            .all(|(left, right)| left.eq_ignore_ascii_case(right))
 }
 
 fn render_document(
@@ -160,7 +160,7 @@ fn render_document(
     );
     // Each page's HTML template sees its merged variables (config < setup < CLI),
     // resolved during that page's preprocessing.
-    site_context.vars = preprocessed.vars.clone();
+    site_context.store = preprocessed.store.clone();
     apply_toc_context(
         &mut site_context,
         page_meta.and_then(|meta| meta.toc.as_ref()),

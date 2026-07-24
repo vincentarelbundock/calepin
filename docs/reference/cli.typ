@@ -1,5 +1,4 @@
 #set document(title: [CLI reference])
-#metadata((tags: ("reference", "CLI"))) <website-metadata>
 
 #title() <cli-reference>
 
@@ -108,7 +107,7 @@ Options:
       --set <KEY=VALUE>
           Override a Calepin config value as `key=value` (repeatable).
           
-          Uses dotted paths for nested config, such as `theme=./theme`, `vars.region=CA`, or `toc.enabled=false`.
+          Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.
 
   -h, --help
           Print help (see a summary with '-h')
@@ -167,7 +166,7 @@ Options:
       --set <KEY=VALUE>
           Override a Calepin config value as `key=value` (repeatable).
           
-          Uses dotted paths for nested config, such as `theme=./theme`, `vars.region=CA`, or `toc.enabled=false`.
+          Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.
 
   -h, --help
           Print help (see a summary with '-h')

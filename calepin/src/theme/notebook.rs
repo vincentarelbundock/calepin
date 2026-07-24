@@ -19,7 +19,7 @@ pub struct NotebookTemplateContext {
     pub title: String,
     pub body: String,
     pub page_meta: Value,
-    pub vars: Value,
+    pub store: Value,
 }
 
 impl Default for NotebookTemplateContext {
@@ -31,7 +31,7 @@ impl Default for NotebookTemplateContext {
             title: String::new(),
             body: String::new(),
             page_meta: Value::Null,
-            vars: Value::Object(serde_json::Map::new()),
+            store: Value::Object(serde_json::Map::new()),
         }
     }
 }
@@ -46,7 +46,7 @@ struct NotebookTemplateRenderContext<'a> {
     theme: &'a str,
     target: &'static str,
     doc: NotebookDocContext<'a>,
-    vars: &'a Value,
+    store: &'a Value,
 }
 
 #[derive(Serialize)]
@@ -154,7 +154,7 @@ fn render_notebook_template(
                 body: &context.body,
                 meta: &context.page_meta,
             },
-            vars: &context.vars,
+            store: &context.store,
         })
         .map_err(|error| notebook_template_error(theme_name, template_name, error))
 }

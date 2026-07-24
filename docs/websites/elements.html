@@ -4178,7 +4178,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#import \"/.calepin/calepin.typ\" as calepin\n\n#set document(title: [Reusable elements])\n\n#metadata((title: \"Elements\", pdf: false, tags: (\"websites\", \"elements\"))) <website-metadata>\n\n#calepin.setup(fenced-chunks: true)\n\n#title()\n\n= Typst functions\n\nIn Typst, `#let` is your primary building block for reusable formatting and construction. Use it to avoid repeating the same patterns.\n\n#let banner(message, note) = [\n  #strong(message)\n  #v(0.3em)\n  #quote(note)\n]\n\n```typ\n#let banner(message, note) = [\n  #strong(message)\n  #v(0.3em)\n  #quote(note)\n]\n\n#banner(\"Reusable functions\", \"Define UI once and reuse it for many places.\")\n```\n\n#banner(\"Reusable function in action\", \"If you update this definition, both call sites update automatically.\")\n\nThe `calepin` namespace also includes a compact set of reusable elements for cards, galleries, columns, tabs, and lightbox media. They are designed to demonstrate output-aware patterning in practical notebook websites.\n\n= Output-aware formatting\n\nCalepin exposes `#calepin.elements.target()` to pick content for HTML, static outputs, or a fallback. This example uses colors to make output differences explicit. In Typst `0.15`, HTML color output was not fully supported, so HTML branches use explicit CSS via `html.elem()`.\n\n```typ\n#let html-color-label(body, color) = html.elem(\"span\", attrs: (style: \"color: \" + color + \";\"))[\n  #body\n]\n\n#calepin.elements.target(\n  html: () => [#html-color-label([#strong(\"HTML\")], \"blue\") output branch],\n  paged: () => [#text(fill: green)[#strong(\"PDF/SVG\")] output branch],\n  fallback: () => [#text(fill: gray)[#strong(\"Fallback\")] output branch],\n)\n```\n\nThe rendered result:\n\n\n#let html-color-label(body, color) = html.elem(\"span\", attrs: (style: \"color: \" + color + \";\"))[\n  #body\n]\n\n#calepin.elements.target(\n  html: () => [#html-color-label([#strong(\"HTML\")], \"blue\") output branch],\n  paged: () => [#text(fill: green)[#strong(\"PDF/SVG\")] output branch],\n  fallback: () => [#text(fill: gray)[#strong(\"Fallback\")] output branch],\n)\n\n\n= Card\n\n`calepin.elements.card` keeps one piece of content boxed consistently across formats.\n\n```typ\n#let callout = calepin.elements.card[\n  #heading(level: 3)[Reusable card]\n  A card wraps content with matching style in HTML and paged output.\n]\n#callout\n```\n\n#calepin.elements.card[\n  #heading(level: 3)[Reusable card]\n  A card wraps content with matching style in HTML and paged output.\n]\n\n= Callouts\n\n`calepin.elements.callout` renders AsciiDoc-style admonitions in HTML and paged output. Use `kind:` with `note`, `tip`, `important`, `caution`, or `warning`. The title defaults to the capitalized kind label; pass `title: [...]` to override it, or `title: none` to hide the title row.\n\n````typ\n#calepin.elements.callout(kind: \"note\")[\n  Notes highlight neutral supporting information.\n]\n````\n\n#calepin.elements.callout(kind: \"note\")[\n  Notes highlight neutral supporting information.\n]\n\n````typ\n#calepin.elements.callout(kind: \"warning\", title: [Heads up])[\n  Warnings flag potential problems before they happen.\n]\n````\n\n#calepin.elements.callout(kind: \"warning\", title: [Heads up])[\n  Warnings flag potential problems before they happen.\n]\n\nYou can also define a project-specific helper with Typst's `.with()` method:\n\n````typ\n#let callout-custom = calepin.elements.callout.with(\n  kind: \"important\",\n  title: [Project note],\n)\n\n#callout-custom[\n  Use a local helper when several callouts should share the same kind and title.\n]\n````\n\n#let callout-custom = calepin.elements.callout.with(\n  kind: \"important\",\n  title: [Project note],\n)\n\n#callout-custom[\n  Use a local helper when several callouts should share the same kind and title.\n]\n\n= Side notes\n\n`calepin.elements.sidenote` and `calepin.elements.sidefigure` place supporting\nmaterial in the margin. In HTML output, the built-in `academic` theme supports\nthese elements directly and reserves the side column only on pages that use them.\n\nIn PDF output, Calepin leaves page geometry under your control. The `academic`\ntheme connects these elements to `marginalia`, but it does not automatically\nreserve a wide outer margin. Add a `marginalia.setup` rule near the top of the\ndocument or in a local theme when you want Tufte-style PDF margins:\n\n```typ\n#import \"@preview/marginalia:0.2.0\" as marginalia\n\n#show: marginalia.setup.with(\n  outer: (far: 8mm, width: 48mm, sep: 6mm),\n  book: false,\n)\n```\n\nUse `numbering: none` for an unnumbered side note.\n\n```typ\nText#calepin.elements.sidenote[A margin note.] continues.\n\n#calepin.elements.sidefigure(caption: [A small figure.])[\n  #image(\"figure.svg\")\n]\n```\n\n= Gallery\n\n`calepin.elements.gallery` accepts image items as tuples or dictionaries and handles local image metadata automatically in static outputs. In HTML output, it can activate lightbox behavior.\n\nFor offline sites or a strict Content Security Policy, override `styles-url`,\n`lightbox-url`, and `module-url` with locally hosted PhotoSwipe assets. Their\ndefaults remain the pinned PhotoSwipe 5.4.4 files on unpkg. Frontend assets are\nemitted once, so every gallery on a page must use the same three URLs; Calepin\nreports conflicting configurations at compile time.\n\n```typ\n#calepin.elements.gallery(\n  (\n    (\"../assets/flowers_01.jpg\", \"First flower\", [First flower]),\n    (\"../assets/flowers_04.jpg\", \"Fourth flower\", [Fourth flower]),\n    (\"../assets/flowers_02.jpg\", \"Second flower\", [Second flower]),\n    (\"../assets/flowers_03.jpg\", \"Third flower\", [Third flower]),\n    (\"../assets/flowers_05.jpg\", \"Fifth flower\", [Fifth flower]),\n  ),\n  columns: 3,\n  max-width: 42em,\n)\n```\n\n#calepin.elements.gallery(\n  (\n    (\"../assets/flowers_01.jpg\", \"First flower\", [First flower]),\n    (\"../assets/flowers_04.jpg\", \"Fourth flower\", [Fourth flower]),\n    (\"../assets/flowers_02.jpg\", \"Second flower\", [Second flower]),\n    (\"../assets/flowers_03.jpg\", \"Third flower\", [Third flower]),\n    (\"../assets/flowers_05.jpg\", \"Fifth flower\", [Fifth flower]),\n  ),\n  columns: 3,\n  max-width: 42em,\n)\n\n= Columns\n\n`calepin.elements.columns` is output-aware, so the same call produces a plain Pico `.grid` for HTML and a `grid(...)` for paged output. Columns are equal-width; pass the paged-output column count as an integer. By default, each item is wrapped in a `<div>` so plain Typst blocks stay together as one column; use `wrap: false` when the items already render as standalone HTML elements such as cards.\n\n```typ\n#calepin.elements.columns(\n  columns: 2,\n  wrap: false,\n  [\n    #calepin.elements.card[\n      #heading(level: 3)[Left]\n      Use an equal-width two-column layout for related content.\n    ]\n  ],\n  [\n    #calepin.elements.card[\n      #heading(level: 3)[Right]\n      Paged output renders this via Typst `grid(...)`; HTML uses `<div class=\"grid\">` by default.\n    ]\n  ],\n)\n```\n\n#calepin.elements.columns(\n  columns: 2,\n  wrap: false,\n  [\n    #calepin.elements.card[\n      #heading(level: 3)[Left]\n      Use an equal-width two-column layout for related content.\n    ]\n  ],\n  [\n    #calepin.elements.card[\n      #heading(level: 3)[Right]\n      Paged output renders this via Typst `grid(...)`; HTML uses `<div class=\"grid\">` by default.\n    ]\n  ],\n)\n\nYou can also request more than two columns:\n\n```typ\n#calepin.elements.columns(\n  columns: 4,\n  wrap: true,\n  [One], [Two], [Three]\n)\n```\n\n#calepin.elements.columns(\n  columns: 4,\n  wrap: true,\n  [One], [Two], [Three]\n)\n\n= Tabs\n\n`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the container and `calepin.elements.tab(\"Label\", active: true)[...]` for each panel. Panel names are generated automatically and uniquely; pass `name: \"...\"` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed. For offline or CSP-restricted HTML, pass `module-url` to the tabs container to use a locally hosted Web Awesome tab-group module. The module is emitted once, so every tabs container on a page must use the same URL; conflicting values produce a compile-time error.\n\nPass the same `group: \"...\"` value to multiple tab containers to keep their selection synchronized by panel name. As in Quarto tabset groups, selecting a panel in one container selects the corresponding panel in every other container in the group. Repeated labels are matched by their occurrence among enabled tabs, while their generated DOM panel ids remain unique. Containers without `group` remain independent.\n\n````typ\n#calepin.elements.tabs[\n  #calepin.elements.tab(\"R\", active: true)[\nThis tab shows R code:\n\n```r\nx <- c(1, 2, 3, 4, 5)\nmean(x)\n```\n  ]\n\n  #calepin.elements.tab(\"Python\")[\nThis tab shows Python code:\n\n```python\nx = [1, 2, 3, 4, 5]\nsum(x) / len(x)\n```\n  ]\n]\n````\n\n#calepin.elements.tabs[\n  #calepin.elements.tab(\"R\", active: true)[\nThis tab shows R code:\n\n```r\nx <- c(1, 2, 3, 4, 5)\nmean(x)\n```\n  ]\n\n  #calepin.elements.tab(\"Python\")[\nThis tab shows Python code:\n\n```python\nx = [1, 2, 3, 4, 5]\nsum(x) / len(x)\n```\n  ]\n]\n\n= Lightbox\n\n`lightbox-image(...)` and `lightbox-video(...)` produce browser-only interactive media wrappers in HTML while degrading gracefully in paged output.\n\n```typ\n#calepin.elements.lightbox-image(\n  \"editor-image\",\n  \"/assets/screenshot_notebook.png\",\n  \"Notebook screenshot\",\n  width: 16em,\n)\n#calepin.elements.lightbox-video(\n  \"editor-video\",\n  \"/assets/calepin_vscode.mp4\",\n  poster: \"/assets/calepin_vscode-thumb.png\",\n  width: 16em,\n)\n```\n\n#calepin.elements.columns(\n  columns: 2,\n  wrap: false,\n  [\n    #calepin.elements.lightbox-image(\n      \"editor-image\",\n      \"/assets/screenshot_notebook.png\",\n      \"Notebook screenshot\",\n      width: 16em,\n    )\n  ],\n  [\n    #calepin.elements.lightbox-video(\n      \"editor-video\",\n      \"/assets/calepin_vscode.mp4\",\n      poster: \"/assets/calepin_vscode-thumb.png\",\n      width: 16em,\n    )\n  ],\n)\n\nFor lower-level browser-only components, see #link(\"custom-elements.html\")[Custom web elements].\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#import \"/.calepin/calepin.typ\" as calepin\n\n#set document(title: [Reusable elements])\n\n#metadata((title: \"Elements\", pdf: false, tags: (\"websites\", \"elements\"))) <website-metadata>\n\n#calepin.setup(fenced-chunks: true)\n\n#title()\n\n= Typst functions\n\nIn Typst, `#let` is your primary building block for reusable formatting and construction. Use it to avoid repeating the same patterns.\n\n#let banner(message, note) = [\n  #strong(message)\n  #v(0.3em)\n  #quote(note)\n]\n\n```typ\n#let banner(message, note) = [\n  #strong(message)\n  #v(0.3em)\n  #quote(note)\n]\n\n#banner(\"Reusable functions\", \"Define UI once and reuse it for many places.\")\n```\n\n#banner(\"Reusable function in action\", \"If you update this definition, both call sites update automatically.\")\n\nThe `calepin` namespace also includes a compact set of reusable elements for cards, galleries, columns, tabs, and lightbox media. They are designed to demonstrate output-aware patterning in practical notebook websites.\n\n= Output-aware formatting\n\nCalepin exposes `#calepin.elements.target()` to pick content for HTML, static outputs, or a fallback. This example uses colors to make output differences explicit. In Typst `0.15`, HTML color output was not fully supported, so HTML branches use explicit CSS via `html.elem()`.\n\n```typ\n#let html-color-label(body, color) = html.elem(\"span\", attrs: (style: \"color: \" + color + \";\"))[\n  #body\n]\n\n#calepin.elements.target(\n  html: () => [#html-color-label([#strong(\"HTML\")], \"blue\") output branch],\n  paged: () => [#text(fill: green)[#strong(\"PDF/SVG\")] output branch],\n  fallback: () => [#text(fill: gray)[#strong(\"Fallback\")] output branch],\n)\n```\n\nThe rendered result:\n\n\n#let html-color-label(body, color) = html.elem(\"span\", attrs: (style: \"color: \" + color + \";\"))[\n  #body\n]\n\n#calepin.elements.target(\n  html: () => [#html-color-label([#strong(\"HTML\")], \"blue\") output branch],\n  paged: () => [#text(fill: green)[#strong(\"PDF/SVG\")] output branch],\n  fallback: () => [#text(fill: gray)[#strong(\"Fallback\")] output branch],\n)\n\n\n= Card\n\n`calepin.elements.card` keeps one piece of content boxed consistently across formats.\n\n```typ\n#let callout = calepin.elements.card[\n  #heading(level: 3)[Reusable card]\n  A card wraps content with matching style in HTML and paged output.\n]\n#callout\n```\n\n#calepin.elements.card[\n  #heading(level: 3)[Reusable card]\n  A card wraps content with matching style in HTML and paged output.\n]\n\n= Callouts\n\n`calepin.elements.callout` renders AsciiDoc-style admonitions in HTML and paged output. Use `kind:` with `note`, `tip`, `important`, `caution`, or `warning`. The title defaults to the capitalized kind label; pass `title: [...]` to override it, or `title: none` to hide the title row.\n\n````typ\n#calepin.elements.callout(kind: \"note\")[\n  Notes highlight neutral supporting information.\n]\n````\n\n#calepin.elements.callout(kind: \"note\")[\n  Notes highlight neutral supporting information.\n]\n\n````typ\n#calepin.elements.callout(kind: \"warning\", title: [Heads up])[\n  Warnings flag potential problems before they happen.\n]\n````\n\n#calepin.elements.callout(kind: \"warning\", title: [Heads up])[\n  Warnings flag potential problems before they happen.\n]\n\nYou can also define a project-specific helper with Typst's `.with()` method:\n\n````typ\n#let callout-custom = calepin.elements.callout.with(\n  kind: \"important\",\n  title: [Project note],\n)\n\n#callout-custom[\n  Use a local helper when several callouts should share the same kind and title.\n]\n````\n\n#let callout-custom = calepin.elements.callout.with(\n  kind: \"important\",\n  title: [Project note],\n)\n\n#callout-custom[\n  Use a local helper when several callouts should share the same kind and title.\n]\n\n= Side notes\n\n`calepin.elements.sidenote` and `calepin.elements.sidefigure` place supporting\nmaterial in the margin. In HTML output, the built-in `academic` theme supports\nthese elements directly and reserves the side column only on pages that use them.\n\nIn PDF output, Calepin leaves page geometry under your control. The `academic`\ntheme connects these elements to `marginalia`, but it does not automatically\nreserve a wide outer margin. Add a `marginalia.setup` rule near the top of the\ndocument or in a local theme when you want Tufte-style PDF margins:\n\n```typ\n#import \"@preview/marginalia:0.2.0\" as marginalia\n\n#show: marginalia.setup.with(\n  outer: (far: 8mm, width: 48mm, sep: 6mm),\n  book: false,\n)\n```\n\nUse `numbering: none` for an unnumbered side note.\n\n```typ\nText#calepin.elements.sidenote[A margin note.] continues.\n\n#calepin.elements.sidefigure(caption: [A small figure.])[\n  #image(\"figure.svg\")\n]\n```\n\n= Gallery\n\n`calepin.elements.gallery` accepts image items as tuples or dictionaries and handles local image metadata automatically in static outputs. In HTML output, it can activate lightbox behavior.\n\nFor offline sites or a strict Content Security Policy, override `styles-url`,\n`lightbox-url`, and `module-url` with locally hosted PhotoSwipe assets. Their\ndefaults remain the pinned PhotoSwipe 5.4.4 files on unpkg. Frontend assets are\nemitted once, so every gallery on a page must use the same three URLs; Calepin\nreports conflicting configurations at compile time.\n\n```typ\n#calepin.elements.gallery(\n  (\n    (\"../assets/flowers_01.jpg\", \"First flower\", [First flower]),\n    (\"../assets/flowers_04.jpg\", \"Fourth flower\", [Fourth flower]),\n    (\"../assets/flowers_02.jpg\", \"Second flower\", [Second flower]),\n    (\"../assets/flowers_03.jpg\", \"Third flower\", [Third flower]),\n    (\"../assets/flowers_05.jpg\", \"Fifth flower\", [Fifth flower]),\n  ),\n  columns: 3,\n  max-width: 42em,\n)\n```\n\n#calepin.elements.gallery(\n  (\n    (\"../assets/flowers_01.jpg\", \"First flower\", [First flower]),\n    (\"../assets/flowers_04.jpg\", \"Fourth flower\", [Fourth flower]),\n    (\"../assets/flowers_02.jpg\", \"Second flower\", [Second flower]),\n    (\"../assets/flowers_03.jpg\", \"Third flower\", [Third flower]),\n    (\"../assets/flowers_05.jpg\", \"Fifth flower\", [Fifth flower]),\n  ),\n  columns: 3,\n  max-width: 42em,\n)\n\n= Columns\n\n`calepin.elements.columns` is output-aware, so the same call produces a plain Pico `.grid` for HTML and a `grid(...)` for paged output. Columns are equal-width; pass the paged-output column count as an integer. By default, each item is wrapped in a `<div>` so plain Typst blocks stay together as one column; use `wrap: false` when the items already render as standalone HTML elements such as cards.\n\n```typ\n#calepin.elements.columns(\n  columns: 2,\n  wrap: false,\n  [\n    #calepin.elements.card[\n      #heading(level: 3)[Left]\n      Use an equal-width two-column layout for related content.\n    ]\n  ],\n  [\n    #calepin.elements.card[\n      #heading(level: 3)[Right]\n      Paged output renders this via Typst `grid(...)`; HTML uses `<div class=\"grid\">` by default.\n    ]\n  ],\n)\n```\n\n#calepin.elements.columns(\n  columns: 2,\n  wrap: false,\n  [\n    #calepin.elements.card[\n      #heading(level: 3)[Left]\n      Use an equal-width two-column layout for related content.\n    ]\n  ],\n  [\n    #calepin.elements.card[\n      #heading(level: 3)[Right]\n      Paged output renders this via Typst `grid(...)`; HTML uses `<div class=\"grid\">` by default.\n    ]\n  ],\n)\n\nYou can also request more than two columns:\n\n```typ\n#calepin.elements.columns(\n  columns: 4,\n  wrap: true,\n  [One], [Two], [Three]\n)\n```\n\n#calepin.elements.columns(\n  columns: 4,\n  wrap: true,\n  [One], [Two], [Three]\n)\n\n= Tabs\n\n`calepin.elements.tabs` renders Web Awesome tabs in HTML and lists each enabled panel in paged output. Use `calepin.elements.tabs[...]` as the container and `calepin.elements.tab(\"Label\", active: true)[...]` for each panel. Panel names are generated automatically and uniquely; pass `name: \"...\"` only when you need a stable custom panel id. Fenced code chunks inside tabs are still discovered and executed. For offline or CSP-restricted HTML, pass `module-url` to the tabs container to use a locally hosted Web Awesome tab-group module. The module is emitted once, so every tabs container on a page must use the same URL; conflicting values produce a compile-time error.\n\nPass the same `group: \"...\"` value to multiple tab containers to keep their selection synchronized by panel name. As in Quarto tabset groups, selecting a panel in one container selects the corresponding panel in every other container in the group. Repeated labels are matched by their occurrence among enabled tabs, while their generated DOM panel ids remain unique. Containers without `group` remain independent.\n\n````typ\n#calepin.elements.tabs[\n  #calepin.elements.tab(\"R\", active: true)[\nThis tab shows R code:\n\n```r\nx <- c(1, 2, 3, 4, 5)\nmean(x)\n```\n  ]\n\n  #calepin.elements.tab(\"Python\")[\nThis tab shows Python code:\n\n```python\nx = [1, 2, 3, 4, 5]\nsum(x) / len(x)\n```\n  ]\n]\n````\n\n#calepin.elements.tabs[\n  #calepin.elements.tab(\"R\", active: true)[\nThis tab shows R code:\n\n```r\nx <- c(1, 2, 3, 4, 5)\nmean(x)\n```\n  ]\n\n  #calepin.elements.tab(\"Python\")[\nThis tab shows Python code:\n\n```python\nx = [1, 2, 3, 4, 5]\nsum(x) / len(x)\n```\n  ]\n]\n\n== Synchronized groups\n\nGive multiple tab containers the same `group` name to keep their selected panels synchronized in HTML output. The first two containers below belong to the `language` group. Selecting R or Python in either one changes both.\n\n#calepin.elements.tabs(group: \"language\")[\n  #calepin.elements.tab(\"R\", active: true)[\n    The first container is showing its R content.\n  ]\n\n  #calepin.elements.tab(\"Python\")[\n    The first container is showing its Python content.\n  ]\n]\n\n#calepin.elements.tabs(group: \"language\")[\n  #calepin.elements.tab(\"R\", active: true)[\n    The second container follows the first container to R.\n  ]\n\n  #calepin.elements.tab(\"Python\")[\n    The second container follows the first container to Python.\n  ]\n]\n\nThis container has no `group` argument, so its selection changes independently of the two containers above.\n\n#calepin.elements.tabs[\n  #calepin.elements.tab(\"R\")[\n    This independent container is showing its R content.\n  ]\n\n  #calepin.elements.tab(\"Python\", active: true)[\n    This independent container is showing its Python content.\n  ]\n]\n\n= Lightbox\n\n`lightbox-image(...)` and `lightbox-video(...)` produce browser-only interactive media wrappers in HTML while degrading gracefully in paged output.\n\n```typ\n#calepin.elements.lightbox-image(\n  \"editor-image\",\n  \"/assets/screenshot_notebook.png\",\n  \"Notebook screenshot\",\n  width: 16em,\n)\n#calepin.elements.lightbox-video(\n  \"editor-video\",\n  \"/assets/calepin_vscode.mp4\",\n  poster: \"/assets/calepin_vscode-thumb.png\",\n  width: 16em,\n)\n```\n\n#calepin.elements.columns(\n  columns: 2,\n  wrap: false,\n  [\n    #calepin.elements.lightbox-image(\n      \"editor-image\",\n      \"/assets/screenshot_notebook.png\",\n      \"Notebook screenshot\",\n      width: 16em,\n    )\n  ],\n  [\n    #calepin.elements.lightbox-video(\n      \"editor-video\",\n      \"/assets/calepin_vscode.mp4\",\n      poster: \"/assets/calepin_vscode-thumb.png\",\n      width: 16em,\n    )\n  ],\n)\n\nFor lower-level browser-only components, see #link(\"custom-elements.html\")[Custom web elements].\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4270,6 +4270,10 @@ html:not([data-theme]) {
 
                             
                             
+<li class="calepin-website-sidebar-link"><a href="../getting-started/basics.html" aria-label="Basics">Basics</a></li>
+
+                            
+                            
 <li class="calepin-website-sidebar-link"><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
 
                             
@@ -4289,12 +4293,8 @@ html:not([data-theme]) {
                     
                     
                     <details class="calepin-website-sidebar-section">
-                        <summary>Notebooks</summary>
+                        <summary>Code execution</summary>
                         <ul>
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../notebooks/notebooks.html" aria-label="Notebooks">Notebooks</a></li>
-
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
@@ -4309,15 +4309,11 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/data_store.html" aria-label="Data transport">Data transport</a></li>
 
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
 
                             
                         </ul>
@@ -4328,6 +4324,33 @@ html:not([data-theme]) {
                     
                     
                     <details class="calepin-website-sidebar-section" open>
+                        <summary>HTML</summary>
+                        <ul>
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="elements.html" aria-label="Elements" class="active" aria-current="page">Elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
+
+                            
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
                         <summary>Websites</summary>
                         <ul>
                             
@@ -4356,11 +4379,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="elements.html" aria-label="Elements" class="active" aria-current="page">Elements</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+<li class="calepin-website-sidebar-link"><a href="health.html" aria-label="Health">Health</a></li>
 
                             
                         </ul>
@@ -4398,15 +4417,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="../themes/pdf_templates.html" aria-label="PDF">PDF</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
 
                             
                             
@@ -4426,10 +4437,6 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../tips.html" aria-label="Tips &amp; tricks">Tips &amp; tricks</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="health.html" aria-label="Health">Health</a></li>
 
                             
                             
@@ -4657,7 +4664,7 @@ sum(x) / len(x)
 <span class="calepin-syntax-scope-10">mean</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-1">x</span><span class="calepin-syntax-scope-2">)</span>
 </code></pre></div><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">[1] 3</span></code></pre></div></wa-tab-panel><wa-tab panel="calepin-tab-Python-2" data-calepin-tab-key="Python">Python</wa-tab><wa-tab-panel name="calepin-tab-Python-2"><p>This tab shows Python code:</p><div class="sourceCode" data-lang="python"><pre><code data-lang="python"><span class="calepin-syntax-scope-1">x</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-6">1</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">2</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">3</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">4</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">5</span><span class="calepin-syntax-scope-2">]</span>
 <span class="calepin-syntax-scope-132">sum</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-123">x</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-9">/</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-132">len</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-123">x</span><span class="calepin-syntax-scope-2">)</span>
-</code></pre></div><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">3.0</span></code></pre></div></wa-tab-panel></wa-tab-group><h2 id="lightbox">Lightbox</h2><p><code>lightbox-image(...)</code> and <code>lightbox-video(...)</code> produce browser-only interactive media wrappers in HTML while degrading gracefully in paged output.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">#calepin<span class="calepin-syntax-scope-2">.</span>elements<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">lightbox-image</span><span class="calepin-syntax-scope-2">(</span>
+</code></pre></div><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">3.0</span></code></pre></div></wa-tab-panel></wa-tab-group><h3 id="synchronized-groups">Synchronized groups</h3><p>Give multiple tab containers the same <code>group</code> name to keep their selected panels synchronized in HTML output. The first two containers below belong to the <code>language</code> group. Selecting R or Python in either one changes both.</p><wa-tab-group class="calepin-elements-tabs" data-calepin-tab-group="language"><wa-tab panel="calepin-tab-R-3" data-calepin-tab-key="R" active>R</wa-tab><wa-tab-panel name="calepin-tab-R-3" active>The first container is showing its R content.</wa-tab-panel><wa-tab panel="calepin-tab-Python-4" data-calepin-tab-key="Python">Python</wa-tab><wa-tab-panel name="calepin-tab-Python-4">The first container is showing its Python content.</wa-tab-panel></wa-tab-group><wa-tab-group class="calepin-elements-tabs" data-calepin-tab-group="language"><wa-tab panel="calepin-tab-R-5" data-calepin-tab-key="R" active>R</wa-tab><wa-tab-panel name="calepin-tab-R-5" active>The second container follows the first container to R.</wa-tab-panel><wa-tab panel="calepin-tab-Python-6" data-calepin-tab-key="Python">Python</wa-tab><wa-tab-panel name="calepin-tab-Python-6">The second container follows the first container to Python.</wa-tab-panel></wa-tab-group><p>This container has no <code>group</code> argument, so its selection changes independently of the two containers above.</p><wa-tab-group class="calepin-elements-tabs"><wa-tab panel="calepin-tab-R-7" data-calepin-tab-key="R">R</wa-tab><wa-tab-panel name="calepin-tab-R-7">This independent container is showing its R content.</wa-tab-panel><wa-tab panel="calepin-tab-Python-8" data-calepin-tab-key="Python" active>Python</wa-tab><wa-tab-panel name="calepin-tab-Python-8" active>This independent container is showing its Python content.</wa-tab-panel></wa-tab-group><h2 id="lightbox">Lightbox</h2><p><code>lightbox-image(...)</code> and <code>lightbox-video(...)</code> produce browser-only interactive media wrappers in HTML while degrading gracefully in paged output.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">#calepin<span class="calepin-syntax-scope-2">.</span>elements<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">lightbox-image</span><span class="calepin-syntax-scope-2">(</span>
   <span class="calepin-syntax-scope-4">"editor-image"</span><span class="calepin-syntax-scope-2">,</span>
   <span class="calepin-syntax-scope-4">"/assets/screenshot_notebook.png"</span><span class="calepin-syntax-scope-2">,</span>
   <span class="calepin-syntax-scope-4">"Notebook screenshot"</span><span class="calepin-syntax-scope-2">,</span>
@@ -4691,6 +4698,8 @@ sum(x) / len(x)
                     <li class="level-2"><a href="#columns">Columns</a></li>
                     
                     <li class="level-2"><a href="#tabs">Tabs</a></li>
+                    
+                    <li class="level-3"><a href="#synchronized-groups">Synchronized groups</a></li>
                     
                     <li class="level-2"><a href="#lightbox">Lightbox</a></li>
                     
@@ -4774,6 +4783,17 @@ sum(x) / len(x)
     
         
         
+            
+            
+        
+        
+        
+    
+        
+        
+            
+            
+        
         
             
         
@@ -4815,24 +4835,6 @@ sum(x) / len(x)
         
     
         
-        
-        
-            
-        
-        
-    
-        
-        
-            
-            
-        
-        
-        
-    
-        
-        
-            
-            
         
         
             
@@ -4914,11 +4916,11 @@ sum(x) / len(x)
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="multilingual.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="../notebooks/diagrams.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Multilingual</span>
+            <span class="calepin-website-page-nav-title">Diagrams</span>
           </span>
         </a>
         

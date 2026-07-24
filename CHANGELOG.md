@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Replace the legacy document-variable transport with a validated document-scoped `store`: initialize values with `[store]`, `calepin.store.set()`, or `--set store.*`; move structured values between R, Python, Typst, and theme templates with `store-get`/`store-set`; and support store-driven multipass chunk expansion with complete-build cache reuse and generation-safe watch publication. Mixed-engine notebooks now execute in source order instead of engine-grouped order, which can change the ordering of observable side effects. `#|` options accept Typst-style parenthesized arrays while retaining bracket-array compatibility, and themed discovery keeps adjacent fenced blocks matched to their own results.
 - Make website tables of contents float by default with site-wide and per-page `toc.floating` overrides, and use content-driven spacing so wrapped titles expand without overlapping adjacent entries.
 - Fix Typst chunk handling for dotted kernel names, duplicate labels, numeric label overflow, and path-like artifact labels; invalidate preprocessing caches when local theme files change and reject invalid SVG dimensions.
 - Improve the Typst helper runtime with complete document-level figure defaults, source-aware paged galleries, collision-safe grouped tabs, safely configurable frontend assets, shared code/results modules, and canonical dotted-engine source echo with legacy-results compatibility.

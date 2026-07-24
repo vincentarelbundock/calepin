@@ -4178,7 +4178,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Templating])\n#import \"/.calepin/calepin.typ\" as calepin\n#metadata((tags: (\"themes\", \"templates\"))) <website-metadata>\n#title()\n\nTheme layouts are #link(\"https://docs.rs/minijinja/latest/minijinja/syntax/index.html\")[MiniJinja] templates. The HTML layouts (`layouts/site.html` and `layouts/document.html`) and the paged layout (`layouts/pdf.typ`) all use the same engine, so the syntax on this page applies to both. The #link(\"html_templates.html\")[HTML templates] and #link(\"pdf_templates.html\")[PDF templates] pages document the values each layout receives.\n\n= Syntax\n\nMiniJinja has two kinds of tags.\n\nInterpolation prints a value:\n\n```html\n<title>{{ doc.title }}</title>\n```\n\nStatements control flow. Loops repeat a block:\n\n```html\n{% for file in css %}\n<style>\n{{ file.content }}\n</style>\n{% endfor %}\n```\n\nConditionals show a block only when a value is set:\n\n```html\n{% if site.logo %}\n<img src=\"{{ site.logo }}\" alt=\"{{ site.logo_alt }}\">\n{% endif %}\n```\n\nIncludes pull in another template file, which is how themes share partials:\n\n```html\n{% include \"partials/site-footer.html\" %}\n```\n\nThe #link(\"https://docs.rs/minijinja/latest/minijinja/syntax/index.html\")[MiniJinja syntax reference] covers the rest: filters, tests, macros, and more.\n\n= Context\n\nEach layout receives a context: a set of named values you reference with `{{ }}`. The available names depend on the target.\n\n- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `vars`, and more. See #link(\"html_templates.html\")[HTML templates].\n- The paged layout receives `doc`, `theme`, `target`, and `vars`. See #link(\"pdf_templates.html\")[PDF templates].\n\nBoth targets receive `theme`, `target`, and `vars`.\n\n= Variables\n\nPass project-specific template values with `--set vars.<name>=...`:\n\n```sh\ncalepin compile notebook.typ --set vars.course=\"Econ 101\" --set vars.semester=\"Fall 2026\"\n```\n\nThese values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values are merged into the same map, and CLI `--set vars.<name>=...` values take precedence. In HTML templates, `vars` sits at the top level, not under `site`:\n\n```html\n<p>{{ vars.course }}, {{ vars.semester }}</p>\n```\n\nIn a `layouts/pdf.typ` paged layout, read the same values and emit Typst:\n\n```typ\n#let course = \"{{ vars.course }}\"\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Templating])\n#import \"/.calepin/calepin.typ\" as calepin\n#metadata((tags: (\"themes\", \"templates\"))) <website-metadata>\n#title()\n\nTheme layouts are #link(\"https://docs.rs/minijinja/latest/minijinja/syntax/index.html\")[MiniJinja] templates. The HTML layouts (`layouts/site.html` and `layouts/document.html`) and the paged layout (`layouts/pdf.typ`) all use the same engine, so the syntax on this page applies to both. The #link(\"html_templates.html\")[HTML templates] and #link(\"pdf_templates.html\")[PDF templates] pages document the values each layout receives.\n\n= Syntax\n\nMiniJinja has two kinds of tags.\n\nInterpolation prints a value:\n\n```html\n<title>{{ doc.title }}</title>\n```\n\nStatements control flow. Loops repeat a block:\n\n```html\n{% for file in css %}\n<style>\n{{ file.content }}\n</style>\n{% endfor %}\n```\n\nConditionals show a block only when a value is set:\n\n```html\n{% if site.logo %}\n<img src=\"{{ site.logo }}\" alt=\"{{ site.logo_alt }}\">\n{% endif %}\n```\n\nIncludes pull in another template file, which is how themes share partials:\n\n```html\n{% include \"partials/site-footer.html\" %}\n```\n\nThe #link(\"https://docs.rs/minijinja/latest/minijinja/syntax/index.html\")[MiniJinja syntax reference] covers the rest: filters, tests, macros, and more.\n\n= Context\n\nEach layout receives a context: a set of named values you reference with `{{ }}`. The available names depend on the target.\n\n- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `store`, and more. See #link(\"html_templates.html\")[HTML templates].\n- The paged layout receives `doc`, `theme`, `target`, and `store`. See #link(\"pdf_templates.html\")[PDF templates].\n\nBoth targets receive `theme`, `target`, and `store`.\n\n= Document store\n\nPass project-specific template values with `[store]` or `--set store.<name>=...`:\n\n```sh\ncalepin compile notebook.typ --set store.course=\"Econ 101\" --set store.semester=\"Fall 2026\"\n```\n\nThe completed document store is available as top-level `store` in both HTML and paged layouts. It includes project values, document initializers declared with `calepin.store.set()`, and values committed by successful `store-set` chunks. CLI `--set store.<name>=...` values take precedence over project and document initializers. In HTML templates, `store` sits at the top level, not under `site`:\n\n```html\n<p>{{ store.course }}, {{ store.semester }}</p>\n```\n\nIn a `layouts/pdf.typ` paged layout, read the same values and emit Typst:\n\n```typ\n#let course = \"{{ store.course }}\"\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4270,6 +4270,10 @@ html:not([data-theme]) {
 
                             
                             
+<li class="calepin-website-sidebar-link"><a href="../getting-started/basics.html" aria-label="Basics">Basics</a></li>
+
+                            
+                            
 <li class="calepin-website-sidebar-link"><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
 
                             
@@ -4289,12 +4293,8 @@ html:not([data-theme]) {
                     
                     
                     <details class="calepin-website-sidebar-section">
-                        <summary>Notebooks</summary>
+                        <summary>Code execution</summary>
                         <ul>
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../notebooks/notebooks.html" aria-label="Notebooks">Notebooks</a></li>
-
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
@@ -4309,15 +4309,38 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/data_store.html" aria-label="Data transport">Data transport</a></li>
 
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>HTML</summary>
+                        <ul>
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="html_templates.html" aria-label="HTML">HTML</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="css.html" aria-label="CSS">CSS</a></li>
 
                             
                         </ul>
@@ -4356,11 +4379,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+<li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
 
                             
                         </ul>
@@ -4398,15 +4417,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="html_templates.html" aria-label="HTML">HTML</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="pdf_templates.html" aria-label="PDF">PDF</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="css.html" aria-label="CSS">CSS</a></li>
 
                             
                             
@@ -4429,10 +4440,6 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
 
                             
@@ -4445,19 +4452,14 @@ html:not([data-theme]) {
             </nav>
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
-            <h1 id="templating">Templating</h1><p>Theme layouts are <a href="https://docs.rs/minijinja/latest/minijinja/syntax/index.html">MiniJinja</a> templates. The HTML layouts (<code>layouts/site.html</code> and <code>layouts/document.html</code>) and the paged layout (<code>layouts/pdf.typ</code>) all use the same engine, so the syntax on this page applies to both. The <a href="html_templates.html">HTML templates</a> and <a href="pdf_templates.html">PDF templates</a> pages document the values each layout receives.</p><h2 id="syntax">Syntax</h2><p>MiniJinja has two kinds of tags.</p><p>Interpolation prints a value:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ doc.title }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span></code></pre></div><p>Statements control flow. Loops repeat a block:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ doc.title }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span></code></pre></div><p>Conditionals show a block only when a value is set:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{% for file in css %}</span>
+            <h1 id="templating">Templating</h1><p>Theme layouts are <a href="https://docs.rs/minijinja/latest/minijinja/syntax/index.html">MiniJinja</a> templates. The HTML layouts (<code>layouts/site.html</code> and <code>layouts/document.html</code>) and the paged layout (<code>layouts/pdf.typ</code>) all use the same engine, so the syntax on this page applies to both. The <a href="html_templates.html">HTML templates</a> and <a href="pdf_templates.html">PDF templates</a> pages document the values each layout receives.</p><h2 id="syntax">Syntax</h2><p>MiniJinja has two kinds of tags.</p><p>Interpolation prints a value:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ doc.title }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span></code></pre></div><p>Statements control flow. Loops repeat a block:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{% for file in css %}</span>
 <span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
 <span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">{ </span><span class="calepin-syntax-scope-1">file</span><span class="calepin-syntax-scope-1">.</span><span class="calepin-syntax-scope-23">content</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-1">}</span>
 <span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">{% endfor %}</span></code></pre></div><p>Includes pull in another template file, which is how themes share partials:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{% for file in css %}</span>
-<span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">{ </span><span class="calepin-syntax-scope-1">file</span><span class="calepin-syntax-scope-1">.</span><span class="calepin-syntax-scope-23">content</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-1">}</span>
-<span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">{% endfor %}</span></code></pre></div><p>The <a href="https://docs.rs/minijinja/latest/minijinja/syntax/index.html">MiniJinja syntax reference</a> covers the rest: filters, tests, macros, and more.</p><h2 id="context">Context</h2><p>Each layout receives a context: a set of named values you reference with <code>{{ }}</code>. The available names depend on the target.</p><ul><li>HTML layouts receive <code>site</code>, <code>css</code>, <code>js</code>, <code>doc</code>, <code>theme</code>, <code>target</code>, <code>vars</code>, and more. See <a href="html_templates.html">HTML templates</a>.</li><li>The paged layout receives <code>doc</code>, <code>theme</code>, <code>target</code>, and <code>vars</code>. See <a href="pdf_templates.html">PDF templates</a>.</li></ul><p>Both targets receive <code>theme</code>, <code>target</code>, and <code>vars</code>.</p><h2 id="variables">Variables</h2><p>Pass project-specific template values with <code>--set vars.&lt;name>=...</code>:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">{</span><span class="calepin-syntax-scope-1">%</span><span class="calepin-syntax-scope-1"> if site.logo </span><span class="calepin-syntax-scope-1">%</span><span class="calepin-syntax-scope-1">}</span>
-<span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-1">img </span><span class="calepin-syntax-scope-1">src</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">{{ site.logo }}</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">alt</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">{{ site.logo_alt }}</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-10">{</span><span class="calepin-syntax-scope-1">%</span><span class="calepin-syntax-scope-1"> endif </span><span class="calepin-syntax-scope-1">%</span><span class="calepin-syntax-scope-1">}</span></code></pre></div><p>These values are available as a top-level <code>vars</code> in both HTML and paged layouts. Document-level <code>calepin.setup(vars: ...)</code> values are merged into the same map, and CLI <code>--set vars.&lt;name>=...</code> values take precedence. In HTML templates, <code>vars</code> sits at the top level, not under <code>site</code>:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{% if site.logo %}</span>
+<span class="calepin-syntax-scope-1">{% endfor %}</span></code></pre></div><p>Conditionals show a block only when a value is set:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{% if site.logo %}</span>
 <span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">img</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">src</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">{{ site.logo }}</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">alt</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">{{ site.logo_alt }}</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">{% endif %}</span></code></pre></div><p>In a <code>layouts/pdf.typ</code> paged layout, read the same values and emit Typst:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> course <span class="calepin-syntax-scope-9">=</span> <span class="calepin-syntax-scope-4">"{{ vars.course }}"</span></code></pre></div>
+<span class="calepin-syntax-scope-1">{% endif %}</span></code></pre></div><p>Includes pull in another template file, which is how themes share partials:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{% include "partials/site-footer.html" %}</span></code></pre></div><p>The <a href="https://docs.rs/minijinja/latest/minijinja/syntax/index.html">MiniJinja syntax reference</a> covers the rest: filters, tests, macros, and more.</p><h2 id="context">Context</h2><p>Each layout receives a context: a set of named values you reference with <code>{{ }}</code>. The available names depend on the target.</p><ul><li>HTML layouts receive <code>site</code>, <code>css</code>, <code>js</code>, <code>doc</code>, <code>theme</code>, <code>target</code>, <code>store</code>, and more. See <a href="html_templates.html">HTML templates</a>.</li><li>The paged layout receives <code>doc</code>, <code>theme</code>, <code>target</code>, and <code>store</code>. See <a href="pdf_templates.html">PDF templates</a>.</li></ul><p>Both targets receive <code>theme</code>, <code>target</code>, and <code>store</code>.</p><h2 id="document-store">Document store</h2><p>Pass project-specific template values with <code>[store]</code> or <code>--set store.&lt;name>=...</code>:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile notebook.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> store.course=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Econ 101</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> store.semester=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Fall 2026</span><span class="calepin-syntax-scope-4">"</span>
+</code></pre></div><p>The completed document store is available as top-level <code>store</code> in both HTML and paged layouts. It includes project values, document initializers declared with <code>calepin.store.set()</code>, and values committed by successful <code>store-set</code> chunks. CLI <code>--set store.&lt;name>=...</code> values take precedence over project and document initializers. In HTML templates, <code>store</code> sits at the top level, not under <code>site</code>:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">p</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ store.course }}, {{ store.semester }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">p</span><span class="calepin-syntax-scope-9">></span></code></pre></div><p>In a <code>layouts/pdf.typ</code> paged layout, read the same values and emit Typst:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> course <span class="calepin-syntax-scope-9">=</span> <span class="calepin-syntax-scope-4">"{{ store.course }}"</span></code></pre></div>
         </main>
                 
         <aside class="calepin-website-toc is-floating">
@@ -4469,7 +4471,7 @@ html:not([data-theme]) {
                     
                     <li class="level-2"><a href="#context">Context</a></li>
                     
-                    <li class="level-2"><a href="#variables">Variables</a></li>
+                    <li class="level-2"><a href="#document-store">Document store</a></li>
                     
                 </ul>
             </nav>
@@ -4628,17 +4630,6 @@ html:not([data-theme]) {
     
         
         
-            
-            
-        
-        
-        
-    
-        
-        
-            
-            
-        
         
             
         
@@ -4653,12 +4644,16 @@ html:not([data-theme]) {
     
         
         
-        
             
+            
+        
         
         
     
         
+        
+            
+            
         
         
             
@@ -4701,10 +4696,10 @@ html:not([data-theme]) {
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="html_templates.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="pdf_templates.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">HTML</span>
+            <span class="calepin-website-page-nav-title">PDF</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

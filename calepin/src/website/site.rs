@@ -191,7 +191,7 @@ impl SiteModel {
                     &format!("{PAGEFIND_DIR}/"),
                 )),
             }),
-            vars: Default::default(),
+            store: Default::default(),
             toc_depth: None,
             toc_floating: None,
         }

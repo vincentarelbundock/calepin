@@ -1,7 +1,9 @@
 {
-  "schema": 1,
-  "calepin_version": "0.0.34",
+  "schema": 2,
+  "calepin_version": "0.0.36",
   "input": "notebooks/figures.typ",
+  "generation": "c4d3591e1755c318-1349cde127705c16",
+  "store": {},
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",

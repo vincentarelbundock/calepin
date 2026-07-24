@@ -1,33 +1,10 @@
-#import "../core/state.typ": *
 #import "../core/target.typ": _is-query
-
-// Validate that document variables only contain JSON-serializable leaves
-// (none, bool, int, float, str) nested in arrays/dictionaries. Anything else
-// (content, functions, lengths, colors, ...) fails fast with the offending path.
-#let _validate-vars(value, path) = {
-  let t = type(value)
-  if value == none or t == bool or t == int or t == float or t == str {
-    // supported scalar leaf
-  } else if t == array {
-    for (i, item) in value.enumerate() {
-      _validate-vars(item, path + "[" + str(i) + "]")
-    }
-  } else if t == dictionary {
-    for (k, v) in value.pairs() {
-      _validate-vars(v, if path == "" { k } else { path + "." + k })
-    }
-  } else {
-    panic(
-      "calepin.setup: unsupported variable `" + path + "`: values of type " + str(t)
-        + " cannot be passed as variables; use none, a boolean, a number, a string, "
-        + "an array, or a dictionary",
-    )
-  }
-}
+#import "defaults.typ": _base-options, _call-extra-defaults, _setup-defaults
 
 // Per-option defaults come from `_base-options` so there is a single source of
 // truth for all document-level configuration.
 #let setup(
+  script: _base-options.at("script"),
   echo: _base-options.at("echo"),
   eval: _base-options.at("eval"),
   results: _base-options.at("results"),
@@ -44,13 +21,20 @@
   fig-height: _base-options.at("fig-height"),
   fig-align: _base-options.at("fig-align"),
   fig-responsive: _base-options.at("fig-responsive"),
+  fig-link: _base-options.at("fig-link"),
+  fig-caption: _base-options.at("fig-caption"),
+  fig-cap-location: _base-options.at("fig-cap-location"),
+  fig-alt-text: _base-options.at("fig-alt-text"),
+  fig-subcaptions: _base-options.at("fig-subcaptions"),
+  fig-layout-columns: _base-options.at("fig-layout-columns"),
+  fig-layout-rows: _base-options.at("fig-layout-rows"),
+  kind: _base-options.at("kind"),
   fenced-chunks: true,
   fallback-warning: true,
   theme: none,
-  vars: (:),
   ) = {
-  _validate-vars(vars, "")
   let setup-opts = (
+    script: script,
     echo: echo,
     eval: eval,
     results: results,
@@ -67,10 +51,17 @@
     "fig-height": fig-height,
     "fig-align": fig-align,
     "fig-responsive": fig-responsive,
+    "fig-link": fig-link,
+    "fig-caption": fig-caption,
+    "fig-cap-location": fig-cap-location,
+    "fig-alt-text": fig-alt-text,
+    "fig-subcaptions": fig-subcaptions,
+    "fig-layout-columns": fig-layout-columns,
+    "fig-layout-rows": fig-layout-rows,
+    kind: kind,
     "fenced-chunks": fenced-chunks,
     "fallback-warning": fallback-warning,
     theme: theme,
-    vars: vars,
   )
   _setup-defaults.update(defaults => (default: defaults.at("default") + setup-opts))
   if _is-query() {
@@ -86,7 +77,7 @@
   }
 }
 
-#let _resolve-options(engine, args) = {
+#let _resolve-options-for(args) = {
   let defaults = _setup-defaults.get().at("default")
   let out = (:)
   for key in _base-options.keys() {
@@ -97,3 +88,6 @@
   }
   out
 }
+
+// Keep the engine argument for themes that import the historical helper.
+#let _resolve-options(engine, args) = _resolve-options-for(args)

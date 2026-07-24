@@ -259,20 +259,11 @@ impl JupyterBridgeSession {
         program: &Path,
         cwd: Option<&Path>,
         timeout: Option<std::time::Duration>,
-        vars_path: Option<&Path>,
     ) -> Result<Self> {
         process::validate_python_interpreter(program, "start Jupyter bridge", Some(&tools::PYTHON))
             .context("failed to start Jupyter bridge")?;
-        // Set CALEPIN_VARS_PATH on the bridge process before it launches any
-        // kernel, so every kernel (whatever its language) inherits it and can
-        // read vars.json. This is the only reliable transport for kernels
-        // Calepin cannot auto-bind.
-        let mut env: Vec<(&str, &str)> =
+        let env: Vec<(&str, &str)> =
             vec![("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")];
-        let vars_path = vars_path.map(|path| path.to_string_lossy().into_owned());
-        if let Some(path) = vars_path.as_deref() {
-            env.push(("CALEPIN_VARS_PATH", path));
-        }
         let mut proc = SubprocessSession::spawn(
             program,
             &["-s", "-u", "-c", JUPYTER_BRIDGE],
@@ -382,7 +373,6 @@ mod tests {
             Path::new("python3"),
             None,
             Some(Duration::from_secs(10)),
-            None,
         )
         .unwrap();
 
@@ -422,7 +412,6 @@ display({
             Path::new("python3"),
             None,
             Some(Duration::from_secs(10)),
-            None,
         )
         .unwrap();
 

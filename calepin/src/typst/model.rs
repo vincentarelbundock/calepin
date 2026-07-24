@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-pub const RESULT_SCHEMA_VERSION: u8 = 1;
+pub const RESULT_SCHEMA_VERSION: u8 = 2;
 pub const DEFAULT_FIG_DEVICE_FORMAT: &str = "svg";
 pub const DEFAULT_FIG_DEVICE_DPI: u32 = 150;
 pub const DEFAULT_FIG_DEVICE_WIDTH: f64 = 6.0;
@@ -170,11 +170,6 @@ pub struct SetupDefaults {
     #[serde(default)]
     pub kind: Option<String>,
     pub fenced_chunks: FencedChunks,
-    /// Document-level variables from `calepin.setup(vars: (...))`, kept as a
-    /// JSON object. Merged with `[vars]` config and CLI `--set vars.*` overrides, then
-    /// injected once per engine so chunks can read a `vars` value.
-    #[serde(default)]
-    pub vars: Value,
     /// Document-level theme from `calepin.setup(theme: ...)`: a builtin name, a
     /// project-relative path, or `"typst"` for raw Typst output.
     #[serde(default)]
@@ -211,7 +206,6 @@ impl Default for SetupDefaults {
             fig_layout_rows: None,
             kind: None,
             fenced_chunks: FencedChunks::All,
-            vars: Value::Object(serde_json::Map::new()),
             theme: None,
         }
     }
@@ -233,6 +227,10 @@ impl SetupDefaults {
 pub struct ExecOptions {
     pub eval: bool,
     pub error: bool,
+    #[serde(default, rename = "store-get")]
+    pub store_get: Vec<String>,
+    #[serde(default, rename = "store-set")]
+    pub store_set: Vec<String>,
     pub fig_device_format: String,
     pub fig_device_dpi: u32,
     pub fig_device_width: f64,
@@ -523,6 +521,10 @@ pub struct ResultsDocument {
     pub schema: u8,
     pub calepin_version: String,
     pub input: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub generation: String,
+    #[serde(default)]
+    pub store: serde_json::Map<String, Value>,
     pub chunks: IndexMap<String, ChunkResultDocument>,
 }
 
@@ -574,6 +576,8 @@ mod tests {
             fig_device_aspect: DEFAULT_FIG_DEVICE_ASPECT,
             eval: true,
             error: false,
+            store_get: Vec::new(),
+            store_set: Vec::new(),
         }
     }
 

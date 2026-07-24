@@ -186,9 +186,7 @@ fn alt_argument_state(args: &str) -> AltState {
 }
 
 fn validate_local_image(root: &Path, image: &ImageOccurrence) -> Option<String> {
-    let Some(candidate) = resolve_local_reference_target(root, &image.source, &image.target) else {
-        return None;
-    };
+    let candidate = resolve_local_reference_target(root, &image.source, &image.target)?;
     let candidate = match candidate {
         Ok(candidate) => candidate,
         Err(_) => {

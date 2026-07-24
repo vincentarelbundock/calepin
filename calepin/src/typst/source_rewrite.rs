@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use crate::typst::crossref::has_crossref_prefix;
@@ -147,6 +148,8 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
     let mut raw_block: Option<RawBlock> = None;
     let mut parse_state = TypstParseState::default();
     let mut source_lex = LexState::default();
+    let mut store_set_lex = StoreSetLexState::default();
+    let store_bases = store_set_bases(source, runtime_import);
     let mut needs_runtime_alias = false;
     let mut saw_runtime_import = false;
 
@@ -200,6 +203,8 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
             runtime_import,
             &mut saw_runtime_import,
         );
+        let rewritten =
+            rewrite_store_set_calls_in_line(&rewritten, &mut store_set_lex, &store_bases);
         let inline_fence = parse_state.scan_line(&rewritten);
         if let Some(offset) = inline_fence {
             let opening = &rewritten[offset..];
@@ -229,6 +234,181 @@ fn rewrite_source(source: &str, runtime_import: &str) -> RewriteResult {
         needs_runtime_alias,
         saw_runtime_import,
     }
+}
+
+fn store_set_bases(source: &str, runtime_import: &str) -> HashSet<String> {
+    let mut bases = HashSet::new();
+    let mut saw_runtime_import = false;
+    let mut raw_block = None;
+    let mut lex = LexState::default();
+
+    for segment in source.split_inclusive('\n') {
+        let (line, _) = split_segment(segment);
+        let trimmed = line.trim_start();
+        if let Some(fence_len) = raw_block {
+            if is_closing_fence(trimmed, fence_len) {
+                raw_block = None;
+            }
+            continue;
+        }
+        if !lex.in_block_comment() {
+            if let Some((fence_len, _)) = opening_fence(trimmed) {
+                raw_block = Some(fence_len);
+                continue;
+            }
+        }
+        let _ = scan_line_for_imports(line, &mut lex, |candidate| {
+            let import = parse_import_candidate(candidate)?;
+            if !is_calepin_runtime_import(&import.literal.value, runtime_import) {
+                return None;
+            }
+            saw_runtime_import = true;
+            record_store_import_bases(import.tail, &mut bases);
+            Some(())
+        });
+    }
+
+    if !saw_runtime_import {
+        bases.insert(format!("{RUNTIME_DEFAULT_ALIAS}.store"));
+    }
+    bases
+}
+
+fn record_store_import_bases(tail: &str, bases: &mut HashSet<String>) {
+    let tail = tail.trim_start();
+    if let Some(alias) = tail
+        .strip_prefix("as")
+        .filter(|rest| rest.starts_with(char::is_whitespace))
+        .map(str::trim_start)
+    {
+        let len = identifier_len(alias);
+        if len > 0 {
+            bases.insert(format!("{}.store", &alias[..len]));
+        }
+        return;
+    }
+    let Some(imports) = tail.strip_prefix(':') else {
+        bases.insert(format!("{RUNTIME_DEFAULT_ALIAS}.store"));
+        return;
+    };
+    for import in imports.split(',') {
+        let import = import.trim();
+        if import.starts_with('*') {
+            bases.insert("store".to_string());
+            continue;
+        }
+        let name_len = identifier_len(import);
+        if name_len == 0 || &import[..name_len] != "store" {
+            continue;
+        }
+        let rest = import[name_len..].trim_start();
+        if let Some(alias) = rest
+            .strip_prefix("as")
+            .filter(|tail| tail.starts_with(char::is_whitespace))
+            .map(str::trim_start)
+        {
+            let alias_len = identifier_len(alias);
+            if alias_len > 0 {
+                bases.insert(alias[..alias_len].to_string());
+                continue;
+            }
+        }
+        bases.insert("store".to_string());
+    }
+}
+
+fn rewrite_store_set_calls_in_line(
+    line: &str,
+    lex: &mut StoreSetLexState,
+    bases: &HashSet<String>,
+) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut idx = 0;
+
+    while idx < line.len() {
+        if let Some(delimiter_len) = lex.raw_delimiter_len {
+            let delimiter = "`".repeat(delimiter_len);
+            if line[idx..].starts_with(&delimiter) {
+                out.push_str(&delimiter);
+                idx += delimiter_len;
+                lex.raw_delimiter_len = None;
+            } else {
+                let ch = line[idx..].chars().next().expect("valid char index");
+                out.push(ch);
+                idx += ch.len_utf8();
+            }
+            continue;
+        }
+        if lex.comments.in_block_comment() {
+            if line[idx..].starts_with("/*") {
+                lex.comments.enter_block_comment();
+                out.push_str("/*");
+                idx += 2;
+            } else if line[idx..].starts_with("*/") {
+                lex.comments.exit_block_comment();
+                out.push_str("*/");
+                idx += 2;
+            } else {
+                let ch = line[idx..].chars().next().expect("valid char index");
+                out.push(ch);
+                idx += ch.len_utf8();
+            }
+            continue;
+        }
+        if line[idx..].starts_with("//") {
+            out.push_str(&line[idx..]);
+            break;
+        }
+        if line[idx..].starts_with("/*") {
+            lex.comments.enter_block_comment();
+            out.push_str("/*");
+            idx += 2;
+            continue;
+        }
+        if line[idx..].starts_with('"') {
+            let len = string_literal_source_len(&line[idx..]);
+            out.push_str(&line[idx..idx + len]);
+            idx += len;
+            continue;
+        }
+        if line[idx..].starts_with('`') {
+            let delimiter_len = leading_backtick_count(&line[idx..]);
+            let delimiter = "`".repeat(delimiter_len);
+            out.push_str(&delimiter);
+            idx += delimiter_len;
+            lex.raw_delimiter_len = Some(delimiter_len);
+            continue;
+        }
+
+        let candidate = &line[idx..];
+        if identifier_len(candidate) > 0 {
+            let follows_call = candidate
+                .split_once(".set")
+                .is_some_and(|(_, tail)| tail.trim_start().starts_with('('));
+            let has_boundary = idx == 0
+                || line[..idx]
+                    .chars()
+                    .next_back()
+                    .is_none_or(|ch| !is_ident_char(ch) && ch != '.');
+            if follows_call && has_boundary {
+                if let Some(path) = bases
+                    .iter()
+                    .map(|base| format!("{base}.set"))
+                    .find(|path| candidate.starts_with(path))
+                {
+                    out.push_str(&path);
+                    out.push('_');
+                    idx += path.len();
+                    continue;
+                }
+            }
+        }
+
+        let ch = candidate.chars().next().expect("valid char index");
+        out.push(ch);
+        idx += ch.len_utf8();
+    }
+    out
 }
 
 struct RawBlock {
@@ -294,6 +474,12 @@ impl LexState {
 enum CommentStep {
     Continue(usize),
     Break,
+}
+
+#[derive(Default)]
+struct StoreSetLexState {
+    comments: LexState,
+    raw_delimiter_len: Option<usize>,
 }
 
 #[derive(Default)]
@@ -1101,6 +1287,76 @@ print("comment")
 
         assert_eq!(runtime_import_count(&staged), 0, "{staged}");
         assert!(staged.contains("as cp"), "{staged}");
+    }
+
+    #[test]
+    fn rewrites_store_set_for_default_and_custom_runtime_aliases() {
+        let default = stage_user_source(
+            "#calepin.store.set(\"region\", \"NY\")\n",
+            "/.calepin/calepin.typ",
+        );
+        assert!(
+            default.contains("#calepin.store.set_(\"region\", \"NY\")"),
+            "{default}"
+        );
+
+        let custom = stage_user_source(
+            "#import \"/.calepin/calepin.typ\" as cp\n#cp.store.set(\"region\", \"NY\")\n",
+            "/.calepin/calepin.typ",
+        );
+        assert!(
+            custom.contains("#cp.store.set_(\"region\", \"NY\")"),
+            "{custom}"
+        );
+
+        let bare = stage_user_source(
+            "#import \".calepin/calepin.typ\"\n#calepin.store.set(\"region\", \"NY\")\n",
+            "/.calepin/calepin.typ",
+        );
+        assert!(
+            bare.contains("#calepin.store.set_(\"region\", \"NY\")"),
+            "{bare}"
+        );
+
+        let named = stage_user_source(
+            "#import \"/.calepin/calepin.typ\": store\n#store.set(\"region\", \"NY\")\n",
+            "/.calepin/calepin.typ",
+        );
+        assert!(named.contains("#store.set_(\"region\", \"NY\")"), "{named}");
+    }
+
+    #[test]
+    fn store_set_rewrite_ignores_strings_comments_and_raw_blocks() {
+        let source = r##"#let literal = "#calepin.store.set(\"wrong\", 1)"
+// #calepin.store.set("wrong", 2)
+#let inline-raw = `#calepin.store.set("wrong", 3)`
+```typ
+#calepin.store.set("wrong", 4)
+```
+#calepin.store.set("right", 5)
+"##;
+        let staged = stage_user_source(source, "/.calepin/calepin.typ");
+
+        assert!(
+            staged.contains(r##""#calepin.store.set(\"wrong\", 1)""##),
+            "{staged}"
+        );
+        assert!(
+            staged.contains("// #calepin.store.set(\"wrong\", 2)"),
+            "{staged}"
+        );
+        assert!(
+            staged.contains("`#calepin.store.set(\"wrong\", 3)`"),
+            "{staged}"
+        );
+        assert!(
+            staged.contains("#calepin.store.set(\"wrong\", 4)"),
+            "{staged}"
+        );
+        assert!(
+            staged.contains("#calepin.store.set_(\"right\", 5)"),
+            "{staged}"
+        );
     }
 
     #[test]

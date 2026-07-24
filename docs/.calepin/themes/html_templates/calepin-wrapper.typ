@@ -2,6 +2,18 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
+#let _calepin-expected-generation = "cd266784ee7f6139-1349cde127705c16"
+#let _calepin-verify-generation() = {
+  let path = sys.inputs.at("calepin-results", default: none)
+  if path != none and path != "" {
+    let actual = json(path).at("generation", default: "")
+    if actual != _calepin-expected-generation {
+      panic("Calepin results changed while this render was starting; Typst will retry with the completed build")
+    }
+  }
+}
+#_calepin-verify-generation()
+
 
 
 #let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2", "html")
@@ -38,7 +50,7 @@
 }
 
 // Notebook theme
-#import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
+#import "/.calepin/calepin.typ": _html-themed-raw-block, _is-query, chunk_from_raw_plain
 
 // Body text size, captured below at document-body level. Code blocks are sized
 // relative to this rather than to `1em`, which would compound: a literal
@@ -54,7 +66,7 @@
       set text(size: _calepin-body-size.get() * 0.8)
       it
     }
-  } else if it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
+  } else if it.lang != none and (_is-query() or _raw-chunk-langs.contains(it.lang)) and _fenced-chunks-runs(
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
@@ -82,7 +94,7 @@ Templates can access a variety of "contexts" and "variables" to build a document
 - `highlight_css`: standalone syntax-highlight CSS.
 - `theme`: the active theme name.
 - `target`: the render target; currently `html`.
-- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--set vars.<name>=...` overrides.
+- `store`: the completed document store from `[store]`, `calepin.store.set()`, successful `store-set` chunks, and CLI `--set store.<name>=...` overrides.
 
 `doc` contains:
 

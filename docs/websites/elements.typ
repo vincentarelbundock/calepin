@@ -295,6 +295,42 @@ sum(x) / len(x)
   ]
 ]
 
+== Synchronized groups
+
+Give multiple tab containers the same `group` name to keep their selected panels synchronized in HTML output. The first two containers below belong to the `language` group. Selecting R or Python in either one changes both.
+
+#calepin.elements.tabs(group: "language")[
+  #calepin.elements.tab("R", active: true)[
+    The first container is showing its R content.
+  ]
+
+  #calepin.elements.tab("Python")[
+    The first container is showing its Python content.
+  ]
+]
+
+#calepin.elements.tabs(group: "language")[
+  #calepin.elements.tab("R", active: true)[
+    The second container follows the first container to R.
+  ]
+
+  #calepin.elements.tab("Python")[
+    The second container follows the first container to Python.
+  ]
+]
+
+This container has no `group` argument, so its selection changes independently of the two containers above.
+
+#calepin.elements.tabs[
+  #calepin.elements.tab("R")[
+    This independent container is showing its R content.
+  ]
+
+  #calepin.elements.tab("Python", active: true)[
+    This independent container is showing its Python content.
+  ]
+]
+
 = Lightbox
 
 `lightbox-image(...)` and `lightbox-video(...)` produce browser-only interactive media wrappers in HTML while degrading gracefully in paged output.

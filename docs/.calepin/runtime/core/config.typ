@@ -3,6 +3,7 @@
 #let _empty-config = (
   enabled: false,
   results: none,
+  store: none,
   "image-meta": none,
   "source-dir": "",
   source: none,
@@ -16,6 +17,7 @@
 #let _input-config() = (
   enabled: true,
   results: sys.inputs.at("calepin-results"),
+  store: sys.inputs.at("calepin-store", default: none),
   "image-meta": sys.inputs.at("calepin-image-meta", default: none),
   "source-dir": sys.inputs.at("calepin-source-dir", default: ""),
   source: none,

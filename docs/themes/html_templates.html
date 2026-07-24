@@ -4178,7 +4178,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [HTML])\n#import \"/.calepin/calepin.typ\" as calepin\n#metadata((tags: (\"themes\", \"HTML\", \"templates\"))) <website-metadata>\n#title()\n\n= Context\n\nTemplates can access a variety of \"contexts\" and \"variables\" to build a document:\n\n- `doc`: Typst's generated HTML shell and document content.\n- `site`: website metadata, navigation, and search settings.\n- `css`: theme CSS files. Each item has `name` and `content`.\n- `js`: theme JS files. Each item has `name` and `content`.\n- `highlight_css`: standalone syntax-highlight CSS.\n- `theme`: the active theme name.\n- `target`: the render target; currently `html`.\n- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--set vars.<name>=...` overrides.\n\n`doc` contains:\n\n- `doc.head`: Typst's document shell before `</head>`.\n- `doc.body_open`: `</head>` and Typst's opening `<body>` tag.\n- `doc.body`: Typst's generated body content.\n- `doc.body_close`: Typst's closing `</body>` tag and any remaining document shell.\n- `doc.title`: the document title, or an empty string.\n\n`site` contains:\n\n- `site.title`, `site.description`, `site.base_url`\n- `site.logo`, `site.logo_alt`, `site.home_url`, `site.favicon`\n- `site.page_url`, `site.page_title`\n- `site.sidebar`: flat navigation entries.\n- `site.sidebar_sections`: grouped navigation sections.\n- `site.sidebar_fold`: whether titled sidebar sections should fold.\n- `site.toc`: the current page table of contents.\n- `site.menus`: named menus, such as `site.menus.main`, `site.menus.social`, and `site.menus.footer`.\n- `site.language`: the current language code.\n- `site.languages`: language entries for the language picker.\n- `site.translations`: alternate-language links for the current page.\n- `site.pagefind`: Pagefind search assets and bundle path, when search is enabled.\n\nNested entries expose these fields:\n\n- Navigation entries in `site.sidebar`, `site.menus.<name>`, and section `items`: `href`, `label`, `label_html`, `active`.\n- Sidebar sections: `title`, `active`, `items`.\n- TOC entries: `level`, `href`, `label`.\n- Language and translation entries: `c de`, `label`, `href`, `active`.\n- Pagefind: `css`, `js`, `bundle`.\n\n= Layouts\n\nHTML layouts are MiniJinja templates; see #link(\"templating.html\")[Templating] for the syntax. For a single HTML notebook, use `layouts/document.html`. For websites, the default entry is `layouts/site.html`.\n\nHere is a minimal `layouts/document.html`:\n\n```html\n{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <header class=\"document-header\">\n    <a href=\"index.html\">Home</a>\n    <button type=\"button\" data-calepin-theme-toggle>Theme</button>\n  </header>\n  <main class=\"container\">\n    {{ doc.body }}\n  </main>\n  {% for file in js %}\n  <script>\n{{ file.content }}\n  <\/script>\n  {% endfor %}\n{{ doc.body_close }}\n```\n\nKeep `doc.head`, `doc.body_open`, and `doc.body_close` unless you are intentionally replacing the entire HTML shell.\n\n= Partials\n\nInstead of maintainng large monolithic templates, it is useful to split templates into different \"partials\", that is, templates that handle a specific part of  a web page. This allows re-useability and makes the codebase more maintainable. These templates are hosted under `partials/`, and we include them in a layout with the `{% include %}` tag.\n\n```html\n{% include \"partials/header.html\" %}\n```\n\nPartials receive the same template context as the file that includes them. Shared partials from the bundled base layer are included by both built-in themes; a theme-local partial with the same path overrides the shared one. To customize one component, copy that partial into your local theme and edit it there.\n\nThe bundled themes currently provide these partials. This list is descriptive; the #link(\"https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/assets/themes\")[theme source code on GitHub] is canonical.\n\nShared partials:\n\n- `partials/document-head.html`\n- `partials/site-brand.html`\n- `partials/site-footer.html`\n- `partials/site-head.html`\n- `partials/site-head-meta.html`\n- `partials/site-language-picker.html`\n- `partials/site-nav-prev-next.html`\n- `partials/site-search.html` — the Pagefind modal container, not the full search UI.\n- `partials/site-sidebar-item.html`\n- `partials/theme-init-script.html`\n- `partials/theme-scripts.html`\n- `partials/theme-styles.html`\n- `partials/theme-toggle-button.html`\n\n`calepin` theme partials:\n\n- `partials/document-theme-switcher.html`\n- `partials/site-nav.html`\n- `partials/site-nav-item.html`\n- `partials/site-nav-sidebar.html`\n- `partials/site-nav-toc.html`\n\n`academic` theme partials:\n\n- `partials/site-nav.html`\n- `partials/site-nav-item.html`\n\n= Page-specific layouts\n\nSometimes, we would like a specific page of a website to use a different layout than the default. For instance, the landing page is often very different than the other pages of a site.\n\nYou can switch layouts per page with `<website-metadata>`:\n\n```typ\n#metadata((\n  title: \"Landing page\",\n  layout: \"layouts/site-landing.html\",\n)) <website-metadata>\n```\n\nThe `layout` value must be a relative `.html` path inside the active theme. Calepin does not add `layouts/` or `.html` for you and does not fall back to `layouts/site.html` if the file is missing.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [HTML])\n#import \"/.calepin/calepin.typ\" as calepin\n#metadata((tags: (\"themes\", \"HTML\", \"templates\"))) <website-metadata>\n#title()\n\n= Context\n\nTemplates can access a variety of \"contexts\" and \"variables\" to build a document:\n\n- `doc`: Typst's generated HTML shell and document content.\n- `site`: website metadata, navigation, and search settings.\n- `css`: theme CSS files. Each item has `name` and `content`.\n- `js`: theme JS files. Each item has `name` and `content`.\n- `highlight_css`: standalone syntax-highlight CSS.\n- `theme`: the active theme name.\n- `target`: the render target; currently `html`.\n- `store`: the completed document store from `[store]`, `calepin.store.set()`, successful `store-set` chunks, and CLI `--set store.<name>=...` overrides.\n\n`doc` contains:\n\n- `doc.head`: Typst's document shell before `</head>`.\n- `doc.body_open`: `</head>` and Typst's opening `<body>` tag.\n- `doc.body`: Typst's generated body content.\n- `doc.body_close`: Typst's closing `</body>` tag and any remaining document shell.\n- `doc.title`: the document title, or an empty string.\n\n`site` contains:\n\n- `site.title`, `site.description`, `site.base_url`\n- `site.logo`, `site.logo_alt`, `site.home_url`, `site.favicon`\n- `site.page_url`, `site.page_title`\n- `site.sidebar`: flat navigation entries.\n- `site.sidebar_sections`: grouped navigation sections.\n- `site.sidebar_fold`: whether titled sidebar sections should fold.\n- `site.toc`: the current page table of contents.\n- `site.menus`: named menus, such as `site.menus.main`, `site.menus.social`, and `site.menus.footer`.\n- `site.language`: the current language code.\n- `site.languages`: language entries for the language picker.\n- `site.translations`: alternate-language links for the current page.\n- `site.pagefind`: Pagefind search assets and bundle path, when search is enabled.\n\nNested entries expose these fields:\n\n- Navigation entries in `site.sidebar`, `site.menus.<name>`, and section `items`: `href`, `label`, `label_html`, `active`.\n- Sidebar sections: `title`, `active`, `items`.\n- TOC entries: `level`, `href`, `label`.\n- Language and translation entries: `c de`, `label`, `href`, `active`.\n- Pagefind: `css`, `js`, `bundle`.\n\n= Layouts\n\nHTML layouts are MiniJinja templates; see #link(\"templating.html\")[Templating] for the syntax. For a single HTML notebook, use `layouts/document.html`. For websites, the default entry is `layouts/site.html`.\n\nHere is a minimal `layouts/document.html`:\n\n```html\n{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <header class=\"document-header\">\n    <a href=\"index.html\">Home</a>\n    <button type=\"button\" data-calepin-theme-toggle>Theme</button>\n  </header>\n  <main class=\"container\">\n    {{ doc.body }}\n  </main>\n  {% for file in js %}\n  <script>\n{{ file.content }}\n  <\/script>\n  {% endfor %}\n{{ doc.body_close }}\n```\n\nKeep `doc.head`, `doc.body_open`, and `doc.body_close` unless you are intentionally replacing the entire HTML shell.\n\n= Partials\n\nInstead of maintainng large monolithic templates, it is useful to split templates into different \"partials\", that is, templates that handle a specific part of  a web page. This allows re-useability and makes the codebase more maintainable. These templates are hosted under `partials/`, and we include them in a layout with the `{% include %}` tag.\n\n```html\n{% include \"partials/header.html\" %}\n```\n\nPartials receive the same template context as the file that includes them. Shared partials from the bundled base layer are included by both built-in themes; a theme-local partial with the same path overrides the shared one. To customize one component, copy that partial into your local theme and edit it there.\n\nThe bundled themes currently provide these partials. This list is descriptive; the #link(\"https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/assets/themes\")[theme source code on GitHub] is canonical.\n\nShared partials:\n\n- `partials/document-head.html`\n- `partials/site-brand.html`\n- `partials/site-footer.html`\n- `partials/site-head.html`\n- `partials/site-head-meta.html`\n- `partials/site-language-picker.html`\n- `partials/site-nav-prev-next.html`\n- `partials/site-search.html` — the Pagefind modal container, not the full search UI.\n- `partials/site-sidebar-item.html`\n- `partials/theme-init-script.html`\n- `partials/theme-scripts.html`\n- `partials/theme-styles.html`\n- `partials/theme-toggle-button.html`\n\n`calepin` theme partials:\n\n- `partials/document-theme-switcher.html`\n- `partials/site-nav.html`\n- `partials/site-nav-item.html`\n- `partials/site-nav-sidebar.html`\n- `partials/site-nav-toc.html`\n\n`academic` theme partials:\n\n- `partials/site-nav.html`\n- `partials/site-nav-item.html`\n\n= Page-specific layouts\n\nSometimes, we would like a specific page of a website to use a different layout than the default. For instance, the landing page is often very different than the other pages of a site.\n\nYou can switch layouts per page with `<website-metadata>`:\n\n```typ\n#metadata((\n  title: \"Landing page\",\n  layout: \"layouts/site-landing.html\",\n)) <website-metadata>\n```\n\nThe `layout` value must be a relative `.html` path inside the active theme. Calepin does not add `layouts/` or `.html` for you and does not fall back to `layouts/site.html` if the file is missing.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4270,6 +4270,10 @@ html:not([data-theme]) {
 
                             
                             
+<li class="calepin-website-sidebar-link"><a href="../getting-started/basics.html" aria-label="Basics">Basics</a></li>
+
+                            
+                            
 <li class="calepin-website-sidebar-link"><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
 
                             
@@ -4289,12 +4293,8 @@ html:not([data-theme]) {
                     
                     
                     <details class="calepin-website-sidebar-section">
-                        <summary>Notebooks</summary>
+                        <summary>Code execution</summary>
                         <ul>
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../notebooks/notebooks.html" aria-label="Notebooks">Notebooks</a></li>
-
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
@@ -4309,15 +4309,38 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/data_store.html" aria-label="Data transport">Data transport</a></li>
 
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section" open>
+                        <summary>HTML</summary>
+                        <ul>
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="html_templates.html" aria-label="HTML" class="active" aria-current="page">HTML</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="css.html" aria-label="CSS">CSS</a></li>
 
                             
                         </ul>
@@ -4356,11 +4379,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+<li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
 
                             
                         </ul>
@@ -4385,7 +4404,7 @@ html:not([data-theme]) {
                     
                     
                     
-                    <details class="calepin-website-sidebar-section" open>
+                    <details class="calepin-website-sidebar-section">
                         <summary>Themes</summary>
                         <ul>
                             
@@ -4398,15 +4417,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="html_templates.html" aria-label="HTML" class="active" aria-current="page">HTML</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="pdf_templates.html" aria-label="PDF">PDF</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="css.html" aria-label="CSS">CSS</a></li>
 
                             
                             
@@ -4429,10 +4440,6 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
 
                             
@@ -4445,7 +4452,7 @@ html:not([data-theme]) {
             </nav>
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
-            <h1 id="html">HTML</h1><h2 id="context">Context</h2><p>Templates can access a variety of “contexts” and “variables” to build a document:</p><ul><li><code>doc</code>: Typst’s generated HTML shell and document content.</li><li><code>site</code>: website metadata, navigation, and search settings.</li><li><code>css</code>: theme CSS files. Each item has <code>name</code> and <code>content</code>.</li><li><code>js</code>: theme JS files. Each item has <code>name</code> and <code>content</code>.</li><li><code>highlight_css</code>: standalone syntax-highlight CSS.</li><li><code>theme</code>: the active theme name.</li><li><code>target</code>: the render target; currently <code>html</code>.</li><li><code>vars</code>: merged document variables from <code>[vars]</code> in <code>calepin.toml</code>, <code>calepin.setup(vars: ...)</code>, and CLI <code>--set vars.&lt;name>=...</code> overrides.</li></ul><p><code>doc</code> contains:</p><ul><li><code>doc.head</code>: Typst’s document shell before <code>&lt;/head></code>.</li><li><code>doc.body_open</code>: <code>&lt;/head></code> and Typst’s opening <code>&lt;body></code> tag.</li><li><code>doc.body</code>: Typst’s generated body content.</li><li><code>doc.body_close</code>: Typst’s closing <code>&lt;/body></code> tag and any remaining document shell.</li><li><code>doc.title</code>: the document title, or an empty string.</li></ul><p><code>site</code> contains:</p><ul><li><code>site.title</code>, <code>site.description</code>, <code>site.base_url</code></li><li><code>site.logo</code>, <code>site.logo_alt</code>, <code>site.home_url</code>, <code>site.favicon</code></li><li><code>site.page_url</code>, <code>site.page_title</code></li><li><code>site.sidebar</code>: flat navigation entries.</li><li><code>site.sidebar_sections</code>: grouped navigation sections.</li><li><code>site.sidebar_fold</code>: whether titled sidebar sections should fold.</li><li><code>site.toc</code>: the current page table of contents.</li><li><code>site.menus</code>: named menus, such as <code>site.menus.main</code>, <code>site.menus.social</code>, and <code>site.menus.footer</code>.</li><li><code>site.language</code>: the current language code.</li><li><code>site.languages</code>: language entries for the language picker.</li><li><code>site.translations</code>: alternate-language links for the current page.</li><li><code>site.pagefind</code>: Pagefind search assets and bundle path, when search is enabled.</li></ul><p>Nested entries expose these fields:</p><ul><li>Navigation entries in <code>site.sidebar</code>, <code>site.menus.&lt;name></code>, and section <code>items</code>: <code>href</code>, <code>label</code>, <code>label_html</code>, <code>active</code>.</li><li>Sidebar sections: <code>title</code>, <code>active</code>, <code>items</code>.</li><li>TOC entries: <code>level</code>, <code>href</code>, <code>label</code>.</li><li>Language and translation entries: <code>c de</code>, <code>label</code>, <code>href</code>, <code>active</code>.</li><li>Pagefind: <code>css</code>, <code>js</code>, <code>bundle</code>.</li></ul><h2 id="layouts">Layouts</h2><p>HTML layouts are MiniJinja templates; see <a href="templating.html">Templating</a> for the syntax. For a single HTML notebook, use <code>layouts/document.html</code>. For websites, the default entry is <code>layouts/site.html</code>.</p><p>Here is a minimal <code>layouts/document.html</code>:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{{ doc.head }}</span>
+            <h1 id="html">HTML</h1><h2 id="context">Context</h2><p>Templates can access a variety of “contexts” and “variables” to build a document:</p><ul><li><code>doc</code>: Typst’s generated HTML shell and document content.</li><li><code>site</code>: website metadata, navigation, and search settings.</li><li><code>css</code>: theme CSS files. Each item has <code>name</code> and <code>content</code>.</li><li><code>js</code>: theme JS files. Each item has <code>name</code> and <code>content</code>.</li><li><code>highlight_css</code>: standalone syntax-highlight CSS.</li><li><code>theme</code>: the active theme name.</li><li><code>target</code>: the render target; currently <code>html</code>.</li><li><code>store</code>: the completed document store from <code>[store]</code>, <code>calepin.store.set()</code>, successful <code>store-set</code> chunks, and CLI <code>--set store.&lt;name>=...</code> overrides.</li></ul><p><code>doc</code> contains:</p><ul><li><code>doc.head</code>: Typst’s document shell before <code>&lt;/head></code>.</li><li><code>doc.body_open</code>: <code>&lt;/head></code> and Typst’s opening <code>&lt;body></code> tag.</li><li><code>doc.body</code>: Typst’s generated body content.</li><li><code>doc.body_close</code>: Typst’s closing <code>&lt;/body></code> tag and any remaining document shell.</li><li><code>doc.title</code>: the document title, or an empty string.</li></ul><p><code>site</code> contains:</p><ul><li><code>site.title</code>, <code>site.description</code>, <code>site.base_url</code></li><li><code>site.logo</code>, <code>site.logo_alt</code>, <code>site.home_url</code>, <code>site.favicon</code></li><li><code>site.page_url</code>, <code>site.page_title</code></li><li><code>site.sidebar</code>: flat navigation entries.</li><li><code>site.sidebar_sections</code>: grouped navigation sections.</li><li><code>site.sidebar_fold</code>: whether titled sidebar sections should fold.</li><li><code>site.toc</code>: the current page table of contents.</li><li><code>site.menus</code>: named menus, such as <code>site.menus.main</code>, <code>site.menus.social</code>, and <code>site.menus.footer</code>.</li><li><code>site.language</code>: the current language code.</li><li><code>site.languages</code>: language entries for the language picker.</li><li><code>site.translations</code>: alternate-language links for the current page.</li><li><code>site.pagefind</code>: Pagefind search assets and bundle path, when search is enabled.</li></ul><p>Nested entries expose these fields:</p><ul><li>Navigation entries in <code>site.sidebar</code>, <code>site.menus.&lt;name></code>, and section <code>items</code>: <code>href</code>, <code>label</code>, <code>label_html</code>, <code>active</code>.</li><li>Sidebar sections: <code>title</code>, <code>active</code>, <code>items</code>.</li><li>TOC entries: <code>level</code>, <code>href</code>, <code>label</code>.</li><li>Language and translation entries: <code>c de</code>, <code>label</code>, <code>href</code>, <code>active</code>.</li><li>Pagefind: <code>css</code>, <code>js</code>, <code>bundle</code>.</li></ul><h2 id="layouts">Layouts</h2><p>HTML layouts are MiniJinja templates; see <a href="templating.html">Templating</a> for the syntax. For a single HTML notebook, use <code>layouts/document.html</code>. For websites, the default entry is <code>layouts/site.html</code>.</p><p>Here is a minimal <code>layouts/document.html</code>:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{{ doc.head }}</span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">meta</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">charset</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">UTF-8</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ doc.title }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span>
 <span class="calepin-syntax-scope-1">  {% for file in css %}</span>
@@ -4466,28 +4473,7 @@ html:not([data-theme]) {
 <span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">file</span><span class="calepin-syntax-scope-9">.</span><span class="calepin-syntax-scope-14">content</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-2">}</span>
 <span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">script</span><span class="calepin-syntax-scope-9">></span>
 <span class="calepin-syntax-scope-1">  {% endfor %}</span>
-<span class="calepin-syntax-scope-1">{{ doc.body_close }}</span></code></pre></div><p>Keep <code>doc.head</code>, <code>doc.body_open</code>, and <code>doc.body_close</code> unless you are intentionally replacing the entire HTML shell.</p><h2 id="partials">Partials</h2><p>Instead of maintainng large monolithic templates, it is useful to split templates into different “partials”, that is, templates that handle a specific part of a web page. This allows re-useability and makes the codebase more maintainable. These templates are hosted under <code>partials/</code>, and we include them in a layout with the <code>{% include %}</code> tag.</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{{ doc.head }}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">meta</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">charset</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">UTF-8</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">{{ doc.title }}</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">title</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  {% for file in css %}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1">{ </span><span class="calepin-syntax-scope-1">file</span><span class="calepin-syntax-scope-1">.</span><span class="calepin-syntax-scope-23">content</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-1">}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">style</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  {% endfor %}</span>
-<span class="calepin-syntax-scope-1">{{ doc.body_open }}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">header</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">class</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">document-header</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">a</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">href</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">index.html</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">Home</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">a</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">button</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">type</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">button</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">data-calepin-theme-toggle</span><span class="calepin-syntax-scope-9">></span><span class="calepin-syntax-scope-1">Theme</span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">button</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">header</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">main</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">class</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">container</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">    {{ doc.body }}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">main</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  {% for file in js %}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">script</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-2">{</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">file</span><span class="calepin-syntax-scope-9">.</span><span class="calepin-syntax-scope-14">content</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">}</span><span class="calepin-syntax-scope-2">}</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">&lt;/</span><span class="calepin-syntax-scope-67">script</span><span class="calepin-syntax-scope-9">></span>
-<span class="calepin-syntax-scope-1">  {% endfor %}</span>
-<span class="calepin-syntax-scope-1">{{ doc.body_close }}</span></code></pre></div><p>Partials receive the same template context as the file that includes them. Shared partials from the bundled base layer are included by both built-in themes; a theme-local partial with the same path overrides the shared one. To customize one component, copy that partial into your local theme and edit it there.</p><p>The bundled themes currently provide these partials. This list is descriptive; the <a href="https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/assets/themes">theme source code on GitHub</a> is canonical.</p><p>Shared partials:</p><ul><li><code>partials/document-head.html</code></li><li><code>partials/site-brand.html</code></li><li><code>partials/site-footer.html</code></li><li><code>partials/site-head.html</code></li><li><code>partials/site-head-meta.html</code></li><li><code>partials/site-language-picker.html</code></li><li><code>partials/site-nav-prev-next.html</code></li><li><code>partials/site-search.html</code> — the Pagefind modal container, not the full search UI.</li><li><code>partials/site-sidebar-item.html</code></li><li><code>partials/theme-init-script.html</code></li><li><code>partials/theme-scripts.html</code></li><li><code>partials/theme-styles.html</code></li><li><code>partials/theme-toggle-button.html</code></li></ul><p><code>calepin</code> theme partials:</p><ul><li><code>partials/document-theme-switcher.html</code></li><li><code>partials/site-nav.html</code></li><li><code>partials/site-nav-item.html</code></li><li><code>partials/site-nav-sidebar.html</code></li><li><code>partials/site-nav-toc.html</code></li></ul><p><code>academic</code> theme partials:</p><ul><li><code>partials/site-nav.html</code></li><li><code>partials/site-nav-item.html</code></li></ul><h2 id="page-specific-layouts">Page-specific layouts</h2><p>Sometimes, we would like a specific page of a website to use a different layout than the default. For instance, the landing page is often very different than the other pages of a site.</p><p>You can switch layouts per page with <code>&lt;website-metadata></code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>
+<span class="calepin-syntax-scope-1">{{ doc.body_close }}</span></code></pre></div><p>Keep <code>doc.head</code>, <code>doc.body_open</code>, and <code>doc.body_close</code> unless you are intentionally replacing the entire HTML shell.</p><h2 id="partials">Partials</h2><p>Instead of maintainng large monolithic templates, it is useful to split templates into different “partials”, that is, templates that handle a specific part of a web page. This allows re-useability and makes the codebase more maintainable. These templates are hosted under <code>partials/</code>, and we include them in a layout with the <code>{% include %}</code> tag.</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{% include "partials/header.html" %}</span></code></pre></div><p>Partials receive the same template context as the file that includes them. Shared partials from the bundled base layer are included by both built-in themes; a theme-local partial with the same path overrides the shared one. To customize one component, copy that partial into your local theme and edit it there.</p><p>The bundled themes currently provide these partials. This list is descriptive; the <a href="https://github.com/vincentarelbundock/calepin/tree/main/calepin/src/assets/themes">theme source code on GitHub</a> is canonical.</p><p>Shared partials:</p><ul><li><code>partials/document-head.html</code></li><li><code>partials/site-brand.html</code></li><li><code>partials/site-footer.html</code></li><li><code>partials/site-head.html</code></li><li><code>partials/site-head-meta.html</code></li><li><code>partials/site-language-picker.html</code></li><li><code>partials/site-nav-prev-next.html</code></li><li><code>partials/site-search.html</code> — the Pagefind modal container, not the full search UI.</li><li><code>partials/site-sidebar-item.html</code></li><li><code>partials/theme-init-script.html</code></li><li><code>partials/theme-scripts.html</code></li><li><code>partials/theme-styles.html</code></li><li><code>partials/theme-toggle-button.html</code></li></ul><p><code>calepin</code> theme partials:</p><ul><li><code>partials/document-theme-switcher.html</code></li><li><code>partials/site-nav.html</code></li><li><code>partials/site-nav-item.html</code></li><li><code>partials/site-nav-sidebar.html</code></li><li><code>partials/site-nav-toc.html</code></li></ul><p><code>academic</code> theme partials:</p><ul><li><code>partials/site-nav.html</code></li><li><code>partials/site-nav-item.html</code></li></ul><h2 id="page-specific-layouts">Page-specific layouts</h2><p>Sometimes, we would like a specific page of a website to use a different layout than the default. For instance, the landing page is often very different than the other pages of a site.</p><p>You can switch layouts per page with <code>&lt;website-metadata></code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">metadata</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">(</span>
   title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Landing page"</span><span class="calepin-syntax-scope-2">,</span>
   layout<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"layouts/site-landing.html"</span><span class="calepin-syntax-scope-2">,</span>
 <span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-183">&lt;website-metadata></span></code></pre></div><p>The <code>layout</code> value must be a relative <code>.html</code> path inside the active theme. Calepin does not add <code>layouts/</code> or <code>.html</code> for you and does not fall back to <code>layouts/site.html</code> if the file is missing.</p>
@@ -4600,6 +4586,17 @@ html:not([data-theme]) {
     
         
         
+            
+            
+        
+        
+        
+    
+        
+        
+            
+            
+        
         
             
         
@@ -4662,24 +4659,6 @@ html:not([data-theme]) {
         
     
         
-        
-        
-            
-        
-        
-    
-        
-        
-            
-            
-        
-        
-        
-    
-        
-        
-            
-            
         
         
             
@@ -4726,20 +4705,20 @@ html:not([data-theme]) {
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="templating.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="../websites/custom-elements.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Templating</span>
+            <span class="calepin-website-page-nav-title">Custom elements</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="pdf_templates.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="css.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">PDF</span>
+            <span class="calepin-website-page-nav-title">CSS</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

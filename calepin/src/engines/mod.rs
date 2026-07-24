@@ -134,7 +134,11 @@ pub fn make_sentinel() -> String {
     format!("__CALEPIN_{:x}_{:x}__", std::process::id(), seq)
 }
 
-fn process_results(raw: &str, fig_path: &Path, results: &mut Vec<EngineResult>) -> Result<()> {
+pub(crate) fn process_results(
+    raw: &str,
+    fig_path: &Path,
+    results: &mut Vec<EngineResult>,
+) -> Result<()> {
     let (sentinel, rest) = raw.split_once('\n').unwrap_or(("", raw));
     let sep_marker = format!("{}_SEP", sentinel);
 

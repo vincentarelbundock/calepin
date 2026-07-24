@@ -55,6 +55,9 @@ title = "Getting started"
   target = "getting-started/install.typ"
 
   [[sidebar.section.item]]
+  target = "getting-started/basics.typ"
+
+  [[sidebar.section.item]]
   target = "getting-started/config.typ"
 
   [[sidebar.section.item]]
@@ -64,10 +67,7 @@ title = "Getting started"
   target = "editors.typ"
 
 [[sidebar.section]]
-title = "Notebooks"
-
-  [[sidebar.section.item]]
-  target = "notebooks/notebooks.typ"
+title = "Code execution"
 
   [[sidebar.section.item]]
   target = "notebooks/code_execution.typ"
@@ -79,13 +79,25 @@ title = "Notebooks"
   target = "notebooks/cross-references.typ"
 
   [[sidebar.section.item]]
-  target = "notebooks/parameters.typ"
+  target = "notebooks/data_store.typ"
 
   [[sidebar.section.item]]
   target = "notebooks/diagrams.typ"
 
+[[sidebar.section]]
+title = "HTML"
+
   [[sidebar.section.item]]
-  target = "notebooks/tab_groups.typ"
+  target = "websites/elements.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/custom-elements.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/html_templates.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/css.typ"
 
 [[sidebar.section]]
 title = "Websites"
@@ -109,10 +121,7 @@ title = "Websites"
   target = "websites/multilingual.typ"
 
   [[sidebar.section.item]]
-  target = "websites/elements.typ"
-
-  [[sidebar.section.item]]
-  target = "websites/custom-elements.typ"
+  target = "websites/health.typ"
 
 [[sidebar.section]]
 title = "Slides"
@@ -130,13 +139,7 @@ title = "Themes"
   target = "themes/templating.typ"
 
   [[sidebar.section.item]]
-  target = "themes/html_templates.typ"
-
-  [[sidebar.section.item]]
   target = "themes/pdf_templates.typ"
-
-  [[sidebar.section.item]]
-  target = "themes/css.typ"
 
   [[sidebar.section.item]]
   target = "themes/case_studies.typ"
@@ -145,13 +148,7 @@ title = "Themes"
 title = "More"
 
   [[sidebar.section.item]]
-  target = "websites/elements.typ"
-
-  [[sidebar.section.item]]
   target = "tips.typ"
-
-  [[sidebar.section.item]]
-  target = "websites/health.typ"
 
   [[sidebar.section.item]]
   target = "reference/cli.typ"

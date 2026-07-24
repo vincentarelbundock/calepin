@@ -24,17 +24,7 @@ pub struct ExecutionConfig {
     pub cwd: PathBuf,
     pub executables: ExecutablePaths,
     pub timeout: Option<Duration>,
-    /// Document-level variables, injected once per engine at session startup.
-    pub vars: Value,
-    /// Path to the on-disk `vars.json`, exposed to Jupyter kernels via
-    /// `CALEPIN_VARS_PATH` for kernels Calepin cannot auto-bind.
-    pub vars_path: Option<PathBuf>,
-}
-
-impl ExecutionConfig {
-    fn has_vars(&self) -> bool {
-        self.vars.as_object().is_some_and(|vars| !vars.is_empty())
-    }
+    pub store: serde_json::Map<String, Value>,
 }
 
 /// A prelude that errored is a Calepin bug (we generate the literal), so surface
@@ -59,16 +49,23 @@ pub struct EnginePool {
     python: Option<PythonSession>,
     jupyter: Option<JupyterBridgeSession>,
     config: ExecutionConfig,
+    store: serde_json::Map<String, Value>,
 }
 
 impl EnginePool {
     pub fn new(config: ExecutionConfig) -> Self {
+        let store = config.store.clone();
         Self {
             r: None,
             python: None,
             jupyter: None,
             config,
+            store,
         }
+    }
+
+    pub fn store(&self) -> &serde_json::Map<String, Value> {
+        &self.store
     }
 
     pub fn execute_chunk(
@@ -84,6 +81,8 @@ impl EnginePool {
                 Vec::new(),
             ));
         }
+        self.validate_store_options(chunk)?;
+        self.inject_store_values(chunk)?;
 
         let engine = chunk.engine.clone();
         let source = lines(&chunk.code);
@@ -105,13 +104,16 @@ impl EnginePool {
         let has_error = items
             .iter()
             .any(|item| item.item_type == ResultItemType::Error);
-        if has_error && !chunk.exec_options.error {
+        if has_error && (!chunk.exec_options.error || !chunk.exec_options.store_set.is_empty()) {
             let message = items
                 .iter()
                 .find(|item| item.item_type == ResultItemType::Error)
                 .and_then(|item| item.message.as_deref())
                 .unwrap_or("execution failed");
             return Err(anyhow!("chunk `{}` failed: {}", chunk.label, message));
+        }
+        if !has_error {
+            self.capture_store_values(chunk)?;
         }
         Ok(chunk_result_document(
             chunk,
@@ -165,15 +167,12 @@ impl EnginePool {
 
     fn ensure_r_session(&mut self) -> Result<()> {
         if self.r.is_none() {
-            let mut session = RSession::init_with_program(
+            let session = RSession::init_with_program(
                 &self.config.executables.rscript,
                 "typst",
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?;
-            if self.config.has_vars() {
-                inject_r_vars(&mut session, &self.config.vars)?;
-            }
             self.r = Some(session);
         }
         Ok(())
@@ -181,14 +180,11 @@ impl EnginePool {
 
     fn ensure_python_session(&mut self) -> Result<()> {
         if self.python.is_none() {
-            let mut session = PythonSession::init_with_program(
+            let session = PythonSession::init_with_program(
                 &self.config.executables.python,
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?;
-            if self.config.has_vars() {
-                inject_python_vars(&mut session, &self.config.vars)?;
-            }
             self.python = Some(session);
         }
         Ok(())
@@ -200,7 +196,6 @@ impl EnginePool {
                 &self.config.executables.python,
                 Some(&self.config.cwd),
                 self.config.timeout,
-                self.config.vars_path.as_deref(),
             )?);
         }
         Ok(())
@@ -224,6 +219,112 @@ impl EnginePool {
             python: self.python.as_mut(),
             jupyter: self.jupyter.as_mut(),
         })
+    }
+
+    fn validate_store_options(&self, chunk: &ChunkSpec) -> Result<()> {
+        if chunk.exec_options.store_get.is_empty() && chunk.exec_options.store_set.is_empty() {
+            return Ok(());
+        }
+        if !matches!(chunk.engine, EngineName::R | EngineName::Python) {
+            return Err(anyhow!(
+                "chunk `{}` declares a document store option, but engine `{}` does not support the Calepin document store",
+                chunk.label,
+                chunk.engine
+            ));
+        }
+        for key in &chunk.exec_options.store_get {
+            if !self.store.contains_key(key) {
+                return Err(anyhow!(
+                    "chunk `{}` requests store key `{key}`, but no earlier writer has committed that key",
+                    chunk.label
+                ));
+            }
+        }
+        for key in &chunk.exec_options.store_set {
+            if self.store.contains_key(key) {
+                return Err(anyhow!(
+                    "chunk `{}` cannot set store key `{key}` because it is already initialized or committed",
+                    chunk.label
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn inject_store_values(&mut self, chunk: &ChunkSpec) -> Result<()> {
+        if chunk.exec_options.store_get.is_empty() {
+            return Ok(());
+        }
+        let values = Value::Object(
+            chunk
+                .exec_options
+                .store_get
+                .iter()
+                .map(|key| (key.clone(), self.store[key].clone()))
+                .collect(),
+        );
+        match chunk.engine {
+            EngineName::R => {
+                self.ensure_r_session()?;
+                let session = self.r.as_mut().expect("R session initialized");
+                for (key, value) in values.as_object().expect("store values object") {
+                    inject_r_binding(session, key, value)?;
+                }
+            }
+            EngineName::Python => {
+                self.ensure_python_session()?;
+                let session = self.python.as_mut().expect("Python session initialized");
+                for (key, value) in values.as_object().expect("store values object") {
+                    inject_python_binding(session, key, value)?;
+                }
+            }
+            _ => unreachable!("store engine validated"),
+        }
+        Ok(())
+    }
+
+    fn capture_store_values(&mut self, chunk: &ChunkSpec) -> Result<()> {
+        if chunk.exec_options.store_set.is_empty() {
+            return Ok(());
+        }
+        let captured = match chunk.engine {
+            EngineName::Python => {
+                self.ensure_python_session()?;
+                capture_python_store(
+                    self.python.as_mut().expect("Python session initialized"),
+                    &chunk.exec_options.store_set,
+                )
+            }
+            EngineName::R => {
+                self.ensure_r_session()?;
+                capture_r_store(
+                    self.r.as_mut().expect("R session initialized"),
+                    &chunk.exec_options.store_set,
+                )
+            }
+            _ => unreachable!("store engine validated"),
+        }
+        .map_err(|error| {
+            anyhow!(
+                "cannot set store values from chunk `{}`: {error}",
+                chunk.label
+            )
+        })?;
+        for key in &chunk.exec_options.store_set {
+            if !captured.contains_key(key) {
+                return Err(anyhow!(
+                    "chunk `{}` declares store-set `{key}`, but the {} session has no object named `{key}` after the chunk completed",
+                    chunk.label,
+                    chunk.engine
+                ));
+            }
+        }
+        crate::typst::store::validate_writer_values(&captured)?;
+        let mut committed = self.store.clone();
+        committed.extend(captured);
+        crate::typst::store::validate_store(&committed)?;
+        self.store = committed;
+        Ok(())
     }
 }
 
@@ -263,8 +364,12 @@ fn is_unavailable_engine_error(error: &anyhow::Error) -> bool {
     })
 }
 
-fn inject_r_vars(session: &mut RSession, vars: &Value) -> Result<()> {
-    let code = engines::prelude::r_prelude("vars", vars);
+fn inject_r_binding(session: &mut RSession, name: &str, value: &Value) -> Result<()> {
+    let code = format!(
+        "assign({}, {}, envir=globalenv(), inherits=FALSE)",
+        engines::prelude::r_value(&Value::String(name.to_string())),
+        engines::prelude::r_store_value(value)?
+    );
     let raw = session.capture(
         &code,
         "",
@@ -276,8 +381,12 @@ fn inject_r_vars(session: &mut RSession, vars: &Value) -> Result<()> {
     check_prelude_output(&raw, "R")
 }
 
-fn inject_python_vars(session: &mut PythonSession, vars: &Value) -> Result<()> {
-    let code = engines::prelude::python_prelude("vars", vars);
+fn inject_python_binding(session: &mut PythonSession, name: &str, value: &Value) -> Result<()> {
+    let code = format!(
+        "globals()[{}] = {}",
+        engines::prelude::python_value(&Value::String(name.to_string())),
+        engines::prelude::python_value(value)
+    );
     let raw = session.capture(
         &code,
         "",
@@ -286,6 +395,112 @@ fn inject_python_vars(session: &mut PythonSession, vars: &Value) -> Result<()> {
         PRELUDE_FIG_DPI,
     )?;
     check_prelude_output(&raw, "Python")
+}
+
+fn capture_outputs(raw: &str) -> Result<Vec<String>> {
+    let mut results = Vec::new();
+    engines::process_results(raw, Path::new(""), &mut results)?;
+    let mut outputs = Vec::new();
+    for result in results {
+        match result {
+            EngineResult::Output(text) => outputs.push(text),
+            EngineResult::Error(message) => return Err(anyhow!(message)),
+            _ => {}
+        }
+    }
+    Ok(outputs)
+}
+
+fn capture_python_store(
+    session: &mut PythonSession,
+    keys: &[String],
+) -> Result<serde_json::Map<String, Value>> {
+    let keys = serde_json::to_string(keys)?;
+    let code = format!(
+        r#"import json as _calepin_json, math as _calepin_math
+def _calepin_store_value(v, seen=None):
+    if seen is None: seen = set()
+    if v is None or type(v) in (bool, str): return v
+    if type(v) is int:
+        if not -(2**63) <= v < 2**63: raise TypeError("integer outside signed 64-bit range")
+        return v
+    if type(v) is float:
+        if not _calepin_math.isfinite(v): raise TypeError("non-finite number")
+        return v
+    if type(v) in (list, dict):
+        if id(v) in seen: raise TypeError("serialization cycle")
+        seen.add(id(v))
+        if type(v) is list: out = [_calepin_store_value(x, seen) for x in v]
+        else:
+            if any(type(k) is not str for k in v): raise TypeError("mapping keys must be strings")
+            out = {{k: _calepin_store_value(x, seen) for k, x in v.items()}}
+        seen.remove(id(v))
+        return out
+    raise TypeError("the value is outside the supported Python store value model")
+_calepin_keys = {keys}
+_calepin_missing = [k for k in _calepin_keys if k not in globals()]
+if _calepin_missing: raise NameError("missing store variables: " + ", ".join(_calepin_missing))
+print(_calepin_json.dumps({{k: _calepin_store_value(globals()[k]) for k in _calepin_keys}}, separators=(",", ":")))"#
+    );
+    let raw = session.capture(
+        &code,
+        "",
+        PRELUDE_FIG_WIDTH,
+        PRELUDE_FIG_HEIGHT,
+        PRELUDE_FIG_DPI,
+    )?;
+    let text = capture_outputs(&raw)?
+        .pop()
+        .ok_or_else(|| anyhow!("Python store adapter returned no value"))?;
+    serde_json::from_str(text.trim()).context("Python store adapter returned invalid JSON")
+}
+
+fn capture_r_store(
+    session: &mut RSession,
+    keys: &[String],
+) -> Result<serde_json::Map<String, Value>> {
+    let keys = engines::prelude::r_value(&Value::Array(
+        keys.iter().cloned().map(Value::String).collect(),
+    ));
+    let code = format!(
+        r#".calepin_json <- function(x) {{
+  q <- function(s) encodeString(s, quote="\"", na.encode=FALSE)
+  if (is.null(x)) return("null")
+  if (is.logical(x) && length(x)==1L && !is.na(x)) return(if (x) "true" else "false")
+  if (is.integer(x) && length(x)==1L && !is.na(x)) return(as.character(x))
+  if (is.double(x) && length(x)==1L && is.finite(x)) {{
+    out <- sprintf("%.17g", x)
+    if (!grepl("[.eE]", out)) out <- paste0(out, ".0")
+    return(out)
+  }}
+  if (is.character(x) && !anyNA(x) && (length(x)==0L || length(x)>1L))
+    return(paste0("[", paste(vapply(x, q, ""), collapse=","), "]"))
+  if ((is.integer(x) || is.double(x)) && !anyNA(x) && (length(x)==0L || length(x)>1L)) {{
+    if (is.double(x) && any(!is.finite(x))) stop("non-finite number")
+    return(paste0("[", paste(vapply(as.list(x), .calepin_json, ""), collapse=","), "]"))
+  }}
+  if (is.character(x) && length(x)==1L && !is.na(x)) return(q(x))
+  if (is.list(x) && length(x)>0L && !is.null(names(x)) && all(nzchar(names(x))) && !anyDuplicated(names(x)))
+    return(paste0("{{", paste(vapply(seq_along(x), function(i) paste0(q(names(x)[i]), ":", .calepin_json(x[[i]])), ""), collapse=","), "}}"))
+  stop("the value is outside the supported R store value model")
+}}
+.calepin_keys <- {keys}
+.calepin_missing <- .calepin_keys[!vapply(.calepin_keys, exists, FALSE, envir=globalenv(), inherits=FALSE)]
+if (length(.calepin_missing)) stop(paste("missing store variables:", paste(.calepin_missing, collapse=", ")))
+cat(paste0("{{", paste(vapply(.calepin_keys, function(k) paste0(encodeString(k, quote="\""), ":", .calepin_json(get(k, envir=globalenv(), inherits=FALSE))), ""), collapse=","), "}}"))"#
+    );
+    let raw = session.capture(
+        &code,
+        "",
+        "svg",
+        PRELUDE_FIG_WIDTH,
+        PRELUDE_FIG_HEIGHT,
+        PRELUDE_FIG_DPI,
+    )?;
+    let text = capture_outputs(&raw)?
+        .pop()
+        .ok_or_else(|| anyhow!("R store adapter returned no value"))?;
+    serde_json::from_str(text.trim()).context("R store adapter returned invalid JSON")
 }
 
 fn chunk_result_document(
@@ -909,8 +1124,7 @@ mod tests {
             cwd: dir.path().to_path_buf(),
             executables,
             timeout: Some(std::time::Duration::from_secs(5)),
-            vars: Value::Object(serde_json::Map::new()),
-            vars_path: None,
+            store: serde_json::Map::new(),
         };
         let mut pool = EnginePool::new(config);
         let mut octave_chunk = chunk(ResultsMode::Verbatim);
@@ -934,8 +1148,7 @@ mod tests {
             cwd: dir.path().to_path_buf(),
             executables,
             timeout: Some(std::time::Duration::from_secs(5)),
-            vars: Value::Object(serde_json::Map::new()),
-            vars_path: None,
+            store: serde_json::Map::new(),
         };
         let mut pool = EnginePool::new(config);
         let mut python_chunk = chunk(ResultsMode::Verbatim);
@@ -964,8 +1177,7 @@ mod tests {
             cwd: dir.path().to_path_buf(),
             executables,
             timeout: Some(std::time::Duration::from_secs(5)),
-            vars: Value::Object(serde_json::Map::new()),
-            vars_path: None,
+            store: serde_json::Map::new(),
         };
         let mut pool = EnginePool::new(config);
         let mut python_chunk = chunk(ResultsMode::Verbatim);
@@ -982,13 +1194,42 @@ mod tests {
         assert!(err.contains("boom"), "{err}");
     }
 
+    #[test]
+    fn writer_error_commits_nothing_even_when_errors_are_displayable() {
+        if !command_available("python3") {
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let mut executables = ExecutablePaths::defaults();
+        executables.python = PathBuf::from("python3");
+        let mut pool = EnginePool::new(ExecutionConfig {
+            cwd: dir.path().to_path_buf(),
+            executables,
+            timeout: Some(std::time::Duration::from_secs(5)),
+            store: serde_json::Map::new(),
+        });
+        let mut writer = chunk(ResultsMode::Verbatim);
+        writer.engine = EngineName::Python;
+        writer.label = "failing-writer".to_string();
+        writer.code = "answer = 42\nraise RuntimeError('boom')".to_string();
+        writer.exec_options.error = true;
+        writer.exec_options.store_set = vec!["answer".to_string()];
+
+        let error = pool
+            .execute_chunk(&writer, dir.path(), unused_artifact_path)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("chunk `failing-writer` failed"), "{error}");
+        assert!(!pool.store().contains_key("answer"));
+    }
+
     fn pool_with_vars(dir: &Path, vars: Value) -> EnginePool {
         EnginePool::new(ExecutionConfig {
             cwd: dir.to_path_buf(),
             executables: ExecutablePaths::defaults(),
             timeout: Some(std::time::Duration::from_secs(20)),
-            vars,
-            vars_path: None,
+            store: vars.as_object().cloned().unwrap_or_default(),
         })
     }
 
@@ -997,6 +1238,7 @@ mod tests {
         chunk.engine = engine;
         chunk.label = "vars-chunk".to_string();
         chunk.code = code.to_string();
+        chunk.exec_options.store_get = pool.store().keys().cloned().collect();
         let result = pool
             .execute_chunk(&chunk, dir, unused_artifact_path)
             .unwrap();
@@ -1022,7 +1264,7 @@ mod tests {
             &mut pool,
             dir.path(),
             EngineName::R,
-            "cat(vars$label, vars$alpha, vars$n, vars$flag)",
+            "cat(label, alpha, n, flag)",
         );
         assert!(out.contains("baseline"), "{out:?}");
         assert!(out.contains("0.1"), "{out:?}");
@@ -1037,7 +1279,7 @@ mod tests {
         }
         let dir = tempfile::tempdir().unwrap();
         let mut pool = pool_with_vars(dir.path(), serde_json::json!({"q": "a\"b"}));
-        let out = run_chunk(&mut pool, dir.path(), EngineName::R, "cat(vars$q)");
+        let out = run_chunk(&mut pool, dir.path(), EngineName::R, "cat(q)");
         assert!(out.contains("a\"b"), "{out:?}");
     }
 
@@ -1055,7 +1297,7 @@ mod tests {
             &mut pool,
             dir.path(),
             EngineName::Python,
-            "print(vars['label'], vars['years'][1], vars['active'])",
+            "print(label, years[1], active)",
         );
         assert!(out.contains("baseline"), "{out:?}");
         assert!(out.contains("2021"), "{out:?}");

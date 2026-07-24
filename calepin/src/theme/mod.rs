@@ -887,8 +887,8 @@ css = ["../theme.css"]
             dir.path().join("layouts/pdf.typ"),
             r#"#let title = "{{ doc.title }}"
 #let meta_title = "{{ doc.meta.title }}"
-#let species = "{{ vars.Species }}"
-#let course = "{{ vars.course }}"
+#let species = "{{ store.Species }}"
+#let course = "{{ store.course }}"
 "#,
         )
         .unwrap();
@@ -901,7 +901,7 @@ css = ["../theme.css"]
             title: "Iris Report".to_string(),
             body: "#include \"/.calepin/reports/iris/source.typ\"".to_string(),
             page_meta: serde_json::json!({"title": "Iris Report"}),
-            vars: serde_json::json!({"Species": "setosa", "course": "Econ 101"}),
+            store: serde_json::json!({"Species": "setosa", "course": "Econ 101"}),
         };
 
         let source = notebook_source(&sel, &context).unwrap().unwrap();
@@ -923,7 +923,7 @@ css = ["../theme.css"]
         let sel = ThemeSelection::Dir(dir.path().to_path_buf());
         let context = NotebookTemplateContext {
             body: "Value: {{ vars.Species }} and {% if x %}y{% endif %}".to_string(),
-            vars: serde_json::json!({"Species": "setosa"}),
+            store: serde_json::json!({"Species": "setosa"}),
             ..NotebookTemplateContext::default()
         };
         let source = notebook_source(&sel, &context).unwrap().unwrap();
@@ -965,7 +965,7 @@ css = ["../theme.css"]
             title: String::new(),
             body: "#include \"/.calepin/paper/source.typ\"".to_string(),
             page_meta: serde_json::Value::Null,
-            vars: serde_json::json!({}),
+            store: serde_json::json!({}),
         };
 
         let source = notebook_source(&sel, &context).unwrap().unwrap();

@@ -1,6 +1,8 @@
 {
-  "schema": 1,
-  "calepin_version": "0.0.34",
+  "schema": 2,
+  "calepin_version": "0.0.36",
   "input": "notebooks/tab_groups.typ",
+  "generation": "cb19c71472e052ad-1349cde127705c16",
+  "store": {},
   "chunks": {}
 }

@@ -16,8 +16,8 @@ use crate::typst::model::{ChunkSpec, CrossrefLabelDoc, EngineName};
 use options::{parse_chunk_options, parse_script_destination};
 pub use options::{parse_setup_config, SetupConfig};
 use value::{
-    is_auto, is_calepin_chunk_metadata, is_calepin_fence_label_metadata, is_raw_code_block,
-    parse_query_values, value_for,
+    extract_text, is_auto, is_calepin_chunk_metadata, is_calepin_fence_label_metadata,
+    is_raw_code_block, parse_query_values, value_for,
 };
 
 #[cfg(test)]
@@ -49,6 +49,15 @@ pub fn parse_chunks_with_warnings(
         let ordinal = index;
         let value = &values[index];
         if is_raw_code_block(value) {
+            if raw_observation_has_matching_metadata(&values, index) {
+                // A broad theme show rule can leave the original raw element
+                // one or more times immediately before the metadata emitted
+                // by `chunk_from_raw_plain`. Treat that adjacent observation
+                // run as one chunk, while preserving repeated authored blocks
+                // when no matching metadata follows.
+                index += 1;
+                continue;
+            }
             let lookahead_fence_label = values
                 .get(index + 1)
                 .filter(|value| is_calepin_fence_label_metadata(value))
@@ -98,6 +107,49 @@ pub fn parse_chunks_with_warnings(
     }
 
     Ok(ChunkParseResult { chunks, warnings })
+}
+
+fn raw_observation_has_matching_metadata(values: &[Value], index: usize) -> bool {
+    let raw = &values[index];
+    let mut next = index + 1;
+    while values
+        .get(next)
+        .is_some_and(|candidate| same_raw_observation(raw, candidate))
+    {
+        next += 1;
+    }
+    values
+        .get(next)
+        .is_some_and(|metadata| raw_matches_chunk_metadata(raw, metadata))
+}
+
+fn same_raw_observation(left: &Value, right: &Value) -> bool {
+    is_raw_code_block(right)
+        && left.get("lang") == right.get("lang")
+        && left.get("text") == right.get("text")
+}
+
+fn raw_matches_chunk_metadata(raw: &Value, metadata: &Value) -> bool {
+    if !is_calepin_chunk_metadata(metadata) {
+        return false;
+    }
+    let Some(raw_lang) = raw.get("lang").and_then(Value::as_str) else {
+        return false;
+    };
+    let Some(chunk) = metadata.get("value") else {
+        return false;
+    };
+    let Some(engine) = chunk.get("engine").and_then(Value::as_str) else {
+        return false;
+    };
+    let Some(raw_text) = raw.get("text").and_then(Value::as_str) else {
+        return false;
+    };
+    let Some(body_text) = chunk.get("body").and_then(extract_text) else {
+        return false;
+    };
+
+    raw_lang == engine && raw_text == body_text
 }
 
 struct ChunkParseState<'a> {
@@ -607,6 +659,22 @@ mod tests {
     }
 
     #[test]
+    fn parses_typst_array_store_options_in_fenced_chunks() {
+        let json = serde_json::json!([
+          {"func":"raw","text":"#| store-get: (\"region\", \"year\")\nprint(region, year)","block":true,"lang":"python"}
+        ])
+        .to_string();
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+
+        let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
+
+        assert_eq!(chunks[0].exec_options.store_get, ["region", "year"]);
+    }
+
+    #[test]
     fn parses_qmd_label_in_fenced_chunks() {
         let json = serde_json::json!([
           {"func":"raw","text":"#| label: fig-fenced\n#| fig-caption: Fenced plot\nplot(1)","block":true,"lang":"r"}
@@ -907,7 +975,6 @@ mod tests {
             fig_layout_rows: Some(Value::from(1)),
             kind: Some("figure".to_string()),
             fenced_chunks: FencedChunks::Off,
-            vars: serde_json::json!({}),
             theme: None,
         };
         let chunks = parse_chunks(&json, Some(setup_config_with(defaults))).unwrap();
@@ -1015,25 +1082,22 @@ mod tests {
     }
 
     #[test]
-    fn parses_setup_vars_object() {
+    fn rejects_setup_vars_object() {
         let json = setup_metadata(
             r#"{
               "echo":true,
               "vars":{"region":"NY","min_count":25,"active":true}
             }"#,
         );
-        let config = parse_setup_config(&json).unwrap().unwrap();
-        assert_eq!(
-            config.defaults.vars,
-            serde_json::json!({"region":"NY","min_count":25,"active":true})
-        );
+        let err = parse_setup_config(&json).unwrap_err().to_string();
+        assert!(err.contains("vars"), "{err}");
     }
 
     #[test]
-    fn setup_vars_default_to_empty_object() {
+    fn setup_without_vars_is_valid() {
         let json = setup_metadata(r#"{"echo":true}"#);
         let config = parse_setup_config(&json).unwrap().unwrap();
-        assert_eq!(config.defaults.vars, serde_json::json!({}));
+        assert!(config.defaults.echo);
     }
 
     #[test]
@@ -1347,6 +1411,30 @@ mod tests {
         assert_eq!(chunks[0].engine, EngineName::R);
         assert_eq!(chunks[0].label, "chunk-1");
         assert_eq!(chunks[0].code, "plot(2)");
+    }
+
+    #[test]
+    fn metadata_query_collapses_adjacent_raw_and_jupyter_metadata() {
+        let defaults = SetupDefaults {
+            fenced_chunks: FencedChunks::All,
+            ..SetupDefaults::default()
+        };
+        let json = r##"[
+          {"func":"raw","text":"previous = true","block":true,"lang":"toml"},
+          {"func":"raw","text":"previous = true","block":true,"lang":"toml"},
+          {"func":"metadata","value":{"body":{"func":"raw","text":"previous = true","block":true,"lang":"toml"},"engine":"toml","label":"chunk-1"},"label":"<calepin-chunk>"},
+          {"func":"metadata","value":{"body":{"func":"raw","text":"#| eval: false\necho current","block":true,"lang":"sh"},"engine":"sh","label":"chunk-2"},"label":"<calepin-chunk>"}
+        ]"##;
+
+        let chunks = parse_chunks(json, Some(setup_config_with(defaults))).unwrap();
+
+        assert_eq!(chunks.len(), 2);
+        assert_eq!(chunks[0].label, "chunk-1");
+        assert_eq!(chunks[0].engine, EngineName::Jupyter("toml".to_string()));
+        assert_eq!(chunks[0].code, "previous = true");
+        assert_eq!(chunks[1].label, "chunk-2");
+        assert_eq!(chunks[1].engine, EngineName::Jupyter("sh".to_string()));
+        assert_eq!(chunks[1].code, "echo current");
     }
 
     #[test]

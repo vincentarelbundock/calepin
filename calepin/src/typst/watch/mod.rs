@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
@@ -33,7 +33,7 @@ fn start_html_output_postprocessor(
     output: PathBuf,
     layout: crate::typst::model::LayoutPaths,
     html_entry: Option<crate::theme::HtmlEntry>,
-    site_context: Option<SiteContextInput>,
+    site_context: Option<Arc<RwLock<SiteContextInput>>>,
     writes: Receiver<PathBuf>,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
@@ -86,12 +86,15 @@ fn start_html_output_postprocessor(
                 _ => false,
             };
             if should_refresh {
+                let current_site_context = site_context
+                    .as_ref()
+                    .and_then(|context| context.read().ok().map(|context| context.clone()));
                 if let Err(error) = postprocess_html_output(
                     &output,
                     &layout,
                     html_entry.as_ref(),
                     &syntax_theme,
-                    site_context.as_ref(),
+                    current_site_context.as_ref(),
                     false,
                 ) {
                     cwarn!("failed to postprocess watched HTML output: {}", error);
@@ -133,47 +136,64 @@ fn install_ctrl_c_handler() -> Result<Arc<AtomicBool>> {
     Ok(stop)
 }
 
+struct WatchPreprocessPaths<'a> {
+    root: &'a Path,
+    excluded_output: &'a Path,
+    artifact_root: &'a Path,
+}
+
 fn watch_preprocess_changes(
     args: &WatchArgs,
-    root: &Path,
-    excluded_output: &Path,
-    artifact_root: &Path,
+    paths: WatchPreprocessPaths<'_>,
     stop: Arc<AtomicBool>,
     sync_pages: bool,
     action: &'static str,
+    site_context: Option<Arc<RwLock<SiteContextInput>>>,
 ) -> Result<()> {
     let options = preprocess_options(args, sync_pages);
     let quiet = args.common.quiet;
     watcher::watch_root(
-        root,
-        excluded_output,
-        artifact_root,
+        paths.root,
+        paths.excluded_output,
+        paths.artifact_root,
         args.common.config.as_deref(),
         stop,
-        move |changed| match prepare_preprocess_plan(options.clone()) {
-            Ok(plan) => {
-                if !quiet {
-                    let names = changed
-                        .iter()
-                        .filter_map(|path| path.file_name())
-                        .map(|name| name.to_string_lossy().to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    eprintln!("{action} {names}...");
-                }
-                match preprocess_cached_plan(plan) {
-                    Ok(output) => {
-                        if let Err(error) = publish_active_binding(&output.layout) {
-                            cwarn!("failed to publish active notebook: {}", error);
+        move |changed| {
+            // Block HTML postprocessing across the rebuild so the newly
+            // published wrapper and its completed store become visible
+            // together.
+            let mut site_context_guard = site_context
+                .as_ref()
+                .and_then(|context| context.write().ok());
+            match prepare_preprocess_plan(options.clone()) {
+                Ok(plan) => {
+                    if !quiet {
+                        let names = changed
+                            .iter()
+                            .filter_map(|path| path.file_name())
+                            .map(|name| name.to_string_lossy().to_string())
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        eprintln!("{action} {names}...");
+                    }
+                    match preprocess_cached_plan(plan) {
+                        Ok(output) => {
+                            if let Some(context) = site_context_guard.as_deref_mut() {
+                                context.store = output.store.clone();
+                            }
+                            drop(site_context_guard);
+                            if let Err(error) = publish_active_binding(&output.layout) {
+                                cwarn!("failed to publish active notebook: {}", error);
+                            }
+                        }
+                        Err(error) => {
+                            cwarn!("rebuild failed: {}", error);
                         }
                     }
-                    Err(error) => {
-                        cwarn!("rebuild failed: {}", error);
-                    }
                 }
-            }
-            Err(error) => {
-                cwarn!("rebuild failed: {}", error);
+                Err(error) => {
+                    cwarn!("rebuild failed: {}", error);
+                }
             }
         },
     )
@@ -193,12 +213,15 @@ fn run_eval_only_watch(args: WatchArgs) -> Result<()> {
 
     watch_preprocess_changes(
         &args,
-        &initial.layout.root,
-        &initial.layout.results_path,
-        &initial.layout.artifact_root(),
+        WatchPreprocessPaths {
+            root: &initial.layout.root,
+            excluded_output: &initial.layout.results_path,
+            artifact_root: &initial.layout.artifact_root(),
+        },
         stop,
         false,
         "checking",
+        None,
     )
 }
 
@@ -230,11 +253,13 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     };
     let mut html_postprocessor = None;
     let mut write_events = None;
-    if is_html {
-        let site_context = SiteContextInput {
-            vars: initial.vars.clone(),
+    let html_site_context = is_html.then(|| {
+        Arc::new(RwLock::new(SiteContextInput {
+            store: initial.store.clone(),
             ..SiteContextInput::default()
-        };
+        }))
+    });
+    if is_html {
         let html_entry =
             crate::theme::resolve_html_entry(&initial.theme, crate::theme::HtmlScope::Document)?;
         let (sender, receiver) = mpsc::channel();
@@ -244,7 +269,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
             resolved_output.clone(),
             initial.layout.clone(),
             html_entry,
-            Some(site_context),
+            html_site_context.clone(),
             receiver,
         ));
     }
@@ -321,12 +346,15 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let watcher = thread::spawn(move || {
         let result = watch_preprocess_changes(
             &watcher_args,
-            &watcher_root,
-            &watcher_output,
-            &watcher_artifact_root,
+            WatchPreprocessPaths {
+                root: &watcher_root,
+                excluded_output: &watcher_output,
+                artifact_root: &watcher_artifact_root,
+            },
             Arc::clone(&watcher_stop),
             sync_pages,
             "rebuilding",
+            html_site_context,
         );
         if let Err(error) = result {
             cwarn!("watch error: {}", error);

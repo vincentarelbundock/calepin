@@ -33,7 +33,7 @@ struct DocContext {
 struct ThemeContext {
     doc: DocContext,
     site: SiteContext,
-    vars: serde_json::Value,
+    store: serde_json::Value,
     css: Vec<CssEntry>,
     js: Vec<JsEntry>,
     highlight_css: String,
@@ -61,7 +61,7 @@ pub(crate) struct SiteContextInput {
     pub(crate) page_title: Option<String>,
     pub(crate) pagefind: Option<SitePagefindEntry>,
     #[serde(skip)]
-    pub(crate) vars: serde_json::Value,
+    pub(crate) store: serde_json::Value,
     /// Resolved max heading level included in the on-page TOC: `Some(0)` means
     /// no TOC, `Some(n)` includes headings up to level `n`. `None` (the
     /// default, used when no caller resolves it) falls back to the original
@@ -210,7 +210,7 @@ fn render_theme(
         .unwrap_or(3);
     let (body, toc) = annotate_body_headings(parts.body, site_title_heading, toc_depth);
     let site = site_context(project_root, output_path, toc, site_context_input);
-    let vars = site.input.vars.clone();
+    let store = site.input.store.clone();
     let context = ThemeContext {
         doc: DocContext {
             head: parts.head.to_string(),
@@ -220,7 +220,7 @@ fn render_theme(
             title: parts.title.clone().unwrap_or_default(),
         },
         site,
-        vars,
+        store,
         css,
         js,
         highlight_css: highlight_css(syntax_theme),

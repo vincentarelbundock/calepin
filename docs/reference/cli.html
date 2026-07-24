@@ -4178,7 +4178,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [CLI reference])\n#metadata((tags: (\"reference\", \"CLI\"))) <website-metadata>\n\n#title() <cli-reference>\n\n= `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a notebook file, website scaffold, or ejected theme\n  health   Check Calepin's local runtime environment and local links\n  compile  Preprocess, then invoke typst compile\n  watch    Watch and preprocess, optionally delegating rendering to typst watch\n  serve    Serve static files locally\n  update   Update Calepin using the official installer updater\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n= `calepin new`\n<calepin-new>\n\n```text\nCreate a notebook file, website scaffold, or ejected theme\n\nUsage: calepin new [OPTIONS] <PATH|website|theme> [DIR]\n\nArguments:\n  <PATH|website|theme>  What to create: a .typ notebook path, `website`, or `theme`\n  [DIR]                 Destination directory when creating a website scaffold or ejected theme\n\nOptions:\n      --theme <THEME>  Built-in theme to use when creating a website scaffold or ejected theme [possible values: calepin, academic]\n  -f, --force          Overwrite the file if it already exists\n  -h, --help           Print help\n\nExamples:\n  calepin new paper.typ\n  calepin new website\n  calepin new website --theme academic\n  calepin new theme\n  calepin new theme --theme academic\n  calepin new theme themes/my-theme\n```\n\n= `calepin health`\n<calepin-health>\n\n```text\nCheck Calepin's local runtime environment and local links\n\nUsage: calepin health [OPTIONS]\n\nOptions:\n      --config <CONFIG>       Path to project config TOML\n  -d, --depth <DEPTH>         Maximum recursion depth when searching for links\n      --json                  Print machine-readable JSON\n      --strict                Exit with an error when warnings are present\n      --check-external-links  Also check external links\n  -h, --help                  Print help\n```\n\n= `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format, including source-code script extraction\n          \n          [possible values: pdf, png, svg, html, script]\n\n      --minify\n          Minify HTML output after theming and asset processing\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n      --set <KEY=VALUE>\n          Override a Calepin config value as `key=value` (repeatable).\n          \n          Uses dotted paths for nested config, such as `theme=./theme`, `vars.region=CA`, or `toc.enabled=false`.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin watch`\n<calepin-watch>\n\n```text\nWatch and preprocess, optionally delegating rendering to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst watch\n          \n          [possible values: pdf, png, svg, html]\n\n      --eval-only\n          Evaluate changed chunks and refresh artifacts without starting typst watch\n\n      --serve\n          Serve the website while watching a directory\n\n      --open\n          Open the served website in the default browser\n\n      --host <HOST>\n          Interface to bind when serving a watched website\n          \n          [default: 127.0.0.1]\n\n      --port <PORT>\n          Port to bind when serving a watched website (default: first free port from 8000)\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n      --set <KEY=VALUE>\n          Override a Calepin config value as `key=value` (repeatable).\n          \n          Uses dotted paths for nested config, such as `theme=./theme`, `vars.region=CA`, or `toc.enabled=false`.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin serve`\n<calepin-serve>\n\n```text\nServe static files locally\n\nUsage: calepin serve [OPTIONS] <DIR>\n\nArguments:\n  <DIR>  Directory containing static files to serve\n\nOptions:\n      --host <HOST>  Interface to bind [default: 127.0.0.1]\n  -p, --port <PORT>  Port to bind (default: first free port from 8000)\n      --open         Open the website in the default browser\n  -h, --help         Print help\n```\n\n= `calepin update`\n<calepin-update>\n\n```text\nUpdate Calepin using the official installer updater\n\nUsage: calepin update\n\nOptions:\n  -h, --help  Print help\n```\n\n= `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [CLI reference])\n\n#title() <cli-reference>\n\n= `calepin`\n<calepin>\n\n```text\nPreprocess Typst documents with executable code chunks\n\nUsage: calepin <COMMAND>\n\nCommands:\n  new      Create a notebook file, website scaffold, or ejected theme\n  health   Check Calepin's local runtime environment and local links\n  compile  Preprocess, then invoke typst compile\n  watch    Watch and preprocess, optionally delegating rendering to typst watch\n  serve    Serve static files locally\n  update   Update Calepin using the official installer updater\n  clean    Remove `.calepin` directories and generated artifacts\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -v, --version  Print version\n  -h, --help     Print help\n```\n\n= `calepin new`\n<calepin-new>\n\n```text\nCreate a notebook file, website scaffold, or ejected theme\n\nUsage: calepin new [OPTIONS] <PATH|website|theme> [DIR]\n\nArguments:\n  <PATH|website|theme>  What to create: a .typ notebook path, `website`, or `theme`\n  [DIR]                 Destination directory when creating a website scaffold or ejected theme\n\nOptions:\n      --theme <THEME>  Built-in theme to use when creating a website scaffold or ejected theme [possible values: calepin, academic]\n  -f, --force          Overwrite the file if it already exists\n  -h, --help           Print help\n\nExamples:\n  calepin new paper.typ\n  calepin new website\n  calepin new website --theme academic\n  calepin new theme\n  calepin new theme --theme academic\n  calepin new theme themes/my-theme\n```\n\n= `calepin health`\n<calepin-health>\n\n```text\nCheck Calepin's local runtime environment and local links\n\nUsage: calepin health [OPTIONS]\n\nOptions:\n      --config <CONFIG>       Path to project config TOML\n  -d, --depth <DEPTH>         Maximum recursion depth when searching for links\n      --json                  Print machine-readable JSON\n      --strict                Exit with an error when warnings are present\n      --check-external-links  Also check external links\n  -h, --help                  Print help\n```\n\n= `calepin compile`\n<calepin-compile>\n\n```text\nPreprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format, including source-code script extraction\n          \n          [possible values: pdf, png, svg, html, script]\n\n      --minify\n          Minify HTML output after theming and asset processing\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n      --set <KEY=VALUE>\n          Override a Calepin config value as `key=value` (repeatable).\n          \n          Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin watch`\n<calepin-watch>\n\n```text\nWatch and preprocess, optionally delegating rendering to typst watch\n\nUsage: calepin watch [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst watch after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format passed to typst watch\n          \n          [possible values: pdf, png, svg, html]\n\n      --eval-only\n          Evaluate changed chunks and refresh artifacts without starting typst watch\n\n      --serve\n          Serve the website while watching a directory\n\n      --open\n          Open the served website in the default browser\n\n      --host <HOST>\n          Interface to bind when serving a watched website\n          \n          [default: 127.0.0.1]\n\n      --port <PORT>\n          Port to bind when serving a watched website (default: first free port from 8000)\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n      --set <KEY=VALUE>\n          Override a Calepin config value as `key=value` (repeatable).\n          \n          Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.\n\n  -h, --help\n          Print help (see a summary with '-h')\n```\n\n= `calepin serve`\n<calepin-serve>\n\n```text\nServe static files locally\n\nUsage: calepin serve [OPTIONS] <DIR>\n\nArguments:\n  <DIR>  Directory containing static files to serve\n\nOptions:\n      --host <HOST>  Interface to bind [default: 127.0.0.1]\n  -p, --port <PORT>  Port to bind (default: first free port from 8000)\n      --open         Open the website in the default browser\n  -h, --help         Print help\n```\n\n= `calepin update`\n<calepin-update>\n\n```text\nUpdate Calepin using the official installer updater\n\nUsage: calepin update\n\nOptions:\n  -h, --help  Print help\n```\n\n= `calepin clean`\n<calepin-clean>\n\n```text\nRemove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help\n```\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4270,6 +4270,10 @@ html:not([data-theme]) {
 
                             
                             
+<li class="calepin-website-sidebar-link"><a href="../getting-started/basics.html" aria-label="Basics">Basics</a></li>
+
+                            
+                            
 <li class="calepin-website-sidebar-link"><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
 
                             
@@ -4289,12 +4293,8 @@ html:not([data-theme]) {
                     
                     
                     <details class="calepin-website-sidebar-section">
-                        <summary>Notebooks</summary>
+                        <summary>Code execution</summary>
                         <ul>
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../notebooks/notebooks.html" aria-label="Notebooks">Notebooks</a></li>
-
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
@@ -4309,15 +4309,38 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/data_store.html" aria-label="Data transport">Data transport</a></li>
 
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>HTML</summary>
+                        <ul>
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
 
                             
                         </ul>
@@ -4356,11 +4379,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+<li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
 
                             
                         </ul>
@@ -4398,15 +4417,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="../themes/pdf_templates.html" aria-label="PDF">PDF</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
 
                             
                             
@@ -4426,10 +4437,6 @@ html:not([data-theme]) {
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../tips.html" aria-label="Tips &amp; tricks">Tips &amp; tricks</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
 
                             
                             
@@ -4461,23 +4468,7 @@ Commands:
 
 Options:
   -v, --version  Print version
-  -h, --help     Print help</code></pre></div><h2 id="calepin-new"><code>calepin new</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Preprocess Typst documents with executable code chunks
-
-Usage: calepin &lt;COMMAND>
-
-Commands:
-  new      Create a notebook file, website scaffold, or ejected theme
-  health   Check Calepin's local runtime environment and local links
-  compile  Preprocess, then invoke typst compile
-  watch    Watch and preprocess, optionally delegating rendering to typst watch
-  serve    Serve static files locally
-  update   Update Calepin using the official installer updater
-  clean    Remove `.calepin` directories and generated artifacts
-  help     Print this message or the help of the given subcommand(s)
-
-Options:
-  -v, --version  Print version
-  -h, --help     Print help</code></pre></div><h2 id="calepin-health"><code>calepin health</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Create a notebook file, website scaffold, or ejected theme
+  -h, --help     Print help</code></pre></div><h2 id="calepin-new"><code>calepin new</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Create a notebook file, website scaffold, or ejected theme
 
 Usage: calepin new [OPTIONS] &lt;PATH|website|theme> [DIR]
 
@@ -4496,26 +4487,7 @@ Examples:
   calepin new website --theme academic
   calepin new theme
   calepin new theme --theme academic
-  calepin new theme themes/my-theme</code></pre></div><h2 id="calepin-compile"><code>calepin compile</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Create a notebook file, website scaffold, or ejected theme
-
-Usage: calepin new [OPTIONS] &lt;PATH|website|theme> [DIR]
-
-Arguments:
-  &lt;PATH|website|theme>  What to create: a .typ notebook path, `website`, or `theme`
-  [DIR]                 Destination directory when creating a website scaffold or ejected theme
-
-Options:
-      --theme &lt;THEME>  Built-in theme to use when creating a website scaffold or ejected theme [possible values: calepin, academic]
-  -f, --force          Overwrite the file if it already exists
-  -h, --help           Print help
-
-Examples:
-  calepin new paper.typ
-  calepin new website
-  calepin new website --theme academic
-  calepin new theme
-  calepin new theme --theme academic
-  calepin new theme themes/my-theme</code></pre></div><h2 id="calepin-watch"><code>calepin watch</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Check Calepin's local runtime environment and local links
+  calepin new theme themes/my-theme</code></pre></div><h2 id="calepin-health"><code>calepin health</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Check Calepin's local runtime environment and local links
 
 Usage: calepin health [OPTIONS]
 
@@ -4525,17 +4497,7 @@ Options:
       --json                  Print machine-readable JSON
       --strict                Exit with an error when warnings are present
       --check-external-links  Also check external links
-  -h, --help                  Print help</code></pre></div><h2 id="calepin-serve"><code>calepin serve</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Check Calepin's local runtime environment and local links
-
-Usage: calepin health [OPTIONS]
-
-Options:
-      --config &lt;CONFIG>       Path to project config TOML
-  -d, --depth &lt;DEPTH>         Maximum recursion depth when searching for links
-      --json                  Print machine-readable JSON
-      --strict                Exit with an error when warnings are present
-      --check-external-links  Also check external links
-  -h, --help                  Print help</code></pre></div><h2 id="calepin-update"><code>calepin update</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Preprocess, then invoke typst compile
+  -h, --help                  Print help</code></pre></div><h2 id="calepin-compile"><code>calepin compile</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Preprocess, then invoke typst compile
 
 Usage: calepin compile [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...
 
@@ -4570,12 +4532,12 @@ Options:
       --set &lt;KEY=VALUE>
           Override a Calepin config value as `key=value` (repeatable).
           
-          Uses dotted paths for nested config, such as `theme=./theme`, `vars.region=CA`, or `toc.enabled=false`.
+          Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.
 
   -h, --help
-          Print help (see a summary with '-h')</code></pre></div><h2 id="calepin-clean"><code>calepin clean</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Preprocess, then invoke typst compile
+          Print help (see a summary with '-h')</code></pre></div><h2 id="calepin-watch"><code>calepin watch</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Watch and preprocess, optionally delegating rendering to typst watch
 
-Usage: calepin compile [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...
+Usage: calepin watch [OPTIONS] &lt;INPUT> [OUTPUT] [TYPST_ARGS]...
 
 Arguments:
   &lt;INPUT>
@@ -4585,16 +4547,30 @@ Arguments:
           Output file path, or website output directory when INPUT is a directory
 
   [TYPST_ARGS]...
-          Arguments forwarded to typst compile after `--`
+          Arguments forwarded to typst watch after `--`
 
 Options:
       --format &lt;FORMAT>
-          Output format, including source-code script extraction
+          Output format passed to typst watch
           
-          [possible values: pdf, png, svg, html, script]
+          [possible values: pdf, png, svg, html]
 
-      --minify
-          Minify HTML output after theming and asset processing
+      --eval-only
+          Evaluate changed chunks and refresh artifacts without starting typst watch
+
+      --serve
+          Serve the website while watching a directory
+
+      --open
+          Open the served website in the default browser
+
+      --host &lt;HOST>
+          Interface to bind when serving a watched website
+          
+          [default: 127.0.0.1]
+
+      --port &lt;PORT>
+          Port to bind when serving a watched website (default: first free port from 8000)
 
       --config &lt;CONFIG>
           Path to project config TOML
@@ -4608,10 +4584,33 @@ Options:
       --set &lt;KEY=VALUE>
           Override a Calepin config value as `key=value` (repeatable).
           
-          Uses dotted paths for nested config, such as `theme=./theme`, `vars.region=CA`, or `toc.enabled=false`.
+          Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.
 
   -h, --help
-          Print help (see a summary with '-h')</code></pre></div>
+          Print help (see a summary with '-h')</code></pre></div><h2 id="calepin-serve"><code>calepin serve</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Serve static files locally
+
+Usage: calepin serve [OPTIONS] &lt;DIR>
+
+Arguments:
+  &lt;DIR>  Directory containing static files to serve
+
+Options:
+      --host &lt;HOST>  Interface to bind [default: 127.0.0.1]
+  -p, --port &lt;PORT>  Port to bind (default: first free port from 8000)
+      --open         Open the website in the default browser
+  -h, --help         Print help</code></pre></div><h2 id="calepin-update"><code>calepin update</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Update Calepin using the official installer updater
+
+Usage: calepin update
+
+Options:
+  -h, --help  Print help</code></pre></div><h2 id="calepin-clean"><code>calepin clean</code></h2><div class="sourceCode" data-lang="text"><pre><code data-lang="text">Remove `.calepin` directories and generated artifacts
+
+Usage: calepin clean [OPTIONS]
+
+Options:
+  -d, --depth &lt;DEPTH>  Maximum recursion depth when searching for `.calepin` directories
+  -y, --yes            Skip interactive confirmation and delete immediately
+  -h, --help           Print help</code></pre></div>
         </main>
                 
         <aside class="calepin-website-toc is-floating">
@@ -4834,13 +4833,6 @@ Options:
     
         
         
-        
-            
-        
-        
-    
-        
-        
             
             
         
@@ -4852,11 +4844,11 @@ Options:
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="../websites/health.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="../tips.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Health</span>
+            <span class="calepin-website-page-nav-title">Tips &amp; tricks</span>
           </span>
         </a>
         

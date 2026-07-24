@@ -2,6 +2,18 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
+#let _calepin-expected-generation = "93827c1d0082c32e-1349cde127705c16"
+#let _calepin-verify-generation() = {
+  let path = sys.inputs.at("calepin-results", default: none)
+  if path != none and path != "" {
+    let actual = json(path).at("generation", default: "")
+    if actual != _calepin-expected-generation {
+      panic("Calepin results changed while this render was starting; Typst will retry with the completed build")
+    }
+  }
+}
+#_calepin-verify-generation()
+
 
 
 #let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2", "html", "sh")
@@ -39,7 +51,7 @@
 }
 
 // Notebook theme
-#import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
+#import "/.calepin/calepin.typ": _html-themed-raw-block, _is-query, chunk_from_raw_plain
 
 // Body text size, captured below at document-body level. Code blocks are sized
 // relative to this rather than to `1em`, which would compound: a literal
@@ -55,7 +67,7 @@
       set text(size: _calepin-body-size.get() * 0.8)
       it
     }
-  } else if it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
+  } else if it.lang != none and (_is-query() or _raw-chunk-langs.contains(it.lang)) and _fenced-chunks-runs(
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
@@ -115,25 +127,25 @@ The #link("https://docs.rs/minijinja/latest/minijinja/syntax/index.html")[MiniJi
 
 Each layout receives a context: a set of named values you reference with `{{ }}`. The available names depend on the target.
 
-- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `vars`, and more. See #link("html_templates.html")[HTML templates].
-- The paged layout receives `doc`, `theme`, `target`, and `vars`. See #link("pdf_templates.html")[PDF templates].
+- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `store`, and more. See #link("html_templates.html")[HTML templates].
+- The paged layout receives `doc`, `theme`, `target`, and `store`. See #link("pdf_templates.html")[PDF templates].
 
-Both targets receive `theme`, `target`, and `vars`.
+Both targets receive `theme`, `target`, and `store`.
 
-= Variables
+= Document store
 
-Pass project-specific template values with `--set vars.<name>=...`:
+Pass project-specific template values with `[store]` or `--set store.<name>=...`:
 
-#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile notebook.typ --set vars.course=\"Econ 101\" --set vars.semester=\"Fall 2026\"\n", block: true, lang: "sh"))
+#calepin_runtime.chunk_from_raw_plain("sh", raw("calepin compile notebook.typ --set store.course=\"Econ 101\" --set store.semester=\"Fall 2026\"\n", block: true, lang: "sh"))
 
-These values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values are merged into the same map, and CLI `--set vars.<name>=...` values take precedence. In HTML templates, `vars` sits at the top level, not under `site`:
+The completed document store is available as top-level `store` in both HTML and paged layouts. It includes project values, document initializers declared with `calepin.store.set()`, and values committed by successful `store-set` chunks. CLI `--set store.<name>=...` values take precedence over project and document initializers. In HTML templates, `store` sits at the top level, not under `site`:
 
 ```html
-<p>{{ vars.course }}, {{ vars.semester }}</p>
+<p>{{ store.course }}, {{ store.semester }}</p>
 ```
 
 In a `layouts/pdf.typ` paged layout, read the same values and emit Typst:
 
 ```typ
-#let course = "{{ vars.course }}"
+#let course = "{{ store.course }}"
 ```

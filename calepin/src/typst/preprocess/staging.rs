@@ -14,7 +14,7 @@ pub(super) fn notebook_template_context(
     layout: &LayoutPaths,
     staged_input: &Path,
     page_meta: Option<serde_json::Value>,
-    vars: serde_json::Value,
+    store: serde_json::Value,
 ) -> Result<crate::theme::NotebookTemplateContext> {
     let input_dir = layout
         .input_rel
@@ -48,7 +48,7 @@ pub(super) fn notebook_template_context(
         title,
         body,
         page_meta,
-        vars,
+        store,
     })
 }
 
@@ -58,8 +58,46 @@ pub(super) fn write_render_wrapper(
     include_input: Option<&Path>,
     jupyter_kernels: &[&str],
     notebook_theme: Option<&crate::theme::NotebookSource>,
+    expected_generation: Option<&str>,
 ) -> Result<PathBuf> {
-    let wrapper_relative = layout.artifact_relative_path("calepin-wrapper.typ");
+    write_wrapper(
+        layout,
+        "calepin-wrapper.typ",
+        runtime_import,
+        include_input,
+        jupyter_kernels,
+        notebook_theme,
+        expected_generation,
+    )
+}
+
+pub(super) fn write_query_wrapper(
+    layout: &LayoutPaths,
+    runtime_import: &str,
+    include_input: Option<&Path>,
+    notebook_theme: Option<&crate::theme::NotebookSource>,
+) -> Result<PathBuf> {
+    write_wrapper(
+        layout,
+        "calepin-query-wrapper.typ",
+        runtime_import,
+        include_input,
+        &[],
+        notebook_theme,
+        None,
+    )
+}
+
+fn write_wrapper(
+    layout: &LayoutPaths,
+    artifact_name: &str,
+    runtime_import: &str,
+    include_input: Option<&Path>,
+    jupyter_kernels: &[&str],
+    notebook_theme: Option<&crate::theme::NotebookSource>,
+    expected_generation: Option<&str>,
+) -> Result<PathBuf> {
+    let wrapper_relative = layout.artifact_relative_path(artifact_name);
     let wrapper = layout.root.join(&wrapper_relative);
 
     // The runtime exports `document` for authored `#show: calepin.document`
@@ -68,6 +106,22 @@ pub(super) fn write_render_wrapper(
     let mut lines = format!(
         "#let _calepin-document-element = document\n#import \"{runtime_import}\": *\n#let document = _calepin-document-element\n\n"
     );
+    if let Some(generation) = expected_generation {
+        lines.push_str(&format!(
+            "#let _calepin-expected-generation = {}\n\
+             #let _calepin-verify-generation() = {{\n\
+             \u{20}\u{20}let path = sys.inputs.at(\"calepin-results\", default: none)\n\
+             \u{20}\u{20}if path != none and path != \"\" {{\n\
+             \u{20}\u{20}\u{20}\u{20}let actual = json(path).at(\"generation\", default: \"\")\n\
+             \u{20}\u{20}\u{20}\u{20}if actual != _calepin-expected-generation {{\n\
+             \u{20}\u{20}\u{20}\u{20}\u{20}\u{20}panic(\"Calepin results changed while this render was starting; Typst will retry with the completed build\")\n\
+             \u{20}\u{20}\u{20}\u{20}}}\n\
+             \u{20}\u{20}}}\n\
+             }}\n\
+             #_calepin-verify-generation()\n\n",
+            typst_string(generation)
+        ));
+    }
 
     lines.push('\n');
     lines.push('\n');
@@ -189,6 +243,7 @@ pub(super) fn write_query_source(layout: &LayoutPaths, staged_input: &Path) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::typst::testfixtures;
 
     #[test]
     fn raw_show_rule_escapes_kernel_names() {
@@ -199,5 +254,20 @@ mod tests {
             rule.contains(r#"chunk_from_raw_plain("weird\"kernel""#),
             "{rule}"
         );
+    }
+
+    #[test]
+    fn query_and_render_wrappers_are_isolated_artifacts() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = testfixtures::layout(dir.path());
+
+        let query = write_query_wrapper(&layout, "/.calepin/calepin.typ", None, None).unwrap();
+        let render =
+            write_render_wrapper(&layout, "/.calepin/calepin.typ", None, &[], None, Some("g"))
+                .unwrap();
+
+        assert_ne!(query, render);
+        assert!(layout.root.join(query).is_file());
+        assert!(layout.root.join(render).is_file());
     }
 }

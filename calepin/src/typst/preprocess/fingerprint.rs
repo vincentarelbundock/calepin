@@ -33,7 +33,7 @@ pub(super) fn preprocess_fingerprint(
             .iter()
             .map(ChunkFingerprint::from)
             .collect::<Vec<_>>(),
-        vars: execution.vars.clone(),
+        store: execution.store.clone(),
         theme: theme_fingerprint(theme),
         asset_dir: path_fingerprint(asset_dir),
         image_meta: format!("{image_meta_signature:016x}"),
@@ -45,7 +45,7 @@ pub(super) fn preprocess_fingerprint(
 pub(super) struct ExecutionFingerprintInputs<'a> {
     pub cwd: &'a Path,
     pub timeout: Option<Duration>,
-    pub vars: &'a serde_json::Value,
+    pub store: &'a serde_json::Value,
 }
 
 pub(super) fn preprocess_cache_hit(layout: &LayoutPaths, fingerprint: u64) -> Result<bool> {
@@ -91,7 +91,7 @@ struct PreprocessFingerprint {
     timeout_secs: Option<u64>,
     executables: ExecutableFingerprint,
     chunks: Vec<ChunkFingerprint>,
-    vars: serde_json::Value,
+    store: serde_json::Value,
     theme: String,
     asset_dir: String,
     image_meta: String,

@@ -2,6 +2,18 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
+#let _calepin-expected-generation = "7d49b9f320435969-1349cde127705c16"
+#let _calepin-verify-generation() = {
+  let path = sys.inputs.at("calepin-results", default: none)
+  if path != none and path != "" {
+    let actual = json(path).at("generation", default: "")
+    if actual != _calepin-expected-generation {
+      panic("Calepin results changed while this render was starting; Typst will retry with the completed build")
+    }
+  }
+}
+#_calepin-verify-generation()
+
 
 
 #let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2")
@@ -37,7 +49,7 @@
 }
 
 // Notebook theme
-#import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
+#import "/.calepin/calepin.typ": _html-themed-raw-block, _is-query, chunk_from_raw_plain
 
 // Body text size, captured below at document-body level. Code blocks are sized
 // relative to this rather than to `1em`, which would compound: a literal
@@ -53,7 +65,7 @@
       set text(size: _calepin-body-size.get() * 0.8)
       it
     }
-  } else if it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
+  } else if it.lang != none and (_is-query() or _raw-chunk-langs.contains(it.lang)) and _fenced-chunks-runs(
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
@@ -73,6 +85,8 @@
 #title()
 
 Calepin documents are ordinary Typst files, so you can keep your editor's language tooling and preview while Calepin evaluates computational chunks.
+
+The #link("https://marketplace.visualstudio.com/items?itemName=myriad-dreamin.tinymist")[Tinymist extension] provides Typst language tooling and live document preview in VS Code.
 
 The _Calepin for Typst_ extension adds start and stop commands for Calepin in VS Code, Cursor, Positron, and other VSX-compatible editors. This short screencast shows the workflow alongside Tinymist preview.
 

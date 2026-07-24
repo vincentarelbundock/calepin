@@ -7,7 +7,12 @@
   if results-path == none or results-path == "" {
     none
   } else {
-    json(results-path)
+    let document = json(results-path)
+    let schema = document.at("schema", default: 1)
+    if schema not in (1, 2) {
+      panic("unsupported Calepin results schema " + str(schema) + "; this runtime supports schemas 1 and 2")
+    }
+    document
   }
 }
 

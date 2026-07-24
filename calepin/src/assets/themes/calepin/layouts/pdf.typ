@@ -1,4 +1,4 @@
-#import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
+#import "/.calepin/calepin.typ": _html-themed-raw-block, _is-query, chunk_from_raw_plain
 
 // Body text size, captured below at document-body level. Code blocks are sized
 // relative to this rather than to `1em`, which would compound: a literal
@@ -14,7 +14,7 @@
       set text(size: _calepin-body-size.get() * 0.8)
       it
     }
-  } else if it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
+  } else if it.lang != none and (_is-query() or _raw-chunk-langs.contains(it.lang)) and _fenced-chunks-runs(
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {

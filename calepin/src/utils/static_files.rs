@@ -44,7 +44,7 @@ pub fn request_relative_path(
         return None;
     }
     let decoded = strip_base_path_prefix(&decoded, base_path_prefix);
-    let trimmed = path::strip_leading_url_prefix(&decoded);
+    let trimmed = path::strip_leading_url_prefix(decoded);
 
     let mut relative = PathBuf::new();
     for component in Path::new(trimmed).components() {

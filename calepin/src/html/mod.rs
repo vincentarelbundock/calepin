@@ -488,16 +488,16 @@ mod tests {
     }
 
     #[test]
-    fn user_theme_exposes_custom_vars() {
+    fn user_theme_exposes_custom_store() {
         let entry = HtmlEntry {
             theme_name: "vars".to_string(),
-            layout: "{{ vars.course }} — {{ vars.semester }}".to_string(),
+            layout: "{{ store.course }} — {{ store.semester }}".to_string(),
             partials: Vec::new(),
             styles: Vec::new(),
             scripts: Vec::new(),
         };
         let site_context = SiteContextInput {
-            vars: serde_json::json!({
+            store: serde_json::json!({
                 "course": "Econ 101",
                 "semester": "Fall 2026",
             }),
@@ -1293,8 +1293,7 @@ mod tests {
                 "{theme_name}: TOC rows should use a compact content-driven grid"
             );
             assert!(
-                css.contains(".calepin-website-toc nav li {")
-                    && css.contains("  min-height: 0;"),
+                css.contains(".calepin-website-toc nav li {") && css.contains("  min-height: 0;"),
                 "{theme_name}: TOC items should not inherit a fixed minimum height"
             );
             assert!(
@@ -1308,7 +1307,9 @@ mod tests {
             );
             assert!(
                 css.contains(".calepin-website-toc li.level-3 a { --calepin-toc-indent: 0.9rem; }")
-                    && css.contains(".calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }"),
+                    && css.contains(
+                        ".calepin-website-toc li.level-6 a { --calepin-toc-indent: 3.6rem; }"
+                    ),
                 "{theme_name}: nested TOC levels should have clearly stepped indentation"
             );
         }

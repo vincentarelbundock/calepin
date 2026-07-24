@@ -329,7 +329,7 @@ print(x + 1)
     let results_path = dir.path().join(".calepin/paper/results.json");
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
-    assert_eq!(results["schema"], 1);
+    assert_eq!(results["schema"], 2);
     assert_eq!(results["chunks"]["chunk-1"]["engine"], "python");
     assert!(results["chunks"]["chunk-1"].get("cached").is_none());
     assert_eq!(results["chunks"]["chunk-1"]["items"][0]["type"], "stream");
@@ -525,6 +525,9 @@ fn compile_cache_refreshes_render_only_chunk_options() {
 
 ```python
 #| fig-width: {fig_width}
+from pathlib import Path
+counter = Path("cache-runs.txt")
+_ = counter.write_text(str(int(counter.read_text()) + 1 if counter.exists() else 1))
 print("cached")
 ```
 "#
@@ -562,6 +565,10 @@ print("cached")
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
     assert_eq!(results["chunks"]["chunk-1"]["options"]["fig-width"], "10%");
     assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "cached");
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("cache-runs.txt")).unwrap(),
+        "1"
+    );
 }
 
 #[test]
@@ -1402,7 +1409,7 @@ print(42)
 }
 
 #[test]
-fn compile_injects_setup_vars_into_python() {
+fn compile_injects_document_store_into_python() {
     if !has_command("typst") || !has_command("python3") {
         return;
     }
@@ -1412,10 +1419,11 @@ fn compile_injects_setup_vars_into_python() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(vars: (region: "NY", min_count: 25))
+#calepin.store.set("region", "NY")
+#calepin.store.set("min_count", 25)
 
-#calepin.chunk("python", echo: false)[```
-print(vars["region"], vars["min_count"])
+#calepin.chunk("python", echo: false, store-get: ("region", "min_count"))[```
+print(region, min_count)
 ```]
 "##,
     )
@@ -1437,12 +1445,49 @@ print(vars["region"], vars["min_count"])
     )
     .unwrap();
     assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "NY 25");
-    // vars.json is written as the universal transport / reproducibility record.
-    assert!(dir.path().join(".calepin/paper/vars.json").exists());
+    assert_eq!(results["store"]["region"], "NY");
+    assert!(!dir.path().join(".calepin/paper/vars.json").exists());
 }
 
 #[test]
-fn compile_var_override_beats_setup_vars() {
+fn typst_store_set_is_bound_without_rewriting_string_literals() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import "/.calepin/calepin.typ" as calepin
+
+#let literal = "#calepin.store.set(\"wrong\", 1)"
+#calepin.store.set("region", "NY")
+#assert(calepin.store.get("region", default: "NY") == "NY")
+#literal
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(results["store"], serde_json::json!({"region": "NY"}));
+}
+
+#[test]
+fn compile_store_override_beats_document_initializer() {
     if !has_command("typst") || !has_command("python3") {
         return;
     }
@@ -1452,10 +1497,10 @@ fn compile_var_override_beats_setup_vars() {
         dir.path().join("paper.typ"),
         r##"#import ".calepin/calepin.typ"
 
-#calepin.setup(vars: (region: "NY"))
+#calepin.store.set("region", "NY")
 
-#calepin.chunk("python", echo: false)[```
-print(vars["region"])
+#calepin.chunk("python", echo: false, store-get: "region")[```
+print(region)
 ```]
 "##,
     )
@@ -1467,7 +1512,7 @@ print(vars["region"])
             "paper.typ",
             "paper.pdf",
             "--set",
-            "vars.region=CA",
+            "store.region=CA",
             "--quiet",
         ])
         .current_dir(dir.path())
@@ -1487,7 +1532,191 @@ print(vars["region"])
 }
 
 #[test]
-fn compile_rejects_unsupported_var_type() {
+fn computed_store_values_expand_later_chunks() {
+    if !has_command("typst") || !has_command("python3") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", store-set: "labels", results: "hide")[
+```python
+from pathlib import Path
+counter = Path("writer-runs.txt")
+_ = counter.write_text(str(int(counter.read_text()) + 1 if counter.exists() else 1))
+labels = ["A", "B"]
+```
+]
+
+#for label in calepin.store.get("labels", default: ()) {
+  calepin.chunk("python", raw("print(" + json.encode(label) + ")"), echo: false)
+}
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let cached = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run cached calepin compile");
+    assert!(
+        cached.status.success(),
+        "cached compile failed:\n{}",
+        String::from_utf8_lossy(&cached.stderr)
+    );
+
+    let results: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
+    )
+    .unwrap();
+    let manifest: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/expansion.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(results["store"]["labels"], serde_json::json!(["A", "B"]));
+    assert_eq!(results["chunks"].as_object().unwrap().len(), 3);
+    assert_eq!(results["chunks"]["chunk-2"]["items"][0]["text"], "A");
+    assert_eq!(results["chunks"]["chunk-3"]["items"][0]["text"], "B");
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("writer-runs.txt")).unwrap(),
+        "1"
+    );
+    assert_eq!(results["generation"], manifest["generation"]);
+}
+
+#[test]
+fn computed_store_values_refresh_minijinja_query_theme() {
+    if !has_command("typst") || !has_command("python3") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::create_dir_all(dir.path().join("mytheme/layouts")).unwrap();
+    std::fs::write(
+        dir.path().join("mytheme/theme.toml"),
+        "extends = \"typst\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("mytheme/layouts/pdf.typ"),
+        r#"{% if store.enable_followup | default(false) %}
+#let theme-enables-followup = true
+{% else %}
+#let theme-enables-followup = false
+{% endif %}
+{{ doc.body }}
+"#,
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("paper.toml"), "theme = \"mytheme/\"\n").unwrap();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import "/.calepin/calepin.typ" as calepin
+
+#calepin.chunk("python", store-set: "enable_followup", results: "hide")[
+```python
+enable_followup = True
+```
+]
+
+#if theme-enables-followup {
+  calepin.chunk(
+    "python",
+    raw("print('THEME_STORE_OK')", block: true),
+    echo: false,
+  )
+}
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.pdf",
+            "--config",
+            "paper.toml",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(results["chunks"].as_object().unwrap().len(), 2);
+    assert_eq!(
+        results["chunks"]["chunk-2"]["items"][0]["text"],
+        "THEME_STORE_OK"
+    );
+}
+
+#[test]
+fn r_store_preserves_whole_valued_doubles() {
+    if !has_command("typst") || !has_command("Rscript") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import "/.calepin/calepin.typ" as calepin
+
+#calepin.chunk("r", store-set: "answer", results: "hide")[
+```r
+answer <- 2.0
+```
+]
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        results["store"]["answer"].as_f64().is_some()
+            && results["store"]["answer"].as_i64().is_none()
+    );
+}
+
+#[test]
+fn compile_rejects_removed_setup_vars() {
     if !has_command("typst") {
         return;
     }
@@ -1513,7 +1742,7 @@ Body text.
     assert!(!output.status.success(), "compile unexpectedly succeeded");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("unsupported variable") && stderr.contains("bad"),
+        stderr.contains("unexpected argument") && stderr.contains("vars"),
         "{stderr}"
     );
 }
@@ -1562,6 +1791,60 @@ Body text in between.
         count, 1,
         "expected hidden output to appear once at the relocation: {extracted}"
     );
+}
+
+#[test]
+fn adjacent_display_fences_keep_distinct_auto_chunk_results() {
+    if !has_command("typst") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: true, eval: true)
+
+```toml
+#| eval: false
+PREVIOUS_TOML_BLOCK = true
+```
+
+```sh
+#| eval: false
+echo CURRENT_SHELL_BLOCK
+```
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .expect("failed to run pdftotext");
+    let extracted = String::from_utf8(text.stdout).unwrap();
+    assert!(
+        extracted.contains("PREVIOUS_TOML_BLOCK = true"),
+        "{extracted}"
+    );
+    assert!(
+        extracted.contains("echo CURRENT_SHELL_BLOCK"),
+        "{extracted}"
+    );
+    assert_eq!(extracted.matches("PREVIOUS_TOML_BLOCK = true").count(), 1);
 }
 
 #[test]

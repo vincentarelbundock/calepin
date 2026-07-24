@@ -263,7 +263,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     })?;
     // The HTML theme step reuses the merged document variables (config < setup
     // < CLI) resolved during preprocessing.
-    site_context.vars = output.vars.clone();
+    site_context.store = output.store.clone();
     compile_with_typst(
         &output.executables.typst,
         &output.layout,
@@ -654,7 +654,7 @@ mod tests {
         let mut args = watch_args(PathBuf::from("paper.typ"), None);
         args.eval_only = true;
         args.common.timeout = Some(30);
-        args.common.sets = vec!["vars.seed=42".to_string()];
+        args.common.sets = vec!["store.seed=42".to_string()];
 
         validate_eval_only_watch_flags(&args).unwrap();
     }

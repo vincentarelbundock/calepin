@@ -1,19 +1,23 @@
-#import "../core/assets.typ": _image-meta-entry, _resolve-asset-href
-#import "../core/state.typ": _site-root-prefix
+#import "../core/assets.typ": _image-meta-entry, _js-string-literal
+#import "../core/assets.typ": _resolve-asset-href, _resolve-asset-path
 #import "../core/css.typ": _css-size
 #import "../core/target.typ": _is-html, _is-query
 
-#let _assets-loaded = state("calepin-elements-gallery-assets", false)
+#let _asset-config = state("calepin-elements-gallery-assets", none)
 
-#let _asset_once() = context {
-  if _assets-loaded.get() {
-    none
-  } else {
-    _assets-loaded.update(_ => true)
+#let _asset_once(styles-url, lightbox-url, module-url) = context {
+  let config = (styles-url, lightbox-url, module-url)
+  let selected = _asset-config.get()
+  if selected != none and selected != config {
+    panic("calepin.elements.gallery: every gallery must use the same frontend asset URLs")
+  }
+  if selected == none {
+    let asset-step = _asset-config.update(_ => config)
     [
+      #asset-step
       #std.html.elem("link", "", attrs: (
         rel: "stylesheet",
-        href: "https://unpkg.com/photoswipe@5.4.4/dist/photoswipe.css",
+        href: styles-url,
       ))
       #std.html.elem("style", "
         .calepin-elements-gallery {
@@ -74,19 +78,20 @@
           display: block;
         }
       ")
-      #std.html.elem("script", "
-        import PhotoSwipeLightbox from 'https://unpkg.com/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js';
+      #std.html.elem("script", "import PhotoSwipeLightbox from " + _js-string-literal(lightbox-url) + ";
 
         document.addEventListener('DOMContentLoaded', () => {
           const lightbox = new PhotoSwipeLightbox({
             gallery: '.calepin-elements-gallery--lightbox',
             children: 'a',
-            pswpModule: () => import('https://unpkg.com/photoswipe@5.4.4/dist/photoswipe.esm.js'),
+            pswpModule: () => import(" + _js-string-literal(module-url) + "),
           });
           lightbox.init();
         });
       ", attrs: (type: "module"))
     ]
+  } else {
+    none
   }
 }
 
@@ -100,7 +105,7 @@
   }
 }
 
-#let _entry(item) = {
+#let _entry(config, item) = {
   let src = none
   let alt = ""
   let caption = none
@@ -124,22 +129,15 @@
   if type(src) != str {
     return none
   }
-
-  let meta = _image-meta-entry(src)
-  let page-root = _site-root-prefix()
-  let href = if src.starts-with("/") {
-    let with-prefix = page-root + src.slice(1)
-    let asset-href = _resolve-asset-href(src)
-    if asset-href != src {
-      asset-href
-    } else {
-      with-prefix
-    }
-  } else {
-    src
+  if type(alt) != str {
+    panic("calepin.elements.gallery: alt must be a string")
   }
+
+  let meta = _image-meta-entry(src, config: config)
+  let href = _resolve-asset-href(src, config: config)
   (
     src: src,
+    path: _resolve-asset-path(src, config: config),
     href: href,
     alt: alt,
     caption: caption,
@@ -148,17 +146,17 @@
   )
 }
 
-#let _entries(items) = {
+#let _entries(config, items) = {
   let raw = if type(items) == array { items } else { (items,) }
   let out = ()
   for item in raw {
     if type(item) == array and (type(item.at(0, default: none)) == array or type(item.at(0, default: none)) == dictionary) {
       for nested in item {
-        let entry = _entry(nested)
+        let entry = _entry(config, nested)
         if entry != none { out.push(entry) }
       }
     } else {
-      let entry = _entry(item)
+      let entry = _entry(config, item)
       if entry != none { out.push(entry) }
     }
   }
@@ -216,19 +214,41 @@
   ]
 }
 
-#let gallery(items, columns: 3, gap: 0.75em, max-width: 42em, show-captions: true) = {
+#let _gallery(
+  config,
+  items,
+  columns: 3,
+  gap: 0.75em,
+  max-width: 42em,
+  show-captions: true,
+  styles-url: "https://unpkg.com/photoswipe@5.4.4/dist/photoswipe.css",
+  lightbox-url: "https://unpkg.com/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js",
+  module-url: "https://unpkg.com/photoswipe@5.4.4/dist/photoswipe.esm.js",
+) = {
+  if type(show-captions) != bool {
+    panic("calepin.elements.gallery: show-captions must be a boolean")
+  }
+  for (name, value) in (
+    ("styles-url", styles-url),
+    ("lightbox-url", lightbox-url),
+    ("module-url", module-url),
+  ) {
+    if type(value) != str or value == "" {
+      panic("calepin.elements.gallery: " + name + " must be a non-empty string")
+    }
+  }
   if _is-query() {
     return none
   }
 
-  let entries = _entries(items)
+  let entries = _entries(config, items)
   if entries.len() == 0 {
     return if _is-html() { text[No images yet.] } else { none }
   }
 
   if _is-html() {
     return [
-      #_asset_once()
+      #_asset_once(styles-url, lightbox-url, module-url)
       #std.html.elem("div", attrs: (
         class: "calepin-elements-gallery calepin-elements-gallery--lightbox",
         data-calepin-elements-gallery: "true",
@@ -246,7 +266,7 @@
     columns: fallback-columns,
     gutter: gap,
     ..entries.map(entry => {
-      let img = image(entry.src, width: 100%)
+      let img = image(entry.path, width: 100%, alt: entry.alt)
       if show-captions and entry.caption != none {
         let caption = entry.caption
         [#img #v(0.3em) #text(size: 0.8em, fill: luma(38%))[#caption]]
@@ -256,3 +276,5 @@
     }),
   )
 }
+
+#let gallery(items, ..args) = _gallery(none, items, ..args)

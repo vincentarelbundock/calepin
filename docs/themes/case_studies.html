@@ -4270,6 +4270,10 @@ html:not([data-theme]) {
 
                             
                             
+<li class="calepin-website-sidebar-link"><a href="../getting-started/basics.html" aria-label="Basics">Basics</a></li>
+
+                            
+                            
 <li class="calepin-website-sidebar-link"><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
 
                             
@@ -4289,12 +4293,8 @@ html:not([data-theme]) {
                     
                     
                     <details class="calepin-website-sidebar-section">
-                        <summary>Notebooks</summary>
+                        <summary>Code execution</summary>
                         <ul>
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../notebooks/notebooks.html" aria-label="Notebooks">Notebooks</a></li>
-
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
@@ -4309,15 +4309,38 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/data_store.html" aria-label="Data transport">Data transport</a></li>
 
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>HTML</summary>
+                        <ul>
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="html_templates.html" aria-label="HTML">HTML</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="css.html" aria-label="CSS">CSS</a></li>
 
                             
                         </ul>
@@ -4356,11 +4379,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+<li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
 
                             
                         </ul>
@@ -4398,15 +4417,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="html_templates.html" aria-label="HTML">HTML</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="pdf_templates.html" aria-label="PDF">PDF</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="css.html" aria-label="CSS">CSS</a></li>
 
                             
                             
@@ -4429,10 +4440,6 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
 
                             
@@ -4450,70 +4457,44 @@ html:not([data-theme]) {
   theme/
     theme.toml
     css/
-      tufte.css</code></pre></div><p>The theme directory itself declares its base theme:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">project</span><span class="calepin-syntax-scope-1">/</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">tufte</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-67">typ</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-1">/</span>
-<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-67">toml</span>
-<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-67">css</span><span class="calepin-syntax-scope-1">/</span>
-<span class="calepin-syntax-scope-1">      </span><span class="calepin-syntax-scope-67">tufte</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-67">css</span></code></pre></div><p>That keeps all of the built-in <code>academic</code> theme structure: the single-document HTML wrapper, the theme toggle, sidenotes, side figures, code styling, and dark-mode support. The local <code>tufte/css/tufte.css</code> file is intentionally small. It overrides the public <code>--calepin-*</code> tokens instead of targeting private theme internals:</p><div class="sourceCode" data-lang="css"><pre><code data-lang="css"><span class="calepin-syntax-scope-1"># theme</span><span class="calepin-syntax-scope-1">/</span><span class="calepin-syntax-scope-1">theme</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-34">toml</span>
-<span class="calepin-syntax-scope-1">extends = "academic"</span></code></pre></div><p>The document source can then use the normal academic-theme elements: <code>calepin.elements.sidenote</code> for margin notes, <code>calepin.elements.sidefigure</code> for margin figures, and regular executable code chunks for computed output. The stylesheet changes the feel of those elements, but the layout behavior still comes from the built-in theme.</p><p>From the project root, render the HTML and PDF with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> theme/theme.toml</span>
-<span class="calepin-syntax-scope-10">extends</span><span class="calepin-syntax-scope-1"> = </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">academic</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>The theme path is resolved from the project root when no <code>--config</code> file is provided. Keeping the local theme and document together makes the example portable: copy the directory, run the same commands, and the academic theme plus Tufte overlay are applied in both rendered outputs.</p><h2 id="classicthesis">Classicthesis</h2><p>This case study shows how to use a local theme with <code>layouts/pdf.typ</code> to wrap a Typst document in the <code>classicthesis</code> template.</p><p>The project can stay small:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">:root, html[data-theme="light"] {
-  --calepin-font-body: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --calepin-font-heading: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --calepin-surface-code: #fffdf0;
-  --calepin-surface-output: #fffdf0;
-  --calepin-surface: #fffdf0;
-  --calepin-surface-muted: #fff8eb;
-  --calepin-color-background: #fffff8;
-  --calepin-color-text: #12110f;
-  --calepin-color-muted: #5a5650;
-  --calepin-color-accent: #7a2e2a;
-  --calepin-color-accent-hover: #5f2520;
-  --calepin-color-link: #7a2e2a;
-  --calepin-color-link-hover: #5f2520;
-}
+      tufte.css</code></pre></div><p>The theme directory itself declares its base theme:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> theme/theme.toml</span>
+<span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">academic</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>That keeps all of the built-in <code>academic</code> theme structure: the single-document HTML wrapper, the theme toggle, sidenotes, side figures, code styling, and dark-mode support. The local <code>tufte/css/tufte.css</code> file is intentionally small. It overrides the public <code>--calepin-*</code> tokens instead of targeting private theme internals:</p><div class="sourceCode" data-lang="css"><pre><code data-lang="css"><span class="calepin-syntax-scope-2">:</span><span class="calepin-syntax-scope-1">root</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-69">data-theme</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">light</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-font-body</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">Palatino, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Palatino Linotype</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Book Antiqua</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, Georgia, </span><span class="calepin-syntax-scope-1">serif</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-font-heading</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">Palatino, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Palatino Linotype</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Book Antiqua</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, Georgia, </span><span class="calepin-syntax-scope-1">serif</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-code</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fffdf0</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-output</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fffdf0</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fffdf0</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-muted</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fff8eb</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-background</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">fffff8</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-text</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">12110f</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-muted</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">5a5650</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">7a2e2a</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent-hover</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">5f2520</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-link</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">7a2e2a</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-link-hover</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">5f2520</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-2">}</span>
 
-html[data-theme="dark"] {
-  --calepin-color-background: #18130d;
-  --calepin-color-text: #f6efe8;
-  --calepin-color-muted: #c5baa7;
-  --calepin-color-accent: #d58a7f;
-  --calepin-color-accent-hover: #f0b7ab;
-  --calepin-color-link: #d58a7f;
-  --calepin-color-link-hover: #f0b7ab;
-  --calepin-surface-code: #1f1a14;
-  --calepin-surface-output: #1f1a14;
-  --calepin-surface: #1f1a14;
-  --calepin-surface-muted: #2b241b;
-}</code></pre></div><p>The theme manifest disables inherited Calepin styling so the PDF layout comes entirely from the template:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-1">:root, html[data-theme="light"] {</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-font-body</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-font-heading</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-surface-code</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#fffdf0;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-surface-output</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#fffdf0;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-surface</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#fffdf0;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-surface-muted</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#fff8eb;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-background</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#fffff8;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-text</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#12110f;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-muted</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#5a5650;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-accent</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#7a2e2a;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-accent-hover</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#5f2520;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-link</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#7a2e2a;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-link-hover</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#5f2520;</span>
-<span class="calepin-syntax-scope-1">}</span>
-
-<span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-1">[</span><span class="calepin-syntax-scope-67">data-theme</span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">dark</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">] {</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-background</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#18130d;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-text</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#f6efe8;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-muted</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#c5baa7;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-accent</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#d58a7f;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-accent-hover</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#f0b7ab;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-link</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#d58a7f;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-color-link-hover</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#f0b7ab;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-surface-code</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#1f1a14;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-surface-output</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#1f1a14;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-surface</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#1f1a14;</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">--calepin-surface-muted</span><span class="calepin-syntax-scope-1">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">#2b241b;</span>
-<span class="calepin-syntax-scope-1">}</span></code></pre></div><p>First put the <code>classicthesis</code> MiniJinja template in <code>theme/layouts/pdf.typ</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">import</span> <span class="calepin-syntax-scope-4">"@preview/classicthesis:0.1.0"</span><span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-9">*</span>
+<span class="calepin-syntax-scope-67">html</span><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-69">data-theme</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">dark</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">]</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-background</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">18130d</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-text</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">f6efe8</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-muted</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">c5baa7</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">d58a7f</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-accent-hover</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">f0b7ab</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-link</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">d58a7f</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-color-link-hover</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">f0b7ab</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-code</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">1f1a14</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-output</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">1f1a14</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">1f1a14</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-surface-muted</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">#</span><span class="calepin-syntax-scope-1">2b241b</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>The document source can then use the normal academic-theme elements: <code>calepin.elements.sidenote</code> for margin notes, <code>calepin.elements.sidefigure</code> for margin figures, and regular executable code chunks for computed output. The stylesheet changes the feel of those elements, but the layout behavior still comes from the built-in theme.</p><p>From the project root, render the HTML and PDF with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile tufte.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> html</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=./theme</span>
+<span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile tufte.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> pdf</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=./theme</span>
+</code></pre></div><p>The theme path is resolved from the project root when no <code>--config</code> file is provided. Keeping the local theme and document together makes the example portable: copy the directory, run the same commands, and the academic theme plus Tufte overlay are applied in both rendered outputs.</p><h2 id="classicthesis">Classicthesis</h2><p>This case study shows how to use a local theme with <code>layouts/pdf.typ</code> to wrap a Typst document in the <code>classicthesis</code> template.</p><p>The project can stay small:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">project/
+  book.typ
+  theme/
+    theme.toml
+    layouts/
+      pdf.typ</code></pre></div><p>The theme manifest disables inherited Calepin styling so the PDF layout comes entirely from the template:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> theme/theme.toml</span>
+<span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">typst</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>First put the <code>classicthesis</code> MiniJinja template in <code>theme/layouts/pdf.typ</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">import</span> <span class="calepin-syntax-scope-4">"@preview/classicthesis:0.1.0"</span><span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-9">*</span>
 
 <span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span><span class="calepin-syntax-scope-2">:</span> classicthesis<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">with</span><span class="calepin-syntax-scope-2">(</span>
   title<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"My Book Title"</span><span class="calepin-syntax-scope-2">,</span>
@@ -4529,47 +4510,41 @@ html[data-theme="dark"] {
 
 <span class="calepin-syntax-scope-177">==</span><span class="calepin-syntax-scope-177"> </span><span class="calepin-syntax-scope-177">Section</span>
 
-More content<span class="calepin-syntax-scope-5">...</span></code></pre></div><p>Here, the <code>classicthesis</code> template provides the page design and chapter structure, while the notebook body still comes from your <code>.typ</code> file. <code>doc.body</code> is where Calepin injects the document source.</p><p>From the project root, render the PDF with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile tufte.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> html</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=./theme</span>
-<span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile tufte.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> pdf</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=./theme</span>
-</code></pre></div><p>If you want the same document to use a different PDF layout later, swap the contents of <code>theme/layouts/pdf.typ</code> without changing the document itself.</p><h2 id="website-fonts">Website fonts</h2><p>This case study shows how to override a website’s fonts using Google Fonts API. We start by creating an example website scaffold based on the default <code>calepin</code> theme. The following command will create a new directory called <code>calepin_website</code>:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">project/</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-10">book.typ</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-10">theme/</span>
-<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-10">theme.toml</span>
-<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-10">layouts/</span>
-<span class="calepin-syntax-scope-1">      </span><span class="calepin-syntax-scope-10">pdf.typ</span></code></pre></div><p>Then, we add simple local theme directory with a manifest <code>theme.toml</code> and a single <code>fonts.css</code> file:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">project/
-  book.typ
+More content<span class="calepin-syntax-scope-5">...</span></code></pre></div><p>Here, the <code>classicthesis</code> template provides the page design and chapter structure, while the notebook body still comes from your <code>.typ</code> file. <code>doc.body</code> is where Calepin injects the document source.</p><p>From the project root, render the PDF with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile book.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> pdf</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=./theme</span>
+</code></pre></div><p>If you want the same document to use a different PDF layout later, swap the contents of <code>theme/layouts/pdf.typ</code> without changing the document itself.</p><h2 id="website-fonts">Website fonts</h2><p>This case study shows how to override a website’s fonts using Google Fonts API. We start by creating an example website scaffold based on the default <code>calepin</code> theme. The following command will create a new directory called <code>calepin_website</code>:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">theme</span><span class="calepin-syntax-scope-1"> calepin</span>
+</code></pre></div><p>Then, we add simple local theme directory with a manifest <code>theme.toml</code> and a single <code>fonts.css</code> file:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin_website/
+
+  theme/            # theme directory
+    theme.toml
+    css/
+      fonts.css
+
+  calepin.toml      # website configuration file
+
+  index.typ         # website content
+  404.typ
+  assets/
+  posts/</code></pre></div><p>The theme manifest, <code>calepin_website/theme/theme.toml</code>, inherits from the built-in <code>calepin</code> theme:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">calepin</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>We add a single CSS file which imports Google Fonts and overrides the public font tokens:</p><div class="sourceCode" data-lang="css"><pre><code data-lang="css"><span class="calepin-syntax-scope-7">@</span><span class="calepin-syntax-scope-7">import</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-10">url</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">https://fonts.googleapis.com/css2?family=Rubik+Moonrocks&amp;family=Space+Grotesk:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">;</span>
+
+<span class="calepin-syntax-scope-2">:</span><span class="calepin-syntax-scope-1">root</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">{</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-font-body</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Space Grotesk</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-1">system-ui</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-1">sans-serif</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-font-heading</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Rubik Moonrocks</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">Space Grotesk</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-1">sans-serif</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-2">--</span><span class="calepin-syntax-scope-15">calepin-font-mono</span><span class="calepin-syntax-scope-9">:</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">IBM Plex Mono</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1">, ui-</span><span class="calepin-syntax-scope-1">monospace</span><span class="calepin-syntax-scope-1">, </span><span class="calepin-syntax-scope-1">monospace</span><span class="calepin-syntax-scope-2">;</span>
+<span class="calepin-syntax-scope-2">}</span></code></pre></div><p>This keeps the layout, navigation, and page behavior from the built-in <code>calepin</code> theme. The local theme only changes typography, so the result is easy to reason about: same site structure, different font stack.</p><p>Finally, we render and serve the website:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile calepin_website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=./theme</span>
+<span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve calepin_website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">open</span>
+</code></pre></div><h2 id="site-verification">Site verification</h2><p>This case study shows how to add a small, global element to a website’s <code>&lt;head></code>. A realistic reason to do this is site ownership verification for Google Search Console, Bing Webmaster Tools, or another service that asks you to add a verification <code>&lt;meta></code> tag to every page.</p><p>Start with a local theme that extends the built-in <code>calepin</code> website theme:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin_website/
   theme/
     theme.toml
-    layouts/
-      pdf.typ</code></pre></div><p>The theme manifest, <code>calepin_website/theme/theme.toml</code>, inherits from the built-in <code>calepin</code> theme:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> theme/theme.toml</span>
-<span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">typst</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>We add a single CSS file which imports Google Fonts and overrides the public font tokens:</p><div class="sourceCode" data-lang="css"><pre><code data-lang="css"><span class="calepin-syntax-scope-1"># theme</span><span class="calepin-syntax-scope-1">/</span><span class="calepin-syntax-scope-1">theme</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-34">toml</span>
-<span class="calepin-syntax-scope-1">extends = "typst"</span></code></pre></div><p>This keeps the layout, navigation, and page behavior from the built-in <code>calepin</code> theme. The local theme only changes typography, so the result is easy to reason about: same site structure, different font stack.</p><p>Finally, we render and serve the website:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile book.typ</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">format</span><span class="calepin-syntax-scope-1"> pdf</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=./theme</span>
-</code></pre></div><h2 id="site-verification">Site verification</h2><p>This case study shows how to add a small, global element to a website’s <code>&lt;head></code>. A realistic reason to do this is site ownership verification for Google Search Console, Bing Webmaster Tools, or another service that asks you to add a verification <code>&lt;meta></code> tag to every page.</p><p>Start with a local theme that extends the built-in <code>calepin</code> website theme:</p><div class="sourceCode" data-lang="text"><pre><code data-lang="text">calepin new website --theme calepin
-</code></pre></div><p>The manifest keeps the built-in website layout:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-67">calepin_website</span><span class="calepin-syntax-scope-1">/</span>
-
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-1">/</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">           # theme directory</span>
-<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-67">theme</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-67">toml</span>
-<span class="calepin-syntax-scope-1">    </span><span class="calepin-syntax-scope-67">css</span><span class="calepin-syntax-scope-1">/</span>
-<span class="calepin-syntax-scope-1">      </span><span class="calepin-syntax-scope-67">fonts</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-67">css</span>
-
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">calepin</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-67">toml</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">    # website configuration file</span>
-
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">index</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-67">typ</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">       # website content</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">404</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-67">typ</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">assets</span><span class="calepin-syntax-scope-1">/</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-67">posts</span><span class="calepin-syntax-scope-1">/</span></code></pre></div><p>Then override the shared <code>partials/site-head.html</code> partial:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">calepin_website/</span>
-
-<span class="calepin-syntax-scope-1">  theme/            # theme directory</span>
-<span class="calepin-syntax-scope-1">    theme.toml</span>
-<span class="calepin-syntax-scope-1">    css/</span>
-<span class="calepin-syntax-scope-1">      fonts.css</span>
-
-<span class="calepin-syntax-scope-1">  calepin.toml      # website configuration file</span>
-
-<span class="calepin-syntax-scope-1">  index.typ         # website content</span>
-<span class="calepin-syntax-scope-1">  404.typ</span>
-<span class="calepin-syntax-scope-1">  assets/</span>
-<span class="calepin-syntax-scope-1">  posts/</span></code></pre></div><p>The important part is that the custom partial still emits <code>doc.head</code> and the standard Calepin head partials. The only new line is the verification tag, so the theme keeps the inherited title metadata, favicon support, theme initialization, and stylesheets.</p><p>Render the site with the local theme:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">extends</span><span class="calepin-syntax-scope-1"> = </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">calepin</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Use the same pattern for other small head-only additions, such as a canonical site-wide metadata tag or a lightweight analytics script.</p>
+    partials/
+      site-head.html
+  calepin.toml
+  index.typ</code></pre></div><p>The manifest keeps the built-in website layout:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-3">#</span><span class="calepin-syntax-scope-3"> theme/theme.toml</span>
+<span class="calepin-syntax-scope-67">extends</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">calepin</span><span class="calepin-syntax-scope-4">"</span></code></pre></div><p>Then override the shared <code>partials/site-head.html</code> partial:</p><div class="sourceCode" data-lang="html"><pre><code data-lang="html"><span class="calepin-syntax-scope-1">{{ doc.head }}</span>
+<span class="calepin-syntax-scope-1">{% include "partials/site-head-meta.html" %}</span>
+<span class="calepin-syntax-scope-9">&lt;</span><span class="calepin-syntax-scope-67">meta</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">name</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">google-site-verification</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-69">content</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">abc123-site-token</span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-9">></span>
+<span class="calepin-syntax-scope-1">{% include "partials/theme-init-script.html" %}</span>
+<span class="calepin-syntax-scope-1">{% include "partials/theme-styles.html" %}</span></code></pre></div><p>The important part is that the custom partial still emits <code>doc.head</code> and the standard Calepin head partials. The only new line is the verification tag, so the theme keeps the inherited title metadata, favicon support, theme initialization, and stylesheets.</p><p>Render the site with the local theme:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile calepin_website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">set</span><span class="calepin-syntax-scope-1"> theme=./theme</span>
+</code></pre></div><p>Use the same pattern for other small head-only additions, such as a canonical site-wide metadata tag or a lightweight analytics script.</p>
         </main>
                 
         <aside class="calepin-website-toc is-floating">
@@ -4793,23 +4768,16 @@ More content<span class="calepin-syntax-scope-5">...</span></code></pre></div><p
         
         
     
-        
-        
-        
-            
-        
-        
-    
 
     
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="css.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="pdf_templates.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">CSS</span>
+            <span class="calepin-website-page-nav-title">PDF</span>
           </span>
         </a>
         

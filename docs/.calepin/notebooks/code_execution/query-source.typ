@@ -11,7 +11,7 @@
 
 #title()
 
-This page is the reference for controlling how _Calepin_ runs chunks and displays their output. If you are starting from scratch, read #link("notebooks.html")[Notebooks] first for the basic document structure, runtime import, code chunks, and inline results.
+This page is the reference for controlling how _Calepin_ runs chunks and displays their output. If you are starting from scratch, read #link("../getting-started/basics.html")[Basics] first for the basic document structure, runtime import, code chunks, and inline results.
 
 = Execution model
 

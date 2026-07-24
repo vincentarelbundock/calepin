@@ -1,7 +1,9 @@
 {
-  "schema": 1,
-  "calepin_version": "0.0.34",
+  "schema": 2,
+  "calepin_version": "0.0.36",
   "input": "websites/health.typ",
+  "generation": "2d3fcd75357decd0-1349cde127705c16",
+  "store": {},
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
@@ -33,7 +35,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "text",
-      "source": "calepin health [OPTIONS]",
+      "source": "calepin health --depth 2",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -59,87 +61,6 @@
     },
     "chunk-3": {
       "label": "chunk-3",
-      "engine": "text",
-      "source": "calepin health --depth 2",
-      "status": "skipped",
-      "options": {
-        "echo": true,
-        "output": true,
-        "results": "render",
-        "warning": true,
-        "message": true,
-        "placeholder": true,
-        "fig-width": "70%",
-        "fig-height": null,
-        "fig-align": "center",
-        "fig-responsive": true,
-        "fig-link": null,
-        "fig-caption": null,
-        "fig-cap-location": null,
-        "fig-alt-text": null,
-        "fig-subcaptions": null,
-        "fig-layout-columns": null,
-        "fig-layout-rows": null,
-        "kind": null
-      },
-      "items": []
-    },
-    "chunk-4": {
-      "label": "chunk-4",
-      "engine": "text",
-      "source": "calepin health --depth 2",
-      "status": "skipped",
-      "options": {
-        "echo": true,
-        "output": true,
-        "results": "render",
-        "warning": true,
-        "message": true,
-        "placeholder": true,
-        "fig-width": "70%",
-        "fig-height": null,
-        "fig-align": "center",
-        "fig-responsive": true,
-        "fig-link": null,
-        "fig-caption": null,
-        "fig-cap-location": null,
-        "fig-alt-text": null,
-        "fig-subcaptions": null,
-        "fig-layout-columns": null,
-        "fig-layout-rows": null,
-        "kind": null
-      },
-      "items": []
-    },
-    "chunk-5": {
-      "label": "chunk-5",
-      "engine": "text",
-      "source": "calepin health --strict --check-external-links",
-      "status": "skipped",
-      "options": {
-        "echo": true,
-        "output": true,
-        "results": "render",
-        "warning": true,
-        "message": true,
-        "placeholder": true,
-        "fig-width": "70%",
-        "fig-height": null,
-        "fig-align": "center",
-        "fig-responsive": true,
-        "fig-link": null,
-        "fig-caption": null,
-        "fig-cap-location": null,
-        "fig-alt-text": null,
-        "fig-subcaptions": null,
-        "fig-layout-columns": null,
-        "fig-layout-rows": null,
-        "kind": null
-      },
-      "items": []
-    },
-    "chunk-6": {
-      "label": "chunk-6",
       "engine": "text",
       "source": "calepin health --strict --check-external-links",
       "status": "skipped",

@@ -2,6 +2,18 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
+#let _calepin-expected-generation = "7e5e985c1f6c6697-1349cde127705c16"
+#let _calepin-verify-generation() = {
+  let path = sys.inputs.at("calepin-results", default: none)
+  if path != none and path != "" {
+    let actual = json(path).at("generation", default: "")
+    if actual != _calepin-expected-generation {
+      panic("Calepin results changed while this render was starting; Typst will retry with the completed build")
+    }
+  }
+}
+#_calepin-verify-generation()
+
 
 
 #let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2")
@@ -37,7 +49,7 @@
 }
 
 // Notebook theme
-#import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
+#import "/.calepin/calepin.typ": _html-themed-raw-block, _is-query, chunk_from_raw_plain
 
 // Body text size, captured below at document-body level. Code blocks are sized
 // relative to this rather than to `1em`, which would compound: a literal
@@ -53,7 +65,7 @@
       set text(size: _calepin-body-size.get() * 0.8)
       it
     }
-  } else if it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
+  } else if it.lang != none and (_is-query() or _raw-chunk-langs.contains(it.lang)) and _fenced-chunks-runs(
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
@@ -354,6 +366,42 @@ This tab shows R code:
 This tab shows Python code:
 
 #calepin_runtime.chunk_from_raw_plain("python", raw("x = [1, 2, 3, 4, 5]\nsum(x) / len(x)\n", block: true, lang: "python"))
+  ]
+]
+
+== Synchronized groups
+
+Give multiple tab containers the same `group` name to keep their selected panels synchronized in HTML output. The first two containers below belong to the `language` group. Selecting R or Python in either one changes both.
+
+#calepin.elements.tabs(group: "language")[
+  #calepin.elements.tab("R", active: true)[
+    The first container is showing its R content.
+  ]
+
+  #calepin.elements.tab("Python")[
+    The first container is showing its Python content.
+  ]
+]
+
+#calepin.elements.tabs(group: "language")[
+  #calepin.elements.tab("R", active: true)[
+    The second container follows the first container to R.
+  ]
+
+  #calepin.elements.tab("Python")[
+    The second container follows the first container to Python.
+  ]
+]
+
+This container has no `group` argument, so its selection changes independently of the two containers above.
+
+#calepin.elements.tabs[
+  #calepin.elements.tab("R")[
+    This independent container is showing its R content.
+  ]
+
+  #calepin.elements.tab("Python", active: true)[
+    This independent container is showing its Python content.
   ]
 ]
 

@@ -250,6 +250,8 @@ fn native_chunk_option_names() -> &'static [&'static str] {
         "warning",
         "message",
         "placeholder",
+        "store-get",
+        "store-set",
         "fig-device-format",
         "fig-device-dpi",
         "fig-device-width",
@@ -303,19 +305,45 @@ pub(crate) fn parse_qmd_value(value: &str) -> Result<Value> {
     if value.starts_with('\'') && value.ends_with('\'') && value.len() >= 2 {
         return Ok(Value::String(value[1..value.len() - 1].to_string()));
     }
+    if value.starts_with('[') && !value.ends_with(']') {
+        return Err(anyhow!("unbalanced bracket sequence value `{value}`"));
+    }
     if value.starts_with('[') && value.ends_with(']') {
         let inner = value[1..value.len() - 1].trim();
         if inner.is_empty() {
             return Ok(Value::Array(vec![]));
         }
-
-        let items = split_qmd_array_items(inner)?
-            .into_iter()
-            .map(|item| parse_qmd_value(item.trim()))
-            .collect::<Result<Vec<_>>>()?;
-        return Ok(Value::Array(items));
+        return Ok(Value::Array(parse_qmd_sequence_values(inner)?));
+    }
+    if value.starts_with('(') && !value.ends_with(')') {
+        return Err(anyhow!("unbalanced parenthesized sequence value `{value}`"));
+    }
+    if value.starts_with('(') && value.ends_with(')') {
+        let inner = value[1..value.len() - 1].trim();
+        if inner.is_empty() {
+            return Ok(Value::Array(vec![]));
+        }
+        let items = split_qmd_sequence_items(inner)?;
+        if items.len() == 1 {
+            return parse_qmd_value(items[0]);
+        }
+        return Ok(Value::Array(parse_qmd_sequence_values(inner)?));
     }
     Ok(Value::String(value.to_string()))
+}
+
+fn parse_qmd_sequence_values(inner: &str) -> Result<Vec<Value>> {
+    let mut items = split_qmd_sequence_items(inner)?;
+    if items.last().is_some_and(|item| item.is_empty()) {
+        items.pop();
+    }
+    if items.iter().any(|item| item.is_empty()) {
+        return Err(anyhow!("empty item in sequence value `{inner}`"));
+    }
+    items
+        .into_iter()
+        .map(|item| parse_qmd_value(item.trim()))
+        .collect()
 }
 
 fn translate_chunk_option_name(name: &str) -> Option<&'static str> {
@@ -328,10 +356,11 @@ fn is_native_chunk_option(name: &str) -> bool {
     native_chunk_option_names().contains(&name)
 }
 
-fn split_qmd_array_items(inner: &str) -> Result<Vec<&str>> {
+fn split_qmd_sequence_items(inner: &str) -> Result<Vec<&str>> {
     let mut items = Vec::new();
     let mut item_start = 0usize;
     let mut bracket_depth = 0usize;
+    let mut paren_depth = 0usize;
     let mut quote = None;
     let mut escaped = false;
 
@@ -356,11 +385,18 @@ fn split_qmd_array_items(inner: &str) -> Result<Vec<&str>> {
             '[' => bracket_depth += 1,
             ']' => {
                 if bracket_depth == 0 {
-                    return Err(anyhow!("unmatched `]` in array value `{inner}`"));
+                    return Err(anyhow!("unmatched `]` in sequence value `{inner}`"));
                 }
                 bracket_depth -= 1;
             }
-            ',' if bracket_depth == 0 => {
+            '(' => paren_depth += 1,
+            ')' => {
+                if paren_depth == 0 {
+                    return Err(anyhow!("unmatched `)` in sequence value `{inner}`"));
+                }
+                paren_depth -= 1;
+            }
+            ',' if bracket_depth == 0 && paren_depth == 0 => {
                 items.push(inner[item_start..idx].trim());
                 item_start = idx + ch.len_utf8();
             }
@@ -375,7 +411,12 @@ fn split_qmd_array_items(inner: &str) -> Result<Vec<&str>> {
     }
     if bracket_depth != 0 {
         return Err(anyhow!(
-            "unterminated nested array in array value `{inner}`"
+            "unterminated nested bracket sequence in sequence value `{inner}`"
+        ));
+    }
+    if paren_depth != 0 {
+        return Err(anyhow!(
+            "unterminated nested parenthesized sequence in sequence value `{inner}`"
         ));
     }
 
@@ -463,6 +504,29 @@ mod tests {
         let parsed = parse_qmd_value(r#"["A, with comma", ["B, nested", C], "D"]"#).unwrap();
 
         assert_eq!(parsed, json!(["A, with comma", ["B, nested", "C"], "D"]));
+    }
+
+    #[test]
+    fn qmd_typst_arrays_support_nesting_and_singletons() {
+        assert_eq!(
+            parse_qmd_value(r#"("A, with comma", ("B, nested", C), ["D"])"#).unwrap(),
+            json!(["A, with comma", ["B, nested", "C"], ["D"]])
+        );
+        assert_eq!(parse_qmd_value(r#"("only",)"#).unwrap(), json!(["only"]));
+        assert_eq!(parse_qmd_value("(grouped)").unwrap(), json!("grouped"));
+        assert_eq!(parse_qmd_value("()").unwrap(), json!([]));
+    }
+
+    #[test]
+    fn qmd_sequences_reject_empty_and_unbalanced_nested_items() {
+        for value in [
+            "(first,,third)",
+            "(first, (nested, second)",
+            "(first, second",
+            "[first, second",
+        ] {
+            assert!(parse_qmd_value(value).is_err(), "accepted {value}");
+        }
     }
 
     #[test]

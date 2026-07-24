@@ -4270,6 +4270,10 @@ html:not([data-theme]) {
 
                             
                             
+<li class="calepin-website-sidebar-link"><a href="../getting-started/basics.html" aria-label="Basics">Basics</a></li>
+
+                            
+                            
 <li class="calepin-website-sidebar-link"><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
 
                             
@@ -4289,12 +4293,8 @@ html:not([data-theme]) {
                     
                     
                     <details class="calepin-website-sidebar-section">
-                        <summary>Notebooks</summary>
+                        <summary>Code execution</summary>
                         <ul>
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../notebooks/notebooks.html" aria-label="Notebooks">Notebooks</a></li>
-
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
@@ -4309,15 +4309,38 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/parameters.html" aria-label="Parameters">Parameters</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/data_store.html" aria-label="Data transport">Data transport</a></li>
 
                             
                             
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
+                        </ul>
+                    </details>
+                    
+                    
+                    
+                    
+                    
+                    <details class="calepin-website-sidebar-section">
+                        <summary>HTML</summary>
+                        <ul>
                             
-<li class="calepin-website-sidebar-link"><a href="../notebooks/tab_groups.html" aria-label="Synchronized tab groups">Synchronized tab groups</a></li>
+                            
+<li class="calepin-website-sidebar-link"><a href="elements.html" aria-label="Elements">Elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
+
+                            
+                            
+<li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
 
                             
                         </ul>
@@ -4356,11 +4379,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="elements.html" aria-label="Elements">Elements</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
+<li class="calepin-website-sidebar-link"><a href="health.html" aria-label="Health">Health</a></li>
 
                             
                         </ul>
@@ -4398,15 +4417,7 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="../themes/pdf_templates.html" aria-label="PDF">PDF</a></li>
-
-                            
-                            
-<li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
 
                             
                             
@@ -4429,10 +4440,6 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="health.html" aria-label="Health">Health</a></li>
-
-                            
-                            
 <li class="calepin-website-sidebar-link"><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
 
                             
@@ -4446,7 +4453,7 @@ html:not([data-theme]) {
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
             <h1 id="static-website-generator">Static website generator</h1><p><em>Calepin</em> can turn a directory of Typst documents into a website. In fact, the website you are reading now was entirely generated with <em>Calepin</em>.</p><h2 id="new-website">New website</h2><p>Use this command to scaffold an example site:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span>
-</code></pre></div><p>This creates a website source directory with enough structure to exercise the bundled themes:</p><ul><li><code>calepin_website/calepin.toml</code>: the site configuration file, where you set the title, base URL, navigation, theme, and output options.</li><li><code>calepin_website/index.typ</code>: the home page source file, which builds to <code>index.html</code>.</li><li><code>calepin_website/404.typ</code>: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.</li><li><code>calepin_website/about.typ</code>, <code>calepin_website/guide/*.typ</code>, and <code>calepin_website/fr/*.typ</code>: regular pages in two languages, with site menu and sidebar entries.</li><li><code>calepin_website/blog.typ</code> and <code>calepin_website/posts/*.typ</code>: a small blog index and post source files using <code>calepin.pages()</code>.</li></ul><p>The scaffold uses the <code>calepin</code> theme by default. Use <code>--theme</code> to start from another built-in theme:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">theme</span><span class="calepin-syntax-scope-1"> academic</span></code></pre></div><h2 id="build">Build</h2><p>Compile a website directory with the same <code>compile</code> command used for a single Typst document:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">theme</span><span class="calepin-syntax-scope-1"> academic</span></code></pre></div><p>This compiles the website in place: source files are read from <code>my_site/</code>, and generated outputs are written back into <code>my_site/</code>.</p><p>To compile the same source directory somewhere else, pass an output directory as the second path:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/</span></code></pre></div><p>When the input path is a directory, <em>Calepin</em> looks for <code>calepin.toml</code> at the root of that directory. An explicit <code>--config &lt;path></code> supersedes the automatic lookup; if no config is found either way, the build fails.</p><p>By default, website pages render to HTML. Configure PDF output and site settings in <a href="configuration.html">Site configuration</a>.</p><h2 id="serve">Serve</h2><p>Serve the built site locally with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/</span></code></pre></div><p>This is useful for a quick preview after <code>calepin compile</code>. By default, <em>Calepin</em> uses <code>127.0.0.1</code> and the first available port from 8000.</p><p>Use <code>--host</code> and <code>--port</code> when you need a specific address:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/ public/</span></code></pre></div><p>Add <code>--open</code> to launch the served site in your default browser:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/ public/</span></code></pre></div><h2 id="watch">Watch</h2><p>During development, watch the website source directory for changes, and re-compile automatically:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span></code></pre></div><p>As with <code>compile</code>, the first positional argument is the source directory and the optional second positional argument is the output directory. The first build renders the whole site. After that, <em>Calepin</em> hashes each edited page and rebuilds only the pages whose content actually changed; files that were touched but not modified are skipped.</p><p>Changes that can affect more than one page trigger a full rebuild instead. This includes edits to <code>calepin.toml</code>, themes, or assets, pages that are added, removed, or renamed, and edits that change the site navigation or page metadata.</p><p>Add <code>--serve</code> to run the local server while watching; it uses the same <code>--host</code>, <code>--port</code>, and <code>--open</code> options as <code>calepin serve</code>.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span></code></pre></div><h2 id="features">Features</h2><ul><li>Directory builds from Typst source files.</li><li>In-place or separate output directories.</li><li>Sidebar and site menu navigation from configuration or discovered pages.</li><li>HTML output with optional PDF twins.</li><li>Page metadata and <code>calepin.pages()</code> for listings and indexes.</li><li>Multilingual site navigation.</li><li>Static file copying for assets, downloads, and host-specific files.</li><li>Generated <code>sitemap.xml</code> and <code>robots.txt</code>, with template overrides for <code>robots.txt</code>.</li><li>Optional Pagefind search index generation, with cached no-op rebuilds.</li><li>Optional HTML minification, including inline CSS and JavaScript.</li><li>Local serving and incremental watch builds.</li></ul>
+</code></pre></div><p>This creates a website source directory with enough structure to exercise the bundled themes:</p><ul><li><code>calepin_website/calepin.toml</code>: the site configuration file, where you set the title, base URL, navigation, theme, and output options.</li><li><code>calepin_website/index.typ</code>: the home page source file, which builds to <code>index.html</code>.</li><li><code>calepin_website/404.typ</code>: the not-found page source file, used by static hosts such as GitHub Pages for missing routes.</li><li><code>calepin_website/about.typ</code>, <code>calepin_website/guide/*.typ</code>, and <code>calepin_website/fr/*.typ</code>: regular pages in two languages, with site menu and sidebar entries.</li><li><code>calepin_website/blog.typ</code> and <code>calepin_website/posts/*.typ</code>: a small blog index and post source files using <code>calepin.pages()</code>.</li></ul><p>The scaffold uses the <code>calepin</code> theme by default. Use <code>--theme</code> to start from another built-in theme:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> new website</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">theme</span><span class="calepin-syntax-scope-1"> academic</span></code></pre></div><h2 id="build">Build</h2><p>Compile a website directory with the same <code>compile</code> command used for a single Typst document:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/</span></code></pre></div><p>This compiles the website in place: source files are read from <code>my_site/</code>, and generated outputs are written back into <code>my_site/</code>.</p><p>To compile the same source directory somewhere else, pass an output directory as the second path:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> compile my_site/ public/</span></code></pre></div><p>When the input path is a directory, <em>Calepin</em> looks for <code>calepin.toml</code> at the root of that directory. An explicit <code>--config &lt;path></code> supersedes the automatic lookup; if no config is found either way, the build fails.</p><p>By default, website pages render to HTML. Configure PDF output and site settings in <a href="configuration.html">Site configuration</a>.</p><h2 id="serve">Serve</h2><p>Serve the built site locally with:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span></code></pre></div><p>This is useful for a quick preview after <code>calepin compile</code>. By default, <em>Calepin</em> uses <code>127.0.0.1</code> and the first available port from 8000.</p><p>Use <code>--host</code> and <code>--port</code> when you need a specific address:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">host</span><span class="calepin-syntax-scope-1"> 127.0.0.1</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">port</span><span class="calepin-syntax-scope-1"> 8001</span></code></pre></div><p>Add <code>--open</code> to launch the served site in your default browser:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> serve my_site/</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">open</span></code></pre></div><h2 id="watch">Watch</h2><p>During development, watch the website source directory for changes, and re-compile automatically:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch my_site/ my_site/</span></code></pre></div><p>As with <code>compile</code>, the first positional argument is the source directory and the optional second positional argument is the output directory. The first build renders the whole site. After that, <em>Calepin</em> hashes each edited page and rebuilds only the pages whose content actually changed; files that were touched but not modified are skipped.</p><p>Changes that can affect more than one page trigger a full rebuild instead. This includes edits to <code>calepin.toml</code>, themes, or assets, pages that are added, removed, or renamed, and edits that change the site navigation or page metadata.</p><p>Add <code>--serve</code> to run the local server while watching; it uses the same <code>--host</code>, <code>--port</code>, and <code>--open</code> options as <code>calepin serve</code>.</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-1"> watch my_site/ my_site/</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">serve</span><span class="calepin-syntax-scope-2"> --</span><span class="calepin-syntax-scope-17">open</span></code></pre></div><h2 id="features">Features</h2><ul><li>Directory builds from Typst source files.</li><li>In-place or separate output directories.</li><li>Sidebar and site menu navigation from configuration or discovered pages.</li><li>HTML output with optional PDF twins.</li><li>Page metadata and <code>calepin.pages()</code> for listings and indexes.</li><li>Multilingual site navigation.</li><li>Static file copying for assets, downloads, and host-specific files.</li><li>Generated <code>sitemap.xml</code> and <code>robots.txt</code>, with template overrides for <code>robots.txt</code>.</li><li>Optional Pagefind search index generation, with cached no-op rebuilds.</li><li>Optional HTML minification, including inline CSS and JavaScript.</li><li>Local serving and incremental watch builds.</li></ul>
         </main>
                 
         <aside class="calepin-website-toc is-floating">
@@ -4551,17 +4558,6 @@ html:not([data-theme]) {
     
         
         
-            
-            
-        
-        
-        
-    
-        
-        
-            
-            
-        
         
             
         
@@ -4583,12 +4579,16 @@ html:not([data-theme]) {
     
         
         
-        
             
+            
+        
         
         
     
         
+        
+            
+            
         
         
             
@@ -4684,11 +4684,11 @@ html:not([data-theme]) {
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="../notebooks/tab_groups.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="../themes/css.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Synchronized tab groups</span>
+            <span class="calepin-website-page-nav-title">CSS</span>
           </span>
         </a>
         

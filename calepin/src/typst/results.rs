@@ -6,9 +6,19 @@ use crate::typst::io::write_if_changed;
 use crate::typst::model::{ChunkResultDocument, ChunkSpec, ResultsDocument, RESULT_SCHEMA_VERSION};
 use crate::typst::paths::slash_path;
 
+#[cfg(test)]
 pub fn build_results_document(
     input_rel: &Path,
     chunks: Vec<ChunkResultDocument>,
+) -> Result<ResultsDocument> {
+    build_results_document_with_store(input_rel, chunks, serde_json::Map::new(), String::new())
+}
+
+pub fn build_results_document_with_store(
+    input_rel: &Path,
+    chunks: Vec<ChunkResultDocument>,
+    store: serde_json::Map<String, serde_json::Value>,
+    generation: String,
 ) -> Result<ResultsDocument> {
     let mut map = IndexMap::with_capacity(chunks.len());
     for chunk in chunks {
@@ -23,6 +33,8 @@ pub fn build_results_document(
         schema: RESULT_SCHEMA_VERSION,
         calepin_version: env!("CARGO_PKG_VERSION").to_string(),
         input: slash_path(input_rel),
+        generation,
+        store,
         chunks: map,
     })
 }
@@ -75,6 +87,13 @@ pub fn refresh_cached_results_metadata(path: &Path, chunks: &[ChunkSpec]) -> Res
         .with_context(|| format!("failed to read cached results {}", path.display()))?;
     let mut document: ResultsDocument = serde_json::from_str(&text)
         .with_context(|| format!("failed to parse cached results {}", path.display()))?;
+    if !matches!(document.schema, 1 | RESULT_SCHEMA_VERSION) {
+        return Err(anyhow!(
+            "unsupported results schema {}; this Calepin version supports schemas 1 and {}",
+            document.schema,
+            RESULT_SCHEMA_VERSION
+        ));
+    }
     refresh_results_metadata(&mut document, chunks)?;
     write_results(path, &document)
 }
@@ -102,7 +121,7 @@ mod tests {
         let doc =
             build_results_document(Path::new("chapters/intro.typ"), vec![result("setup")]).unwrap();
 
-        assert_eq!(doc.schema, 1);
+        assert_eq!(doc.schema, 2);
         assert_eq!(doc.input, "chapters/intro.typ");
         assert!(doc.chunks.contains_key("setup"));
     }
@@ -126,7 +145,7 @@ mod tests {
         write_results(&path, &doc).unwrap();
 
         let text = std::fs::read_to_string(path).unwrap();
-        assert!(text.contains("\"schema\": 1"));
+        assert!(text.contains("\"schema\": 2"));
         assert!(text.ends_with('\n'));
     }
 

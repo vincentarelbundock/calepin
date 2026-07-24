@@ -1,7 +1,9 @@
 {
-  "schema": 1,
-  "calepin_version": "0.0.34",
+  "schema": 2,
+  "calepin_version": "0.0.36",
   "input": "themes/themes.typ",
+  "generation": "53e9037087c9b505-1349cde127705c16",
+  "store": {},
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
@@ -59,8 +61,8 @@
     },
     "chunk-3": {
       "label": "chunk-3",
-      "engine": "text",
-      "source": "my-theme/\n  theme.toml\n  css/\n    site.css",
+      "engine": "toml",
+      "source": "extends = \"academic\"\n# extends = \"calepin\" # full website with navigation\n# extends = \"typst\"   # bare bones HTML and PDF; no styling",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -86,8 +88,8 @@
     },
     "chunk-4": {
       "label": "chunk-4",
-      "engine": "toml",
-      "source": "extends = \"academic\"\n# extends = \"calepin\" # full website with navigation\n# extends = \"typst\"   # bare bones HTML and PDF; no styling",
+      "engine": "text",
+      "source": "my-theme/\n  theme.toml            # theme metadata and inheritance\n  layouts/\n    site.html           # website page wrapper\n    document.html       # standalone notebook HTML wrapper\n    site-landing.html   # optional page-specific website layout\n    pdf.typ             # PDF/SVG Typst layout around notebook source\n  partials/\n    ...                 # reusable MiniJinja fragments\n  css/\n    ...                 # theme CSS\n  js/\n    ...                 # theme JavaScript",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -113,87 +115,6 @@
     },
     "chunk-5": {
       "label": "chunk-5",
-      "engine": "toml",
-      "source": "extends = \"academic\"\n# extends = \"calepin\" # full website with navigation\n# extends = \"typst\"   # bare bones HTML and PDF; no styling",
-      "status": "skipped",
-      "options": {
-        "echo": true,
-        "output": true,
-        "results": "render",
-        "warning": true,
-        "message": true,
-        "placeholder": true,
-        "fig-width": "70%",
-        "fig-height": null,
-        "fig-align": "center",
-        "fig-responsive": true,
-        "fig-link": null,
-        "fig-caption": null,
-        "fig-cap-location": null,
-        "fig-alt-text": null,
-        "fig-subcaptions": null,
-        "fig-layout-columns": null,
-        "fig-layout-rows": null,
-        "kind": null
-      },
-      "items": []
-    },
-    "chunk-6": {
-      "label": "chunk-6",
-      "engine": "text",
-      "source": "my-theme/\n  theme.toml            # theme metadata and inheritance\n  layouts/\n    site.html           # website page wrapper\n    document.html       # standalone notebook HTML wrapper\n    site-landing.html   # optional page-specific website layout\n    pdf.typ             # PDF/SVG Typst layout around notebook source\n  partials/\n    ...                 # reusable MiniJinja fragments\n  css/\n    ...                 # theme CSS\n  js/\n    ...                 # theme JavaScript",
-      "status": "skipped",
-      "options": {
-        "echo": true,
-        "output": true,
-        "results": "render",
-        "warning": true,
-        "message": true,
-        "placeholder": true,
-        "fig-width": "70%",
-        "fig-height": null,
-        "fig-align": "center",
-        "fig-responsive": true,
-        "fig-link": null,
-        "fig-caption": null,
-        "fig-cap-location": null,
-        "fig-alt-text": null,
-        "fig-subcaptions": null,
-        "fig-layout-columns": null,
-        "fig-layout-rows": null,
-        "kind": null
-      },
-      "items": []
-    },
-    "chunk-7": {
-      "label": "chunk-7",
-      "engine": "text",
-      "source": "my-theme/\n  theme.toml            # theme metadata and inheritance\n  layouts/\n    site.html           # website page wrapper\n    document.html       # standalone notebook HTML wrapper\n    site-landing.html   # optional page-specific website layout\n    pdf.typ             # PDF/SVG Typst layout around notebook source\n  partials/\n    ...                 # reusable MiniJinja fragments\n  css/\n    ...                 # theme CSS\n  js/\n    ...                 # theme JavaScript",
-      "status": "skipped",
-      "options": {
-        "echo": true,
-        "output": true,
-        "results": "render",
-        "warning": true,
-        "message": true,
-        "placeholder": true,
-        "fig-width": "70%",
-        "fig-height": null,
-        "fig-align": "center",
-        "fig-responsive": true,
-        "fig-link": null,
-        "fig-caption": null,
-        "fig-cap-location": null,
-        "fig-alt-text": null,
-        "fig-subcaptions": null,
-        "fig-layout-columns": null,
-        "fig-layout-rows": null,
-        "kind": null
-      },
-      "items": []
-    },
-    "chunk-8": {
-      "label": "chunk-8",
       "engine": "sh",
       "source": "calepin new theme /path/to/my_theme --theme=academic\n",
       "status": "skipped",
@@ -219,8 +140,8 @@
       },
       "items": []
     },
-    "chunk-9": {
-      "label": "chunk-9",
+    "chunk-6": {
+      "label": "chunk-6",
       "engine": "sh",
       "source": "calepin compile notebook.typ --set theme=/path/to/my_theme/\n",
       "status": "skipped",

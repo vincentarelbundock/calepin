@@ -21,6 +21,8 @@
       out.insert(key, options.at(key))
     }
   }
+  out.insert("store-get", options.at("store-get"))
+  out.insert("store-set", options.at("store-set"))
   out
 }
 

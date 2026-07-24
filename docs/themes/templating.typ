@@ -45,27 +45,27 @@ The #link("https://docs.rs/minijinja/latest/minijinja/syntax/index.html")[MiniJi
 
 Each layout receives a context: a set of named values you reference with `{{ }}`. The available names depend on the target.
 
-- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `vars`, and more. See #link("html_templates.html")[HTML templates].
-- The paged layout receives `doc`, `theme`, `target`, and `vars`. See #link("pdf_templates.html")[PDF templates].
+- HTML layouts receive `site`, `css`, `js`, `doc`, `theme`, `target`, `store`, and more. See #link("html_templates.html")[HTML templates].
+- The paged layout receives `doc`, `theme`, `target`, and `store`. See #link("pdf_templates.html")[PDF templates].
 
-Both targets receive `theme`, `target`, and `vars`.
+Both targets receive `theme`, `target`, and `store`.
 
-= Variables
+= Document store
 
-Pass project-specific template values with `--set vars.<name>=...`:
+Pass project-specific template values with `[store]` or `--set store.<name>=...`:
 
 ```sh
-calepin compile notebook.typ --set vars.course="Econ 101" --set vars.semester="Fall 2026"
+calepin compile notebook.typ --set store.course="Econ 101" --set store.semester="Fall 2026"
 ```
 
-These values are available as a top-level `vars` in both HTML and paged layouts. Document-level `calepin.setup(vars: ...)` values are merged into the same map, and CLI `--set vars.<name>=...` values take precedence. In HTML templates, `vars` sits at the top level, not under `site`:
+The completed document store is available as top-level `store` in both HTML and paged layouts. It includes project values, document initializers declared with `calepin.store.set()`, and values committed by successful `store-set` chunks. CLI `--set store.<name>=...` values take precedence over project and document initializers. In HTML templates, `store` sits at the top level, not under `site`:
 
 ```html
-<p>{{ vars.course }}, {{ vars.semester }}</p>
+<p>{{ store.course }}, {{ store.semester }}</p>
 ```
 
 In a `layouts/pdf.typ` paged layout, read the same values and emit Typst:
 
 ```typ
-#let course = "{{ vars.course }}"
+#let course = "{{ store.course }}"
 ```

@@ -52,6 +52,22 @@
     "translations": {}
   },
   {
+    "href": "getting-started/basics.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "getting started",
+        "notebooks",
+        "overview"
+      ]
+    },
+    "path": "getting-started/basics.typ",
+    "pdf": "getting-started/basics.pdf",
+    "title": "Basics",
+    "translation_key": "getting-started/basics",
+    "translations": {}
+  },
+  {
     "href": "getting-started/config.html",
     "language": null,
     "meta": {
@@ -129,6 +145,25 @@
     "translations": {}
   },
   {
+    "href": "notebooks/data_store.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "notebooks",
+        "data store",
+        "parameters",
+        "R",
+        "Python"
+      ],
+      "title": "Data transport"
+    },
+    "path": "notebooks/data_store.typ",
+    "pdf": "notebooks/data_store.pdf",
+    "title": "Data transport",
+    "translation_key": "notebooks/data_store",
+    "translations": {}
+  },
+  {
     "href": "notebooks/diagrams.html",
     "language": null,
     "meta": {
@@ -160,59 +195,9 @@
     "translations": {}
   },
   {
-    "href": "notebooks/notebooks.html",
-    "language": null,
-    "meta": {
-      "tags": [
-        "notebooks",
-        "overview"
-      ]
-    },
-    "path": "notebooks/notebooks.typ",
-    "pdf": "notebooks/notebooks.pdf",
-    "title": "Notebooks",
-    "translation_key": "notebooks/notebooks",
-    "translations": {}
-  },
-  {
-    "href": "notebooks/parameters.html",
-    "language": null,
-    "meta": {
-      "tags": [
-        "notebooks",
-        "parameters"
-      ]
-    },
-    "path": "notebooks/parameters.typ",
-    "pdf": "notebooks/parameters.pdf",
-    "title": "Parameters",
-    "translation_key": "notebooks/parameters",
-    "translations": {}
-  },
-  {
-    "href": "notebooks/tab_groups.html",
-    "language": null,
-    "meta": {
-      "tags": [
-        "notebooks",
-        "HTML"
-      ]
-    },
-    "path": "notebooks/tab_groups.typ",
-    "pdf": "notebooks/tab_groups.pdf",
-    "title": "Synchronized tab groups",
-    "translation_key": "notebooks/tab_groups",
-    "translations": {}
-  },
-  {
     "href": "reference/cli.html",
     "language": null,
-    "meta": {
-      "tags": [
-        "reference",
-        "CLI"
-      ]
-    },
+    "meta": {},
     "path": "reference/cli.typ",
     "pdf": "reference/cli.pdf",
     "title": "CLI reference",

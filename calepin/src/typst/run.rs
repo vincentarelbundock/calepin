@@ -10,6 +10,7 @@ use crate::utils::{process, tools};
 
 pub const INPUT_MODE: &str = "calepin-mode";
 pub const INPUT_RESULTS: &str = "calepin-results";
+pub const INPUT_STORE: &str = "calepin-store";
 pub const INPUT_TARGET: &str = "calepin-target";
 pub const INPUT_ASSETS: &str = "calepin-assets";
 pub const INPUT_PAGES: &str = "calepin-pages";
@@ -20,6 +21,7 @@ pub const INPUT_SOURCE_DIR: &str = "calepin-source-dir";
 pub const RESERVED_INPUT_KEYS: &[&str] = &[
     INPUT_MODE,
     INPUT_RESULTS,
+    INPUT_STORE,
     INPUT_TARGET,
     INPUT_ASSETS,
     INPUT_PAGES,

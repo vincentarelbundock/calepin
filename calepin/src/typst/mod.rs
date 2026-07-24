@@ -16,6 +16,7 @@ mod run;
 mod runtime;
 mod script;
 mod source_rewrite;
+mod store;
 mod sync;
 #[cfg(test)]
 mod testfixtures;

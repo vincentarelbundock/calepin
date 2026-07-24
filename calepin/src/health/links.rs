@@ -163,9 +163,7 @@ fn extract_literal_links(source_path: &Path, source: &str) -> Vec<LinkOccurrence
 }
 
 fn validate_local_link(root: &Path, link: &LinkOccurrence) -> Option<String> {
-    let Some(candidate) = resolve_local_reference_target(root, &link.source, &link.target) else {
-        return None;
-    };
+    let candidate = resolve_local_reference_target(root, &link.source, &link.target)?;
     let candidate = match candidate {
         Ok(candidate) => candidate,
         Err(_) => {

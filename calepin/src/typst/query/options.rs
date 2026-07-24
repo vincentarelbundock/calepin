@@ -20,6 +20,11 @@ pub fn parse_setup_config(query_json: &str) -> Result<Option<SetupConfig>> {
 
     let mut config = SetupConfig::default();
     for value in values {
+        if value.get("vars").is_some() {
+            return Err(anyhow!(
+                "`vars` is no longer supported in #calepin.setup; use calepin.store.set()"
+            ));
+        }
         if value.get("lang").is_some() {
             return Err(anyhow!(
                 "`lang` is no longer supported in #calepin.setup; use a single setup call for document-wide defaults"
@@ -68,9 +73,25 @@ fn parse_exec_options(
     defaults: &SetupDefaults,
     fig_width: &Option<Value>,
 ) -> Result<ExecOptions> {
+    let store_get = crate::typst::store::parse_key_list(value.get("store-get"), "store-get")?;
+    let store_set = crate::typst::store::parse_key_list(value.get("store-set"), "store-set")?;
+    if (!store_get.is_empty() || !store_set.is_empty())
+        && !bool_option(value, "eval", defaults.eval)?
+    {
+        return Err(anyhow!(
+            "`store-get` and `store-set` cannot be used with `eval: false`"
+        ));
+    }
+    if let Some(key) = store_get.iter().find(|key| store_set.contains(key)) {
+        return Err(anyhow!(
+            "store key `{key}` cannot appear in both `store-get` and `store-set`"
+        ));
+    }
     Ok(ExecOptions {
         eval: bool_option(value, "eval", defaults.eval)?,
         error: bool_option(value, "error", defaults.error)?,
+        store_get,
+        store_set,
         fig_device_format: string_option(value, "fig-device-format", &defaults.fig_device_format)?,
         fig_device_dpi: u32_option(value, "fig-device-dpi", defaults.fig_device_dpi)?,
         fig_device_width: fig_device_width_option(
@@ -171,18 +192,8 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         fig_layout_rows: raw_option_with_default(value, "fig-layout-rows", &base.fig_layout_rows)?,
         kind: string_option_with_default(value, "kind", &base.kind)?,
         fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
-        vars: vars_option(value, "vars", &base.vars)?,
         theme: raw_option(value, "theme").or_else(|| base.theme.clone()),
     })
-}
-
-fn vars_option(value: &Value, key: &str, base: &Value) -> Result<Value> {
-    match value.get(key) {
-        None | Some(Value::Null) => Ok(base.clone()),
-        Some(Value::Object(map)) if map.is_empty() => Ok(base.clone()),
-        Some(Value::Object(map)) => Ok(Value::Object(map.clone())),
-        Some(_) => Err(anyhow!("`{}` must be a dictionary", key)),
-    }
 }
 
 fn fenced_chunks_option(value: &Value, base: &FencedChunks) -> Result<FencedChunks> {

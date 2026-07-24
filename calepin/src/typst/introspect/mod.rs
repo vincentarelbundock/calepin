@@ -16,6 +16,7 @@ pub struct PreprocessMetadata {
     pub setup_json: String,
     pub page_meta: Option<Value>,
     pub chunk_queries: Vec<String>,
+    pub store_initializer_queries: Vec<String>,
 }
 
 pub fn preprocess_metadata(
@@ -23,8 +24,9 @@ pub fn preprocess_metadata(
     layout: &LayoutPaths,
     input: &Path,
     results_input: &str,
+    store_input: &str,
 ) -> Result<PreprocessMetadata> {
-    eval::preprocess_metadata(typst, layout, input, results_input)
+    eval::preprocess_metadata(typst, layout, input, results_input, store_input)
 }
 
 pub fn page_anchors(typst: &Path, layout: &LayoutPaths) -> Result<HashMap<String, usize>> {

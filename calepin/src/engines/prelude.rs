@@ -1,28 +1,24 @@
-// Generate language-native literal bindings for document-level variables.
-//
-// Calepin turns the variables declared in `calepin.setup(vars: (...))`, merged
-// with `[vars]` config and CLI `--set vars.*` overrides, into a small prelude that is
-// evaluated once, at engine startup, so user code can read a `vars` value
-// without any string interpolation. The bindings are emitted as real source in
-// each language (no JSON parser dependency on the runtime side), from the
-// already-validated `serde_json::Value` Calepin holds.
+// Generate language-native literals for document store bindings.
 //
 // Only the v1 leaf types reach here (none, bool, int, float, str, array,
 // dictionary); unsupported Typst values are rejected earlier, on the Typst side.
 
+use anyhow::{anyhow, Result};
 use serde_json::Value;
 
 /// R prelude: `vars <- list("alpha" = 0.1, ...)`.
+#[cfg(test)]
 pub fn r_prelude(name: &str, vars: &Value) -> String {
     format!("{name} <- {}", r_value(vars))
 }
 
 /// Python prelude: `vars = {"alpha": 0.1, ...}`.
+#[cfg(test)]
 pub fn python_prelude(name: &str, vars: &Value) -> String {
     format!("{name} = {}", python_value(vars))
 }
 
-fn r_value(value: &Value) -> String {
+pub(crate) fn r_value(value: &Value) -> String {
     match value {
         Value::Null => "NULL".to_string(),
         Value::Bool(true) => "TRUE".to_string(),
@@ -36,6 +32,54 @@ fn r_value(value: &Value) -> String {
                 .map(|(key, val)| format!("{} = {}", escape_string(key), r_value(val)))
                 .collect();
             format!("list({})", fields.join(", "))
+        }
+    }
+}
+
+/// Render a common store value as an R literal without silently rounding
+/// signed 64-bit integers that R can only represent as doubles.
+pub(crate) fn r_store_value(value: &Value) -> Result<String> {
+    match value {
+        Value::Null => Ok("NULL".to_string()),
+        Value::Bool(true) => Ok("TRUE".to_string()),
+        Value::Bool(false) => Ok("FALSE".to_string()),
+        Value::Number(number) => {
+            if let Some(int) = number.as_i64() {
+                if i32::try_from(int).is_ok() {
+                    return Ok(format!("{int}L"));
+                }
+                if (int as f64) as i128 != i128::from(int) {
+                    return Err(anyhow!(
+                        "integer {int} cannot be represented exactly by the R engine"
+                    ));
+                }
+            }
+            Ok(number.to_string())
+        }
+        Value::String(text) => Ok(escape_string(text)),
+        Value::Array(items) => {
+            let rendered = items
+                .iter()
+                .map(r_store_value)
+                .collect::<Result<Vec<_>>>()?;
+            if !items.is_empty() && r_array_is_vector(items) {
+                Ok(format!("c({})", rendered.join(", ")))
+            } else {
+                Ok(format!("list({})", rendered.join(", ")))
+            }
+        }
+        Value::Object(map) => {
+            let fields = map
+                .iter()
+                .map(|(key, value)| {
+                    Ok(format!(
+                        "{} = {}",
+                        escape_string(key),
+                        r_store_value(value)?
+                    ))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok(format!("list({})", fields.join(", ")))
         }
     }
 }
@@ -83,7 +127,7 @@ fn r_array_is_vector(items: &[Value]) -> bool {
     }
 }
 
-fn python_value(value: &Value) -> String {
+pub(crate) fn python_value(value: &Value) -> String {
     match value {
         Value::Null => "None".to_string(),
         Value::Bool(true) => "True".to_string(),
@@ -146,6 +190,18 @@ mod tests {
     fn r_large_integers_drop_l_suffix_to_avoid_na_coercion() {
         // Above .Machine$integer.max; `L` would coerce to NA with a warning.
         assert_eq!(r_value(&json!(3_000_000_000i64)), "3000000000");
+    }
+
+    #[test]
+    fn r_store_rejects_inexact_large_integers() {
+        assert_eq!(
+            r_store_value(&json!(9_007_199_254_740_992i64)).unwrap(),
+            "9007199254740992"
+        );
+        assert!(r_store_value(&json!(9_007_199_254_740_993i64))
+            .unwrap_err()
+            .to_string()
+            .contains("cannot be represented exactly"));
     }
 
     #[test]

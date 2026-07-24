@@ -13,8 +13,7 @@ pub(super) struct WebsiteConfig {
     #[serde(rename = "executables")]
     pub(super) _executables: Option<toml::Value>,
     pub(super) theme: Option<toml::Value>,
-    #[serde(rename = "vars")]
-    pub(super) _vars: BTreeMap<String, toml::Value>,
+    pub(super) store: BTreeMap<String, toml::Value>,
     // Resolved from `CalepinConfig` (config.rs), not here; this field only
     // exists so `deny_unknown_fields` accepts `[toc]` in calepin.toml.
     #[serde(rename = "toc")]

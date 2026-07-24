@@ -73,15 +73,15 @@ fn missing_theme_key_is_default() {
 }
 
 #[test]
-fn website_config_allows_vars_table() {
+fn website_config_allows_store_table() {
     let config = website_config_from_toml(
-        r#"[vars]
+        r#"[store]
 course = "Econ 101"
 "#,
     );
 
     assert_eq!(
-        config._vars.get("course"),
+        config.store.get("course"),
         Some(&toml::Value::String("Econ 101".to_string()))
     );
 }

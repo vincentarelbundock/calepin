@@ -1,30 +1,6 @@
 #import "../core/target.typ": _is-query
 #import "defaults.typ": _base-options, _call-extra-defaults, _setup-defaults
 
-// Validate that document variables only contain JSON-serializable leaves
-// (none, bool, int, float, str) nested in arrays/dictionaries. Anything else
-// (content, functions, lengths, colors, ...) fails fast with the offending path.
-#let _validate-vars(value, path) = {
-  let t = type(value)
-  if value == none or t == bool or t == int or t == float or t == str {
-    // supported scalar leaf
-  } else if t == array {
-    for (i, item) in value.enumerate() {
-      _validate-vars(item, path + "[" + str(i) + "]")
-    }
-  } else if t == dictionary {
-    for (k, v) in value.pairs() {
-      _validate-vars(v, if path == "" { k } else { path + "." + k })
-    }
-  } else {
-    panic(
-      "calepin.setup: unsupported variable `" + path + "`: values of type " + str(t)
-        + " cannot be passed as variables; use none, a boolean, a number, a string, "
-        + "an array, or a dictionary",
-    )
-  }
-}
-
 // Per-option defaults come from `_base-options` so there is a single source of
 // truth for all document-level configuration.
 #let setup(
@@ -56,9 +32,7 @@
   fenced-chunks: true,
   fallback-warning: true,
   theme: none,
-  vars: (:),
   ) = {
-  _validate-vars(vars, "")
   let setup-opts = (
     script: script,
     echo: echo,
@@ -88,7 +62,6 @@
     "fenced-chunks": fenced-chunks,
     "fallback-warning": fallback-warning,
     theme: theme,
-    vars: vars,
   )
   _setup-defaults.update(defaults => (default: defaults.at("default") + setup-opts))
   if _is-query() {

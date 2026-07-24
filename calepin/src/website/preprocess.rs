@@ -140,8 +140,8 @@ pub(super) struct WebsitePreprocessOptions<'a> {
 }
 
 enum WebsitePreprocessWork {
-    Cached(PreprocessOutput),
-    Pending(PreprocessPlan),
+    Cached(Box<PreprocessOutput>),
+    Pending(Box<PreprocessPlan>),
 }
 
 pub(super) fn preprocess_documents(
@@ -159,7 +159,7 @@ pub(super) fn preprocess_documents(
         |input| {
             let rel = project_relative_path(&display_root, &input);
             let page_progress = options.progress.spinner(format!("[scan] {rel}"));
-            let plan = prepare_preprocess_plan(PreprocessOptions {
+            let mut plan = prepare_preprocess_plan(PreprocessOptions {
                 input: input.to_path_buf(),
                 root: Some(options.src_dir.to_path_buf()),
                 config: Some(options.config_path.to_path_buf()),
@@ -176,14 +176,14 @@ pub(super) fn preprocess_documents(
                 config_overrides: options.config_overrides.to_vec(),
             })
             .with_context(|| format!("failed to scan {}", input.display()))?;
-            let work = if preprocess_plan_cache_hit(&plan)? {
+            let work = if preprocess_plan_cache_hit(&mut plan)? {
                 page_progress.finish(format!("[cache] scan {rel}"));
-                WebsitePreprocessWork::Cached(preprocess_cached_output(plan))
+                WebsitePreprocessWork::Cached(Box::new(preprocess_cached_output(plan)))
             } else {
                 let chunk_count = preprocess_plan_chunk_count(&plan);
                 let chunk_label = chunk_count_label(chunk_count);
                 page_progress.finish(format!("[ready] run {rel}: {chunk_label}"));
-                WebsitePreprocessWork::Pending(plan)
+                WebsitePreprocessWork::Pending(Box::new(plan))
             };
             Ok((input, work))
         },
@@ -197,7 +197,7 @@ pub(super) fn preprocess_documents(
     for (input, work) in planned {
         match work {
             WebsitePreprocessWork::Cached(output) => {
-                outputs.insert(input, output);
+                outputs.insert(input, *output);
             }
             WebsitePreprocessWork::Pending(plan) => {
                 let chunk_count = preprocess_plan_chunk_count(&plan);
@@ -234,7 +234,7 @@ pub(super) fn preprocess_documents(
                 let page_progress = options.progress.spinner(format!("[run] {rel}"));
                 let chunk_count = preprocess_plan_chunk_count(&plan);
                 let output = execute_preprocess_plan_with_chunk_progress(
-                    plan,
+                    *plan,
                     (run_chunk_count > 0).then_some(&run_progress),
                 )
                 .with_context(|| format!("failed to run chunks for {}", input.display()))?;

@@ -11,6 +11,8 @@ pub fn exec_options() -> ExecOptions {
     ExecOptions {
         eval: true,
         error: false,
+        store_get: Vec::new(),
+        store_set: Vec::new(),
         fig_device_format: DEFAULT_FIG_DEVICE_FORMAT.to_string(),
         fig_device_dpi: DEFAULT_FIG_DEVICE_DPI,
         fig_device_width: DEFAULT_FIG_DEVICE_WIDTH,

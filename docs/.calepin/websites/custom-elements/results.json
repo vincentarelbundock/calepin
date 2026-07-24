@@ -1,37 +1,12 @@
 {
-  "schema": 1,
-  "calepin_version": "0.0.34",
+  "schema": 2,
+  "calepin_version": "0.0.36",
   "input": "websites/custom-elements.typ",
+  "generation": "021d4d3217fb1f3e-1349cde127705c16",
+  "store": {},
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
-      "engine": "css",
-      "source": ".calepin-elements-gallery {}\n.calepin-elements-gallery__item {}\n.calepin-elements-gallery__image {}\n.calepin-elements-gallery__caption {}\n.calepin-elements-gallery--lightbox {}\n.calepin-elements-card {}\n.calepin-elements-tabs {}\n.calepin-screenshot-thumb {}\n.calepin-screenshot-dialog {}\n.calepin-video-thumb {}\n.calepin-video-dialog {}",
-      "status": "skipped",
-      "options": {
-        "echo": true,
-        "output": true,
-        "results": "render",
-        "warning": true,
-        "message": true,
-        "placeholder": true,
-        "fig-width": "70%",
-        "fig-height": null,
-        "fig-align": "center",
-        "fig-responsive": true,
-        "fig-link": null,
-        "fig-caption": null,
-        "fig-cap-location": null,
-        "fig-alt-text": null,
-        "fig-subcaptions": null,
-        "fig-layout-columns": null,
-        "fig-layout-rows": null,
-        "kind": null
-      },
-      "items": []
-    },
-    "chunk-2": {
-      "label": "chunk-2",
       "engine": "css",
       "source": ".calepin-elements-gallery {}\n.calepin-elements-gallery__item {}\n.calepin-elements-gallery__image {}\n.calepin-elements-gallery__caption {}\n.calepin-elements-gallery--lightbox {}\n.calepin-elements-card {}\n.calepin-elements-tabs {}\n.calepin-screenshot-thumb {}\n.calepin-screenshot-dialog {}\n.calepin-video-thumb {}\n.calepin-video-dialog {}",
       "status": "skipped",

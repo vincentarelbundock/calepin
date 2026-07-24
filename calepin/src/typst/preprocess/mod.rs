@@ -3,6 +3,8 @@ mod image_meta;
 mod staging;
 
 use anyhow::{anyhow, Context, Result};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -12,14 +14,16 @@ use crate::config::{CalepinConfig, ExecutablePaths};
 use crate::typst::execute::{EnginePool, ExecutionConfig};
 use crate::typst::introspect::preprocess_metadata;
 use crate::typst::io::{ensure_parent, write_if_changed};
-use crate::typst::model::{ChunkResultDocument, ChunkSpec, EngineName, LayoutPaths};
+use crate::typst::model::{
+    ChunkResultDocument, ChunkSpec, EngineName, LayoutPaths, ResultsDocument, RESULT_SCHEMA_VERSION,
+};
 use crate::typst::paths::{
     artifact_reference, project_relative_path, resolve_layout, resolve_layout_in_dir, slash_path,
     CALEPIN_DIR,
 };
 use crate::typst::query::{parse_chunks_with_warnings, parse_setup_config};
 use crate::typst::results::{
-    build_results_document, refresh_cached_results_metadata, write_results,
+    build_results_document_with_store, refresh_cached_results_metadata, write_results,
 };
 use crate::typst::runtime::{
     write_notebook_binding, write_runtime_with_syntax_theme, write_runtime_with_syntax_theme_in_dir,
@@ -30,6 +34,8 @@ use crate::typst::version::assert_supported_typst;
 use crate::utils::progress::Progress;
 
 const PAGE_META_FILE: &str = "page-meta.json";
+const EXPANSION_MANIFEST_FILE: &str = "expansion.json";
+const EXPANSION_MANIFEST_SCHEMA: u8 = 1;
 
 use fingerprint::{
     preprocess_cache_hit, preprocess_fingerprint, write_preprocess_fingerprint,
@@ -37,7 +43,8 @@ use fingerprint::{
 };
 use image_meta::write_image_meta;
 use staging::{
-    notebook_template_context, raw_chunk_langs, write_query_source, write_render_wrapper,
+    notebook_template_context, raw_chunk_langs, write_query_source, write_query_wrapper,
+    write_render_wrapper,
 };
 
 pub(crate) use image_meta::image_meta_relative_path;
@@ -69,9 +76,8 @@ pub struct PreprocessOutput {
     pub layout: LayoutPaths,
     pub executables: ExecutablePaths,
     pub theme: crate::theme::ThemeSelection,
-    /// Resolved document variables (`[vars]` config < `setup(vars:)` < CLI),
-    /// reused as the `vars` context for the single-document HTML theme step.
-    pub vars: serde_json::Value,
+    /// Completed document store, reused by the HTML theme step.
+    pub store: serde_json::Value,
 }
 
 #[derive(Debug)]
@@ -87,9 +93,30 @@ pub struct PreprocessPlan {
     progress: bool,
     sync_pages: bool,
     display_root: Option<PathBuf>,
-    vars: serde_json::Value,
+    store: serde_json::Value,
     theme: crate::theme::ThemeSelection,
     raw_languages: Vec<String>,
+    query_input: PathBuf,
+    query_source: PathBuf,
+    query_theme: crate::theme::ThemeSelection,
+    query_store_path: PathBuf,
+    results_input: String,
+    store_input: String,
+    setup_config: crate::typst::query::SetupConfig,
+    initializers: serde_json::Map<String, serde_json::Value>,
+    staged_input: PathBuf,
+    runtime_import: String,
+    page_meta: Option<Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ExpansionManifest {
+    schema: u8,
+    fingerprint: u64,
+    generation: String,
+    completed_store: serde_json::Map<String, Value>,
+    stabilized_chunks: Vec<ChunkSpec>,
+    writers: std::collections::BTreeMap<String, String>,
 }
 
 pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput> {
@@ -97,15 +124,18 @@ pub fn preprocess_cached(options: PreprocessOptions) -> Result<PreprocessOutput>
     preprocess_cached_plan(plan)
 }
 
-pub fn preprocess_cached_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
-    if preprocess_plan_cache_hit(&plan)? {
+pub fn preprocess_cached_plan(mut plan: PreprocessPlan) -> Result<PreprocessOutput> {
+    if preprocess_plan_cache_hit(&mut plan)? {
         return refresh_cached_preprocess_output(plan);
     }
     execute_preprocess_plan(plan)
 }
 
-pub fn preprocess_plan_cache_hit(plan: &PreprocessPlan) -> Result<bool> {
-    preprocess_cache_hit(&plan.layout, plan.fingerprint)
+pub fn preprocess_plan_cache_hit(plan: &mut PreprocessPlan) -> Result<bool> {
+    if !preprocess_cache_hit(&plan.layout, plan.fingerprint)? {
+        return Ok(false);
+    }
+    apply_expansion_cache(plan)
 }
 
 pub fn preprocess_plan_chunk_count(plan: &PreprocessPlan) -> usize {
@@ -122,12 +152,13 @@ pub fn preprocess_cached_output(plan: PreprocessPlan) -> PreprocessOutput {
         layout: plan.layout,
         executables: plan.executables,
         theme: plan.theme,
-        vars: plan.vars,
+        store: plan.store,
     }
 }
 
 pub fn refresh_cached_preprocess_output(plan: PreprocessPlan) -> Result<PreprocessOutput> {
     refresh_cached_results_metadata(&plan.layout.results_path, &plan.chunks)?;
+    let _ = fs::remove_file(&plan.query_store_path);
     write_notebook_binding(&plan.layout, &plan.raw_languages)?;
     if !plan.quiet && plan.status {
         eprintln!("[cache] {}", display_input(&plan));
@@ -182,33 +213,53 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .clone()
         .or_else(|| config_theme.clone())
         .unwrap_or_else(|| options.fallback_theme.clone());
-    // Title and vars are render concerns and irrelevant to metadata extraction,
-    // so the query context leaves them empty.
-    let query_context = notebook_template_context(
-        &layout,
-        &staged_input,
-        None,
-        serde_json::Value::Object(serde_json::Map::new()),
-    )?;
-    let query_theme = crate::theme::notebook_source(&pre_query_theme, &query_context)?;
-    let query_input = write_render_wrapper(
+    let external_store = resolve_store(&config.store, &serde_json::Map::new())?;
+    let mut query_input = write_store_aware_query_wrapper(
         &layout,
         &runtime_import,
-        if query_theme.is_some() {
-            None
-        } else {
-            Some(&query_source)
-        },
-        &[],
-        query_theme.as_ref(),
+        &query_source,
+        &staged_input,
+        &pre_query_theme,
+        &external_store,
     )?;
     let results_input = artifact_reference(&layout.root, &layout.results_path)?;
-    let metadata = preprocess_metadata(
+    let query_store_path = layout.artifact_path("query-store.json");
+    ensure_parent(&query_store_path)?;
+    write_if_changed(&query_store_path, serde_json::to_vec(&external_store)?)?;
+    let store_input = artifact_reference(&layout.root, &query_store_path)?;
+    let mut metadata = preprocess_metadata(
         &config.executables.typst,
         &layout,
         &query_input,
         &results_input,
+        &store_input,
     )?;
+    let initializers = parse_typst_initializers(&metadata.store_initializer_queries)?;
+    let store = merge_initial_store(external_store, &initializers, &options.config_overrides)?;
+    write_if_changed(&query_store_path, serde_json::to_vec(&store)?)?;
+    if !initializers.is_empty() {
+        query_input = write_store_aware_query_wrapper(
+            &layout,
+            &runtime_import,
+            &query_source,
+            &staged_input,
+            &pre_query_theme,
+            &store,
+        )?;
+        metadata = preprocess_metadata(
+            &config.executables.typst,
+            &layout,
+            &query_input,
+            &results_input,
+            &store_input,
+        )?;
+        let repeated = parse_typst_initializers(&metadata.store_initializer_queries)?;
+        if repeated != initializers {
+            return Err(anyhow!(
+                "calepin.store.set() declarations changed after the initial store was resolved"
+            ));
+        }
+    }
     write_page_meta(&layout, metadata.page_meta.as_ref())?;
     let setup_config = parse_setup_config(&metadata.setup_json)?;
     let setup_config = setup_config.unwrap_or_default();
@@ -220,6 +271,10 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
             .collect::<Result<Vec<_>>>()?,
     )?;
     let chunks = parsed_chunks.chunks;
+    validate_store_plan(
+        &chunks,
+        store.as_object().expect("resolved store is an object"),
+    )?;
     if !options.quiet {
         for warning in parsed_chunks.warnings {
             cwarn!("{}", warning);
@@ -239,51 +294,15 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .collect();
     let kernel_names = jupyter_kernels.iter().copied().collect::<Vec<_>>();
     let raw_languages = raw_chunk_langs(&kernel_names);
-    let vars = resolve_vars(
-        &config.vars,
-        &setup_config.defaults.vars,
-        &crate::config::config_var_overrides(&options.config_overrides)?,
-    )?;
-
     let effective_theme = options
         .theme
         .clone()
         .or(setup_config.defaults.theme_selection(&layout.root)?)
         .or(config_theme)
         .unwrap_or_else(|| options.fallback_theme.clone());
-    let notebook_context = notebook_template_context(
-        &layout,
-        &staged_input,
-        metadata.page_meta.clone(),
-        vars.clone(),
-    )?;
-    let notebook_theme = crate::theme::notebook_source(&effective_theme, &notebook_context)?;
-    if !jupyter_kernels.is_empty() {
-        let kernels: Vec<&str> = jupyter_kernels.into_iter().collect();
-        layout.render_input = write_render_wrapper(
-            &layout,
-            &runtime_import,
-            if notebook_theme.is_some() {
-                None
-            } else {
-                Some(&staged_input)
-            },
-            &kernels,
-            notebook_theme.as_ref(),
-        )?;
-    } else {
-        layout.render_input = write_render_wrapper(
-            &layout,
-            &runtime_import,
-            if notebook_theme.is_some() {
-                None
-            } else {
-                Some(&staged_input)
-            },
-            &[],
-            notebook_theme.as_ref(),
-        )?;
-    }
+    // Query passes use a separate wrapper. Keep the active render wrapper
+    // untouched until results and the completed store are ready to publish.
+    layout.render_input = layout.artifact_relative_path("calepin-wrapper.typ");
 
     let cwd = layout.work_dir.clone();
     let timeout = options.timeout.map(Duration::from_secs);
@@ -294,7 +313,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         ExecutionFingerprintInputs {
             cwd: &cwd,
             timeout,
-            vars: &vars,
+            store: &store,
         },
         &effective_theme,
         asset_dir,
@@ -313,10 +332,243 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         progress: options.progress,
         sync_pages: options.sync_pages,
         display_root: options.display_root,
-        vars,
+        store,
         theme: effective_theme,
         raw_languages,
+        query_input,
+        query_source,
+        query_theme: pre_query_theme,
+        query_store_path,
+        results_input,
+        store_input,
+        setup_config,
+        initializers,
+        staged_input,
+        runtime_import,
+        page_meta: metadata.page_meta,
     })
+}
+
+fn write_store_aware_query_wrapper(
+    layout: &LayoutPaths,
+    runtime_import: &str,
+    query_source: &Path,
+    staged_input: &Path,
+    theme: &crate::theme::ThemeSelection,
+    store: &Value,
+) -> Result<PathBuf> {
+    let context = notebook_template_context(layout, staged_input, None, store.clone())?;
+    let query_theme = crate::theme::notebook_source(theme, &context)?;
+    write_query_wrapper(
+        layout,
+        runtime_import,
+        if query_theme.is_some() {
+            None
+        } else {
+            Some(query_source)
+        },
+        query_theme.as_ref(),
+    )
+}
+
+fn completed_generation(
+    fingerprint: u64,
+    store: &serde_json::Map<String, Value>,
+) -> Result<String> {
+    let store_hash = xxh3_64(&serde_json::to_vec(store)?);
+    Ok(format!("{fingerprint:016x}-{store_hash:016x}"))
+}
+
+fn expansion_manifest_path(layout: &LayoutPaths) -> PathBuf {
+    layout.artifact_path(EXPANSION_MANIFEST_FILE)
+}
+
+fn write_expansion_manifest(
+    plan: &PreprocessPlan,
+    generation: &str,
+    completed_store: &serde_json::Map<String, Value>,
+) -> Result<()> {
+    let manifest = ExpansionManifest {
+        schema: EXPANSION_MANIFEST_SCHEMA,
+        fingerprint: plan.fingerprint,
+        generation: generation.to_string(),
+        completed_store: completed_store.clone(),
+        stabilized_chunks: plan.chunks.clone(),
+        writers: writer_provenance(&plan.chunks),
+    };
+    let bytes = serde_json::to_vec_pretty(&manifest)?;
+    write_if_changed(expansion_manifest_path(&plan.layout).as_path(), bytes)
+}
+
+fn read_expansion_manifest(layout: &LayoutPaths) -> Option<ExpansionManifest> {
+    let bytes = fs::read(expansion_manifest_path(layout)).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+fn restore_initial_query_state(plan: &mut PreprocessPlan) -> Result<()> {
+    write_if_changed(&plan.query_store_path, serde_json::to_vec(&plan.store)?)?;
+    plan.query_input = write_store_aware_query_wrapper(
+        &plan.layout,
+        &plan.runtime_import,
+        &plan.query_source,
+        &plan.staged_input,
+        &plan.query_theme,
+        &plan.store,
+    )?;
+    Ok(())
+}
+
+fn apply_expansion_cache(plan: &mut PreprocessPlan) -> Result<bool> {
+    let Some(manifest) = read_expansion_manifest(&plan.layout) else {
+        return Ok(false);
+    };
+    if manifest.schema != EXPANSION_MANIFEST_SCHEMA || manifest.fingerprint != plan.fingerprint {
+        return Ok(false);
+    }
+    if crate::typst::store::validate_store(&manifest.completed_store).is_err() {
+        return Ok(false);
+    }
+    let expected_generation = completed_generation(plan.fingerprint, &manifest.completed_store)?;
+    if manifest.generation != expected_generation {
+        return Ok(false);
+    }
+
+    write_if_changed(
+        &plan.query_store_path,
+        serde_json::to_vec(&manifest.completed_store)?,
+    )?;
+    plan.query_input = write_store_aware_query_wrapper(
+        &plan.layout,
+        &plan.runtime_import,
+        &plan.query_source,
+        &plan.staged_input,
+        &plan.query_theme,
+        &Value::Object(manifest.completed_store.clone()),
+    )?;
+    let metadata = preprocess_metadata(
+        &plan.executables.typst,
+        &plan.layout,
+        &plan.query_input,
+        &plan.results_input,
+        &plan.store_input,
+    )?;
+    let repeated = parse_typst_initializers(&metadata.store_initializer_queries)?;
+    if repeated != plan.initializers {
+        restore_initial_query_state(plan)?;
+        return Ok(false);
+    }
+    let setup_config = parse_setup_config(&metadata.setup_json)?.unwrap_or_default();
+    let parsed = merge_chunk_parse_results(
+        metadata
+            .chunk_queries
+            .iter()
+            .map(|json| parse_chunks_with_warnings(json, Some(setup_config.clone())))
+            .collect::<Result<Vec<_>>>()?,
+    )?;
+    validate_store_plan(
+        &parsed.chunks,
+        plan.store
+            .as_object()
+            .expect("resolved initial store is an object"),
+    )?;
+    if parsed.chunks.len() != manifest.stabilized_chunks.len()
+        || parsed
+            .chunks
+            .iter()
+            .zip(&manifest.stabilized_chunks)
+            .any(|(current, cached)| !same_executed_chunk(current, cached))
+    {
+        restore_initial_query_state(plan)?;
+        return Ok(false);
+    }
+    if writer_provenance(&parsed.chunks) != manifest.writers {
+        restore_initial_query_state(plan)?;
+        return Ok(false);
+    }
+
+    let results = fs::read_to_string(&plan.layout.results_path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<ResultsDocument>(&text).ok());
+    let Some(results) = results else {
+        restore_initial_query_state(plan)?;
+        return Ok(false);
+    };
+    if results.schema != RESULT_SCHEMA_VERSION
+        || results.generation != manifest.generation
+        || results.store != manifest.completed_store
+        || results.chunks.len() != parsed.chunks.len()
+        || parsed
+            .chunks
+            .iter()
+            .any(|chunk| !results.chunks.contains_key(&chunk.label))
+    {
+        restore_initial_query_state(plan)?;
+        return Ok(false);
+    }
+
+    plan.chunks = parsed.chunks;
+    plan.store = Value::Object(manifest.completed_store);
+    plan.setup_config = setup_config;
+    plan.page_meta = metadata.page_meta;
+    plan.raw_languages = raw_languages_for_chunks(&plan.chunks);
+    write_final_render_wrapper(plan, &manifest.generation)?;
+    let _ = fs::remove_file(&plan.query_store_path);
+    Ok(true)
+}
+
+fn writer_provenance(chunks: &[ChunkSpec]) -> std::collections::BTreeMap<String, String> {
+    chunks
+        .iter()
+        .flat_map(|chunk| {
+            chunk
+                .exec_options
+                .store_set
+                .iter()
+                .map(|key| (key.clone(), chunk.label.clone()))
+        })
+        .collect()
+}
+
+fn raw_languages_for_chunks(chunks: &[ChunkSpec]) -> Vec<String> {
+    let kernels = chunks
+        .iter()
+        .filter_map(|chunk| match &chunk.engine {
+            EngineName::Jupyter(kernel) => Some(kernel.as_str()),
+            _ => None,
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    raw_chunk_langs(&kernels.into_iter().collect::<Vec<_>>())
+}
+
+fn write_final_render_wrapper(plan: &mut PreprocessPlan, generation: &str) -> Result<()> {
+    let context = notebook_template_context(
+        &plan.layout,
+        &plan.staged_input,
+        plan.page_meta.clone(),
+        plan.store.clone(),
+    )?;
+    let theme = crate::theme::notebook_source(&plan.theme, &context)?;
+    let kernels = plan
+        .chunks
+        .iter()
+        .filter_map(|chunk| match &chunk.engine {
+            EngineName::Jupyter(kernel) => Some(kernel.as_str()),
+            _ => None,
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    plan.layout.render_input = write_render_wrapper(
+        &plan.layout,
+        &plan.runtime_import,
+        if theme.is_some() {
+            None
+        } else {
+            Some(&plan.staged_input)
+        },
+        &kernels.into_iter().collect::<Vec<_>>(),
+        theme.as_ref(),
+        Some(generation),
+    )?;
+    Ok(())
 }
 
 fn merge_chunk_parse_results(
@@ -325,9 +577,11 @@ fn merge_chunk_parse_results(
     let mut label_index = std::collections::HashMap::new();
     let mut chunks = Vec::new();
     let mut warnings = Vec::new();
+    let mut target_orders = Vec::new();
 
     for result in results {
         warnings.extend(result.warnings);
+        let mut order = Vec::new();
         for chunk in result.chunks {
             if let Some(existing_index) = label_index.get(&chunk.label).copied() {
                 let existing = &chunks[existing_index];
@@ -342,14 +596,51 @@ fn merge_chunk_parse_results(
                         chunk.label
                     ));
                 }
+                order.push(existing_index);
                 continue;
             }
             label_index.insert(chunk.label.clone(), chunks.len());
+            order.push(chunks.len());
             chunks.push(chunk);
         }
+        target_orders.push(order);
     }
 
-    Ok(crate::typst::query::ChunkParseResult { chunks, warnings })
+    let mut outgoing = vec![std::collections::BTreeSet::new(); chunks.len()];
+    let mut indegree = vec![0usize; chunks.len()];
+    for order in target_orders {
+        for pair in order.windows(2) {
+            let (from, to) = (pair[0], pair[1]);
+            if from != to && outgoing[from].insert(to) {
+                indegree[to] += 1;
+            }
+        }
+    }
+    let mut ready: std::collections::BTreeSet<usize> = indegree
+        .iter()
+        .enumerate()
+        .filter_map(|(index, degree)| (*degree == 0).then_some(index))
+        .collect();
+    let mut merged = Vec::with_capacity(chunks.len());
+    while let Some(index) = ready.pop_first() {
+        merged.push(chunks[index].clone());
+        for &next in &outgoing[index] {
+            indegree[next] -= 1;
+            if indegree[next] == 0 {
+                ready.insert(next);
+            }
+        }
+    }
+    if merged.len() != chunks.len() {
+        return Err(anyhow!(
+            "paged and HTML target plans impose incompatible chunk ordering"
+        ));
+    }
+
+    Ok(crate::typst::query::ChunkParseResult {
+        chunks: merged,
+        warnings,
+    })
 }
 
 fn same_chunk_definition(left: &ChunkSpec, right: &ChunkSpec) -> bool {
@@ -361,12 +652,83 @@ fn same_chunk_definition(left: &ChunkSpec, right: &ChunkSpec) -> bool {
         && left.crossref_labels == right.crossref_labels
 }
 
+fn same_executed_chunk(left: &ChunkSpec, right: &ChunkSpec) -> bool {
+    left.label == right.label
+        && left.ordinal == right.ordinal
+        && left.engine == right.engine
+        && left.code == right.code
+        && left.script == right.script
+        && left.exec_options == right.exec_options
+}
+
+fn validate_store_plan(
+    chunks: &[ChunkSpec],
+    initialized: &serde_json::Map<String, serde_json::Value>,
+) -> Result<()> {
+    let mut writers = std::collections::HashMap::<&str, &str>::new();
+    for chunk in chunks {
+        if (!chunk.exec_options.store_get.is_empty() || !chunk.exec_options.store_set.is_empty())
+            && !matches!(chunk.engine, EngineName::R | EngineName::Python)
+        {
+            return Err(anyhow!(
+                "chunk `{}` declares a document store option, but engine `{}` does not support the Calepin document store",
+                chunk.label,
+                chunk.engine
+            ));
+        }
+        for key in &chunk.exec_options.store_set {
+            if initialized.contains_key(key) {
+                return Err(anyhow!(
+                    "store key `{key}` is initialized before execution and is also written by chunk `{}`",
+                    chunk.label
+                ));
+            }
+            if let Some(first) = writers.insert(key, &chunk.label) {
+                return Err(anyhow!(
+                    "store key `{key}` has more than one writer: chunk `{first}` and chunk `{}`",
+                    chunk.label
+                ));
+            }
+        }
+    }
+    if initialized.len() + writers.len() > crate::typst::store::MAX_KEYS {
+        return Err(anyhow!(
+            "document store declares more than {} initialized and written keys",
+            crate::typst::store::MAX_KEYS
+        ));
+    }
+    Ok(())
+}
+
+fn validate_executed_prefix(
+    previous: &[ChunkSpec],
+    next: &[ChunkSpec],
+    executed: usize,
+) -> Result<()> {
+    if next.len() < executed {
+        return Err(anyhow!(
+            "dynamic store expansion removed an already-executed chunk"
+        ));
+    }
+    for index in 0..executed {
+        let old = &previous[index];
+        let new = &next[index];
+        if !same_executed_chunk(old, new) {
+            return Err(anyhow!(
+                "dynamic store expansion changed the already-executed chunk `{}`; stored values may generate chunks only after the execution frontier",
+                old.label
+            ));
+        }
+    }
+    Ok(())
+}
+
 pub fn execute_preprocess_plan(plan: PreprocessPlan) -> Result<PreprocessOutput> {
     execute_preprocess_plan_with_chunk_progress(plan, None)
 }
 
 pub fn execute_preprocess_plan_with_chunk_progress(
-    plan: PreprocessPlan,
+    mut plan: PreprocessPlan,
     chunk_progress: Option<&Progress>,
 ) -> Result<PreprocessOutput> {
     let staged = tempfile::Builder::new()
@@ -377,17 +739,11 @@ pub fn execute_preprocess_plan_with_chunk_progress(
     std::fs::create_dir_all(&staged_figures_dir)
         .with_context(|| format!("failed to create {}", staged_figures_dir.display()))?;
 
-    // Always write vars.json when there are variables: it is the universal
-    // transport for Jupyter kernels Calepin cannot auto-bind, and a useful
-    // reproducibility record. Native R/Python read their literal prelude instead.
-    let vars_path = write_vars_file(&plan.layout, &plan.vars)?;
-
     let execution_config = ExecutionConfig {
         cwd: plan.cwd.clone(),
         executables: plan.executables.clone(),
         timeout: plan.timeout,
-        vars: plan.vars.clone(),
-        vars_path,
+        store: plan.store.as_object().cloned().unwrap_or_default(),
     };
     let mut pool = EnginePool::new(execution_config);
     let mut chunk_results: Vec<Option<ChunkResultDocument>> = vec![None; plan.chunks.len()];
@@ -407,17 +763,19 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         None
     };
 
-    for (position, chunk_index) in chunks_in_engine_order(&plan.chunks).into_iter().enumerate() {
-        let chunk = &plan.chunks[chunk_index];
+    let mut chunk_index = 0;
+    let mut expansion_stages = 0usize;
+    while chunk_index < plan.chunks.len() {
+        let chunk = plan.chunks[chunk_index].clone();
         if let Some(progress) = &progress {
             progress.set_message(format!(
                 "[run] {input}: chunk {}/{} `{}`",
-                position + 1,
-                chunk_count,
+                chunk_index + 1,
+                plan.chunks.len(),
                 chunk.label
             ));
         }
-        let result = execute_chunk_live(&mut pool, chunk, &staged_figures_dir, &plan.layout)?;
+        let result = execute_chunk_live(&mut pool, &chunk, &staged_figures_dir, &plan.layout)?;
         if let Some(progress) = &progress {
             progress.inc(1);
         }
@@ -425,6 +783,71 @@ pub fn execute_preprocess_plan_with_chunk_progress(
             progress.inc(1);
         }
         chunk_results[chunk_index] = Some(result);
+        chunk_index += 1;
+
+        if !chunk.exec_options.store_set.is_empty() {
+            write_if_changed(
+                &plan.query_store_path,
+                serde_json::to_vec(&Value::Object(pool.store().clone()))?,
+            )?;
+            plan.query_input = write_store_aware_query_wrapper(
+                &plan.layout,
+                &plan.runtime_import,
+                &plan.query_source,
+                &plan.staged_input,
+                &plan.query_theme,
+                &Value::Object(pool.store().clone()),
+            )?;
+            let metadata = preprocess_metadata(
+                &plan.executables.typst,
+                &plan.layout,
+                &plan.query_input,
+                &plan.results_input,
+                &plan.store_input,
+            )?;
+            let repeated = parse_typst_initializers(&metadata.store_initializer_queries)?;
+            if repeated != plan.initializers {
+                return Err(anyhow!(
+                    "calepin.store.set() declarations changed after execution began"
+                ));
+            }
+            let next_setup = parse_setup_config(&metadata.setup_json)?.unwrap_or_default();
+            let parsed = merge_chunk_parse_results(
+                metadata
+                    .chunk_queries
+                    .iter()
+                    .map(|json| parse_chunks_with_warnings(json, Some(next_setup.clone())))
+                    .collect::<Result<Vec<_>>>()?,
+            )?;
+            let next_chunks = parsed.chunks;
+            validate_store_plan(
+                &next_chunks,
+                plan.store.as_object().expect("resolved store is an object"),
+            )?;
+            validate_executed_prefix(&plan.chunks, &next_chunks, chunk_index)?;
+            let old_writers: std::collections::HashSet<_> = plan
+                .chunks
+                .iter()
+                .flat_map(|chunk| chunk.exec_options.store_set.iter().cloned())
+                .collect();
+            let new_writers: Vec<_> = next_chunks
+                .iter()
+                .flat_map(|chunk| chunk.exec_options.store_set.iter().cloned())
+                .filter(|key| !old_writers.contains(key))
+                .collect();
+            if !new_writers.is_empty() {
+                expansion_stages += 1;
+                if expansion_stages > 32 {
+                    return Err(anyhow!(
+                        "dynamic store expansion did not stabilize after 32 new-writer stages"
+                    ));
+                }
+            }
+            plan.chunks = next_chunks;
+            plan.setup_config = next_setup;
+            plan.page_meta = metadata.page_meta;
+            chunk_results.resize(plan.chunks.len(), None);
+        }
     }
 
     let chunk_results = chunk_results
@@ -435,9 +858,24 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         .collect::<Result<Vec<_>>>()?;
 
     publish_staged_figures(&staged_figures_dir, &plan.layout.figures_dir)?;
-    let document = build_results_document(&plan.layout.input_rel, chunk_results)?;
+    let completed_store = pool.store().clone();
+    let generation = completed_generation(plan.fingerprint, &completed_store)?;
+    let document = build_results_document_with_store(
+        &plan.layout.input_rel,
+        chunk_results,
+        completed_store.clone(),
+        generation.clone(),
+    )?;
+    // Publish results before the wrapper. The wrapper carries the same
+    // generation and refuses to render against a mismatched results snapshot,
+    // so an active Typst watcher cannot publish a mixed build.
     write_results(&plan.layout.results_path, &document)?;
+    plan.store = Value::Object(completed_store.clone());
+    plan.raw_languages = raw_languages_for_chunks(&plan.chunks);
+    write_final_render_wrapper(&mut plan, &generation)?;
+    let _ = fs::remove_file(&plan.query_store_path);
     write_notebook_binding(&plan.layout, &plan.raw_languages)?;
+    write_expansion_manifest(&plan, &generation, &completed_store)?;
     write_preprocess_fingerprint(&plan.layout, plan.fingerprint)?;
     if plan.sync_pages {
         if let Err(error) = write_page_sync(&plan.executables.typst, &plan.layout, &plan.chunks) {
@@ -454,7 +892,7 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         layout: plan.layout,
         executables: plan.executables,
         theme: plan.theme,
-        vars: plan.vars,
+        store: serde_json::Value::Object(completed_store),
     })
 }
 
@@ -512,27 +950,6 @@ fn execute_chunk_live(
             path,
         )
     })
-}
-
-fn chunks_in_engine_order(chunks: &[ChunkSpec]) -> Vec<usize> {
-    let mut groups: Vec<(EngineName, Vec<usize>)> = Vec::new();
-
-    for (index, chunk) in chunks.iter().enumerate() {
-        if let Some((_, chunk_indexes)) = groups
-            .iter_mut()
-            .find(|(engine, _)| *engine == chunk.engine)
-        {
-            chunk_indexes.push(index);
-            continue;
-        }
-
-        groups.push((chunk.engine.clone(), vec![index]));
-    }
-
-    groups
-        .into_iter()
-        .flat_map(|(_, chunk_indexes)| chunk_indexes)
-        .collect()
 }
 
 fn execution_artifact_reference(
@@ -636,43 +1053,83 @@ fn publish_staged_file(source: &Path, target: &Path) -> Result<()> {
     write_if_changed(target, bytes)
 }
 
-/// Write `vars.json` next to `results.json` when there are variables, and
-/// return its path. Returns `None` (and removes any stale file) when empty.
-fn write_vars_file(layout: &LayoutPaths, vars: &serde_json::Value) -> Result<Option<PathBuf>> {
-    let path = layout.artifact_path("vars.json");
-    let is_empty = vars.as_object().is_none_or(|map| map.is_empty());
-    if is_empty {
-        let _ = fs::remove_file(&path);
-        return Ok(None);
-    }
-    ensure_parent(&path)?;
-    let json = serde_json::to_string_pretty(vars)?;
-    write_if_changed(&path, json)?;
-    Ok(Some(path))
-}
-
-/// Resolve the document's variable map by merging three sources in increasing
-/// precedence: `[vars]` from `calepin.toml`, then `calepin.setup(vars: ...)`,
-/// then `--set vars.key=value` CLI overrides. CLI values inherit the same
-/// scalar typing as `#|` option values.
-fn resolve_vars(
-    config_vars: &std::collections::BTreeMap<String, toml::Value>,
-    setup_vars: &serde_json::Value,
+/// Resolve externally initialized store values.
+fn resolve_store(
+    config_store: &std::collections::BTreeMap<String, toml::Value>,
     overrides: &serde_json::Map<String, serde_json::Value>,
 ) -> Result<serde_json::Value> {
     let mut map = serde_json::Map::new();
-    if let Ok(serde_json::Value::Object(config_map)) = serde_json::to_value(config_vars) {
+    if let Ok(serde_json::Value::Object(config_map)) = serde_json::to_value(config_store) {
         map.extend(config_map);
-    }
-    if let serde_json::Value::Object(setup_map) = setup_vars {
-        for (key, value) in setup_map {
-            map.insert(key.clone(), value.clone());
-        }
     }
     for (key, value) in overrides {
         map.insert(key.clone(), value.clone());
     }
+    crate::typst::store::validate_store(&map)?;
     Ok(serde_json::Value::Object(map))
+}
+
+fn parse_typst_initializers(
+    target_queries: &[String],
+) -> Result<serde_json::Map<String, serde_json::Value>> {
+    let mut target_maps = Vec::new();
+    for query in target_queries {
+        let entries: Vec<serde_json::Value> =
+            serde_json::from_str(query).context("failed to parse calepin.store.set() metadata")?;
+        let mut map = serde_json::Map::new();
+        for entry in entries {
+            let declaration = entry
+                .get("value")
+                .and_then(serde_json::Value::as_object)
+                .ok_or_else(|| anyhow!("malformed calepin.store.set() metadata"))?;
+            let key = declaration
+                .get("key")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| anyhow!("calepin.store.set() key must be a string"))?;
+            crate::typst::store::validate_key(key)?;
+            let value = declaration
+                .get("value")
+                .cloned()
+                .ok_or_else(|| anyhow!("calepin.store.set() is missing its value"))?;
+            crate::typst::store::validate_value(&value)?;
+            if map.insert(key.to_string(), value).is_some() {
+                return Err(anyhow!(
+                    "store key `{key}` is initialized more than once with calepin.store.set()"
+                ));
+            }
+        }
+        target_maps.push(map);
+    }
+    let first = target_maps.first().cloned().unwrap_or_default();
+    if target_maps.iter().any(|map| map != &first) {
+        return Err(anyhow!(
+            "calepin.store.set() declarations differ between paged and HTML targets"
+        ));
+    }
+    Ok(first)
+}
+
+fn merge_initial_store(
+    external: serde_json::Value,
+    document: &serde_json::Map<String, serde_json::Value>,
+    cli: &[String],
+) -> Result<serde_json::Value> {
+    let mut store = external.as_object().cloned().unwrap_or_default();
+    store.extend(document.clone());
+    crate::config::apply_store_overrides(&mut store, cli)?;
+    crate::typst::store::validate_store(&store)?;
+    Ok(serde_json::Value::Object(store))
+}
+
+#[cfg(test)]
+fn resolve_vars(
+    config: &std::collections::BTreeMap<String, toml::Value>,
+    document: &serde_json::Value,
+    cli: &[String],
+) -> Result<serde_json::Value> {
+    let external = resolve_store(config, &serde_json::Map::new())?;
+    let empty = serde_json::Map::new();
+    merge_initial_store(external, document.as_object().unwrap_or(&empty), cli)
 }
 
 #[cfg(test)]
@@ -690,7 +1147,7 @@ mod tests {
         ExecutionFingerprintInputs {
             cwd,
             timeout: Some(Duration::from_secs(5)),
-            vars,
+            store: vars,
         }
     }
 
@@ -722,16 +1179,16 @@ mod tests {
     }
 
     #[test]
-    fn cli_vars_override_setup_vars() {
+    fn cli_store_overrides_document_initializers() {
         let setup = serde_json::json!({"region": "NY", "min_count": 10});
         let resolved = resolve_vars(
             &std::collections::BTreeMap::new(),
             &setup,
-            &serde_json::Map::from_iter([
-                ("region".to_string(), serde_json::json!("CA")),
-                ("alpha".to_string(), serde_json::json!(0.5)),
-                ("active".to_string(), serde_json::json!(true)),
-            ]),
+            &[
+                "store.region=CA".to_string(),
+                "store.alpha=0.5".to_string(),
+                "store.active=true".to_string(),
+            ],
         )
         .unwrap();
         assert_eq!(
@@ -741,7 +1198,7 @@ mod tests {
     }
 
     #[test]
-    fn vars_merge_config_then_setup_then_cli() {
+    fn store_merges_config_then_document_then_cli() {
         let config = std::collections::BTreeMap::from([
             (
                 "region".to_string(),
@@ -753,12 +1210,7 @@ mod tests {
             ),
         ]);
         let setup = serde_json::json!({"region": "setup", "doc": "setup"});
-        let resolved = resolve_vars(
-            &config,
-            &setup,
-            &serde_json::Map::from_iter([("region".to_string(), serde_json::json!("cli"))]),
-        )
-        .unwrap();
+        let resolved = resolve_vars(&config, &setup, &["store.region=cli".to_string()]).unwrap();
         assert_eq!(
             resolved,
             serde_json::json!({"region":"cli","source":"config","doc":"setup"})
@@ -871,30 +1323,28 @@ mod tests {
             plan.layout.root.join("_runtime/paper")
         );
         let wrapper =
-            std::fs::read_to_string(plan.layout.artifact_path("calepin-wrapper.typ")).unwrap();
+            std::fs::read_to_string(plan.layout.artifact_path("calepin-query-wrapper.typ"))
+                .unwrap();
         assert!(wrapper.contains("#import \"/_runtime/calepin.typ\""));
         assert!(!wrapper.contains("#import \"/.calepin/calepin.typ\""));
+        assert!(!plan.layout.artifact_path("calepin-wrapper.typ").exists());
         assert!(plan.layout.root.join("_runtime/calepin.typ").is_file());
     }
 
     #[test]
-    fn cli_var_without_equals_is_rejected() {
-        let err = crate::config::config_var_overrides(&["vars=false".to_string()])
+    fn cli_store_must_be_a_table() {
+        let mut store = serde_json::Map::new();
+        let err = crate::config::apply_store_overrides(&mut store, &["store=false".to_string()])
             .unwrap_err()
             .to_string();
-        assert!(err.contains("vars"), "{err}");
+        assert!(err.contains("store"), "{err}");
     }
 
     #[test]
     fn resolve_vars_with_no_overrides_returns_setup() {
         let setup = serde_json::json!({"a": 1});
         assert_eq!(
-            resolve_vars(
-                &std::collections::BTreeMap::new(),
-                &setup,
-                &serde_json::Map::new()
-            )
-            .unwrap(),
+            resolve_vars(&std::collections::BTreeMap::new(), &setup, &[]).unwrap(),
             setup
         );
     }
@@ -1106,34 +1556,6 @@ mod tests {
     }
 
     #[test]
-    fn chunks_are_executed_grouped_by_engine() {
-        let mut first_r = test_chunk("x <- 1");
-        first_r.label = "r-first".to_string();
-        first_r.engine = EngineName::R;
-
-        let mut first_py = test_chunk("print(1)");
-        first_py.label = "py-first".to_string();
-        first_py.engine = EngineName::Python;
-
-        let mut second_r = test_chunk("x <- 2");
-        second_r.label = "r-second".to_string();
-        second_r.engine = EngineName::R;
-
-        let mut second_py = test_chunk("print(2)");
-        second_py.label = "py-second".to_string();
-        second_py.engine = EngineName::Python;
-
-        let chunks = vec![first_r, first_py, second_r, second_py];
-        let grouped_indices = chunks_in_engine_order(&chunks);
-        let labels: Vec<&str> = grouped_indices
-            .iter()
-            .map(|&index| chunks[index].label.as_str())
-            .collect();
-
-        assert_eq!(labels, vec!["r-first", "r-second", "py-first", "py-second"]);
-    }
-
-    #[test]
     fn execution_artifacts_reference_final_figures_dir() {
         let root = tempfile::tempdir().unwrap();
         let staged = tempfile::tempdir().unwrap();
@@ -1227,12 +1649,12 @@ mod tests {
     }
 
     #[test]
-    fn preprocess_cached_plan_reuses_matching_cache() {
+    fn preprocess_cache_rejects_missing_expansion_manifest() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
         let fingerprint = 0x2a;
         let chunk = test_chunk("print(1)");
-        let results = build_results_document(
+        let results = crate::typst::results::build_results_document(
             &layout.input_rel,
             vec![crate::typst::model::ChunkResultDocument {
                 label: chunk.label.clone(),
@@ -1250,7 +1672,7 @@ mod tests {
         let mut executables = ExecutablePaths::defaults();
         executables.python = PathBuf::from("/no/such/python");
 
-        let output = preprocess_cached_plan(PreprocessPlan {
+        let mut plan = PreprocessPlan {
             layout,
             executables,
             fingerprint,
@@ -1262,13 +1684,23 @@ mod tests {
             progress: false,
             sync_pages: false,
             display_root: None,
-            vars: serde_json::json!({}),
+            store: serde_json::json!({}),
             theme: crate::theme::ThemeSelection::Default,
             raw_languages: vec!["python".to_string(), "r".to_string()],
-        })
-        .unwrap();
+            query_input: PathBuf::new(),
+            query_source: PathBuf::new(),
+            query_theme: crate::theme::ThemeSelection::Default,
+            query_store_path: PathBuf::new(),
+            results_input: String::new(),
+            store_input: String::new(),
+            setup_config: crate::typst::query::SetupConfig::default(),
+            initializers: serde_json::Map::new(),
+            staged_input: PathBuf::new(),
+            runtime_import: String::new(),
+            page_meta: None,
+        };
 
-        assert_eq!(output.layout.input_rel, PathBuf::from("paper.typ"));
+        assert!(!preprocess_plan_cache_hit(&mut plan).unwrap());
     }
 
     #[test]
@@ -1285,6 +1717,7 @@ mod tests {
             None,
             &[],
             Some(&notebook_theme),
+            None,
         )
         .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
@@ -1307,6 +1740,7 @@ mod tests {
             None,
             &[],
             Some(&notebook_theme),
+            None,
         )
         .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
@@ -1329,6 +1763,7 @@ mod tests {
             None,
             &[],
             Some(&notebook_theme),
+            None,
         )
         .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
@@ -1353,6 +1788,7 @@ mod tests {
             "/.calepin/calepin.typ",
             Some(&staged_input),
             &["bash"],
+            None,
             None,
         )
         .unwrap();

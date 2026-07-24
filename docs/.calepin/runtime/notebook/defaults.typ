@@ -35,6 +35,8 @@
 #let _call-extra-defaults = (
   label: none,
   inline-output: false,
+  store-get: none,
+  store-set: none,
   auto-label-prefix: "chunk",
   auto-label-state: _auto-label-index,
 )

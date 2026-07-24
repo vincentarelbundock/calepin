@@ -1,15 +1,48 @@
 #import "../core/target.typ": _is-html, _is-query
+#import "../core/assets.typ": _js-string-literal
 
-#let _assets-loaded = state("calepin-elements-tabs-assets", false)
+#let _asset-config = state("calepin-elements-tabs-assets", none)
+#let _panel-index = state("calepin-elements-tabs-panel-index", 1)
 
-#let _asset_once() = context {
-  if _assets-loaded.get() {
-    none
-  } else {
-    _assets-loaded.update(_ => true)
+#let _asset_once(module-url) = context {
+  let selected = _asset-config.get()
+  if selected != none and selected != module-url {
+    panic("calepin.elements.tabs: every tabs container must use the same module-url")
+  }
+  if selected == none {
+    let asset-step = _asset-config.update(_ => module-url)
     [
-      #std.html.elem("script", "
-        import 'https://ka-f.webawesome.com/webawesome@3.8.0/components/tab-group/tab-group.js';
+      #asset-step
+      #std.html.elem("script", "import " + _js-string-literal(module-url) + ";
+
+        let syncingTabGroup = false;
+        document.addEventListener('wa-tab-show', event => {
+          if (syncingTabGroup) return;
+
+          const source = event.target;
+          const group = source.dataset.calepinTabGroup;
+          const sourceTabs = Array.from(source.querySelectorAll('wa-tab'));
+          const activeTab = sourceTabs.find(tab => tab.panel === source.active);
+          const key = activeTab?.dataset.calepinTabKey;
+          if (!group || !key) return;
+          const occurrence = sourceTabs
+            .filter(tab => tab.dataset.calepinTabKey === key && !tab.disabled)
+            .indexOf(activeTab);
+
+          syncingTabGroup = true;
+          try {
+            document.querySelectorAll('wa-tab-group[data-calepin-tab-group]').forEach(target => {
+              if (target !== source && target.dataset.calepinTabGroup === group) {
+                const tab = Array.from(target.querySelectorAll('wa-tab'))
+                  .filter(candidate => candidate.dataset.calepinTabKey === key && !candidate.disabled)
+                  .at(occurrence);
+                if (tab) target.active = tab.panel;
+              }
+            });
+          } finally {
+            syncingTabGroup = false;
+          }
+        });
       ", attrs: (type: "module"))
       #std.html.elem("style", "
         wa-tab-group.calepin-elements-tabs {
@@ -38,6 +71,8 @@
         }
       ")
     ]
+  } else {
+    none
   }
 }
 
@@ -56,13 +91,51 @@
   }
 }
 
+#let _html-tab(label, name, active, disabled, attrs, panel-attrs, body) = context {
+  let panel-name = if name == none {
+    _auto-panel-name(label) + "-" + str(_panel-index.get())
+  } else {
+    name
+  }
+  let panel-step = if name == none { _panel-index.update(n => n + 1) } else { none }
+  // Keep the human label as the synchronization key. The generated panel
+  // id is slugged for DOM use, but different labels can share a slug (for
+  // example `A B` and `A-B`) and must remain distinct across groups.
+  let sync-key = if name == none { label } else { name }
+  let active-attr = if active { (active: "") } else { (:) }
+  let disabled-attr = if disabled { (disabled: "") } else { (:) }
+  let tab-attrs = (
+    ..attrs,
+    panel: panel-name,
+    "data-calepin-tab-key": sync-key,
+    ..active-attr,
+    ..disabled-attr,
+  )
+  let panel-attrs = (
+    ..panel-attrs,
+    name: panel-name,
+    ..active-attr,
+  )
+
+  [
+    #panel-step
+    #std.html.elem("wa-tab", attrs: tab-attrs)[#label]
+    #std.html.elem("wa-tab-panel", attrs: panel-attrs)[#body]
+  ]
+}
+
 #let tabs(
+  group: none,
   without-scroll-controls: false,
   html-tag: "wa-tab-group",
   html-class: "calepin-elements-tabs",
   html-attrs: (:),
+  module-url: "https://ka-f.webawesome.com/webawesome@3.8.0/components/tab-group/tab-group.js",
   body,
 ) = {
+  if group != none and (type(group) != str or group == "") {
+    panic("calepin.elements.tabs: group must be none or a non-empty string")
+  }
   if type(without-scroll-controls) != bool {
     panic("calepin.elements.tabs: without-scroll-controls must be a boolean")
   }
@@ -71,6 +144,9 @@
   }
   if type(html-class) != str {
     panic("calepin.elements.tabs: html-class must be a string")
+  }
+  if type(module-url) != str or module-url == "" {
+    panic("calepin.elements.tabs: module-url must be a non-empty string")
   }
   _assert-dict("calepin.elements.tabs: html-attrs", html-attrs)
 
@@ -92,13 +168,19 @@
     } else {
       (:)
     }
+    let group-attrs = if group == none {
+      (:)
+    } else {
+      ("data-calepin-tab-group": group)
+    }
     let attrs = (
       ..html-attrs,
       class: attrs-class,
       ..scroll-attrs,
+      ..group-attrs,
     )
     return [
-      #_asset_once()
+      #_asset_once(module-url)
       #std.html.elem(html-tag, attrs: attrs)[#body]
     ]
   }
@@ -135,29 +217,7 @@
   }
 
   if _is-html() {
-    let panel-name = if name == none {
-      _auto-panel-name(label)
-    } else {
-      name
-    }
-    let active-attr = if active { (active: "") } else { (:) }
-    let disabled-attr = if disabled { (disabled: "") } else { (:) }
-    let tab-attrs = (
-      ..attrs,
-      panel: panel-name,
-      ..active-attr,
-      ..disabled-attr,
-    )
-    let panel-attrs = (
-      ..panel-attrs,
-      name: panel-name,
-      ..active-attr,
-    )
-
-    return [
-      #std.html.elem("wa-tab", attrs: tab-attrs)[#label]
-      #std.html.elem("wa-tab-panel", attrs: panel-attrs)[#body]
-    ]
+    return _html-tab(label, name, active, disabled, attrs, panel-attrs, body)
   }
 
   if disabled {

@@ -319,6 +319,13 @@ fn toc_field(value: &serde_json::Value) -> Option<TocConfig> {
     })
 }
 
+fn string_field(value: &serde_json::Value, key: &str) -> Option<String> {
+    value
+        .get(key)
+        .and_then(|field| field.as_str())
+        .and_then(|field| clean_optional_string(Some(field)))
+}
+
 #[cfg(test)]
 mod toc_field_tests {
     use super::*;
@@ -373,11 +380,4 @@ mod toc_field_tests {
 
         assert_eq!(meta.toc, None);
     }
-}
-
-fn string_field(value: &serde_json::Value, key: &str) -> Option<String> {
-    value
-        .get(key)
-        .and_then(|field| field.as_str())
-        .and_then(|field| clean_optional_string(Some(field)))
 }

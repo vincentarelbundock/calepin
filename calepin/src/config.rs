@@ -31,7 +31,7 @@ pub struct CalepinConfig {
     pub executables: ExecutablePaths,
     pub config_dir: PathBuf,
     pub theme: Option<String>,
-    pub vars: BTreeMap<String, toml::Value>,
+    pub store: BTreeMap<String, toml::Value>,
     /// Directory (relative to project root) for generated Calepin assets.
     /// `None` means the built-in default `.calepin`.
     pub asset_dir: Option<PathBuf>,
@@ -81,17 +81,17 @@ impl CalepinConfig {
         reject_removed_asset_dir_keys(&raw_value)?;
         reject_removed_styles_key(&raw_value)?;
         reject_disallowed_config_keys(&raw_value)?;
-        reject_non_table_vars(&raw_value)?;
+        reject_non_table_store(&raw_value)?;
         let raw: RawCalepinConfig = raw_value
             .try_into()
             .with_context(|| format!("failed to parse {source}"))?;
         let asset_dir = resolve_asset_dir(raw.asset_dir)?;
         let toc = validate_toc_config(raw.toc)?;
         Ok(Self {
-            executables: ExecutablePaths::from_raw(root, &config_dir, raw.executables),
+            executables: ExecutablePaths::from_raw(root, config_dir, raw.executables),
             config_dir: config_dir.to_path_buf(),
             theme: raw.theme,
-            vars: raw.vars,
+            store: raw.store,
             asset_dir,
             toc,
         })
@@ -115,26 +115,57 @@ pub fn apply_config_overrides(value: &mut toml::Value, overrides: &[String]) -> 
     Ok(())
 }
 
-pub fn config_var_overrides(
+pub fn apply_store_overrides(
+    store: &mut serde_json::Map<String, serde_json::Value>,
     overrides: &[String],
-) -> Result<serde_json::Map<String, serde_json::Value>> {
-    let mut value = toml::Value::Table(toml::map::Map::new());
+) -> Result<()> {
     for entry in overrides {
-        let Some((path, _)) = entry.split_once('=') else {
+        let Some((raw_path, raw_value)) = entry.split_once('=') else {
             continue;
         };
-        let path = path.trim();
-        if path == "vars" || path.starts_with("vars.") {
-            apply_config_override(&mut value, entry)?;
+        let path = parse_override_path(raw_path)?;
+        if path.first() != Some(&"store") {
+            continue;
         }
+        let value = serde_json::to_value(parse_override_value(raw_value.trim()))?;
+        insert_store_override(store, &path[1..], value, entry)?;
     }
-    let Some(vars) = value.get("vars") else {
-        return Ok(serde_json::Map::new());
-    };
-    let serde_json::Value::Object(map) = serde_json::to_value(vars)? else {
-        return Err(anyhow!("invalid --set `vars`: expected a table"));
-    };
-    Ok(map)
+    Ok(())
+}
+
+fn insert_store_override(
+    store: &mut serde_json::Map<String, serde_json::Value>,
+    path: &[&str],
+    value: serde_json::Value,
+    original_entry: &str,
+) -> Result<()> {
+    if path.is_empty() {
+        let serde_json::Value::Object(replacement) = value else {
+            return Err(anyhow!("invalid --set `store`: expected a table"));
+        };
+        *store = replacement;
+        return Ok(());
+    }
+
+    let mut table = store;
+    for key in &path[..path.len() - 1] {
+        let entry = table
+            .entry((*key).to_string())
+            .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+        let serde_json::Value::Object(nested) = entry else {
+            return Err(anyhow!(
+                "invalid --set `{original_entry}`: `{key}` is already a non-table value"
+            ));
+        };
+        table = nested;
+    }
+    table.insert(
+        path.last()
+            .expect("store override path is non-empty")
+            .to_string(),
+        value,
+    );
+    Ok(())
 }
 
 fn apply_config_override(value: &mut toml::Value, entry: &str) -> Result<()> {
@@ -186,7 +217,7 @@ fn validate_override_root(root: &str) -> Result<()> {
         "theme",
         "title",
         "toc",
-        "vars",
+        "store",
     ];
     if ALLOWED_ROOTS.contains(&root) {
         return Ok(());
@@ -305,7 +336,7 @@ struct RawCalepinConfig {
     #[serde(default)]
     executables: RawExecutablePaths,
     theme: Option<String>,
-    vars: BTreeMap<String, toml::Value>,
+    store: BTreeMap<String, toml::Value>,
     #[serde(rename = "asset-dir")]
     asset_dir: Option<PathBuf>,
     #[serde(default)]
@@ -392,11 +423,14 @@ fn reject_removed_styles_key(value: &toml::Value) -> Result<()> {
     Ok(())
 }
 
-fn reject_non_table_vars(value: &toml::Value) -> Result<()> {
-    if let Some(vars) = value.get("vars") {
-        if !vars.is_table() {
-            return Err(anyhow!("invalid type for `vars`: expected a table"));
+fn reject_non_table_store(value: &toml::Value) -> Result<()> {
+    if let Some(store) = value.get("store") {
+        if !store.is_table() {
+            return Err(anyhow!("invalid type for `store`: expected a table"));
         }
+    }
+    if value.get("vars").is_some() {
+        return Err(anyhow!("unknown config key `vars`; use `[store]`"));
     }
     Ok(())
 }
@@ -740,11 +774,11 @@ styles = ["styles/site.css"]
     }
 
     #[test]
-    fn config_parses_custom_vars() {
+    fn config_parses_custom_store() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("calepin.toml"),
-            r#"[vars]
+            r#"[store]
 course = "Econ 101"
 semester = "Fall 2026"
 credits = 3
@@ -756,14 +790,14 @@ credits = 3
             CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap();
 
         assert_eq!(
-            config.vars.get("course"),
+            config.store.get("course"),
             Some(&toml::Value::String("Econ 101".to_string()))
         );
         assert_eq!(
-            config.vars.get("semester"),
+            config.store.get("semester"),
             Some(&toml::Value::String("Fall 2026".to_string()))
         );
-        assert_eq!(config.vars.get("credits"), Some(&toml::Value::Integer(3)));
+        assert_eq!(config.store.get("credits"), Some(&toml::Value::Integer(3)));
     }
 
     #[test]
@@ -775,7 +809,7 @@ credits = 3
             None,
             &[
                 "theme=./theme".to_string(),
-                "vars.course=Econ 101".to_string(),
+                "store.course=Econ 101".to_string(),
                 "toc.enabled=false".to_string(),
                 "toc.depth=2".to_string(),
             ],
@@ -784,7 +818,7 @@ credits = 3
 
         assert_eq!(config.theme, Some("./theme".to_string()));
         assert_eq!(
-            config.vars.get("course"),
+            config.store.get("course"),
             Some(&toml::Value::String("Econ 101".to_string()))
         );
         assert_eq!(config.toc.enabled, Some(false));
@@ -803,16 +837,23 @@ credits = 3
     }
 
     #[test]
-    fn config_var_overrides_preserve_nested_paths() {
-        let overrides = config_var_overrides(&[
-            "vars.group.name=control".to_string(),
-            "vars.group.n=25".to_string(),
-        ])
+    fn store_overrides_patch_nested_paths_without_dropping_siblings() {
+        let mut store = serde_json::Map::from_iter([(
+            "group".to_string(),
+            serde_json::json!({"name":"control","n":20}),
+        )]);
+        apply_store_overrides(
+            &mut store,
+            &[
+                "store.group.n=25".to_string(),
+                "store.group.active=true".to_string(),
+            ],
+        )
         .unwrap();
 
         assert_eq!(
-            serde_json::Value::Object(overrides),
-            serde_json::json!({"group":{"name":"control","n":25}})
+            serde_json::Value::Object(store),
+            serde_json::json!({"group":{"name":"control","n":25,"active":true}})
         );
     }
 
@@ -825,7 +866,7 @@ credits = 3
             .unwrap_err()
             .to_string();
 
-        assert!(err.contains("invalid type"), "{err}");
+        assert!(err.contains("unknown config key"), "{err}");
         assert!(err.contains("vars"), "{err}");
     }
 

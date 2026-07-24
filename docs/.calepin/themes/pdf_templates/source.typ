@@ -37,7 +37,7 @@ Useful `layouts/pdf.typ` values:
 - `doc.title`: document title, or an empty string
 - `doc.body`: notebook body, injected as a `#include`
 - `doc.meta`: values from `#metadata(...) <website-metadata>`
-- `vars`: merged document variables from `[vars]` in `calepin.toml`, `calepin.setup(vars: ...)`, and CLI `--set vars.<name>=...` overrides
+- `store`: the completed document store from `[store]`, `calepin.store.set()`, successful `store-set` chunks, and CLI `--set store.<name>=...` overrides
 
 `doc.body` must be included explicitly if you want the notebook body in the rendered output.
 

@@ -2,6 +2,18 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
+#let _calepin-expected-generation = "fa59655ad7606ef4-1349cde127705c16"
+#let _calepin-verify-generation() = {
+  let path = sys.inputs.at("calepin-results", default: none)
+  if path != none and path != "" {
+    let actual = json(path).at("generation", default: "")
+    if actual != _calepin-expected-generation {
+      panic("Calepin results changed while this render was starting; Typst will retry with the completed build")
+    }
+  }
+}
+#_calepin-verify-generation()
+
 
 
 #let _raw-chunk-langs = ("python", "r", "mermaid", "dot", "tikz", "d2", "toml", "txt")
@@ -39,7 +51,7 @@
 }
 
 // Notebook theme
-#import "/.calepin/calepin.typ": _html-themed-raw-block, chunk_from_raw_plain
+#import "/.calepin/calepin.typ": _html-themed-raw-block, _is-query, chunk_from_raw_plain
 
 // Body text size, captured below at document-body level. Code blocks are sized
 // relative to this rather than to `1em`, which would compound: a literal
@@ -55,7 +67,7 @@
       set text(size: _calepin-body-size.get() * 0.8)
       it
     }
-  } else if it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
+  } else if it.lang != none and (_is-query() or _raw-chunk-langs.contains(it.lang)) and _fenced-chunks-runs(
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
@@ -174,7 +186,7 @@ layouts, partials, scripts, and `layouts/pdf.typ`.
 See #link("../themes/themes.html")[Themes] for the stable `--calepin-*`
 CSS tokens exposed by bundled themes.
 
-Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Calepin's HTML components convert these paths to page-relative browser URLs, so they also work when the website is hosted below a URL prefix. For custom HTML attributes, use `calepin.asset-href("/assets/diagram.svg")`. Ordinary relative paths remain relative and are not rewritten. If no favicon is set, _Calepin_ writes a small default to `asset-dir`/favicon.svg; if no logo is set, bundled themes use `title` as the site name.
+Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In website builds, use root-relative Typst paths for shared website assets, such as `#image("/assets/diagram.svg")`; the leading `/` points at the website source directory, so the same source works from pages in subdirectories. Calepin's HTML components convert these paths to page-relative browser URLs, so they also work when the website is hosted below a URL prefix. Raw custom HTML attributes are browser URLs rather than Typst paths, so authors are responsible for making those URLs correct for the page and deployment prefix. Ordinary relative Typst paths remain relative and are not rewritten. If no favicon is set, _Calepin_ writes a small default to `asset-dir`/favicon.svg; if no logo is set, bundled themes use `title` as the site name.
 
 = Syntax highlighting
 

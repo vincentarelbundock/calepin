@@ -12,5 +12,6 @@
 #let chunk_from_raw_plain = _bound.chunk_from_raw_plain
 #let code-block = _bound.code-block
 #let elements = _bound.elements
-#let asset-href = _bound.asset-href
+#let _resolve-asset-href = _bound._resolve-asset-href
+#let _resolve-asset-path = _bound._resolve-asset-path
 #let document = _bound.document

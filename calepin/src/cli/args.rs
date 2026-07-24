@@ -259,7 +259,7 @@ pub struct CommonArgs {
     /// Override a Calepin config value as `key=value` (repeatable).
     ///
     /// Uses dotted paths for nested config, such as `theme=./theme`,
-    /// `vars.region=CA`, or `toc.enabled=false`.
+    /// `store.region=CA`, or `toc.enabled=false`.
     #[arg(long = "set", value_name = "KEY=VALUE")]
     pub sets: Vec<String>,
 }
@@ -417,9 +417,9 @@ mod tests {
             "compile",
             "paper.typ",
             "--set",
-            "vars.region=NY",
+            "store.region=NY",
             "--set",
-            "vars.min_count=25",
+            "store.min_count=25",
         ])
         .unwrap();
 
@@ -427,7 +427,7 @@ mod tests {
             Command::Compile(args) => {
                 assert_eq!(
                     args.common.sets,
-                    vec!["vars.region=NY", "vars.min_count=25"]
+                    vec!["store.region=NY", "store.min_count=25"]
                 );
             }
             other => panic!("expected compile command, got {other:?}"),
