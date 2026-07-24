@@ -193,6 +193,89 @@ print(
 
 Sequences become Python lists and either R atomic vectors or lists, depending on their contents.
 
+= Case study
+
+Data transport between an Engine and Typst is a powerful feature that allows us to do complex typsetting very easily. For example, in this example, we use #link("websites/elements.html")[Tab HTML Element] to wrap `R` code chunks. We create two named lists, store their names in the store, and define a custom Typst function that loops over names and creates tabs automatically.
+
+
+````typ
+#import "/.calepin/calepin.typ" as calepin
+
+// The data frames stay in R; Typst receives only their names through the store.
+#let r-tabset(list-name, names-key, echo: false) = {
+  let names = calepin.store.get(names-key, default: ())
+  if names.len() > 0 {
+    calepin.elements.tabs[
+      #for (index, name) in names.enumerate() [
+        #calepin.elements.tab(name, active: index == 0,)[
+          #calepin.chunk("r",
+            raw("get(" + json.encode(list-name) + ")[[" + json.encode(name) + "]]",),
+            echo: echo,
+          )
+        ]
+      ]
+    ]
+  }
+}
+
+```r
+#| echo: false
+#| results: hide
+#| store-set: (list1names, list2names)
+list1 <- list(
+  A = data.frame(x = 1:2),
+  B = data.frame(x = 1:2, y = 11:12)
+)
+list2 <- list(
+  K = head(iris),
+  Z = head(mtcars)
+)
+list1names <- names(list1)
+list2names <- names(list2)
+```
+
+#r-tabset("list1", "list1names")
+
+#r-tabset("list2", "list2names")
+````
+
+// The data frames stay in R; Typst receives only their names through the store.
+#let r-tabset(list-name, names-key, echo: false) = {
+  let names = calepin.store.get(names-key, default: ())
+  if names.len() > 0 {
+    calepin.elements.tabs[
+      #for (index, name) in names.enumerate() [
+        #calepin.elements.tab(name, active: index == 0,)[
+          #calepin.chunk("r", 
+            raw("get(" + json.encode(list-name) + ")[[" + json.encode(name) + "]]",),
+            echo: echo,
+          )
+        ]
+      ]
+    ]
+  }
+}
+
+```r
+#| echo: false
+#| results: hide
+#| store-set: (list1names, list2names)
+list1 <- list(
+  A = data.frame(x = 1:2),
+  B = data.frame(x = 1:2, y = 11:12)
+)
+list2 <- list(
+  K = head(iris),
+  Z = head(mtcars)
+)
+list1names <- names(list1)
+list2names <- names(list2)
+```
+
+#r-tabset("list1", "list1names")
+
+#r-tabset("list2", "list2names")
+
 = Limitations
 
 Store values may contain:

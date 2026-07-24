@@ -1,0 +1,185 @@
+{
+  "schema": 1,
+  "fingerprint": 8536945422722371386,
+  "generation": "767952a19c438f3a-1349cde127705c16",
+  "completed_store": {},
+  "stabilized_chunks": [
+    {
+      "label": "fig-mermaid",
+      "engine": "mermaid",
+      "code": "%%{init: {\"htmlLabels\": false}}%%\nflowchart LR\n  Source[\"Typst document\"] --> Query[\"Calepin query\"]\n  Query --> Execute[\"Run chunks\"]\n  Execute --> Render[\"Typst render\"]",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Mermaid flowchart",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 0,
+      "crossref_labels": [
+        {
+          "kind": "fig",
+          "name": "fig-mermaid"
+        }
+      ]
+    },
+    {
+      "label": "fig-dot",
+      "engine": "dot",
+      "code": "digraph {\n  rankdir=LR\n  Draft -> Review -> Publish\n  Review -> Draft [label=\"revise\"]\n}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Graphviz state graph",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 1,
+      "crossref_labels": [
+        {
+          "kind": "fig",
+          "name": "fig-dot"
+        }
+      ]
+    },
+    {
+      "label": "fig-tikz",
+      "engine": "tikz",
+      "code": "\\begin{tikzpicture}\n  \\draw[thick, blue] (0,0) -- (2,1) -- (4,0);\n  \\fill[red] (2,1) circle (2pt);\n\\end{tikzpicture}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "TikZ path",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 2,
+      "crossref_labels": [
+        {
+          "kind": "fig",
+          "name": "fig-tikz"
+        }
+      ]
+    },
+    {
+      "label": "fig-d2",
+      "engine": "d2",
+      "code": "direction: right\n\nclient -> api: request\napi -> worker: job\nworker -> database: write",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "D2 service sketch",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 3,
+      "crossref_labels": [
+        {
+          "kind": "fig",
+          "name": "fig-d2"
+        }
+      ]
+    }
+  ],
+  "writers": {}
+}

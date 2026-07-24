@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "fingerprint": 11388794250211389261,
+  "generation": "9e0d2007b7dc6f4d-1349cde127705c16",
+  "completed_store": {},
+  "stabilized_chunks": [
+    {
+      "label": "summary",
+      "engine": "python",
+      "code": "total = 40 + 2\nprint(f\"The total is {total}.\")",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": false,
+        "output": true,
+        "results": "hide",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 2,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-1",
+      "engine": "python",
+      "code": "print(\"#strong[42 in Typst]\")",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": false,
+        "output": true,
+        "results": "typst",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 9,
+      "crossref_labels": []
+    }
+  ],
+  "writers": {}
+}
