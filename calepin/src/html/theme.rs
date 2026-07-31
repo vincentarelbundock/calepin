@@ -329,6 +329,7 @@ fn annotate_body_headings(
     let mut out = String::with_capacity(body.len());
     let mut toc = Vec::new();
     let mut counts = HashMap::<String, usize>::new();
+    let mut loc_redirects = Vec::<(String, String)>::new();
     let mut cursor = 0;
     let mut skipped_title_heading = false;
 
@@ -394,16 +395,35 @@ fn annotate_body_headings(
         let label = html_escape(&text);
         // An explicit Typst label is ferried in by the runtime as a marker
         // element just before the heading (see `heading_anchor_show_rule`).
-        // When present it takes precedence over the slugified text.
-        let explicit_id = trailing_heading_anchor_label(&body[cursor..start]);
-        let base_id = explicit_id.unwrap_or_else(|| slugify(&text));
-        let count = counts.entry(base_id.clone()).or_insert(0);
-        let id = if *count == 0 {
-            base_id
+        let marker = trailing_heading_anchor(&body[cursor..start]);
+        // Typst's HTML export emits its own id on headings that are internal
+        // reference targets; that id stays on the element, so the TOC must
+        // link to it rather than to a computed one.
+        let id = if let Some(existing) = existing_heading_id(open_tag) {
+            *counts.entry(existing.clone()).or_insert(0) += 1;
+            existing
         } else {
-            format!("{base_id}-{}", *count + 1)
+            // The marker label takes precedence over the slugified text.
+            let explicit_id = marker.as_ref().map(|marker| marker.label.clone());
+            let base_id = explicit_id.unwrap_or_else(|| slugify(&text));
+            let count = counts.entry(base_id.clone()).or_insert(0);
+            let id = if *count == 0 {
+                base_id
+            } else {
+                format!("{base_id}-{}", *count + 1)
+            };
+            *count += 1;
+            id
         };
-        *count += 1;
+        // When the heading is a reference target, Typst attaches its internal
+        // id to the marker element (the first element the show rule emits) and
+        // points reference links at it. The marker is stripped below, so those
+        // links must be redirected to the heading's actual id.
+        if let Some(loc) = marker.and_then(|marker| marker.typst_id) {
+            if loc != id {
+                loc_redirects.push((loc, id.clone()));
+            }
+        }
 
         out.push_str(&body[cursor..start]);
         if open_tag.contains(r#" id=""#) {
@@ -435,16 +455,21 @@ fn annotate_body_headings(
     out.push_str(&body[cursor..]);
     // Markers consumed above sit just before their heading and are removed
     // here; malformed or otherwise unassociated markers must not reach output.
-    let out = if out.contains(HEADING_ANCHOR_OPEN) {
+    let mut out = if out.contains(HEADING_ANCHOR_TAG) {
         strip_heading_anchor_markers(&out)
     } else {
         out
     };
+    for (loc, target) in loc_redirects {
+        let from = format!("href=\"#{}\"", html_escape(&loc));
+        let to = format!("href=\"{}\"", heading_fragment_href(&target));
+        out = out.replace(&from, &to);
+    }
     (out, toc)
 }
 
 const ROLE_HEADING_OPEN: &str = r#"<div role="heading" aria-level=""#;
-const HEADING_ANCHOR_OPEN: &str = r#"<calepin-heading-anchor data-id=""#;
+const HEADING_ANCHOR_TAG: &str = "<calepin-heading-anchor";
 const HEADING_ANCHOR_CLOSE: &str = "</calepin-heading-anchor>";
 
 fn next_heading_start(value: &str) -> Option<(usize, bool)> {
@@ -465,21 +490,50 @@ fn role_heading_level(open_tag: &str) -> Option<usize> {
     rest[..value_end].parse().ok()
 }
 
-/// Reads the label from a heading-anchor marker that immediately precedes a
-/// heading (trailing whitespace allowed). Returns `None` when `gap` does not
-/// end with a well-formed, non-empty marker.
-fn trailing_heading_anchor_label(gap: &str) -> Option<String> {
+/// A heading-anchor marker emitted by the runtime just before a labeled
+/// heading. `label` is the Typst label (`data-id`); `typst_id` is the id
+/// Typst's HTML export attaches to the marker when the heading is the target
+/// of an internal reference (attribute order is not guaranteed).
+struct HeadingAnchor {
+    label: String,
+    typst_id: Option<String>,
+}
+
+/// Parses a heading-anchor marker that immediately precedes a heading
+/// (trailing whitespace allowed). Returns `None` when `gap` does not end with
+/// a well-formed marker carrying a non-empty label.
+fn trailing_heading_anchor(gap: &str) -> Option<HeadingAnchor> {
     let before_close = gap.trim_end().strip_suffix(HEADING_ANCHOR_CLOSE)?;
-    let open = before_close.rfind(HEADING_ANCHOR_OPEN)?;
-    let rest = &before_close[open + HEADING_ANCHOR_OPEN.len()..];
-    let value_end = rest.find('"')?;
-    // The marker is an empty element, so the attribute value is followed only
-    // by the tag's closing `>`.
-    if &rest[value_end + 1..] != ">" {
+    let open = before_close.rfind(HEADING_ANCHOR_TAG)?;
+    let tag = &before_close[open..];
+    // The marker is an empty element: its open tag must run to the close tag.
+    if !tag.ends_with('>') || tag[..tag.len() - 1].contains('>') {
         return None;
     }
-    let label = decode_basic_entities(&rest[..value_end]);
-    (!label.is_empty()).then_some(label)
+    let label = decode_basic_entities(&attribute_value(tag, "data-id")?);
+    if label.is_empty() {
+        return None;
+    }
+    let typst_id = attribute_value(tag, "id")
+        .map(|value| decode_basic_entities(&value))
+        .filter(|value| !value.is_empty());
+    Some(HeadingAnchor { label, typst_id })
+}
+
+/// Reads a double-quoted attribute value from an element's open tag, returning
+/// the raw (still-escaped) value.
+fn attribute_value(tag: &str, name: &str) -> Option<String> {
+    let marker = format!(" {name}=\"");
+    let start = tag.find(&marker)? + marker.len();
+    let end = tag[start..].find('"')? + start;
+    Some(tag[start..end].to_string())
+}
+
+/// Reads a pre-existing `id` attribute from a heading's open tag. Typst's HTML
+/// export sets one on headings that are targets of internal references.
+fn existing_heading_id(open_tag: &str) -> Option<String> {
+    let id = decode_basic_entities(&attribute_value(open_tag, "id")?);
+    (!id.is_empty()).then_some(id)
 }
 
 fn heading_fragment_href(id: &str) -> String {
@@ -502,7 +556,7 @@ fn heading_fragment_href(id: &str) -> String {
 fn strip_heading_anchor_markers(html: &str) -> String {
     let mut out = String::with_capacity(html.len());
     let mut cursor = 0;
-    while let Some(rel) = html[cursor..].find(HEADING_ANCHOR_OPEN) {
+    while let Some(rel) = html[cursor..].find(HEADING_ANCHOR_TAG) {
         let open = cursor + rel;
         let Some(close_rel) = html[open..].find(HEADING_ANCHOR_CLOSE) else {
             break;
@@ -768,6 +822,48 @@ mod tests {
 
         assert!(out.contains(r#"id=" space ""#), "{out}");
         assert_eq!(toc[0].href, "#%20space%20");
+    }
+
+    #[test]
+    fn referenced_labeled_heading_keeps_label_and_redirects_reference_links() {
+        // When a labeled heading is referenced with `@label`, Typst attaches
+        // its internal id to the marker element, before `data-id`. The label
+        // must still drive the heading id, the marker must not leak into the
+        // output, and the reference link must point at the heading.
+        let body = concat!(
+            r##"<p>See <a href="#loc-1">here</a>.</p>"##,
+            r#"<calepin-heading-anchor id="loc-1" data-id="sec:intro"></calepin-heading-anchor>"#,
+            "<h3>Intro</h3>",
+        );
+        let (out, toc) = annotate_body_headings(body, None, 3);
+        assert!(!out.contains("calepin-heading-anchor"), "{out}");
+        assert!(out.contains(r#"<h3 id="sec:intro">Intro</h3>"#), "{out}");
+        assert!(out.contains(r##"<a href="#sec:intro">here</a>"##), "{out}");
+        assert_eq!(toc.len(), 1);
+        assert_eq!(toc[0].href, "#sec:intro");
+    }
+
+    #[test]
+    fn toc_links_to_a_preexisting_heading_id() {
+        // Typst's HTML export puts its own id (e.g. `loc-1`) on headings that
+        // are internal reference targets; the tag is kept as-is, so the TOC
+        // must link to that id, not to the label or slug.
+        let body = format!("{}<h2 id=\"loc-1\">Intro</h2>", anchor("sec:intro"));
+        let (out, toc) = annotate_body_headings(&body, None, 3);
+        assert!(out.contains(r#"<h2 id="loc-1">Intro</h2>"#), "{out}");
+        assert_eq!(toc.len(), 1);
+        assert_eq!(toc[0].href, "#loc-1");
+    }
+
+    #[test]
+    fn preexisting_ids_share_the_dedup_space() {
+        // A later heading whose slug collides with a Typst-emitted id must be
+        // suffixed away from it.
+        let body = r#"<h2 id="loc-1">First</h2><h2>Loc 1</h2>"#;
+        let (out, toc) = annotate_body_headings(body, None, 3);
+        assert!(out.contains(r#"<h2 id="loc-1-2">Loc 1</h2>"#), "{out}");
+        assert_eq!(toc[0].href, "#loc-1");
+        assert_eq!(toc[1].href, "#loc-1-2");
     }
 
     #[test]
