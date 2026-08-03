@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.36",
+  "calepin_version": "0.0.38",
   "input": "notebooks/diagrams.typ",
-  "generation": "767952a19c438f3a-1349cde127705c16",
+  "generation": "0664fce96185f7f3-1349cde127705c16",
   "store": {},
   "chunks": {
     "fig-mermaid": {

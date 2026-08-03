@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "c022c1518857ca91-1349cde127705c16"
+#let _calepin-expected-generation = "7ddc8f57a1205ab1-1349cde127705c16"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {
@@ -78,6 +78,7 @@
 #context _calepin-body-size.update(text.size)
 
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Tags and taxonomies])
 #metadata((title: "Tags", tags: ("websites", "metadata", "navigation"))) <website-metadata>
@@ -99,6 +100,7 @@ Create a regular page for the taxonomy index. The following generic function col
 
 ```typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #let taxonomy(field) = {
   let pages = calepin.pages()

@@ -66,6 +66,7 @@
 #context _calepin-body-size.update(text.size)
 
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Custom web elements])
 #metadata((title: "Custom elements", pdf: false, tags: ("websites", "HTML", "elements"))) <website-metadata>

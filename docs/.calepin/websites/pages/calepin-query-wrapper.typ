@@ -120,6 +120,7 @@ Use `calepin.pages()` to get structured information about every built page, incl
 
 ```typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #let posts = calepin.pages()
   .filter(p => p.path.starts-with("blog/"))

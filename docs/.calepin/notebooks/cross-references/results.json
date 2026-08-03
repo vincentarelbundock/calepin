@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.36",
+  "calepin_version": "0.0.38",
   "input": "notebooks/cross-references.typ",
-  "generation": "a9d7aff36d7c68d2-1349cde127705c16",
+  "generation": "5d456988768b63de-1349cde127705c16",
   "store": {},
   "chunks": {
     "fig-cross-scatter": {

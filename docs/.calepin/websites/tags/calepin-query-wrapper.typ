@@ -66,6 +66,7 @@
 #context _calepin-body-size.update(text.size)
 
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Tags and taxonomies])
 #metadata((title: "Tags", tags: ("websites", "metadata", "navigation"))) <website-metadata>
@@ -87,6 +88,7 @@ Create a regular page for the taxonomy index. The following generic function col
 
 ```typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #let taxonomy(field) = {
   let pages = calepin.pages()

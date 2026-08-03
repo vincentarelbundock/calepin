@@ -1,4 +1,5 @@
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Calepin])
 
@@ -151,6 +152,7 @@ Write notebooks in pure Typst, a simple, consistent, powerful, and elegant types
 
 ````typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #calepin.setup(
   echo: true,

@@ -348,6 +348,13 @@ h3 {
   margin-top: 0;
 }
 
+/* Fragment navigation (TOC links, cross-references) must land anchor targets
+   below the sticky topbar, not underneath it. Standalone documents have no
+   topbar and keep the default scroll position. */
+body:has(.calepin-site-topbar) [id] {
+  scroll-margin-top: calc(var(--calepin-topbar-height) + 1rem);
+}
+
 .calepin-content img,
 .calepin-content svg,
 .calepin-content video,

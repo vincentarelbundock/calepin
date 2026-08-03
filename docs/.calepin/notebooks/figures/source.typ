@@ -1,5 +1,6 @@
 #import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Figures and tables])
 #metadata((tags: ("notebooks", "figures", "tables"))) <website-metadata>

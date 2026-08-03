@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "fingerprint": 6046367756570965253,
-  "generation": "53e9037087c9b505-1349cde127705c16",
+  "fingerprint": 6586747043756545590,
+  "generation": "5b68d389c8769636-1349cde127705c16",
   "completed_store": {},
   "stabilized_chunks": [
     {
@@ -79,11 +79,89 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "ordinal": 4,
+      "ordinal": 3,
       "crossref_labels": []
     },
     {
       "label": "chunk-3",
+      "engine": "text",
+      "code": "my-theme/\n  theme.toml\n  css/\n    site.css",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 4,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-4",
+      "engine": "toml",
+      "code": "extends = \"academic\"\n# extends = \"calepin\" # full website with navigation\n# extends = \"typst\"   # bare bones HTML and PDF; no styling",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 5,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-5",
       "engine": "toml",
       "code": "extends = \"academic\"\n# extends = \"calepin\" # full website with navigation\n# extends = \"typst\"   # bare bones HTML and PDF; no styling",
       "script": true,
@@ -122,7 +200,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-4",
+      "label": "chunk-6",
+      "engine": "text",
+      "code": "my-theme/\n  theme.toml            # theme metadata and inheritance\n  layouts/\n    site.html           # website page wrapper\n    document.html       # standalone notebook HTML wrapper\n    site-landing.html   # optional page-specific website layout\n    pdf.typ             # PDF/SVG Typst layout around notebook source\n  partials/\n    ...                 # reusable MiniJinja fragments\n  css/\n    ...                 # theme CSS\n  js/\n    ...                 # theme JavaScript",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 7,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-7",
       "engine": "text",
       "code": "my-theme/\n  theme.toml            # theme metadata and inheritance\n  layouts/\n    site.html           # website page wrapper\n    document.html       # standalone notebook HTML wrapper\n    site-landing.html   # optional page-specific website layout\n    pdf.typ             # PDF/SVG Typst layout around notebook source\n  partials/\n    ...                 # reusable MiniJinja fragments\n  css/\n    ...                 # theme CSS\n  js/\n    ...                 # theme JavaScript",
       "script": true,
@@ -161,7 +278,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-5",
+      "label": "chunk-8",
       "engine": "sh",
       "code": "calepin new theme /path/to/my_theme --theme=academic\n",
       "script": true,
@@ -200,7 +317,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-6",
+      "label": "chunk-9",
       "engine": "sh",
       "code": "calepin compile notebook.typ --set theme=/path/to/my_theme/\n",
       "script": true,

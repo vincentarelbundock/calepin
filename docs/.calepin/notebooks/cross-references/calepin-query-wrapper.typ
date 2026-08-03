@@ -66,6 +66,7 @@
 #context _calepin-body-size.update(text.size)
 
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Cross-references])
 #metadata((tags: ("notebooks", "cross-references"))) <website-metadata>

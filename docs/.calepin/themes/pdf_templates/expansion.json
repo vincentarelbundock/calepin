@@ -1,11 +1,50 @@
 {
   "schema": 1,
-  "fingerprint": 12984931192067118757,
-  "generation": "b433be1f400cd6a5-1349cde127705c16",
+  "fingerprint": 5759330627204750901,
+  "generation": "4fed40b0f2911e35-1349cde127705c16",
   "completed_store": {},
   "stabilized_chunks": [
     {
       "label": "chunk-1",
+      "engine": "text",
+      "code": "themes/my-theme/\n  layouts/\n    pdf.typ",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 0,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-2",
       "engine": "text",
       "code": "themes/my-theme/\n  layouts/\n    pdf.typ",
       "script": true,

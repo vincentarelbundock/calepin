@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "fingerprint": 6651351749607120,
-  "generation": "0017a15e824fbed0-792dc73c2c5950e1",
+  "fingerprint": 7169582047797530236,
+  "generation": "637f78e2eafd4e7c-792dc73c2c5950e1",
   "completed_store": {
     "analysis_config": {
       "include_intercept": true,
@@ -109,11 +109,50 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "ordinal": 4,
+      "ordinal": 3,
       "crossref_labels": []
     },
     {
       "label": "chunk-3",
+      "engine": "toml",
+      "code": "[store]\nspecies = \"versicolor\"\nmin_petal_length = 4.5",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 4,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-4",
       "engine": "sh",
       "code": "calepin compile iris.typ \\\n  --set store.species=setosa \\\n  --set store.min_petal_length=1.5\n",
       "script": true,
@@ -152,7 +191,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-4",
+      "label": "chunk-5",
       "engine": "r",
       "code": "species_levels <- levels(iris$Species)\nrow_count <- nrow(iris)\n",
       "script": true,
@@ -194,7 +233,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-5",
+      "label": "chunk-6",
       "engine": "python",
       "code": "python_summary = (\n    f\"{row_count} rows; species: {', '.join(species_levels)}\"\n)\nprint(python_summary)\n",
       "script": true,
@@ -279,7 +318,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-6",
+      "label": "chunk-7",
       "engine": "r",
       "code": "stopifnot(is.list(analysis_config))\ncat(\n  analysis_config$model,\n  \"model with terms:\",\n  paste(analysis_config$terms, collapse = \", \")\n)\n",
       "script": true,
@@ -320,7 +359,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-7",
+      "label": "chunk-8",
       "engine": "python",
       "code": "assert isinstance(analysis_config, dict)\nprint(\n    f\"{analysis_config['model']} model with terms: \"\n    + \", \".join(analysis_config[\"terms\"])\n)\n",
       "script": true,
@@ -361,7 +400,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-8",
+      "label": "chunk-9",
       "engine": "r",
       "code": "list1 <- list(\n  A = data.frame(x = 1:2),\n  B = data.frame(x = 1:2, y = 11:12)\n)\nlist2 <- list(\n  K = head(iris),\n  Z = head(mtcars)\n)\nlist1names <- names(list1)\nlist2names <- names(list2)\n",
       "script": true,
@@ -403,7 +442,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-9",
+      "label": "chunk-10",
       "engine": "r",
       "code": "get(\"list1\")[[\"A\"]]",
       "script": true,
@@ -442,7 +481,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-10",
+      "label": "chunk-11",
       "engine": "r",
       "code": "get(\"list1\")[[\"B\"]]",
       "script": true,
@@ -481,7 +520,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-11",
+      "label": "chunk-12",
       "engine": "r",
       "code": "get(\"list2\")[[\"K\"]]",
       "script": true,
@@ -520,7 +559,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-12",
+      "label": "chunk-13",
       "engine": "r",
       "code": "get(\"list2\")[[\"Z\"]]",
       "script": true,
@@ -560,10 +599,10 @@
     }
   ],
   "writers": {
-    "list1names": "chunk-8",
-    "list2names": "chunk-8",
-    "python_summary": "chunk-5",
-    "row_count": "chunk-4",
-    "species_levels": "chunk-4"
+    "list1names": "chunk-9",
+    "list2names": "chunk-9",
+    "python_summary": "chunk-6",
+    "row_count": "chunk-5",
+    "species_levels": "chunk-5"
   }
 }

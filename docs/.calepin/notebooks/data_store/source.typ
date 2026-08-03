@@ -1,5 +1,6 @@
 #import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Data store and transport])
 #metadata((
@@ -156,6 +157,7 @@ Data transport between an Engine and Typst is a powerful feature that allows us 
 
 ````typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 // The data frames stay in R; Typst receives only their names through the store.
 #let r-tabset(list-name, names-key, echo: false) = {

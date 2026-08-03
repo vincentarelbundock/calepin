@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "b433be1f400cd6a5-1349cde127705c16"
+#let _calepin-expected-generation = "4fed40b0f2911e35-1349cde127705c16"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {
@@ -80,6 +80,7 @@
 
 #set document(title: [PDF])
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 #metadata((tags: ("themes", "PDF", "templates"))) <website-metadata>
 #title()
 

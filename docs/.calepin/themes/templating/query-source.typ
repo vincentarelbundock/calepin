@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Templating])
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 #metadata((tags: ("themes", "templates"))) <website-metadata>
 #title()
 

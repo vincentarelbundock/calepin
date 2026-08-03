@@ -67,6 +67,7 @@
 
 #import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Basics])
 #metadata((tags: ("getting started", "notebooks", "overview"))) <website-metadata>

@@ -1,6 +1,7 @@
 #import "/.calepin/calepin.typ" as calepin_runtime
 #set document(title: [Case studies])
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 #metadata((tags: ("themes", "examples"))) <website-metadata>
 #title()
 

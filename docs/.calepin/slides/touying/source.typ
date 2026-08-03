@@ -27,6 +27,8 @@ Example details:
 #import "@preview/touying:0.7.4": *
 #import themes.simple: *
 
+#show: calepin.document
+
 #set document(title: [Calepin Touying slides])
 
 #show: simple-theme.with(aspect-ratio: "16-9")

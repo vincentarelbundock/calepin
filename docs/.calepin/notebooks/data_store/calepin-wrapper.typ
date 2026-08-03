@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "0017a15e824fbed0-792dc73c2c5950e1"
+#let _calepin-expected-generation = "637f78e2eafd4e7c-792dc73c2c5950e1"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {
@@ -81,6 +81,7 @@
 
 #import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Data store and transport])
 #metadata((
@@ -237,6 +238,7 @@ Data transport between an Engine and Typst is a powerful feature that allows us 
 
 ````typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 // The data frames stay in R; Typst receives only their names through the store.
 #let r-tabset(list-name, names-key, echo: false) = {

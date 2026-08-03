@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "a9d7aff36d7c68d2-1349cde127705c16"
+#let _calepin-expected-generation = "5d456988768b63de-1349cde127705c16"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {
@@ -78,6 +78,7 @@
 #context _calepin-body-size.update(text.size)
 
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Cross-references])
 #metadata((tags: ("notebooks", "cross-references"))) <website-metadata>

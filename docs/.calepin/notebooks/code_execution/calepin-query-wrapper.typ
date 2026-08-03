@@ -66,6 +66,7 @@
 #context _calepin-body-size.update(text.size)
 
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Code execution])
 #metadata((tags: ("notebooks", "code execution"))) <website-metadata>

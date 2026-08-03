@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "fingerprint": 9244776464729275589,
-  "generation": "804c0b36b8147cc5-1349cde127705c16",
+  "fingerprint": 17550064261433176067,
+  "generation": "f38e5a762800b003-1349cde127705c16",
   "completed_store": {},
   "stabilized_chunks": [
     {
@@ -40,11 +40,89 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "ordinal": 1,
+      "ordinal": 0,
       "crossref_labels": []
     },
     {
       "label": "chunk-2",
+      "engine": "css",
+      "code": "/* themes/my-theme/css/custom.css */\n:root {\n  --calepin-color-background: #f6f7f9;\n  --calepin-color-text: #111827;\n  --calepin-color-accent: #2563eb;\n  --calepin-color-border: #d1d5db;\n}\n\nbody {\n  font-family: Inter, system-ui, sans-serif;\n  background: var(--calepin-color-background);\n  color: var(--calepin-color-text);\n}\n\npre {\n  border: 1px solid var(--calepin-color-border);\n}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 1,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-3",
+      "engine": "css",
+      "code": "html[data-theme=\"light\"] {\n  --calepin-color-background: #f6f7f9;\n  --calepin-color-text: #111827;\n  --calepin-color-accent: #2563eb;\n}\n\nhtml[data-theme=\"dark\"] {\n  --calepin-color-background: #101826;\n  --calepin-color-text: #f8fafc;\n  --calepin-color-accent: #60a5fa;\n}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 2,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-4",
       "engine": "css",
       "code": "html[data-theme=\"light\"] {\n  --calepin-color-background: #f6f7f9;\n  --calepin-color-text: #111827;\n  --calepin-color-accent: #2563eb;\n}\n\nhtml[data-theme=\"dark\"] {\n  --calepin-color-background: #101826;\n  --calepin-color-text: #f8fafc;\n  --calepin-color-accent: #60a5fa;\n}",
       "script": true,
@@ -83,7 +161,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-3",
+      "label": "chunk-5",
+      "engine": "text",
+      "code": "raw/\n  theme.toml\n  layouts/\n    document.html\n  css/\n    raw.css",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 4,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-6",
       "engine": "text",
       "code": "raw/\n  theme.toml\n  layouts/\n    document.html\n  css/\n    raw.css",
       "script": true,
@@ -122,7 +239,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-4",
+      "label": "chunk-7",
+      "engine": "toml",
+      "code": "extends = \"typst\"",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 6,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-8",
       "engine": "toml",
       "code": "extends = \"typst\"",
       "script": true,
@@ -161,7 +317,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-5",
+      "label": "chunk-9",
+      "engine": "html",
+      "code": "{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <main class=\"page\">\n    {{ doc.body }}\n  </main>\n{{ doc.body_close }}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 8,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-10",
       "engine": "html",
       "code": "{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <main class=\"page\">\n    {{ doc.body }}\n  </main>\n{{ doc.body_close }}",
       "script": true,
@@ -200,7 +395,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-6",
+      "label": "chunk-11",
       "engine": "sh",
       "code": "calepin compile notebook.typ --format html --set theme=raw\n",
       "script": true,

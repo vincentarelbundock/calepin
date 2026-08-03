@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "fingerprint": 12167198563881828900,
-  "generation": "a8da92a117d1c224-1349cde127705c16",
+  "fingerprint": 1345853929111769135,
+  "generation": "12ad6f049445502f-1349cde127705c16",
   "completed_store": {},
   "stabilized_chunks": [
     {
@@ -40,11 +40,89 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "ordinal": 1,
+      "ordinal": 0,
       "crossref_labels": []
     },
     {
       "label": "chunk-2",
+      "engine": "text",
+      "code": "project/\n  tufte.typ\n  theme/\n    theme.toml\n    css/\n      tufte.css",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 1,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-3",
+      "engine": "toml",
+      "code": "# theme/theme.toml\nextends = \"academic\"",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 2,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-4",
       "engine": "toml",
       "code": "# theme/theme.toml\nextends = \"academic\"",
       "script": true,
@@ -83,7 +161,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-3",
+      "label": "chunk-5",
+      "engine": "css",
+      "code": ":root, html[data-theme=\"light\"] {\n  --calepin-font-body: Palatino, \"Palatino Linotype\", \"Book Antiqua\", Georgia, serif;\n  --calepin-font-heading: Palatino, \"Palatino Linotype\", \"Book Antiqua\", Georgia, serif;\n  --calepin-surface-code: #fffdf0;\n  --calepin-surface-output: #fffdf0;\n  --calepin-surface: #fffdf0;\n  --calepin-surface-muted: #fff8eb;\n  --calepin-color-background: #fffff8;\n  --calepin-color-text: #12110f;\n  --calepin-color-muted: #5a5650;\n  --calepin-color-accent: #7a2e2a;\n  --calepin-color-accent-hover: #5f2520;\n  --calepin-color-link: #7a2e2a;\n  --calepin-color-link-hover: #5f2520;\n}\n\nhtml[data-theme=\"dark\"] {\n  --calepin-color-background: #18130d;\n  --calepin-color-text: #f6efe8;\n  --calepin-color-muted: #c5baa7;\n  --calepin-color-accent: #d58a7f;\n  --calepin-color-accent-hover: #f0b7ab;\n  --calepin-color-link: #d58a7f;\n  --calepin-color-link-hover: #f0b7ab;\n  --calepin-surface-code: #1f1a14;\n  --calepin-surface-output: #1f1a14;\n  --calepin-surface: #1f1a14;\n  --calepin-surface-muted: #2b241b;\n}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 4,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-6",
       "engine": "css",
       "code": ":root, html[data-theme=\"light\"] {\n  --calepin-font-body: Palatino, \"Palatino Linotype\", \"Book Antiqua\", Georgia, serif;\n  --calepin-font-heading: Palatino, \"Palatino Linotype\", \"Book Antiqua\", Georgia, serif;\n  --calepin-surface-code: #fffdf0;\n  --calepin-surface-output: #fffdf0;\n  --calepin-surface: #fffdf0;\n  --calepin-surface-muted: #fff8eb;\n  --calepin-color-background: #fffff8;\n  --calepin-color-text: #12110f;\n  --calepin-color-muted: #5a5650;\n  --calepin-color-accent: #7a2e2a;\n  --calepin-color-accent-hover: #5f2520;\n  --calepin-color-link: #7a2e2a;\n  --calepin-color-link-hover: #5f2520;\n}\n\nhtml[data-theme=\"dark\"] {\n  --calepin-color-background: #18130d;\n  --calepin-color-text: #f6efe8;\n  --calepin-color-muted: #c5baa7;\n  --calepin-color-accent: #d58a7f;\n  --calepin-color-accent-hover: #f0b7ab;\n  --calepin-color-link: #d58a7f;\n  --calepin-color-link-hover: #f0b7ab;\n  --calepin-surface-code: #1f1a14;\n  --calepin-surface-output: #1f1a14;\n  --calepin-surface: #1f1a14;\n  --calepin-surface-muted: #2b241b;\n}",
       "script": true,
@@ -122,7 +239,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-4",
+      "label": "chunk-7",
       "engine": "sh",
       "code": "calepin compile tufte.typ --format html --set theme=./theme\ncalepin compile tufte.typ --format pdf --set theme=./theme\n",
       "script": true,
@@ -161,7 +278,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-5",
+      "label": "chunk-8",
+      "engine": "text",
+      "code": "project/\n  book.typ\n  theme/\n    theme.toml\n    layouts/\n      pdf.typ",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 7,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-9",
       "engine": "text",
       "code": "project/\n  book.typ\n  theme/\n    theme.toml\n    layouts/\n      pdf.typ",
       "script": true,
@@ -200,7 +356,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-6",
+      "label": "chunk-10",
+      "engine": "toml",
+      "code": "# theme/theme.toml\nextends = \"typst\"",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 9,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-11",
       "engine": "toml",
       "code": "# theme/theme.toml\nextends = \"typst\"",
       "script": true,
@@ -239,7 +434,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-7",
+      "label": "chunk-12",
       "engine": "sh",
       "code": "calepin compile book.typ --format pdf --set theme=./theme\n",
       "script": true,
@@ -278,7 +473,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-8",
+      "label": "chunk-13",
       "engine": "sh",
       "code": "calepin new website --theme calepin\n",
       "script": true,
@@ -317,7 +512,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-9",
+      "label": "chunk-14",
+      "engine": "text",
+      "code": "calepin_website/\n\n  theme/            # theme directory\n    theme.toml\n    css/\n      fonts.css\n\n  calepin.toml      # website configuration file\n\n  index.typ         # website content\n  404.typ\n  assets/\n  posts/",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 17,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-15",
       "engine": "text",
       "code": "calepin_website/\n\n  theme/            # theme directory\n    theme.toml\n    css/\n      fonts.css\n\n  calepin.toml      # website configuration file\n\n  index.typ         # website content\n  404.typ\n  assets/\n  posts/",
       "script": true,
@@ -356,7 +590,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-10",
+      "label": "chunk-16",
+      "engine": "toml",
+      "code": "extends = \"calepin\"",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 19,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-17",
       "engine": "toml",
       "code": "extends = \"calepin\"",
       "script": true,
@@ -395,7 +668,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-11",
+      "label": "chunk-18",
+      "engine": "css",
+      "code": "@import url(\"https://fonts.googleapis.com/css2?family=Rubik+Moonrocks&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap\");\n\n:root {\n  --calepin-font-body: \"Space Grotesk\", system-ui, sans-serif;\n  --calepin-font-heading: \"Rubik Moonrocks\", \"Space Grotesk\", sans-serif;\n  --calepin-font-mono: \"IBM Plex Mono\", ui-monospace, monospace;\n}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 21,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-19",
       "engine": "css",
       "code": "@import url(\"https://fonts.googleapis.com/css2?family=Rubik+Moonrocks&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap\");\n\n:root {\n  --calepin-font-body: \"Space Grotesk\", system-ui, sans-serif;\n  --calepin-font-heading: \"Rubik Moonrocks\", \"Space Grotesk\", sans-serif;\n  --calepin-font-mono: \"IBM Plex Mono\", ui-monospace, monospace;\n}",
       "script": true,
@@ -434,7 +746,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-12",
+      "label": "chunk-20",
       "engine": "sh",
       "code": "calepin compile calepin_website --set theme=./theme\ncalepin serve calepin_website --open\n",
       "script": true,
@@ -473,7 +785,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-13",
+      "label": "chunk-21",
+      "engine": "text",
+      "code": "calepin_website/\n  theme/\n    theme.toml\n    partials/\n      site-head.html\n  calepin.toml\n  index.typ",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 24,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-22",
       "engine": "text",
       "code": "calepin_website/\n  theme/\n    theme.toml\n    partials/\n      site-head.html\n  calepin.toml\n  index.typ",
       "script": true,
@@ -512,7 +863,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-14",
+      "label": "chunk-23",
+      "engine": "toml",
+      "code": "# theme/theme.toml\nextends = \"calepin\"",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 26,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-24",
       "engine": "toml",
       "code": "# theme/theme.toml\nextends = \"calepin\"",
       "script": true,
@@ -551,7 +941,46 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-15",
+      "label": "chunk-25",
+      "engine": "html",
+      "code": "{{ doc.head }}\n{% include \"partials/site-head-meta.html\" %}\n<meta name=\"google-site-verification\" content=\"abc123-site-token\">\n{% include \"partials/theme-init-script.html\" %}\n{% include \"partials/theme-styles.html\" %}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 28,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-26",
       "engine": "html",
       "code": "{{ doc.head }}\n{% include \"partials/site-head-meta.html\" %}\n<meta name=\"google-site-verification\" content=\"abc123-site-token\">\n{% include \"partials/theme-init-script.html\" %}\n{% include \"partials/theme-styles.html\" %}",
       "script": true,
@@ -590,7 +1019,7 @@
       "crossref_labels": []
     },
     {
-      "label": "chunk-16",
+      "label": "chunk-27",
       "engine": "sh",
       "code": "calepin compile calepin_website --set theme=./theme\n",
       "script": true,

@@ -66,6 +66,7 @@
 #context _calepin-body-size.update(text.size)
 
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Diagrams])
 #metadata((tags: ("notebooks", "diagrams"))) <website-metadata>

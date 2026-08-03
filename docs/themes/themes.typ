@@ -1,5 +1,6 @@
 #set document(title: [Themes])
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #metadata((title: "Themes", tags: ("themes", "overview"))) <website-metadata>
 

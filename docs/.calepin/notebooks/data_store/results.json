@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.36",
+  "calepin_version": "0.0.38",
   "input": "notebooks/data_store.typ",
-  "generation": "0017a15e824fbed0-792dc73c2c5950e1",
+  "generation": "637f78e2eafd4e7c-792dc73c2c5950e1",
   "store": {
     "analysis_config": {
       "include_intercept": true,
@@ -94,8 +94,8 @@
     },
     "chunk-3": {
       "label": "chunk-3",
-      "engine": "sh",
-      "source": "calepin compile iris.typ \\\n  --set store.species=setosa \\\n  --set store.min_petal_length=1.5\n",
+      "engine": "toml",
+      "source": "[store]\nspecies = \"versicolor\"\nmin_petal_length = 4.5",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -121,6 +121,33 @@
     },
     "chunk-4": {
       "label": "chunk-4",
+      "engine": "sh",
+      "source": "calepin compile iris.typ \\\n  --set store.species=setosa \\\n  --set store.min_petal_length=1.5\n",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-5": {
+      "label": "chunk-5",
       "engine": "r",
       "source": "species_levels <- levels(iris$Species)\nrow_count <- nrow(iris)\n",
       "status": "ok",
@@ -146,8 +173,8 @@
       },
       "items": []
     },
-    "chunk-5": {
-      "label": "chunk-5",
+    "chunk-6": {
+      "label": "chunk-6",
       "engine": "python",
       "source": "python_summary = (\n    f\"{row_count} rows; species: {', '.join(species_levels)}\"\n)\nprint(python_summary)\n",
       "status": "ok",
@@ -212,8 +239,8 @@
         }
       ]
     },
-    "chunk-6": {
-      "label": "chunk-6",
+    "chunk-7": {
+      "label": "chunk-7",
       "engine": "r",
       "source": "stopifnot(is.list(analysis_config))\ncat(\n  analysis_config$model,\n  \"model with terms:\",\n  paste(analysis_config$terms, collapse = \", \")\n)\n",
       "status": "ok",
@@ -245,8 +272,8 @@
         }
       ]
     },
-    "chunk-7": {
-      "label": "chunk-7",
+    "chunk-8": {
+      "label": "chunk-8",
       "engine": "python",
       "source": "assert isinstance(analysis_config, dict)\nprint(\n    f\"{analysis_config['model']} model with terms: \"\n    + \", \".join(analysis_config[\"terms\"])\n)\n",
       "status": "ok",
@@ -278,8 +305,8 @@
         }
       ]
     },
-    "chunk-8": {
-      "label": "chunk-8",
+    "chunk-9": {
+      "label": "chunk-9",
       "engine": "r",
       "source": "list1 <- list(\n  A = data.frame(x = 1:2),\n  B = data.frame(x = 1:2, y = 11:12)\n)\nlist2 <- list(\n  K = head(iris),\n  Z = head(mtcars)\n)\nlist1names <- names(list1)\nlist2names <- names(list2)\n",
       "status": "ok",
@@ -305,8 +332,8 @@
       },
       "items": []
     },
-    "chunk-9": {
-      "label": "chunk-9",
+    "chunk-10": {
+      "label": "chunk-10",
       "engine": "r",
       "source": "get(\"list1\")[[\"A\"]]",
       "status": "ok",
@@ -338,8 +365,8 @@
         }
       ]
     },
-    "chunk-10": {
-      "label": "chunk-10",
+    "chunk-11": {
+      "label": "chunk-11",
       "engine": "r",
       "source": "get(\"list1\")[[\"B\"]]",
       "status": "ok",
@@ -371,8 +398,8 @@
         }
       ]
     },
-    "chunk-11": {
-      "label": "chunk-11",
+    "chunk-12": {
+      "label": "chunk-12",
       "engine": "r",
       "source": "get(\"list2\")[[\"K\"]]",
       "status": "ok",
@@ -404,8 +431,8 @@
         }
       ]
     },
-    "chunk-12": {
-      "label": "chunk-12",
+    "chunk-13": {
+      "label": "chunk-13",
       "engine": "r",
       "source": "get(\"list2\")[[\"Z\"]]",
       "status": "ok",

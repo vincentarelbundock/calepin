@@ -2,6 +2,8 @@
 #import "/.calepin/calepin.typ" as calepin
 #import "@preview/marginalia:0.3.1" as marginalia
 
+#show: calepin.document
+
 // Margin notes
 #show: marginalia.setup.with(
   outer: (far: 6mm, width: 50mm, sep: 6mm),

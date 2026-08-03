@@ -1,8 +1,36 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.36",
+  "calepin_version": "0.0.38",
   "input": "editors.typ",
-  "generation": "7d49b9f320435969-1349cde127705c16",
+  "generation": "49ae1833b0529fea-1349cde127705c16",
   "store": {},
-  "chunks": {}
+  "chunks": {
+    "chunk-1": {
+      "label": "chunk-1",
+      "engine": "sh",
+      "source": "calepin watch --config calepin.toml paper.typ --eval-only\n",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    }
+  }
 }

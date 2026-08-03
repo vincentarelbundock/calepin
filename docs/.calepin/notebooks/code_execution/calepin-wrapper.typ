@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "9e0d2007b7dc6f4d-1349cde127705c16"
+#let _calepin-expected-generation = "02a701e2d52bcd9b-1349cde127705c16"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {
@@ -78,6 +78,7 @@
 #context _calepin-body-size.update(text.size)
 
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Code execution])
 #metadata((tags: ("notebooks", "code execution"))) <website-metadata>

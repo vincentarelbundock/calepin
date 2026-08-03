@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "174efaf89f70f167-1349cde127705c16"
+#let _calepin-expected-generation = "5e7d67e4ef5af51c-1349cde127705c16"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {
@@ -80,6 +80,7 @@
 
 #import "/.calepin/calepin.typ" as calepin_runtime
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #set document(title: [Basics])
 #metadata((tags: ("getting started", "notebooks", "overview"))) <website-metadata>

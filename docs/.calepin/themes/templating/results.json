@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.36",
+  "calepin_version": "0.0.38",
   "input": "themes/templating.typ",
-  "generation": "93827c1d0082c32e-1349cde127705c16",
+  "generation": "198790ab8cffeb41-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {
@@ -35,7 +35,7 @@
     "chunk-2": {
       "label": "chunk-2",
       "engine": "html",
-      "source": "{% for file in css %}\n<style>\n{{ file.content }}\n</style>\n{% endfor %}",
+      "source": "<title>{{ doc.title }}</title>",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -62,7 +62,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "html",
-      "source": "{% if site.logo %}\n<img src=\"{{ site.logo }}\" alt=\"{{ site.logo_alt }}\">\n{% endif %}",
+      "source": "{% for file in css %}\n<style>\n{{ file.content }}\n</style>\n{% endfor %}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -89,7 +89,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "html",
-      "source": "{% include \"partials/site-footer.html\" %}",
+      "source": "{% for file in css %}\n<style>\n{{ file.content }}\n</style>\n{% endfor %}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -115,8 +115,8 @@
     },
     "chunk-5": {
       "label": "chunk-5",
-      "engine": "sh",
-      "source": "calepin compile notebook.typ --set store.course=\"Econ 101\" --set store.semester=\"Fall 2026\"\n",
+      "engine": "html",
+      "source": "{% if site.logo %}\n<img src=\"{{ site.logo }}\" alt=\"{{ site.logo_alt }}\">\n{% endif %}",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -142,6 +142,141 @@
     },
     "chunk-6": {
       "label": "chunk-6",
+      "engine": "html",
+      "source": "{% if site.logo %}\n<img src=\"{{ site.logo }}\" alt=\"{{ site.logo_alt }}\">\n{% endif %}",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-7": {
+      "label": "chunk-7",
+      "engine": "html",
+      "source": "{% include \"partials/site-footer.html\" %}",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-8": {
+      "label": "chunk-8",
+      "engine": "html",
+      "source": "{% include \"partials/site-footer.html\" %}",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-9": {
+      "label": "chunk-9",
+      "engine": "sh",
+      "source": "calepin compile notebook.typ --set store.course=\"Econ 101\" --set store.semester=\"Fall 2026\"\n",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-10": {
+      "label": "chunk-10",
+      "engine": "html",
+      "source": "<p>{{ store.course }}, {{ store.semester }}</p>",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-11": {
+      "label": "chunk-11",
       "engine": "html",
       "source": "<p>{{ store.course }}, {{ store.semester }}</p>",
       "status": "skipped",

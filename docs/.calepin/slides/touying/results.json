@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.36",
+  "calepin_version": "0.0.38",
   "input": "slides/touying.typ",
-  "generation": "fcf41bca468bf0d0-1349cde127705c16",
+  "generation": "de2626c1eac219b5-1349cde127705c16",
   "store": {},
   "chunks": {}
 }

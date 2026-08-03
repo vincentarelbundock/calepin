@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.36",
+  "calepin_version": "0.0.38",
   "input": "themes/html_templates.typ",
-  "generation": "cd266784ee7f6139-1349cde127705c16",
+  "generation": "dbfa5abb145edf60-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {
@@ -34,6 +34,60 @@
     },
     "chunk-2": {
       "label": "chunk-2",
+      "engine": "html",
+      "source": "{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <header class=\"document-header\">\n    <a href=\"index.html\">Home</a>\n    <button type=\"button\" data-calepin-theme-toggle>Theme</button>\n  </header>\n  <main class=\"container\">\n    {{ doc.body }}\n  </main>\n  {% for file in js %}\n  <script>\n{{ file.content }}\n  </script>\n  {% endfor %}\n{{ doc.body_close }}",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-3": {
+      "label": "chunk-3",
+      "engine": "html",
+      "source": "{% include \"partials/header.html\" %}",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-4": {
+      "label": "chunk-4",
       "engine": "html",
       "source": "{% include \"partials/header.html\" %}",
       "status": "skipped",

@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "fcf41bca468bf0d0-1349cde127705c16"
+#let _calepin-expected-generation = "de2626c1eac219b5-1349cde127705c16"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {
@@ -105,6 +105,8 @@ Example details:
 #import "/.calepin/calepin.typ" as calepin
 #import "@preview/touying:0.7.4": *
 #import themes.simple: *
+
+#show: calepin.document
 
 #set document(title: [Calepin Touying slides])
 

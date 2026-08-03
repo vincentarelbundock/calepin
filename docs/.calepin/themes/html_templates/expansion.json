@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "fingerprint": 14782616647524901177,
-  "generation": "cd266784ee7f6139-1349cde127705c16",
+  "fingerprint": 15851081598031028064,
+  "generation": "dbfa5abb145edf60-1349cde127705c16",
   "completed_store": {},
   "stabilized_chunks": [
     {
@@ -40,11 +40,89 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "ordinal": 1,
+      "ordinal": 0,
       "crossref_labels": []
     },
     {
       "label": "chunk-2",
+      "engine": "html",
+      "code": "{{ doc.head }}\n  <meta charset=\"UTF-8\">\n  <title>{{ doc.title }}</title>\n  {% for file in css %}\n  <style>\n{{ file.content }}\n  </style>\n  {% endfor %}\n{{ doc.body_open }}\n  <header class=\"document-header\">\n    <a href=\"index.html\">Home</a>\n    <button type=\"button\" data-calepin-theme-toggle>Theme</button>\n  </header>\n  <main class=\"container\">\n    {{ doc.body }}\n  </main>\n  {% for file in js %}\n  <script>\n{{ file.content }}\n  </script>\n  {% endfor %}\n{{ doc.body_close }}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 1,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-3",
+      "engine": "html",
+      "code": "{% include \"partials/header.html\" %}",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 2,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-4",
       "engine": "html",
       "code": "{% include \"partials/header.html\" %}",
       "script": true,

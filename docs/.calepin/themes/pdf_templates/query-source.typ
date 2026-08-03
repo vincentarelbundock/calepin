@@ -1,5 +1,6 @@
 #set document(title: [PDF])
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 #metadata((tags: ("themes", "PDF", "templates"))) <website-metadata>
 #title()
 

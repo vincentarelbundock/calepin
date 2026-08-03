@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.36",
+  "calepin_version": "0.0.38",
   "input": "blog/static-website-generation.typ",
-  "generation": "17e9a8bdfc6d805c-1349cde127705c16",
+  "generation": "64b7be5f4a10ffd8-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {

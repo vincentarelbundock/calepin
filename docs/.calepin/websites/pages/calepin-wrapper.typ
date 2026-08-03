@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "07ad5fce23df1358-1349cde127705c16"
+#let _calepin-expected-generation = "43d78a72b0309a90-1349cde127705c16"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {
@@ -133,6 +133,7 @@ Use `calepin.pages()` to get structured information about every built page, incl
 
 ```typ
 #import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
 
 #let posts = calepin.pages()
   .filter(p => p.path.starts-with("blog/"))
