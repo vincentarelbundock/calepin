@@ -7,6 +7,7 @@ const CALEPIN_PYTHON_ENV = "CALEPIN_PYTHON";
 let output: vscode.OutputChannel | null = null;
 let watchProcess: ChildProcessWithoutNullStreams | null = null;
 let watchInput: vscode.Uri | null = null;
+let watchConfig: string | null = null;
 
 type PythonExtensionApi = {
   settings?: {
@@ -42,7 +43,15 @@ async function startCalepinWatch(
   const input = await resolveTypstFile(uri);
   if (!input || !(await saveTypstDocument(input))) return;
 
-  if (watchProcess && watchInput && sameFsPath(watchInput.fsPath, input.fsPath)) {
+  const configPath = await pickConfigFile(input);
+  if (configPath === undefined) return;
+
+  if (
+    watchProcess &&
+    watchInput &&
+    sameFsPath(watchInput.fsPath, input.fsPath) &&
+    sameConfigChoice(watchConfig, configPath)
+  ) {
     vscode.window.setStatusBarMessage("Calepin: already watching this document", 3000);
     return;
   }
@@ -52,6 +61,7 @@ async function startCalepinWatch(
 
   stopWatch();
   const args = ["watch", input.fsPath, "--eval-only"];
+  if (configPath) args.push("--config", configPath);
   const process = startCalepin(
     binary,
     args,
@@ -62,8 +72,10 @@ async function startCalepinWatch(
 
   watchProcess = process;
   watchInput = input;
+  watchConfig = configPath;
+  const configNote = configPath ? ` with ${path.basename(configPath)}` : "";
   void vscode.window.showInformationMessage(
-    `Calepin is watching ${path.basename(input.fsPath)} in the background.`,
+    `Calepin is watching ${path.basename(input.fsPath)}${configNote} in the background.`,
   );
   vscode.window.setStatusBarMessage(
     "Calepin: watching code (run Typst: Stop Calepin to stop)",
@@ -74,6 +86,7 @@ async function startCalepinWatch(
     if (watchProcess !== process) return;
     watchProcess = null;
     watchInput = null;
+    watchConfig = null;
     output?.appendLine(`\nCalepin code watch exited with code ${code ?? "null"}.`);
     if (code !== 0 && code !== null) {
       vscode.window.showErrorMessage(
@@ -132,6 +145,37 @@ function stopWatch(): void {
     process.kill();
   }
   watchInput = null;
+  watchConfig = null;
+}
+
+/** Config path to pass as `--config`, null for no config, undefined on cancel. */
+async function pickConfigFile(input: vscode.Uri): Promise<string | null | undefined> {
+  const noConfig = { label: "Start", description: "watch without a config file" };
+  const withConfig = {
+    label: "Start with config file…",
+    description: "pass --config to calepin watch",
+  };
+  const choice = await vscode.window.showQuickPick([noConfig, withConfig], {
+    placeHolder: `Calepin: watch ${path.basename(input.fsPath)}`,
+  });
+  if (!choice) return undefined;
+  if (choice === noConfig) return null;
+
+  const folder = vscode.workspace.getWorkspaceFolder(input);
+  const picked = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: { "TOML files": ["toml"] },
+    openLabel: "Use config",
+    defaultUri: folder?.uri ?? vscode.Uri.file(path.dirname(input.fsPath)),
+  });
+  return picked?.[0]?.fsPath;
+}
+
+function sameConfigChoice(left: string | null, right: string | null): boolean {
+  if (left === null || right === null) return left === right;
+  return sameFsPath(left, right);
 }
 
 async function resolveTypstFile(uri?: vscode.Uri): Promise<vscode.Uri | null> {

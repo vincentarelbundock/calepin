@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.39
+
+- The VS Code and Positron extension's `Typst: Calepin` command now opens a picker before starting the watcher: start as before without a config file, or choose a config TOML to pass as `--config`. Re-running the command with a different choice restarts the watcher with the new configuration.
+
 ## 0.0.38
 
 - Fix TOC and cross-reference anchors in HTML output: TOC entries now link to a heading's pre-existing `id` when Typst's HTML export emits one; explicit heading labels are honored (and internal `@label` reference links repointed at them) even when Typst attaches its own reference id to the heading; and anchor jumps on website pages land below the sticky topbar instead of underneath it.

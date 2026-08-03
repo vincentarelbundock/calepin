@@ -12,7 +12,16 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
   POSITRON_CLI := /Applications/Positron.app/Contents/Resources/app/bin/code
 else
-  POSITRON_CLI := positron
+  # On Nix, `positron` on PATH is an Electron launcher whose wrapper injects
+  # GUI-only flags, so `--install-extension` opens a window and hangs instead
+  # of exiting. Detect that layout and drive cli.js in Node mode directly.
+  POSITRON_APP := $(shell P=$$(readlink -f "$$(command -v positron)" 2>/dev/null); \
+    [ -n "$$P" ] && echo "$${P%/bin/*}/share/positron")
+  ifneq ($(wildcard $(POSITRON_APP)/.positron-wrapped),)
+    POSITRON_CLI := ELECTRON_RUN_AS_NODE=1 "$(POSITRON_APP)/.positron-wrapped" "$(POSITRON_APP)/resources/app/out/cli.js"
+  else
+    POSITRON_CLI := positron
+  endif
 endif
 
 help:  ## Display this help screen
