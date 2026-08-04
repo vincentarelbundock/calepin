@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "fingerprint": 7357850997007022441,
-  "generation": "661c567f8adb7969-1349cde127705c16",
+  "fingerprint": 3436605749249631989,
+  "generation": "2fb146b89516e6f5-1349cde127705c16",
   "completed_store": {},
   "stabilized_chunks": [
     {
@@ -41,6 +41,45 @@
         "kind": null
       },
       "ordinal": 1,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-2",
+      "engine": "toml",
+      "code": "[pages]\nexclude = [\"doc-utils.typ\"]",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "ordinal": 7,
       "crossref_labels": []
     }
   ],
