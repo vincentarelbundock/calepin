@@ -6,6 +6,83 @@ pub use crate::utils::path::slash_path;
 
 pub(crate) const CALEPIN_DIR: &str = ".calepin";
 
+/// Name prefix shared by every generated Typst entry file Calepin writes beside
+/// a source document. The leading dot keeps the files out of ordinary listings
+/// and out of website page discovery, which skips hidden paths.
+pub const ENTRY_FILE_PREFIX: &str = ".calepin-entry.";
+
+/// Suffixes appended after the document stem, one per generated entry file.
+pub const ENTRY_FILE_NAMES: &[&str] = &["source.typ", "wrapper.typ", "query-wrapper.typ"];
+
+/// True when `path` names a generated entry file. Callers that walk a project
+/// tree (website discovery, static copying, link checks, the watcher) use this
+/// to ignore Calepin's own scratch files.
+pub fn is_generated_entry_file(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with(ENTRY_FILE_PREFIX))
+}
+
+/// Delete the generated entry files for one document. Callers run this after a
+/// successful render: keeping them after a failure lets Typst's error spans,
+/// which point into the entry file, still resolve.
+pub fn remove_entry_files(layout: &LayoutPaths) {
+    for path in layout.entry_paths() {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
+/// Name of one generated entry file for the document with this stem.
+pub fn entry_file_name_for(stem: &str, name: &str) -> String {
+    format!("{ENTRY_FILE_PREFIX}{stem}.{name}")
+}
+
+/// Delete the generated entry files for a document identified by its source
+/// path. Website builds clean up page by page rather than sweeping the source
+/// tree, so a concurrent build or watcher keeps its own in-flight entry files.
+pub fn remove_entry_files_for_document(input: &Path) {
+    let (Some(dir), Some(stem)) = (
+        input.parent(),
+        input.file_stem().and_then(|stem| stem.to_str()),
+    ) else {
+        return;
+    };
+    for name in ENTRY_FILE_NAMES {
+        let _ = std::fs::remove_file(dir.join(entry_file_name_for(stem, name)));
+    }
+}
+
+/// Every generated entry file under `dir`, sorted. `calepin clean` sweeps the
+/// tree with this; builds clean up per document instead.
+pub fn find_entry_files(dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut out = Vec::new();
+    collect_entry_files(dir, &mut out)?;
+    out.sort();
+    Ok(out)
+}
+
+fn collect_entry_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return Ok(()),
+    };
+    for entry in entries {
+        let path = entry?.path();
+        if path.is_dir() {
+            let skip = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| crate::utils::static_files::COMMON_SKIP_DIRS.contains(&name));
+            if !skip {
+                collect_entry_files(&path, out)?;
+            }
+        } else if is_generated_entry_file(&path) {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
 pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> {
     resolve_layout_in_dir(input, root, Path::new(CALEPIN_DIR))
 }

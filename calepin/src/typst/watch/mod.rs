@@ -211,7 +211,7 @@ fn run_eval_only_watch(args: WatchArgs) -> Result<()> {
         );
     }
 
-    watch_preprocess_changes(
+    let result = watch_preprocess_changes(
         &args,
         WatchPreprocessPaths {
             root: &initial.layout.root,
@@ -222,7 +222,11 @@ fn run_eval_only_watch(args: WatchArgs) -> Result<()> {
         false,
         "checking",
         None,
-    )
+    );
+    // Tinymist renders the document itself, so nothing outside this session
+    // needs the generated entry files once the watcher stops.
+    crate::typst::paths::remove_entry_files(&initial.layout);
+    result
 }
 
 pub fn run_watch(args: WatchArgs) -> Result<()> {
@@ -386,6 +390,8 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     if let Some(server) = asset_server {
         server.join();
     }
+    // The generated entry files are only needed while `typst watch` is running.
+    crate::typst::paths::remove_entry_files(&initial.layout);
     child_outcome.into_result()
 }
 

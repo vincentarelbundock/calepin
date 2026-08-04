@@ -6,6 +6,8 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use crate::typst::paths::ENTRY_FILE_NAMES;
+
 pub const RESULT_SCHEMA_VERSION: u8 = 2;
 pub const DEFAULT_FIG_DEVICE_FORMAT: &str = "svg";
 pub const DEFAULT_FIG_DEVICE_DPI: u32 = 150;
@@ -560,6 +562,41 @@ impl LayoutPaths {
         path.strip_prefix(&self.root)
             .map(Path::to_path_buf)
             .unwrap_or(path)
+    }
+
+    /// Generated Typst entry files carry the user's document body, so they live
+    /// beside the source document rather than under the artifact directory.
+    /// Typst resolves relative paths from the file that contains them: a body
+    /// staged under `.calepin/` would look for `#import "utils.typ"` or
+    /// `#image("fig.png")` in the artifact directory instead of next to the
+    /// document. Everything that does not carry the body (results, figures,
+    /// metadata) stays under `artifact_dir`.
+    pub fn entry_path(&self, name: &str) -> PathBuf {
+        self.work_dir.join(self.entry_file_name(name))
+    }
+
+    pub fn entry_relative_path(&self, name: &str) -> PathBuf {
+        let path = self.entry_path(name);
+        path.strip_prefix(&self.root)
+            .map(Path::to_path_buf)
+            .unwrap_or(path)
+    }
+
+    pub fn entry_file_name(&self, name: &str) -> String {
+        let stem = self
+            .input_rel
+            .file_stem()
+            .map(|stem| stem.to_string_lossy().to_string())
+            .unwrap_or_default();
+        crate::typst::paths::entry_file_name_for(&stem, name)
+    }
+
+    /// Every generated entry file for this document, for cleanup.
+    pub fn entry_paths(&self) -> Vec<PathBuf> {
+        ENTRY_FILE_NAMES
+            .iter()
+            .map(|name| self.entry_path(name))
+            .collect()
     }
 }
 

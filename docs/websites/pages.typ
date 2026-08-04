@@ -30,6 +30,35 @@ Put the page title in the document and keep website metadata for fields used by 
 
 `index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.
 
+= Import shared Typst code
+
+Reusable helper functions can live in an ordinary `.typ` file that pages import. Paths behave exactly as they do in plain Typst: a relative path resolves from the directory of the file that writes it, and a path starting with `/` resolves from the website source directory.
+
+```typ
+#import "doc-utils.typ": callout-box     // next to this page
+#import "../doc-utils.typ": callout-box  // one directory up
+#import "/doc-utils.typ": callout-box    // website source directory
+
+#callout-box[Reusable helper from a shared file.]
+```
+
+The same holds for every other Typst path: `#image("diagram.svg")`, `#csv("data.csv")`, `#bibliography("refs.bib")`, and `#include`. Root-relative paths are the more portable choice for shared assets, since they keep working when a page moves to a different directory.
+
+A helper file that sits inside the website source directory is otherwise treated as a page and rendered into the site. Exclude it so it is only ever imported:
+
+```toml
+[pages]
+exclude = ["doc-utils.typ"]
+```
+
+Excluded files stay on disk and remain importable; they are only removed from the built site.
+
+Single documents compiled with `calepin compile paper.typ` follow the same rules, with one difference: their root is the directory that contains the document, so `/` refers to that directory rather than to a website source directory, and a lone document cannot reach files above it with a root-relative path. Relative paths such as `#import "doc-utils.typ"` and `#import "../shared/doc-utils.typ"` work in both cases.
+
+This works because _Calepin_ stages the files it hands to Typst next to the document itself: while a page renders, hidden `.calepin-entry.<stem>.*` files appear in its directory, and Typst resolves the page's relative paths from there. Each build removes the files it staged once its pages have rendered, so a successful build leaves nothing behind.
+
+Two cases leave them in place. A failed render keeps them so that the file paths and line numbers in Typst's error messages still point at readable files, and an interrupted run has no chance to clean up. Both are cleared by the next successful build of the same pages, or by `calepin clean`, which removes `.calepin` directories and stray entry files together. The `.calepin-entry.` prefix is reserved: do not name your own files with it, and add `.calepin-entry.*` to `.gitignore` if you want the occasional leftover kept out of version control.
+
 = Page metadata
 
 Add arbitrary page metadata with Typst's `#metadata` function and the `<website-metadata>` label. _Calepin_ reads this dictionary while building the site and attaches it to the page entry returned by `calepin.pages()`.

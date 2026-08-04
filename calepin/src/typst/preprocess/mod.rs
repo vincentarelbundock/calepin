@@ -43,7 +43,7 @@ use fingerprint::{
 };
 use image_meta::write_image_meta;
 use staging::{
-    notebook_template_context, raw_chunk_langs, write_query_source, write_query_wrapper,
+    notebook_template_context, raw_chunk_langs, write_query_wrapper,
     write_render_wrapper,
 };
 
@@ -97,7 +97,6 @@ pub struct PreprocessPlan {
     theme: crate::theme::ThemeSelection,
     raw_languages: Vec<String>,
     query_input: PathBuf,
-    query_source: PathBuf,
     query_theme: crate::theme::ThemeSelection,
     query_store_path: PathBuf,
     results_input: String,
@@ -198,10 +197,10 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let runtime_import = format!("/{}/calepin.typ", slash_path(asset_dir));
     let staged_input = write_staged_source(&layout, &runtime_import)?;
     let image_meta = write_image_meta(&layout)?;
-    // Metadata collection runs before the final target is known. Use the
-    // staged source directly; document-level HTML must be guarded by target
-    // checks so paged/query passes never evaluate `html.*` calls.
-    let query_source = write_query_source(&layout, &staged_input)?;
+    // Metadata collection runs before the final target is known. The query pass
+    // includes the same staged source as the render pass; document-level HTML
+    // must be guarded by target checks so paged/query passes never evaluate
+    // `html.*` calls.
     // Theme the query pass with the same theme + inlined body as render, so the
     // document body shares the theme's scope during metadata extraction too (it
     // is evaluated in both passes). The theme must be knowable before the query:
@@ -217,7 +216,6 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let mut query_input = write_store_aware_query_wrapper(
         &layout,
         &runtime_import,
-        &query_source,
         &staged_input,
         &pre_query_theme,
         &external_store,
@@ -241,7 +239,6 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         query_input = write_store_aware_query_wrapper(
             &layout,
             &runtime_import,
-            &query_source,
             &staged_input,
             &pre_query_theme,
             &store,
@@ -302,7 +299,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .unwrap_or_else(|| options.fallback_theme.clone());
     // Query passes use a separate wrapper. Keep the active render wrapper
     // untouched until results and the completed store are ready to publish.
-    layout.render_input = layout.artifact_relative_path("calepin-wrapper.typ");
+    layout.render_input = layout.entry_relative_path("wrapper.typ");
 
     let cwd = layout.work_dir.clone();
     let timeout = options.timeout.map(Duration::from_secs);
@@ -336,7 +333,6 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         theme: effective_theme,
         raw_languages,
         query_input,
-        query_source,
         query_theme: pre_query_theme,
         query_store_path,
         results_input,
@@ -352,7 +348,6 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
 fn write_store_aware_query_wrapper(
     layout: &LayoutPaths,
     runtime_import: &str,
-    query_source: &Path,
     staged_input: &Path,
     theme: &crate::theme::ThemeSelection,
     store: &Value,
@@ -365,7 +360,7 @@ fn write_store_aware_query_wrapper(
         if query_theme.is_some() {
             None
         } else {
-            Some(query_source)
+            Some(staged_input)
         },
         query_theme.as_ref(),
     )
@@ -410,7 +405,6 @@ fn restore_initial_query_state(plan: &mut PreprocessPlan) -> Result<()> {
     plan.query_input = write_store_aware_query_wrapper(
         &plan.layout,
         &plan.runtime_import,
-        &plan.query_source,
         &plan.staged_input,
         &plan.query_theme,
         &plan.store,
@@ -440,7 +434,6 @@ fn apply_expansion_cache(plan: &mut PreprocessPlan) -> Result<bool> {
     plan.query_input = write_store_aware_query_wrapper(
         &plan.layout,
         &plan.runtime_import,
-        &plan.query_source,
         &plan.staged_input,
         &plan.query_theme,
         &Value::Object(manifest.completed_store.clone()),
@@ -793,7 +786,6 @@ pub fn execute_preprocess_plan_with_chunk_progress(
             plan.query_input = write_store_aware_query_wrapper(
                 &plan.layout,
                 &plan.runtime_import,
-                &plan.query_source,
                 &plan.staged_input,
                 &plan.query_theme,
                 &Value::Object(pool.store().clone()),
@@ -1315,19 +1307,16 @@ mod tests {
         })
         .unwrap();
 
-        let staged_source =
-            std::fs::read_to_string(plan.layout.root.join("_runtime/paper/source.typ")).unwrap();
+        let staged_source = std::fs::read_to_string(plan.layout.entry_path("source.typ")).unwrap();
         assert!(staged_source.contains("#import \"/_runtime/calepin.typ\" as calepin"));
         assert_eq!(
             plan.layout.artifact_dir,
             plan.layout.root.join("_runtime/paper")
         );
-        let wrapper =
-            std::fs::read_to_string(plan.layout.artifact_path("calepin-query-wrapper.typ"))
-                .unwrap();
+        let wrapper = std::fs::read_to_string(plan.layout.entry_path("query-wrapper.typ")).unwrap();
         assert!(wrapper.contains("#import \"/_runtime/calepin.typ\""));
         assert!(!wrapper.contains("#import \"/.calepin/calepin.typ\""));
-        assert!(!plan.layout.artifact_path("calepin-wrapper.typ").exists());
+        assert!(!plan.layout.entry_path("wrapper.typ").exists());
         assert!(plan.layout.root.join("_runtime/calepin.typ").is_file());
     }
 
@@ -1688,7 +1677,6 @@ mod tests {
             theme: crate::theme::ThemeSelection::Default,
             raw_languages: vec!["python".to_string(), "r".to_string()],
             query_input: PathBuf::new(),
-            query_source: PathBuf::new(),
             query_theme: crate::theme::ThemeSelection::Default,
             query_store_path: PathBuf::new(),
             results_input: String::new(),

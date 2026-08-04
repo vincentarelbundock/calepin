@@ -261,14 +261,20 @@ fn compile_config_asset_dir_writes_no_dot_calepin_directory() {
     assert!(dir.path().join("_calepin/active.typ").exists());
     assert!(dir.path().join("_calepin/tmp/calepin.typ").exists());
     assert!(dir.path().join("_calepin/tmp/runtime-config.typ").exists());
-    assert!(dir.path().join("_calepin/tmp/calepin-wrapper.typ").exists());
-    assert!(dir.path().join("_calepin/tmp/source.typ").exists());
     assert!(!dir.path().join(".calepin").exists());
 
-    let wrapper =
-        std::fs::read_to_string(dir.path().join("_calepin/tmp/calepin-wrapper.typ")).unwrap();
-    assert!(wrapper.contains("#import \"/_calepin/calepin.typ\""));
-    assert!(!wrapper.contains("/.calepin/calepin.typ"));
+    // Entry files are staged beside the document while it renders and removed
+    // once the render succeeds.
+    let leftovers = std::fs::read_dir(dir.path())
+        .unwrap()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().to_string())
+        .filter(|name| name.starts_with(".calepin-entry."))
+        .collect::<Vec<_>>();
+    assert!(
+        leftovers.is_empty(),
+        "left behind entry files: {leftovers:?}"
+    );
 
     let preview = Command::new("typst")
         .args(["compile", "tmp.typ", "preview.pdf", "--root", "."])
@@ -1901,4 +1907,138 @@ fn document_body_can_call_theme_exported_helpers() {
         extracted.contains("BADGE: VOCAB_OK"),
         "body should be able to call a theme-exported helper: {extracted}"
     );
+}
+
+#[test]
+fn compile_resolves_relative_paths_from_the_document_directory() {
+    if !has_command("typst") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::create_dir_all(dir.path().join("lib")).unwrap();
+    std::fs::write(
+        dir.path().join("helpers.typ"),
+        "#let shout(body) = upper(body)\n",
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("lib/deep.typ"), "#let depth = [NESTED]\n").unwrap();
+    std::fs::write(dir.path().join("numbers.csv"), "value\nCSVCELL\n").unwrap();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import "helpers.typ": shout
+#import "lib/deep.typ": depth
+
+#shout[sibling] #depth #csv("numbers.csv").at(1).at(0)
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8(text.stdout).unwrap();
+    for expected in ["SIBLING", "NESTED", "CSVCELL"] {
+        assert!(
+            extracted.contains(expected),
+            "relative path should resolve next to the document, missing {expected}: {extracted}"
+        );
+    }
+}
+
+#[test]
+fn website_build_resolves_relative_paths_from_each_page_directory() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::create_dir_all(dir.path().join("sub")).unwrap();
+    std::fs::write(
+        dir.path().join("calepin.toml"),
+        "title = \"Relative paths\"\n\n[pages]\nexclude = [\"shared.typ\", \"sub/local.typ\"]\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("shared.typ"),
+        "#let shared = [SHAREDHELPER]\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("sub/local.typ"),
+        "#let local = [LOCALHELPER]\n",
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("index.typ"), "= Home\n").unwrap();
+    std::fs::write(
+        dir.path().join("sub/page.typ"),
+        r#"#import "../shared.typ": shared
+#import "local.typ": local
+
+= Page
+
+#shared #local
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", ".", "_site", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "website build failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let page = std::fs::read_to_string(dir.path().join("_site/sub/page.html")).unwrap();
+    assert!(
+        page.contains("SHAREDHELPER"),
+        "parent-relative import should resolve: {page}"
+    );
+    assert!(
+        page.contains("LOCALHELPER"),
+        "sibling import should resolve: {page}"
+    );
+
+    let entry_files = collect_entry_files_recursively(dir.path());
+    assert!(
+        entry_files.is_empty(),
+        "website build should clean up its entry files: {entry_files:?}"
+    );
+}
+
+fn collect_entry_files_recursively(dir: &Path) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return out;
+    };
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        let path = entry.path();
+        if path.is_dir() {
+            out.extend(collect_entry_files_recursively(&path));
+        } else if path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with(".calepin-entry."))
+        {
+            out.push(path);
+        }
+    }
+    out
 }

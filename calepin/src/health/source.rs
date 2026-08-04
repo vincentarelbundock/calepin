@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
+use crate::typst::paths::is_generated_entry_file;
 use crate::utils::path::normalize_path;
 use crate::utils::static_files::path_has_common_skip_dir;
 
@@ -24,7 +25,7 @@ fn collect_typst_files_in(
         let entry = entry?;
         let path = entry.path();
         let rel = path.strip_prefix(root).unwrap_or(&path);
-        if path_has_common_skip_dir(rel) {
+        if path_has_common_skip_dir(rel) || is_generated_entry_file(rel) {
             continue;
         }
         if path.is_dir() {

@@ -17,7 +17,7 @@ const PREVIEW_IMPORT_PREFIX: &str = "@preview/calepin:";
 const SOURCE_REWRITTEN_CHUNK_LANGS: &[&str] = &["python", "r", "julia", "sh", "bash"];
 
 pub fn write_staged_source(layout: &LayoutPaths, runtime_import: &str) -> Result<PathBuf> {
-    let staged_relative = layout.artifact_relative_path("source.typ");
+    let staged_relative = layout.entry_relative_path("source.typ");
 
     let source = std::fs::read_to_string(&layout.input)
         .with_context(|| format!("failed to read {}", layout.input.display()))?;

@@ -166,7 +166,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         }
     };
     set_quiet(args.common.quiet);
-    build_site(WebsiteBuildOptions {
+    let result = build_site(WebsiteBuildOptions {
         config: config_path,
         src: Some(args.input),
         out: args.output,
@@ -181,6 +181,12 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         clean: true,
         minify_html: args.minify,
     })?;
+    // Each page stages entry files beside its source; the build no longer needs
+    // them once every page has rendered. Clean up page by page so a concurrent
+    // build or watcher keeps its own in-flight files.
+    for page in result.page_fingerprints.keys() {
+        crate::typst::paths::remove_entry_files_for_document(page);
+    }
     Ok(())
 }
 
@@ -662,6 +668,11 @@ fn watch_site(
             },
         )?;
         if stop.load(Ordering::Relaxed) || !restart {
+            // Clean up the pages this session staged, leaving any other build's
+            // in-flight entry files alone.
+            for page in current.page_fingerprints.keys() {
+                crate::typst::paths::remove_entry_files_for_document(page);
+            }
             return Ok(());
         }
     }
@@ -706,6 +717,11 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
         return false;
     }
     if path_has_skip_dir(rel, &[initial.asset_dir.as_path()]) {
+        return false;
+    }
+    // Generated entry files are rewritten by the build itself; reacting to them
+    // would re-trigger the build that produced them.
+    if crate::typst::paths::is_generated_entry_file(rel) {
         return false;
     }
     if path.starts_with(&initial.out_dir) {

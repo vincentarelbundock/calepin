@@ -196,14 +196,21 @@ pub fn handle_clean(args: CleanArgs) -> Result<()> {
     let root = std::env::current_dir()?;
     let mut calepin_dirs = find_calepin_dirs(&root, args.depth)?;
     calepin_dirs.sort();
+    // Generated entry files live beside their documents rather than inside
+    // `.calepin`, so they need their own sweep. A build removes its own on
+    // success; strays are left behind by interrupted or failed runs.
+    let entry_files = crate::typst::paths::find_entry_files(&root)?;
 
-    if calepin_dirs.is_empty() {
-        eprintln!("No .calepin directories found under {}", root.display());
+    if calepin_dirs.is_empty() && entry_files.is_empty() {
+        eprintln!("No Calepin artifacts found under {}", root.display());
         return Ok(());
     }
 
-    eprintln!("The following directories will be removed:");
+    eprintln!("The following will be removed:");
     for path in &calepin_dirs {
+        eprintln!("  {}", path.display());
+    }
+    for path in &entry_files {
         eprintln!("  {}", path.display());
     }
 
@@ -214,6 +221,9 @@ pub fn handle_clean(args: CleanArgs) -> Result<()> {
     for path in calepin_dirs {
         fs::remove_dir_all(&path)
             .with_context(|| format!("failed to remove {}", path.display()))?;
+    }
+    for path in entry_files {
+        fs::remove_file(&path).with_context(|| format!("failed to remove {}", path.display()))?;
     }
 
     Ok(())
@@ -284,6 +294,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         },
     )?;
     publish_active_binding(&output.layout)?;
+    crate::typst::paths::remove_entry_files(&output.layout);
     Ok(())
 }
 

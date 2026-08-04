@@ -7,6 +7,7 @@ pub(crate) use crate::utils::watch::is_write_event;
 use anyhow::{Context, Result};
 use notify::RecursiveMode;
 
+use crate::typst::paths::is_generated_entry_file;
 use crate::utils::static_files::path_has_common_skip_dir;
 use crate::utils::watch::run_debounced_watch;
 
@@ -33,7 +34,12 @@ pub(crate) fn is_watch_candidate(
         }
     }
 
-    if rel.components().next().is_none() || path_has_common_skip_dir(rel) {
+    // Calepin writes the generated entry files itself on every preprocess pass.
+    // Watching them would turn each rebuild into the trigger for the next one.
+    if rel.components().next().is_none()
+        || path_has_common_skip_dir(rel)
+        || is_generated_entry_file(rel)
+    {
         return false;
     }
 
