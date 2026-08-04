@@ -182,8 +182,11 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         minify_html: args.minify,
     })?;
     // Each page stages entry files beside its source; the build no longer needs
-    // them once every page has rendered.
-    crate::typst::paths::remove_entry_files_under(&result.src_dir)?;
+    // them once every page has rendered. Clean up page by page so a concurrent
+    // build or watcher keeps its own in-flight files.
+    for page in result.page_fingerprints.keys() {
+        crate::typst::paths::remove_entry_files_for_document(page);
+    }
     Ok(())
 }
 
@@ -235,12 +238,10 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         None
     };
 
-    let src_dir = initial.src_dir.clone();
     let result = watch_site(options, initial, live, args.common.quiet);
     if let Some(server) = server {
         server.stop();
     }
-    crate::typst::paths::remove_entry_files_under(&src_dir)?;
     result
 }
 
@@ -667,6 +668,11 @@ fn watch_site(
             },
         )?;
         if stop.load(Ordering::Relaxed) || !restart {
+            // Clean up the pages this session staged, leaving any other build's
+            // in-flight entry files alone.
+            for page in current.page_fingerprints.keys() {
+                crate::typst::paths::remove_entry_files_for_document(page);
+            }
             return Ok(());
         }
     }

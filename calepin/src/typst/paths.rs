@@ -37,18 +37,28 @@ pub fn remove_entry_files(layout: &LayoutPaths) {
     }
 }
 
-/// Delete every generated entry file under `dir`. Used after website builds,
-/// which stage one set of entry files per page, and by `calepin clean`.
-pub fn remove_entry_files_under(dir: &Path) -> Result<Vec<PathBuf>> {
-    let removed = find_entry_files(dir)?;
-    for path in &removed {
-        std::fs::remove_file(path)
-            .with_context(|| format!("failed to remove {}", path.display()))?;
-    }
-    Ok(removed)
+/// Name of one generated entry file for the document with this stem.
+pub fn entry_file_name_for(stem: &str, name: &str) -> String {
+    format!("{ENTRY_FILE_PREFIX}{stem}.{name}")
 }
 
-/// Every generated entry file under `dir`, sorted.
+/// Delete the generated entry files for a document identified by its source
+/// path. Website builds clean up page by page rather than sweeping the source
+/// tree, so a concurrent build or watcher keeps its own in-flight entry files.
+pub fn remove_entry_files_for_document(input: &Path) {
+    let (Some(dir), Some(stem)) = (
+        input.parent(),
+        input.file_stem().and_then(|stem| stem.to_str()),
+    ) else {
+        return;
+    };
+    for name in ENTRY_FILE_NAMES {
+        let _ = std::fs::remove_file(dir.join(entry_file_name_for(stem, name)));
+    }
+}
+
+/// Every generated entry file under `dir`, sorted. `calepin clean` sweeps the
+/// tree with this; builds clean up per document instead.
 pub fn find_entry_files(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     collect_entry_files(dir, &mut out)?;

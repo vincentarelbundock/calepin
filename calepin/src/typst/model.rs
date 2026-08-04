@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use crate::typst::paths::{ENTRY_FILE_NAMES, ENTRY_FILE_PREFIX};
+use crate::typst::paths::ENTRY_FILE_NAMES;
 
 pub const RESULT_SCHEMA_VERSION: u8 = 2;
 pub const DEFAULT_FIG_DEVICE_FORMAT: &str = "svg";
@@ -588,7 +588,7 @@ impl LayoutPaths {
             .file_stem()
             .map(|stem| stem.to_string_lossy().to_string())
             .unwrap_or_default();
-        format!("{ENTRY_FILE_PREFIX}{stem}.{name}")
+        crate::typst::paths::entry_file_name_for(&stem, name)
     }
 
     /// Every generated entry file for this document, for cleanup.
