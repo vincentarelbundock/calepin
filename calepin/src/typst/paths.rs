@@ -6,6 +6,78 @@ pub use crate::utils::path::slash_path;
 
 pub(crate) const CALEPIN_DIR: &str = ".calepin";
 
+/// Name prefix shared by every generated Typst entry file Calepin writes beside
+/// a source document. The leading dot keeps the files out of ordinary listings
+/// and out of website page discovery, which skips hidden paths.
+pub const ENTRY_FILE_PREFIX: &str = ".calepin-entry.";
+
+/// Suffixes appended after the document stem, one per generated entry file.
+pub const ENTRY_FILE_NAMES: &[&str] = &[
+    "source.typ",
+    "query-source.typ",
+    "wrapper.typ",
+    "query-wrapper.typ",
+];
+
+/// True when `path` names a generated entry file. Callers that walk a project
+/// tree (website discovery, static copying, link checks, the watcher) use this
+/// to ignore Calepin's own scratch files.
+pub fn is_generated_entry_file(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with(ENTRY_FILE_PREFIX))
+}
+
+/// Delete the generated entry files for one document. Callers run this after a
+/// successful render: keeping them after a failure lets Typst's error spans,
+/// which point into the entry file, still resolve.
+pub fn remove_entry_files(layout: &LayoutPaths) {
+    for path in layout.entry_paths() {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
+/// Delete every generated entry file under `dir`. Used after website builds,
+/// which stage one set of entry files per page, and by `calepin clean`.
+pub fn remove_entry_files_under(dir: &Path) -> Result<Vec<PathBuf>> {
+    let removed = find_entry_files(dir)?;
+    for path in &removed {
+        std::fs::remove_file(path)
+            .with_context(|| format!("failed to remove {}", path.display()))?;
+    }
+    Ok(removed)
+}
+
+/// Every generated entry file under `dir`, sorted.
+pub fn find_entry_files(dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut out = Vec::new();
+    collect_entry_files(dir, &mut out)?;
+    out.sort();
+    Ok(out)
+}
+
+fn collect_entry_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return Ok(()),
+    };
+    for entry in entries {
+        let path = entry?.path();
+        if path.is_dir() {
+            let skip = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| crate::utils::static_files::COMMON_SKIP_DIRS.contains(&name));
+            if !skip {
+                collect_entry_files(&path, out)?;
+            }
+        } else if is_generated_entry_file(&path) {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
 pub fn resolve_layout(input: &Path, root: Option<&Path>) -> Result<LayoutPaths> {
     resolve_layout_in_dir(input, root, Path::new(CALEPIN_DIR))
 }

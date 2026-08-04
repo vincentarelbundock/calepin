@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, bail, Context, Result};
 
 use crate::html::SiteNavEntry;
+use crate::typst::paths::is_generated_entry_file;
 use crate::utils::html::escape as html_escape;
 use crate::utils::static_files::{collect_files_by, path_has_common_skip_dir};
 use crate::utils::url::output_href_with_extension;
@@ -686,7 +687,11 @@ fn collect_static_files(
         dir,
         out,
         |rel, _| !path_has_common_skip_dir(rel) && !rel.starts_with(asset_dir),
-        |rel, _| !path_has_common_skip_dir(rel) && !rel.starts_with(asset_dir),
+        |rel, _| {
+            !path_has_common_skip_dir(rel)
+                && !rel.starts_with(asset_dir)
+                && !is_generated_entry_file(rel)
+        },
     )
 }
 
@@ -1198,9 +1203,13 @@ fn collect_typ_files(
         dir,
         out,
         |rel, _| (include_hidden || !has_hidden_component(rel)) && !rel.starts_with(asset_dir),
+        // Generated entry files are Calepin's own staged copies of pages. They
+        // are never pages themselves, including when `include_hidden` lets an
+        // explicit `[pages] include` glob reach hidden paths.
         |rel, path| {
             (include_hidden || !has_hidden_component(rel))
                 && !rel.starts_with(asset_dir)
+                && !is_generated_entry_file(rel)
                 && path.extension().and_then(|ext| ext.to_str()) == Some("typ")
                 && !exclude.contains(&rel.to_path_buf())
         },

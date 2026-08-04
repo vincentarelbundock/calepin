@@ -62,7 +62,7 @@ pub(super) fn write_render_wrapper(
 ) -> Result<PathBuf> {
     write_wrapper(
         layout,
-        "calepin-wrapper.typ",
+        "wrapper.typ",
         runtime_import,
         include_input,
         jupyter_kernels,
@@ -79,7 +79,7 @@ pub(super) fn write_query_wrapper(
 ) -> Result<PathBuf> {
     write_wrapper(
         layout,
-        "calepin-query-wrapper.typ",
+        "query-wrapper.typ",
         runtime_import,
         include_input,
         &[],
@@ -90,14 +90,14 @@ pub(super) fn write_query_wrapper(
 
 fn write_wrapper(
     layout: &LayoutPaths,
-    artifact_name: &str,
+    entry_name: &str,
     runtime_import: &str,
     include_input: Option<&Path>,
     jupyter_kernels: &[&str],
     notebook_theme: Option<&crate::theme::NotebookSource>,
     expected_generation: Option<&str>,
 ) -> Result<PathBuf> {
-    let wrapper_relative = layout.artifact_relative_path(artifact_name);
+    let wrapper_relative = layout.entry_relative_path(entry_name);
     let wrapper = layout.root.join(&wrapper_relative);
 
     // The runtime exports `document` for authored `#show: calepin.document`
@@ -230,7 +230,7 @@ fn html_raw_show_rule() -> &'static str {
 }
 
 pub(super) fn write_query_source(layout: &LayoutPaths, staged_input: &Path) -> Result<PathBuf> {
-    let query_source_relative = layout.artifact_relative_path("query-source.typ");
+    let query_source_relative = layout.entry_relative_path("query-source.typ");
     let query_source = layout.root.join(&query_source_relative);
 
     let staged_input_abs = layout.root.join(staged_input);

@@ -166,7 +166,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         }
     };
     set_quiet(args.common.quiet);
-    build_site(WebsiteBuildOptions {
+    let result = build_site(WebsiteBuildOptions {
         config: config_path,
         src: Some(args.input),
         out: args.output,
@@ -181,6 +181,9 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         clean: true,
         minify_html: args.minify,
     })?;
+    // Each page stages entry files beside its source; the build no longer needs
+    // them once every page has rendered.
+    crate::typst::paths::remove_entry_files_under(&result.src_dir)?;
     Ok(())
 }
 
@@ -232,10 +235,12 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         None
     };
 
+    let src_dir = initial.src_dir.clone();
     let result = watch_site(options, initial, live, args.common.quiet);
     if let Some(server) = server {
         server.stop();
     }
+    crate::typst::paths::remove_entry_files_under(&src_dir)?;
     result
 }
 
@@ -706,6 +711,11 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
         return false;
     }
     if path_has_skip_dir(rel, &[initial.asset_dir.as_path()]) {
+        return false;
+    }
+    // Generated entry files are rewritten by the build itself; reacting to them
+    // would re-trigger the build that produced them.
+    if crate::typst::paths::is_generated_entry_file(rel) {
         return false;
     }
     if path.starts_with(&initial.out_dir) {

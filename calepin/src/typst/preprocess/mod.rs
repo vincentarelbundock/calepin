@@ -302,7 +302,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         .unwrap_or_else(|| options.fallback_theme.clone());
     // Query passes use a separate wrapper. Keep the active render wrapper
     // untouched until results and the completed store are ready to publish.
-    layout.render_input = layout.artifact_relative_path("calepin-wrapper.typ");
+    layout.render_input = layout.entry_relative_path("wrapper.typ");
 
     let cwd = layout.work_dir.clone();
     let timeout = options.timeout.map(Duration::from_secs);
@@ -1315,19 +1315,16 @@ mod tests {
         })
         .unwrap();
 
-        let staged_source =
-            std::fs::read_to_string(plan.layout.root.join("_runtime/paper/source.typ")).unwrap();
+        let staged_source = std::fs::read_to_string(plan.layout.entry_path("source.typ")).unwrap();
         assert!(staged_source.contains("#import \"/_runtime/calepin.typ\" as calepin"));
         assert_eq!(
             plan.layout.artifact_dir,
             plan.layout.root.join("_runtime/paper")
         );
-        let wrapper =
-            std::fs::read_to_string(plan.layout.artifact_path("calepin-query-wrapper.typ"))
-                .unwrap();
+        let wrapper = std::fs::read_to_string(plan.layout.entry_path("query-wrapper.typ")).unwrap();
         assert!(wrapper.contains("#import \"/_runtime/calepin.typ\""));
         assert!(!wrapper.contains("#import \"/.calepin/calepin.typ\""));
-        assert!(!plan.layout.artifact_path("calepin-wrapper.typ").exists());
+        assert!(!plan.layout.entry_path("wrapper.typ").exists());
         assert!(plan.layout.root.join("_runtime/calepin.typ").is_file());
     }
 

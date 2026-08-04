@@ -273,10 +273,8 @@ theme = "calepin"
     .unwrap();
 
     let runtime = root.join("_runtime/calepin.typ");
-    let wrapper = root
-        .join("_runtime")
-        .join("index")
-        .join("calepin-wrapper.typ");
+    // Entry files carrying the page body live beside the page itself.
+    let wrapper = root.join(".calepin-entry.index.wrapper.typ");
 
     assert_eq!(result.asset_dir, PathBuf::from("_runtime"));
     assert!(
