@@ -2,7 +2,7 @@
 #import "/.calepin/calepin.typ": *
 #let document = _calepin-document-element
 
-#let _calepin-expected-generation = "198790ab8cffeb41-1349cde127705c16"
+#let _calepin-expected-generation = "7f7b6f8d2841190e-1349cde127705c16"
 #let _calepin-verify-generation() = {
   let path = sys.inputs.at("calepin-results", default: none)
   if path != none and path != "" {

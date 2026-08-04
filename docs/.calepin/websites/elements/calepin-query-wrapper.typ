@@ -228,19 +228,13 @@ Text#calepin.elements.sidenote[A margin note.] continues.
 
 `calepin.elements.gallery` accepts image items as tuples or dictionaries and handles local image metadata automatically in static outputs. In HTML output, it can activate lightbox behavior.
 
-For offline sites or a strict Content Security Policy, override `styles-url`,
-`lightbox-url`, and `module-url` with locally hosted PhotoSwipe assets. Their
-defaults remain the pinned PhotoSwipe 5.4.4 files on unpkg. Frontend assets are
-emitted once, so every gallery on a page must use the same three URLs; Calepin
-reports conflicting configurations at compile time.
-
 ```typ
 #calepin.elements.gallery(
   (
     ("../assets/flowers_01.jpg", "First flower", [First flower]),
-    ("../assets/flowers_04.jpg", "Fourth flower", [Fourth flower]),
     ("../assets/flowers_02.jpg", "Second flower", [Second flower]),
     ("../assets/flowers_03.jpg", "Third flower", [Third flower]),
+    ("../assets/flowers_04.jpg", "Fourth flower", [Fourth flower]),
     ("../assets/flowers_05.jpg", "Fifth flower", [Fifth flower]),
   ),
   columns: 3,
@@ -251,14 +245,44 @@ reports conflicting configurations at compile time.
 #calepin.elements.gallery(
   (
     ("../assets/flowers_01.jpg", "First flower", [First flower]),
-    ("../assets/flowers_04.jpg", "Fourth flower", [Fourth flower]),
     ("../assets/flowers_02.jpg", "Second flower", [Second flower]),
     ("../assets/flowers_03.jpg", "Third flower", [Third flower]),
+    ("../assets/flowers_04.jpg", "Fourth flower", [Fourth flower]),
     ("../assets/flowers_05.jpg", "Fifth flower", [Fifth flower]),
   ),
   columns: 3,
   max-width: 42em,
 )
+
+== Item order
+
+Items fill the grid in row-major order, left to right and then down, in both HTML
+and paged output. This matches Typst's own `grid`, so the same document lays out
+the same way in every target.
+
+Any other order is a rearrangement of the item array, which is plain Typst and
+needs no support from Calepin. A column-major helper is a dozen lines:
+
+```typ
+#let column-major(items, columns: 3) = {
+  let base = calc.div-euclid(items.len(), columns)
+  let extra = calc.rem-euclid(items.len(), columns)
+  let size = c => base + if c < extra { 1 } else { 0 }
+  let start = c => range(c).map(size).sum(default: 0)
+  let out = ()
+  for row in range(size(0)) {
+    for c in range(columns) {
+      if row < size(c) { out.push(items.at(start(c) + row)) }
+    }
+  }
+  out
+}
+
+#calepin.elements.gallery(column-major(images, columns: 3), columns: 3)
+```
+
+The same trick covers reversing, interleaving, or grouping items: transform the
+array, then hand it to `gallery`.
 
 = Columns
 

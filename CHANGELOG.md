@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.41
+
+- Center the bundled website theme's three-column shell (sidebar, main, table of contents) in the viewport. The shell was pinned to the left edge, so on wide screens all the leftover horizontal space collected on the right while the topbar, footer, and page navigation stayed centered ([#95](https://github.com/vincentarelbundock/calepin/issues/95)).
+- `calepin.elements.gallery` now fills its grid in row-major order in HTML output, matching paged output and Typst's own `grid`. Previously an integer `columns` produced a CSS multi-column container, which flowed items down each column before starting the next; a string `columns` was already row-major, so ordering depended on the argument's type. Galleries relying on the old masonry packing will now align items in rows. The documentation shows how to reorder items with a plain Typst helper when a different order is wanted. Thanks to [@maucejo](https://github.com/maucejo) for [the report](https://github.com/vincentarelbundock/calepin/issues/97).
+
 ## 0.0.39
 
 - The VS Code and Positron extension's `Typst: Calepin` command now opens a picker before starting the watcher: start as before without a config file, or choose a config TOML to pass as `--config`. Re-running the command with a different choice restarts the watcher with the new configuration.

@@ -18,11 +18,9 @@
   grid-template-areas: "sidebar main toc";
   gap: var(--calepin-shell-gap);
   width: min(100% - 2rem, 95rem);
-  margin: 0;
+  margin-inline: auto;
   justify-items: stretch;
-  justify-content: start;
   padding: 2rem 0 4rem;
-  padding-inline-start: 1rem;
 }
 
 .calepin-website-sidebar {

@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.38",
+  "calepin_version": "0.0.40",
   "input": "compile_watch_serve.typ",
-  "generation": "bb86660b871ae2b5-1349cde127705c16",
+  "generation": "4b7dda94969f68ce-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {

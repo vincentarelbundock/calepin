@@ -628,6 +628,58 @@ fn typst_compile_html_gallery_escapes_and_validates_asset_urls() {
 }
 
 #[test]
+fn typst_compile_html_gallery_lays_out_items_row_major() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    std::fs::write(
+        dir.path().join("pixel.svg"),
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>"#,
+    )
+    .unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.gallery(
+  (
+    ("pixel.svg", "one"),
+    ("pixel.svg", "two"),
+    ("pixel.svg", "three"),
+  ),
+  columns: 2,
+)
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+
+    // A CSS multi-column container would flow items down each column first; a
+    // grid fills rows left to right, matching Typst's own `grid`.
+    assert!(html.contains("display: grid"), "{html}");
+    assert!(!html.contains("column-count"), "{html}");
+
+    let order: Vec<usize> = ["one", "two", "three"]
+        .iter()
+        .map(|alt| {
+            html.find(&format!(r#"alt="{alt}""#))
+                .unwrap_or_else(|| panic!("missing {alt} in {html}"))
+        })
+        .collect();
+    assert!(order[0] < order[1] && order[1] < order[2], "{html}");
+}
+
+#[test]
 fn typst_compile_html_gallery_rejects_conflicting_asset_urls() {
     skip_if_no_typst!();
 
