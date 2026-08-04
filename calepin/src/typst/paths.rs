@@ -12,12 +12,7 @@ pub(crate) const CALEPIN_DIR: &str = ".calepin";
 pub const ENTRY_FILE_PREFIX: &str = ".calepin-entry.";
 
 /// Suffixes appended after the document stem, one per generated entry file.
-pub const ENTRY_FILE_NAMES: &[&str] = &[
-    "source.typ",
-    "query-source.typ",
-    "wrapper.typ",
-    "query-wrapper.typ",
-];
+pub const ENTRY_FILE_NAMES: &[&str] = &["source.typ", "wrapper.typ", "query-wrapper.typ"];
 
 /// True when `path` names a generated entry file. Callers that walk a project
 /// tree (website discovery, static copying, link checks, the watcher) use this

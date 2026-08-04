@@ -848,7 +848,7 @@ fn discover_site_pages_skips_generated_custom_asset_dir() {
     fs::create_dir_all(src.join("_calepin").join("index")).unwrap();
     fs::write(src.join("_calepin").join("calepin.typ"), "// generated\n").unwrap();
     fs::write(
-        src.join("_calepin").join("index").join("query-source.typ"),
+        src.join("_calepin").join("index").join("results.json"),
         "// generated\n",
     )
     .unwrap();

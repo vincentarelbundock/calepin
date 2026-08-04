@@ -229,17 +229,6 @@ fn html_raw_show_rule() -> &'static str {
 "#
 }
 
-pub(super) fn write_query_source(layout: &LayoutPaths, staged_input: &Path) -> Result<PathBuf> {
-    let query_source_relative = layout.entry_relative_path("query-source.typ");
-    let query_source = layout.root.join(&query_source_relative);
-
-    let staged_input_abs = layout.root.join(staged_input);
-    let source = fs::read_to_string(&staged_input_abs)
-        .with_context(|| format!("failed to read {}", staged_input_abs.display()))?;
-    write_if_changed(&query_source, source)?;
-    Ok(query_source_relative)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
