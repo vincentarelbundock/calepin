@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::config::TocConfig;
-use crate::typst::preprocess::read_page_meta_with_root;
+use crate::typst::preprocess::read_page_meta_in_dir;
 
 use super::util::clean_optional_string;
 
@@ -28,11 +28,15 @@ pub(super) type PageMetaMap = BTreeMap<PathBuf, PageMeta>;
 
 /// Reads the page metadata persisted by preprocessing. Missing or stale
 /// entries degrade to an empty `PageMeta` rather than failing the build.
-pub(super) fn load_page_meta(src_dir: &Path, typ_files: &[PathBuf]) -> PageMetaMap {
+pub(super) fn load_page_meta(
+    src_dir: &Path,
+    typ_files: &[PathBuf],
+    asset_dir: &Path,
+) -> PageMetaMap {
     typ_files
         .iter()
         .map(|path| {
-            let mut meta = read_page_meta_with_root(path, Some(src_dir))
+            let mut meta = read_page_meta_in_dir(path, Some(src_dir), asset_dir)
                 .map(|value| page_meta_from_value(&value))
                 .unwrap_or_default();
             if meta.title.is_none() {

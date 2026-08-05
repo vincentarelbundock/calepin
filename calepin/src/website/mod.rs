@@ -401,7 +401,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         parallelism: args.parallelism,
         progress: progress.clone(),
     })?;
-    let page_meta = load_page_meta(&src_dir, &typ_files);
+    let page_meta = load_page_meta(&src_dir, &typ_files, &asset_dir);
     let metadata = SiteMetadata::from_config(
         &config,
         &src_dir,

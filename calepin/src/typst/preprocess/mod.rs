@@ -909,9 +909,16 @@ fn write_page_meta(layout: &LayoutPaths, value: Option<&serde_json::Value>) -> R
 }
 
 /// Returns the `<website-metadata>` value persisted by the last preprocess of
-/// `input`, or `None` when it is missing or stale for the current content.
-pub fn read_page_meta_with_root(input: &Path, root: Option<&Path>) -> Option<serde_json::Value> {
-    let layout = resolve_layout(input, root).ok()?;
+/// `input` under `artifact_dir`, or `None` when it is missing or stale for the
+/// current content. Sites that configure `asset-dir` persist page metadata
+/// there rather than in `.calepin`, so callers must pass the same directory
+/// preprocessing wrote to.
+pub fn read_page_meta_in_dir(
+    input: &Path,
+    root: Option<&Path>,
+    artifact_dir: &Path,
+) -> Option<serde_json::Value> {
+    let layout = resolve_layout_in_dir(input, root, artifact_dir).ok()?;
     let contents = fs::read_to_string(page_meta_path(&layout)).ok()?;
     let document: serde_json::Value = serde_json::from_str(&contents).ok()?;
     let current = source_fingerprint(&layout.input).ok()?;
@@ -1152,10 +1159,28 @@ mod tests {
         let value = serde_json::json!({"title": "Home", "pdf": false});
 
         write_page_meta(&layout, Some(&value)).unwrap();
-        assert_eq!(read_page_meta_with_root(&input, None), Some(value));
+        assert_eq!(read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)), Some(value));
 
         fs::write(&input, "= Changed\n").unwrap();
-        assert_eq!(read_page_meta_with_root(&input, None), None);
+        assert_eq!(read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)), None);
+    }
+
+    #[test]
+    fn page_meta_reads_from_a_configured_artifact_dir() {
+        let temp = tempfile::tempdir().unwrap();
+        let input = temp.path().join("page.typ");
+        fs::write(&input, "= Home\n").unwrap();
+        let artifact_dir = Path::new("_calepin");
+        let layout = resolve_layout_in_dir(&input, None, artifact_dir).unwrap();
+        let value = serde_json::json!({"title": "Home"});
+
+        write_page_meta(&layout, Some(&value)).unwrap();
+
+        assert_eq!(read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)), None);
+        assert_eq!(
+            read_page_meta_in_dir(&input, None, artifact_dir),
+            Some(value)
+        );
     }
 
     #[test]
@@ -1167,7 +1192,7 @@ mod tests {
 
         write_page_meta(&layout, None).unwrap();
 
-        assert_eq!(read_page_meta_with_root(&input, None), None);
+        assert_eq!(read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)), None);
     }
 
     #[test]

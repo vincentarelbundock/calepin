@@ -3612,7 +3612,11 @@ fn load_page_meta_falls_back_to_document_title() {
     let page = temp.path().join("page.typ");
     fs::write(&page, "#set document(title: [From document])").unwrap();
 
-    let meta = load_page_meta(temp.path(), std::slice::from_ref(&page));
+    let meta = load_page_meta(
+        temp.path(),
+        std::slice::from_ref(&page),
+        std::path::Path::new(".calepin"),
+    );
 
     assert_eq!(meta[&page].title.as_deref(), Some("From document"));
 }
