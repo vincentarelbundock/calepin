@@ -199,12 +199,14 @@ pub(super) fn copy_typ_sources(
     Ok(())
 }
 
-pub(super) fn static_output_paths(
+/// Output locations of files copied verbatim from the source tree (static
+/// assets and, when sources are published, page `.typ` files).
+pub(super) fn copied_output_paths(
     src_dir: &Path,
     out_dir: &Path,
-    static_files: &[PathBuf],
+    files: &[PathBuf],
 ) -> BTreeSet<PathBuf> {
-    static_files
+    files
         .iter()
         .map(|path| output_path_for_source_file(src_dir, out_dir, path))
         .collect()

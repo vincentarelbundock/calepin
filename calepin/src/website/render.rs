@@ -157,6 +157,7 @@ fn render_document(
         &context.page_info,
         context.languages.as_deref(),
         context.search,
+        context.publish_sources,
     );
     // Each page's HTML template sees its merged variables (config < setup < CLI),
     // resolved during that page's preprocessing.
@@ -212,8 +213,11 @@ fn render_document(
     )?;
     let mut dependencies = read_dependencies(&preprocessed.layout.root, &html_dependencies_path)?;
     // Publishes the complete page source for the runtime view-source feature.
-    // Authors should treat comments and code chunks in site pages as public.
-    embed_source_blob(&html_output, input_path)?;
+    // Authors should treat comments and code chunks in site pages as public;
+    // `typ = false` in calepin.toml keeps the source out of the output entirely.
+    if context.publish_sources {
+        embed_source_blob(&html_output, input_path)?;
+    }
     if context.minify_html {
         minify_html_file(&html_output)?;
     }

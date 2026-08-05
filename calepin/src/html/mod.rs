@@ -921,6 +921,8 @@ mod tests {
         let site_context = SiteContextInput {
             title: Some("Example".to_string()),
             home_url: Some("index.html".to_string()),
+            page_source: true,
+            page_pdf: Some("index.pdf".to_string()),
             ..SiteContextInput::default()
         };
         let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
@@ -936,6 +938,49 @@ mod tests {
 
         assert!(themed.contains(r#"id="calepin-website-view-mode""#));
         assert!(themed.contains(r#"<option value="source">Source</option>"#));
+        assert!(themed.contains(r#"<option value="pdf">PDF</option>"#));
+    }
+
+    #[test]
+    fn default_website_theme_output_picker_drops_unavailable_views() {
+        let base = SiteContextInput {
+            title: Some("Example".to_string()),
+            home_url: Some("index.html".to_string()),
+            ..SiteContextInput::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+        let render = |site_context: &SiteContextInput| {
+            theme::apply_html_theme(
+                SAMPLE_HTML,
+                Some(&entry),
+                &HtmlSyntaxTheme::builtin(),
+                None,
+                None,
+                Some(site_context),
+            )
+            .unwrap()
+        };
+
+        // Source only: the PDF entry disappears but the picker stays.
+        let source_only = render(&SiteContextInput {
+            page_source: true,
+            ..base.clone()
+        });
+        assert!(source_only.contains(r#"<option value="source">Source</option>"#));
+        assert!(!source_only.contains(r#"value="pdf""#));
+
+        // PDF only: the Source entry disappears.
+        let pdf_only = render(&SiteContextInput {
+            page_pdf: Some("index.pdf".to_string()),
+            ..base.clone()
+        });
+        assert!(pdf_only.contains(r#"<option value="pdf">PDF</option>"#));
+        assert!(!pdf_only.contains(r#"value="source""#));
+
+        // Neither: the picker itself is gone. The bundled CSS/JS still mention
+        // the class, so the rendered `<option>` markup is what we check.
+        let html_only = render(&base);
+        assert!(!html_only.contains(r#"<option value="rendered">HTML</option>"#));
     }
 
     #[test]

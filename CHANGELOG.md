@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.42
+
+- Add a website `typ` option to `calepin.toml`. Websites publish each page's Typst source by default: the `.typ` file is copied into the output directory and the full source is embedded in the rendered HTML for the theme's view-source mode. Set `typ = false` to withhold both, which leaves an output directory of HTML only. Switching a site from `true` to `false` also removes `.typ` files copied by earlier builds.
+- Bundled website themes now list only the page views that exist in their view-mode picker. A site built with `pdf = false` no longer offers a PDF entry that fails to load, `typ = false` drops the Source entry, and an HTML-only site omits the picker entirely. Themes can make the same distinction through the new `site.page_pdf` and `site.page_source` template variables. Thanks to [@maucejo](https://github.com/maucejo) for [the report](https://github.com/vincentarelbundock/calepin/issues/101).
+
 ## 0.0.41
 
 - Relative paths in a document now resolve from the document's own directory, the way they do in plain Typst. `#import "utils.typ"`, `#image("figure.svg")`, `#csv("data.csv")`, `#bibliography("refs.bib")`, and `#include` all find files next to the document, and `../` reaches its parent directory. Previously _Calepin_ compiled a staged copy of each document under `.calepin/<stem>/`, and Typst resolved relative paths from that directory instead, so these paths failed with "file not found" while working in a Tinymist preview, which compiles the document in place. Root-relative paths beginning with `/` are unchanged. The generated entry files that carry the document body are now written beside the document as hidden `.calepin-entry.*` files and removed when the render finishes; `calepin clean` deletes any left behind by an interrupted run. Results, figures, and metadata still live under `.calepin/`. A document that relied on the old behavior by placing a helper inside `.calepin/<stem>/` must move that helper next to the document. Thanks to [@maucejo](https://github.com/maucejo) for [the report](https://github.com/vincentarelbundock/calepin/issues/96).

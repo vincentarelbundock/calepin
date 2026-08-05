@@ -33,6 +33,10 @@ pub(super) struct WebsiteConfig {
     /// Also render a PDF for every page; pages can override with `pdf` in
     /// their `<website-metadata>`.
     pub(super) pdf: Option<bool>,
+    /// Publish each page's Typst source (default `true`): copies `.typ` files
+    /// into the output directory and embeds the source in the rendered HTML for
+    /// the view-source mode. `false` suppresses both.
+    pub(super) typ: Option<bool>,
     /// Minify generated HTML after theming and website metadata injection.
     pub(super) minify: Option<bool>,
     pub(super) search: Option<SearchEngine>,

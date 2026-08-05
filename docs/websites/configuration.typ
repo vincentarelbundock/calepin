@@ -30,6 +30,11 @@ theme = "calepin"
 # Default: false.
 pdf = false
 
+# Publish each page's Typst source: copy .typ files to the output directory
+# and embed the source for the theme's view-source mode.
+# Default: true.
+typ = false
+
 # Minify generated HTML, including inline CSS and JavaScript.
 # Default: false.
 minify = true
@@ -62,6 +67,8 @@ highlight-dark = "themes/syntax/dark.tmTheme"
 ```
 
 Use `--format html` for a one-time HTML-only build, regardless of `pdf`. Use `--minify` to minify HTML for a single build without changing `calepin.toml`.
+
+By default every page ships its Typst source: the `.typ` file is copied next to the rendered HTML, and the full source is embedded in the page so the theme's view-mode picker can show it. Set `typ = false` to withhold both. Bundled themes list only the views that exist, so a site with `pdf = false` shows no PDF entry, one with `typ = false` shows no Source entry, and an HTML-only site drops the picker entirely.
 
 Set `search = "pagefind"` to add static search to bundled website themes. _Calepin_ writes the Pagefind search bundle to `pagefind/` after rendering the site and links the bundled themes to the generated component script and stylesheet. Bundled themes mark the main page content with `data-pagefind-body`, so navigation, toolbars, and footers are excluded from the search index.
 

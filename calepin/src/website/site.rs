@@ -100,6 +100,7 @@ impl SiteModel {
         page_info_map: &PageInfoMap,
         languages: Option<&[LanguageInfo]>,
         search: Option<SearchEngine>,
+        publish_source: bool,
     ) -> SiteContextInput {
         let mut sidebar = Vec::new();
         let mut sidebar_sections = Vec::new();
@@ -183,6 +184,10 @@ impl SiteModel {
                 html_escape(&absolute_site_url_without_index(base_url, current_href))
             }),
             page_title,
+            page_pdf: page_info
+                .and_then(|info| info.pdf_href.as_deref())
+                .map(|pdf| html_escape(&page_relative_url(current_href, pdf))),
+            page_source: publish_source,
             pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {
                 css: html_escape(&page_relative_url(current_href, PAGEFIND_CSS)),
                 js: html_escape(&page_relative_url(current_href, PAGEFIND_JS)),

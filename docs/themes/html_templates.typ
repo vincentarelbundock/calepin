@@ -30,6 +30,8 @@ Templates can access a variety of "contexts" and "variables" to build a document
 - `site.title`, `site.description`, `site.base_url`
 - `site.logo`, `site.logo_alt`, `site.home_url`, `site.favicon`
 - `site.page_url`, `site.page_title`
+- `site.page_pdf`: page-relative link to this page's PDF, when one is published.
+- `site.page_source`: whether this page's Typst source is published.
 - `site.sidebar`: flat navigation entries.
 - `site.sidebar_sections`: grouped navigation sections.
 - `site.sidebar_fold`: whether titled sidebar sections should fold.

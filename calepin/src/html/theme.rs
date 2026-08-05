@@ -59,6 +59,12 @@ pub(crate) struct SiteContextInput {
     pub(crate) favicon: Option<String>,
     pub(crate) page_url: Option<String>,
     pub(crate) page_title: Option<String>,
+    /// Page-relative href of this page's PDF, when one is published. `None`
+    /// hides the PDF entry in the theme's view-mode picker.
+    pub(crate) page_pdf: Option<String>,
+    /// Whether this page's Typst source is published (copied `.typ` plus the
+    /// embedded source blob). `false` hides the Source entry in the picker.
+    pub(crate) page_source: bool,
     pub(crate) pagefind: Option<SitePagefindEntry>,
     #[serde(skip)]
     pub(crate) store: serde_json::Value,

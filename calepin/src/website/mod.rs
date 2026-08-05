@@ -64,9 +64,10 @@ use navigation::{
 #[cfg(test)]
 use outputs::MANIFEST_PATH;
 use outputs::{
-    clear_previous_outputs, copy_static_files, copy_typ_sources, expected_generated_outputs,
-    load_manifest, reconcile_manifest_outputs, remove_unexpected_rendered_outputs,
-    static_output_paths, write_default_favicon, write_manifest, GeneratedOutputInputs,
+    clear_previous_outputs, copied_output_paths, copy_static_files, copy_typ_sources,
+    expected_generated_outputs, load_manifest, reconcile_manifest_outputs,
+    remove_unexpected_rendered_outputs, write_default_favicon, write_manifest,
+    GeneratedOutputInputs,
 };
 use pagefind::{
     base_url_path_prefix, cached_pagefind_outputs, manifest_output_paths, pagefind_pages,
@@ -427,6 +428,10 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     };
     let minify_html = args.minify_html || config.minify.unwrap_or(false);
     let pdf_files = pdf_enabled_files(&typ_files, &page_meta, args.render_pdf, config.pdf);
+    // `typ = false` unpublishes page sources entirely: no `.typ` copies in the
+    // output tree and no embedded source blob, so the view-source mode has
+    // nothing to show and the theme hides it.
+    let publish_sources = config.typ.unwrap_or(true);
     let page_info = build_page_info(&src_dir, &typ_files, &page_meta, &pdf_files, &languages)?;
     let pagefind_pages = pagefind_pages(&out_dir, &typ_files, &page_info, &fallback_files);
     let icon_cache_dir = website_icon_cache_dir(&asset_dir);
@@ -452,9 +457,15 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let mut expected_outputs = if out_dir == src_dir {
         expected_outputs
     } else {
+        let published_sources = if publish_sources {
+            copied_output_paths(&src_dir, &out_dir, &typ_files)
+        } else {
+            BTreeSet::new()
+        };
         expected_outputs
             .into_iter()
-            .chain(static_output_paths(&src_dir, &out_dir, &static_files))
+            .chain(copied_output_paths(&src_dir, &out_dir, &static_files))
+            .chain(published_sources)
             .collect()
     };
     let previous_manifest = load_manifest(&out_dir)?;
@@ -503,12 +514,14 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
                 .collect::<Vec<_>>();
             copy_static_files(&src_dir, &out_dir, &changed_static)?;
         }
-        let source_files = if args.incremental_inputs.is_some() {
-            build_set.clone()
-        } else {
-            typ_files.clone()
-        };
-        copy_typ_sources(&src_dir, &out_dir, &source_files)?;
+        if publish_sources {
+            let source_files = if args.incremental_inputs.is_some() {
+                build_set.clone()
+            } else {
+                typ_files.clone()
+            };
+            copy_typ_sources(&src_dir, &out_dir, &source_files)?;
+        }
     }
     asset_progress.finish("[done] write assets");
 
@@ -525,6 +538,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
             out_dir: out_dir.clone(),
             typst: calepin_config.executables.typst,
             pdf_files,
+            publish_sources,
             page_meta: page_meta.clone(),
             page_info: page_info.clone(),
             languages: languages.clone(),
@@ -911,6 +925,7 @@ struct BuildContext {
     out_dir: PathBuf,
     typst: PathBuf,
     pdf_files: BTreeSet<PathBuf>,
+    publish_sources: bool,
     page_meta: PageMetaMap,
     page_info: PageInfoMap,
     languages: Option<Vec<LanguageInfo>>,

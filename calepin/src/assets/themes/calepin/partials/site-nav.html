@@ -38,13 +38,15 @@
                     <button class="calepin-website-mobile-search-button outline secondary" type="button" aria-label="Search documentation" title="Search" data-calepin-mobile-search-trigger><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
                 </li>
                 {% endif %}
+                {% if site.page_source or site.page_pdf %}
                 <li class="calepin-website-view-mode-item">
-                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view" data-calepin-view-mode>
+                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose page view" data-calepin-view-mode>
                         <option value="rendered">HTML</option>
-                        <option value="source">Source</option>
-                        <option value="pdf">PDF</option>
+                        {% if site.page_source %}<option value="source">Source</option>{% endif %}
+                        {% if site.page_pdf %}<option value="pdf">PDF</option>{% endif %}
                     </select>
                 </li>
+                {% endif %}
             </ul>
         </nav>
     </header>

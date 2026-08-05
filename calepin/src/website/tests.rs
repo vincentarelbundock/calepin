@@ -1107,6 +1107,102 @@ exclude = ["lib/**"]
     assert!(!result.out_dir.join("lib/helpers.typ").exists());
 }
 
+fn build_site_with_source_publishing(publish: bool) -> (tempfile::TempDir, PathBuf) {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().to_path_buf();
+    std::fs::write(
+        src.join("calepin.toml"),
+        if publish { "" } else { "typ = false\n" },
+    )
+    .unwrap();
+    std::fs::write(
+        src.join("index.typ"),
+        "#set document(title: [Home])\n#heading[Home]\n",
+    )
+    .unwrap();
+
+    let result = build_site(WebsiteBuildOptions {
+        config: src.join("calepin.toml"),
+        src: Some(src.clone()),
+        out: Some(src.join("public")),
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        config_overrides: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        incremental_changed: Vec::new(),
+        clean: true,
+        minify_html: false,
+    })
+    .unwrap();
+
+    (temp, result.out_dir)
+}
+
+#[test]
+fn page_sources_are_published_by_default() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let (_temp, out_dir) = build_site_with_source_publishing(true);
+
+    assert!(out_dir.join("index.typ").is_file());
+    let html = std::fs::read_to_string(out_dir.join("index.html")).unwrap();
+    assert!(html.contains(&format!("<script id=\"{SOURCE_DATA_ID}\"")));
+    assert!(html.contains(r#"<option value="source">Source</option>"#));
+}
+
+#[test]
+fn typ_false_withholds_page_sources_and_hides_the_source_view() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let (_temp, out_dir) = build_site_with_source_publishing(false);
+
+    assert!(out_dir.join("index.html").is_file());
+    assert!(!out_dir.join("index.typ").exists());
+    let html = std::fs::read_to_string(out_dir.join("index.html")).unwrap();
+    assert!(!html.contains(&format!("<script id=\"{SOURCE_DATA_ID}\"")));
+    assert!(!html.contains(r#"value="source""#));
+    // Neither source nor PDF is available, so the picker itself is gone.
+    assert!(!html.contains(r#"<option value="rendered">HTML</option>"#));
+}
+
+#[test]
+fn disabling_source_publishing_removes_previously_copied_sources() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let (temp, out_dir) = build_site_with_source_publishing(true);
+    assert!(out_dir.join("index.typ").is_file());
+
+    let src = temp.path();
+    std::fs::write(src.join("calepin.toml"), "typ = false\n").unwrap();
+    build_site(WebsiteBuildOptions {
+        config: src.join("calepin.toml"),
+        src: Some(src.to_path_buf()),
+        out: Some(src.join("public")),
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        config_overrides: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        incremental_changed: Vec::new(),
+        clean: false,
+        minify_html: false,
+    })
+    .unwrap();
+
+    assert!(!out_dir.join("index.typ").exists());
+}
+
 #[test]
 fn discover_static_files_includes_files_dirs_and_globs_then_excludes() {
     let temp = tempfile::tempdir().unwrap();
@@ -1551,13 +1647,13 @@ fn site_context_page_url_uses_directory_style_for_index_routes() {
     );
     let empty_page_info = PageInfoMap::new();
 
-    let home = site.theme_context("index.html", None, &empty_page_info, None, None);
+    let home = site.theme_context("index.html", None, &empty_page_info, None, None, true);
     assert_eq!(
         home.page_url.as_deref(),
         Some("https://example.com/project/")
     );
 
-    let section = site.theme_context("guide/index.html", None, &empty_page_info, None, None);
+    let section = site.theme_context("guide/index.html", None, &empty_page_info, None, None, true);
     assert_eq!(
         section.page_url.as_deref(),
         Some("https://example.com/project/guide/")
@@ -1858,7 +1954,14 @@ fn theme_context_rewrites_brand_urls_relative_to_current_page() {
         true,
     );
 
-    let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None, None);
+    let context = site.theme_context(
+        "guide/usage.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        true,
+    );
 
     assert_eq!(context.logo.as_deref(), Some("../assets/logo.svg"));
     assert_eq!(context.home_url.as_deref(), Some("../index.html"));
@@ -1922,6 +2025,7 @@ fn theme_context_includes_global_sidebar_sections_with_language_specific_current
         &page_info,
         None,
         None,
+        true,
     );
 
     assert_eq!(context.sidebar_sections.len(), 2);
@@ -1967,7 +2071,14 @@ fn theme_context_rewrites_nav_urls_relative_to_current_page() {
         true,
     );
 
-    let context = site.theme_context("posts/welcome.html", None, &PageInfoMap::new(), None, None);
+    let context = site.theme_context(
+        "posts/welcome.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        true,
+    );
     let hrefs = context
         .sidebar
         .iter()
@@ -2017,6 +2128,7 @@ fn theme_context_keeps_sidebar_subheadings_unlinked() {
         &PageInfoMap::new(),
         None,
         None,
+        true,
     );
 
     assert_eq!(context.sidebar_sections[0].items[0].href, "");
@@ -2057,6 +2169,7 @@ fn theme_context_keeps_sidebar_external_links_absolute() {
         &PageInfoMap::new(),
         None,
         None,
+        true,
     );
 
     assert_eq!(
@@ -2089,7 +2202,14 @@ fn theme_context_marks_section_containing_current_page_active() {
         true,
     );
 
-    let context = site.theme_context("reference/cli.html", None, &PageInfoMap::new(), None, None);
+    let context = site.theme_context(
+        "reference/cli.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        true,
+    );
 
     assert!(context.sidebar_fold);
     assert!(!context.sidebar_sections[0].active);
@@ -2185,6 +2305,7 @@ fn theme_context_exposes_pagefind_assets_when_search_enabled() {
         &PageInfoMap::new(),
         None,
         Some(SearchEngine::Pagefind),
+        true,
     );
     let pagefind = context.pagefind.expect("Pagefind search context");
 
@@ -3281,7 +3402,14 @@ fn theme_context_exposes_relative_named_menus() {
         true,
     );
 
-    let context = site.theme_context("guide/usage.html", None, &PageInfoMap::new(), None, None);
+    let context = site.theme_context(
+        "guide/usage.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        true,
+    );
 
     assert_eq!(context.menus["main"][0].href, "../index.html");
     assert_eq!(context.menus["main"][1].href, "usage.html");
@@ -3350,7 +3478,14 @@ fn theme_context_filters_menu_page_links_by_language() {
         true,
     );
 
-    let context = site.theme_context("fr/index.html", page_info.get(&fr), &page_info, None, None);
+    let context = site.theme_context(
+        "fr/index.html",
+        page_info.get(&fr),
+        &page_info,
+        None,
+        None,
+        true,
+    );
 
     assert_eq!(context.menus["main"].len(), 1);
     assert_eq!(context.menus["main"][0].label, "Accueil");
