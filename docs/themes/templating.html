@@ -2736,6 +2736,14 @@ a:has(.calepin-nav-icon) {
   background: var(--calepin-surface-muted);
 }
 
+/* calepin.elements.columns: honor the requested column count above Pico's
+   .grid breakpoint. Falls back to Pico's auto-fit when no count is set. */
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(var(--calepin-grid-columns, auto-fit), minmax(0%, 1fr));
+  }
+}
+
     </style>
 
     <style>
@@ -4226,13 +4234,15 @@ html:not([data-theme]) {
                     <button class="calepin-website-mobile-search-button outline secondary" type="button" aria-label="Search documentation" title="Search" data-calepin-mobile-search-trigger><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
                 </li>
                 
+                
                 <li class="calepin-website-view-mode-item">
-                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view" data-calepin-view-mode>
+                    <select id="calepin-website-view-mode" class="calepin-website-view-mode" aria-label="Choose page view" data-calepin-view-mode>
                         <option value="rendered">HTML</option>
                         <option value="source">Source</option>
                         <option value="pdf">PDF</option>
                     </select>
                 </li>
+                
             </ul>
         </nav>
     </header>
@@ -4254,11 +4264,13 @@ html:not([data-theme]) {
                     
                     <button class="calepin-site-theme-toggle" type="button" aria-label="Theme" title="Theme" data-calepin-theme-toggle data-calepin-theme-storage-key="calepin-website-theme" data-calepin-theme-param="theme">Theme</button>
                     
-                    <select class="calepin-website-view-mode" aria-label="Choose rendered HTML, source, or PDF view" data-calepin-view-mode>
+                    
+                    <select class="calepin-website-view-mode" aria-label="Choose page view" data-calepin-view-mode>
                         <option value="rendered">HTML</option>
                         <option value="source">Source</option>
                         <option value="pdf">PDF</option>
                     </select>
+                    
                 </div>
             </nav>
             <nav aria-label="Documentation">

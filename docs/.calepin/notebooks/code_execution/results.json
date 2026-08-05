@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.40",
+  "calepin_version": "0.0.42",
   "input": "notebooks/code_execution.typ",
-  "generation": "32c93bb265fc9695-1349cde127705c16",
+  "generation": "fa6254a175e90c6f-1349cde127705c16",
   "store": {},
   "chunks": {
     "summary": {

@@ -1182,6 +1182,14 @@ a:has(.calepin-nav-icon) {
   background: var(--calepin-surface-muted);
 }
 
+/* calepin.elements.columns: honor the requested column count above Pico's
+   .grid breakpoint. Falls back to Pico's auto-fit when no count is set. */
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(var(--calepin-grid-columns, auto-fit), minmax(0%, 1fr));
+  }
+}
+
     </style>
 
     <style>

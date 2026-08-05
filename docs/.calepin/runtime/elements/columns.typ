@@ -25,9 +25,17 @@
   }
 
   if _is-html() {
+    let column-style = "--calepin-grid-columns: " + str(columns) + ";"
+    let user-style = html-attrs.at("style", default: "")
+    let attrs-style = if user-style == "" {
+      column-style
+    } else {
+      column-style + " " + user-style
+    }
     let attrs = (
       ..html-attrs,
       class: attrs-class,
+      style: attrs-style,
     )
     return std.html.elem(html-tag, attrs: attrs)[
       #for item in items {

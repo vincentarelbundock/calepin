@@ -200,11 +200,52 @@ fn typst_compile_html_elements_columns_uses_plain_pico_grid() {
         "expected columns helper not to emit explicit grid tracks:\n{html}"
     );
     assert!(
-        html.contains("<div class=grid><section>One</section><section>Two</section></div>")
-            || html.contains(
-                r#"<div class="grid"><section>One</section><section>Two</section></div>"#
-            ),
+        html.contains("--calepin-grid-columns: 2"),
+        "expected column count exposed as a CSS custom property:\n{html}"
+    );
+    assert!(
+        html.contains("<section>One</section><section>Two</section>"),
         "expected grid children to be emitted without item wrappers:\n{html}"
+    );
+}
+
+#[test]
+fn typst_compile_html_elements_columns_merges_user_style_with_column_count() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.elements.columns(
+  columns: 3,
+  html-attrs: (style: "align-items: stretch;"),
+  [One],
+  [Two],
+)
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("--calepin-grid-columns: 3"),
+        "expected column count exposed as a CSS custom property:\n{html}"
+    );
+    assert!(
+        html.contains("align-items: stretch;"),
+        "expected user-provided style to be preserved:\n{html}"
     );
 }
 
@@ -238,8 +279,7 @@ fn typst_compile_html_elements_columns_wraps_items_by_default() {
     );
     let html = std::fs::read_to_string(output).unwrap();
     assert!(
-        html.contains("<div class=grid><div><section>One</section></div><div><section>Two</section></div></div>")
-            || html.contains(r#"<div class="grid"><div><section>One</section></div><div><section>Two</section></div></div>"#),
+        html.contains("<div><section>One</section></div><div><section>Two</section></div>"),
         "expected grid children to be wrapped by default:\n{html}"
     );
 }

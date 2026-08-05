@@ -167,6 +167,7 @@ calepin compile notebook.typ --format html --set theme=raw
   "", `--calepin-sidebar-mobile-width`, "Mobile drawer width.",
   "", `--calepin-shell-gap`, "Gap between shell grid tracks.",
   "", `--calepin-toc-indent`, "Indent used by generated TOC trees.",
+  "", `--calepin-grid-columns`, "Column count set by calepin.elements.columns on its .grid wrapper; theme CSS applies it above the grid breakpoint.",
   "Borders", `--calepin-border-width`, "Border width used across theme.",
   "", `--calepin-border`, "Shorthand border style using `--calepin-color-border`.",
   "", `--calepin-radius-sm`, "Small corner radius.",

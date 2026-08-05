@@ -218,7 +218,7 @@ array, then hand it to `gallery`.
 
 = Columns
 
-`calepin.elements.columns` is output-aware, so the same call produces a plain Pico `.grid` for HTML and a `grid(...)` for paged output. Columns are equal-width; pass the paged-output column count as an integer. By default, each item is wrapped in a `<div>` so plain Typst blocks stay together as one column; use `wrap: false` when the items already render as standalone HTML elements such as cards.
+`calepin.elements.columns` is output-aware, so the same call produces a plain Pico `.grid` for HTML and a `grid(...)` for paged output. Columns are equal-width, and the `columns:` count applies to both outputs: paged output uses it directly, while HTML sets the `--calepin-grid-columns` CSS variable, which the theme applies above Pico's `.grid` breakpoint (on narrow screens items still stack in a single column). Items beyond the count wrap onto new rows, so six items with `columns: 3` form a two-row grid. Note that `wrap:` is unrelated to row wrapping: by default, each item is wrapped in a `<div>` so plain Typst blocks stay together as one grid cell; use `wrap: false` when the items already render as standalone HTML elements such as cards.
 
 ```typ
 #calepin.elements.columns(

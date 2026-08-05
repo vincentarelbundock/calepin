@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.40",
+  "calepin_version": "0.0.42",
   "input": "websites/health.typ",
-  "generation": "39d0449b535fb4e4-1349cde127705c16",
+  "generation": "088e22b9c8158ed9-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {

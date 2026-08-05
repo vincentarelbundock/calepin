@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.40",
+  "calepin_version": "0.0.42",
   "input": "tufte.typ",
-  "generation": "76562ff69f3d33b7-1349cde127705c16",
+  "generation": "ca008dc3b4043a97-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {
