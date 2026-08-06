@@ -2023,6 +2023,74 @@ fn website_build_resolves_relative_paths_from_each_page_directory() {
     );
 }
 
+#[test]
+fn fig_align_places_captioned_figures_in_paged_output() {
+    // Regression for GitHub issue #103
+    // (https://github.com/vincentarelbundock/calepin/issues/103):
+    // `fig-align: left`/`right` was ignored in PDF output
+    // for captioned/labeled chunks, because a Typst `figure` centers itself and
+    // ignores an outer `align()`. Assert the observable behavior: a left-aligned
+    // figure's caption sits further left than a right-aligned one's.
+    if !has_command("typst") || !has_command("Rscript") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: false, eval: true)
+
+#calepin.chunk(fig-align: left, fig-width: 40%, fig-caption: [LEFTALIGNEDCAPTION])[```r
+plot(1:10)
+```]
+
+#calepin.chunk(fig-align: right, fig-width: 40%, fig-caption: [RIGHTALIGNEDCAPTION])[```r
+plot(1:10)
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg("-layout")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .expect("failed to run pdftotext");
+    let extracted = String::from_utf8(text.stdout).unwrap();
+
+    // `-layout` preserves horizontal position as leading whitespace, so the
+    // caption's indentation tracks the figure's alignment.
+    let indent = |needle: &str| -> usize {
+        let line = extracted
+            .lines()
+            .find(|line| line.contains(needle))
+            .unwrap_or_else(|| panic!("caption {needle} not found in:\n{extracted}"));
+        line.len() - line.trim_start().len()
+    };
+
+    let left_indent = indent("LEFTALIGNEDCAPTION");
+    let right_indent = indent("RIGHTALIGNEDCAPTION");
+    assert!(
+        left_indent < right_indent,
+        "left-aligned caption ({left_indent}) should sit further left than \
+         right-aligned caption ({right_indent}):\n{extracted}"
+    );
+}
+
 fn collect_entry_files_recursively(dir: &Path) -> Vec<std::path::PathBuf> {
     let mut out = Vec::new();
     let Ok(entries) = std::fs::read_dir(dir) else {

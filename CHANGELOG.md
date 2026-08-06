@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.44
+
+- `fig-align: left` and `fig-align: right` now take effect in paged (PDF) output for captioned or labeled chunks. A Typst `figure` centers itself and ignores an outer `align()`, so _Calepin_ silently rendered every captioned figure centered regardless of `fig-align`; uncaptioned images were unaffected. The alignment is now applied through a show rule so both cases honor the setting. Thanks to [@beingalink](https://github.com/beingalink) for [the report](https://github.com/vincentarelbundock/calepin/issues/103).
+
 ## 0.0.42
 
 - Add a website `typ` option to `calepin.toml`. Websites publish each page's Typst source by default: the `.typ` file is copied into the output directory and the full source is embedded in the rendered HTML for the theme's view-source mode. Set `typ = false` to withhold both, which leaves an output directory of HTML only. Switching a site from `true` to `false` also removes `.typ` files copied by earlier builds.
