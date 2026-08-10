@@ -69,6 +69,8 @@ pub struct PreprocessOptions {
     pub asset_dir: Option<PathBuf>,
     /// `key=value` config overrides from the CLI (`--set`).
     pub config_overrides: Vec<String>,
+    /// Re-execute chunks even when the preprocessing fingerprint matches.
+    pub force: bool,
 }
 
 #[derive(Debug)]
@@ -92,6 +94,7 @@ pub struct PreprocessPlan {
     status: bool,
     progress: bool,
     sync_pages: bool,
+    force: bool,
     display_root: Option<PathBuf>,
     store: serde_json::Value,
     theme: crate::theme::ThemeSelection,
@@ -131,6 +134,9 @@ pub fn preprocess_cached_plan(mut plan: PreprocessPlan) -> Result<PreprocessOutp
 }
 
 pub fn preprocess_plan_cache_hit(plan: &mut PreprocessPlan) -> Result<bool> {
+    if plan.force {
+        return Ok(false);
+    }
     if !preprocess_cache_hit(&plan.layout, plan.fingerprint)? {
         return Ok(false);
     }
@@ -328,6 +334,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         status: options.status,
         progress: options.progress,
         sync_pages: options.sync_pages,
+        force: options.force,
         display_root: options.display_root,
         store,
         theme: effective_theme,
@@ -1260,6 +1267,7 @@ mod tests {
             html_syntax_theme: None,
             asset_dir: None,
             config_overrides: Vec::new(),
+            force: false,
         })
         .unwrap();
 
@@ -1294,6 +1302,7 @@ mod tests {
             html_syntax_theme: None,
             asset_dir: None,
             config_overrides: vec!["theme=academic".to_string()],
+            force: false,
         })
         .unwrap();
 
@@ -1329,6 +1338,7 @@ mod tests {
             html_syntax_theme: None,
             asset_dir: None,
             config_overrides: Vec::new(),
+            force: false,
         })
         .unwrap();
 
@@ -1697,6 +1707,7 @@ mod tests {
             status: false,
             progress: false,
             sync_pages: false,
+            force: false,
             display_root: None,
             store: serde_json::json!({}),
             theme: crate::theme::ThemeSelection::Default,

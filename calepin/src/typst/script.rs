@@ -72,6 +72,7 @@ pub fn extract_scripts(args: CompileArgs) -> Result<()> {
         html_syntax_theme: None,
         asset_dir: None,
         config_overrides: args.common.sets,
+        force: args.force,
     })?;
     let groups = group_script_chunks(preprocess_plan_into_chunks(plan));
 

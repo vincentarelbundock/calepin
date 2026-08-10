@@ -193,7 +193,16 @@ fn has_typst_port_flag(typst_args: &[String]) -> bool {
 }
 
 pub fn handle_clean(args: CleanArgs) -> Result<()> {
-    let root = std::env::current_dir()?;
+    let root = match args.dir {
+        Some(dir) => {
+            if !dir.is_dir() {
+                return Err(anyhow::anyhow!("`{}` is not a directory", dir.display()));
+            }
+            fs::canonicalize(&dir)
+                .with_context(|| format!("failed to resolve {}", dir.display()))?
+        }
+        None => std::env::current_dir()?,
+    };
     let mut calepin_dirs = find_calepin_dirs(&root, args.depth)?;
     calepin_dirs.sort();
     // Generated entry files live beside their documents rather than inside
@@ -270,6 +279,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         html_syntax_theme: None,
         asset_dir: None,
         config_overrides: args.common.sets,
+        force: args.force,
     })?;
     // The HTML theme step reuses the merged document variables (config < setup
     // < CLI) resolved during preprocessing.
@@ -357,6 +367,37 @@ mod tests {
     use super::*;
     use crate::cli::{Cli, Command, CommonArgs, WatchFormat};
     use clap::Parser;
+
+    #[test]
+    fn clean_respects_dir_argument() {
+        let dir = tempfile::tempdir().unwrap();
+        let inside = dir.path().join("project");
+        let outside = dir.path().join("other");
+        fs::create_dir_all(inside.join(".calepin/paper")).unwrap();
+        fs::create_dir_all(outside.join(".calepin/paper")).unwrap();
+
+        handle_clean(CleanArgs {
+            dir: Some(inside.clone()),
+            depth: None,
+            yes: true,
+        })
+        .unwrap();
+
+        assert!(!inside.join(".calepin").exists());
+        assert!(outside.join(".calepin").exists());
+    }
+
+    #[test]
+    fn clean_rejects_missing_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let err = handle_clean(CleanArgs {
+            dir: Some(dir.path().join("nope")),
+            depth: None,
+            yes: true,
+        })
+        .unwrap_err();
+        assert!(err.to_string().contains("is not a directory"));
+    }
 
     #[test]
     fn new_writes_example_file() {

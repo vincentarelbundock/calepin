@@ -95,6 +95,9 @@ Options:
       --minify
           Minify HTML output after theming and asset processing
 
+  -f, --force
+          Re-execute all code chunks even when cached results are up to date
+
       --config <CONFIG>
           Path to project config TOML
 
@@ -208,7 +211,10 @@ Options:
 ```text
 Remove `.calepin` directories and generated artifacts
 
-Usage: calepin clean [OPTIONS]
+Usage: calepin clean [OPTIONS] [DIR]
+
+Arguments:
+  [DIR]  Directory to search for Calepin artifacts (default: current directory)
 
 Options:
   -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories

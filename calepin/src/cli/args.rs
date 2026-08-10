@@ -163,6 +163,10 @@ pub struct CompileArgs {
     #[arg(long)]
     pub minify: bool,
 
+    /// Re-execute all code chunks even when cached results are up to date
+    #[arg(short, long)]
+    pub force: bool,
+
     #[command(flatten)]
     pub common: CommonArgs,
 
@@ -233,6 +237,10 @@ pub struct ServeArgs {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct CleanArgs {
+    /// Directory to search for Calepin artifacts (default: current directory)
+    #[arg(value_name = "DIR")]
+    pub dir: Option<PathBuf>,
+
     /// Maximum recursion depth when searching for `.calepin` directories
     #[arg(short, long)]
     pub depth: Option<usize>,
@@ -567,6 +575,41 @@ mod tests {
                 assert!(args.yes);
             }
             other => panic!("expected clean command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_clean_args_dir() {
+        let cli = Cli::try_parse_from(["calepin", "clean", "projects/paper", "--yes"]).unwrap();
+
+        match cli.command {
+            Command::Clean(args) => {
+                assert_eq!(args.dir, Some(PathBuf::from("projects/paper")));
+                assert!(args.yes);
+            }
+            other => panic!("expected clean command, got {other:?}"),
+        }
+
+        let cli = Cli::try_parse_from(["calepin", "clean", "--yes"]).unwrap();
+        match cli.command {
+            Command::Clean(args) => assert_eq!(args.dir, None),
+            other => panic!("expected clean command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_compile_args_force() {
+        let cli = Cli::try_parse_from(["calepin", "compile", "--force", "paper.typ"]).unwrap();
+
+        match cli.command {
+            Command::Compile(args) => assert!(args.force),
+            other => panic!("expected compile command, got {other:?}"),
+        }
+
+        let cli = Cli::try_parse_from(["calepin", "compile", "paper.typ"]).unwrap();
+        match cli.command {
+            Command::Compile(args) => assert!(!args.force),
+            other => panic!("expected compile command, got {other:?}"),
         }
     }
 

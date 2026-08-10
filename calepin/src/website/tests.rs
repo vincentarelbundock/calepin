@@ -163,6 +163,7 @@ fn website_build_result_canonicalizes_config_theme_dir() {
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 
@@ -210,6 +211,7 @@ fn website_build_records_typst_dependencies_for_each_page() {
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     };
     let result = build_site(options.clone()).unwrap();
 
@@ -269,6 +271,7 @@ theme = "calepin"
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 
@@ -319,6 +322,7 @@ fn website_build_result_normalizes_created_output_dir_inside_source() {
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 
@@ -361,6 +365,7 @@ fn website_config_output_dir_sets_default_build_directory() {
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 
@@ -401,6 +406,7 @@ fn website_cli_output_overrides_config_output_dir() {
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 
@@ -1262,6 +1268,7 @@ exclude = ["lib/**"]
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 
@@ -1297,6 +1304,7 @@ fn build_site_with_source_publishing(publish: bool) -> (tempfile::TempDir, PathB
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 
@@ -1359,6 +1367,7 @@ fn disabling_source_publishing_removes_previously_copied_sources() {
         incremental_changed: Vec::new(),
         clean: false,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 
@@ -2438,6 +2447,7 @@ fn shared_theme_init_script_is_inlined() {
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     })
     .unwrap();
 

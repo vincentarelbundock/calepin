@@ -123,6 +123,7 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
         html_syntax_theme: None,
         asset_dir: None,
         config_overrides: args.common.sets.clone(),
+        force: false,
     }
 }
 

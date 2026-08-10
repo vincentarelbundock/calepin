@@ -181,6 +181,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: args.minify,
+        force: args.force,
     })?;
     // Each page stages entry files beside its source; the build no longer needs
     // them once every page has rendered. Clean up page by page so a concurrent
@@ -224,6 +225,7 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         incremental_changed: Vec::new(),
         clean: true,
         minify_html: false,
+        force: false,
     };
     let initial = build_site(options.clone())?;
     let live = serve::LiveReload::new();
@@ -264,6 +266,7 @@ struct WebsiteBuildOptions {
     incremental_changed: Vec<PathBuf>,
     clean: bool,
     minify_html: bool,
+    force: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -409,6 +412,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         asset_dir: &asset_dir,
         parallelism: args.parallelism,
         progress: progress.clone(),
+        force: args.force,
     })?;
     let page_meta = load_page_meta(&src_dir, &typ_files, &asset_dir);
     let metadata = SiteMetadata::from_config(

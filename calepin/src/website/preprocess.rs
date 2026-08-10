@@ -137,6 +137,7 @@ pub(super) struct WebsitePreprocessOptions<'a> {
     pub(super) asset_dir: &'a Path,
     pub(super) parallelism: Option<usize>,
     pub(super) progress: ProgressManager,
+    pub(super) force: bool,
 }
 
 enum WebsitePreprocessWork {
@@ -174,6 +175,7 @@ pub(super) fn preprocess_documents(
                 html_syntax_theme: Some(options.html_syntax_theme.clone()),
                 asset_dir: Some(options.asset_dir.to_path_buf()),
                 config_overrides: options.config_overrides.to_vec(),
+                force: options.force,
             })
             .with_context(|| format!("failed to scan {}", input.display()))?;
             let work = if preprocess_plan_cache_hit(&mut plan)? {
