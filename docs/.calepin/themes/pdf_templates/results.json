@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.42",
+  "calepin_version": "0.0.44",
   "input": "themes/pdf_templates.typ",
-  "generation": "5e51c0097c95cef6-1349cde127705c16",
+  "generation": "be4610eddc2cbd67-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {

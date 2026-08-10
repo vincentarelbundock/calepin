@@ -1,14 +1,14 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.42",
+  "calepin_version": "0.0.44",
   "input": "websites/multilingual.typ",
-  "generation": "12e0f1b0746c5040-1349cde127705c16",
+  "generation": "aa45e0162e8aafbd-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {
       "label": "chunk-1",
       "engine": "toml",
-      "source": "default_language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent_dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent_dir = \"fr\"",
+      "source": "default-language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent-dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent-dir = \"fr\"",
       "status": "skipped",
       "options": {
         "echo": true,

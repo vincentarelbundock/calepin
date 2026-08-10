@@ -6,5 +6,5 @@
   "image-meta": path("image-meta.json"),
   "source-dir": "websites",
   source: "websites/websites.typ",
-  "raw-langs": ("d2", "dot", "mermaid", "python", "r", "sh", "tikz"),
+  "raw-langs": ("d2", "dot", "mermaid", "python", "r", "sh", "tikz", "toml"),
 )

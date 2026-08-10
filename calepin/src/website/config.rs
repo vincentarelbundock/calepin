@@ -8,6 +8,7 @@ use super::feeds::FeedsConfig;
 #[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(default, deny_unknown_fields)]
 pub(super) struct WebsiteConfig {
+    #[serde(rename(deserialize = "default-language"), alias = "default_language")]
     pub(super) default_language: Option<String>,
     pub(super) languages: BTreeMap<String, LanguageConfig>,
     #[serde(rename = "executables")]
@@ -20,12 +21,19 @@ pub(super) struct WebsiteConfig {
     pub(super) _toc: Option<toml::Value>,
     pub(super) title: Option<String>,
     pub(super) description: Option<String>,
+    #[serde(rename(deserialize = "base-url"), alias = "base_url")]
     pub(super) base_url: Option<String>,
     pub(super) logo: Option<String>,
+    #[serde(rename(deserialize = "logo-alt"), alias = "logo_alt")]
     pub(super) logo_alt: Option<String>,
     pub(super) favicon: Option<String>,
     #[serde(rename = "asset-dir")]
     pub(super) asset_dir: Option<PathBuf>,
+    /// Default output directory for website builds when no output path is
+    /// given on the command line. Relative paths resolve from the directory
+    /// holding `calepin.toml`.
+    #[serde(rename = "output-dir", alias = "output")]
+    pub(super) output_dir: Option<PathBuf>,
     #[serde(rename = "highlight-light")]
     pub(super) highlight_light: Option<PathBuf>,
     #[serde(rename = "highlight-dark")]
@@ -40,8 +48,11 @@ pub(super) struct WebsiteConfig {
     /// Minify generated HTML after theming and website metadata injection.
     pub(super) minify: Option<bool>,
     pub(super) search: Option<SearchEngine>,
+    /// Deprecated toggle kept for backward compatibility; prefer `feeds =
+    /// true` or a `[feeds]` table. When set, it takes precedence.
+    #[serde(rename(deserialize = "generate-feeds"), alias = "generate_feeds")]
     pub(super) generate_feeds: Option<bool>,
-    pub(super) feeds: Option<FeedsConfig>,
+    pub(super) feeds: Option<RawFeedsConfig>,
     pub(super) robots: Option<RawRobotsConfig>,
     pub(super) pages: Option<PagesConfig>,
     #[serde(rename = "static")]
@@ -76,6 +87,15 @@ impl Default for RobotsConfig {
     }
 }
 
+/// `feeds` accepts a bare toggle (`feeds = true`) or a `[feeds]` table, which
+/// implies the toggle.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub(super) enum RawFeedsConfig {
+    Toggle(bool),
+    Config(FeedsConfig),
+}
+
 impl WebsiteConfig {
     pub(super) fn robots_enabled(&self) -> bool {
         match &self.robots {
@@ -86,7 +106,21 @@ impl WebsiteConfig {
     }
 
     pub(super) fn feeds_enabled(&self) -> bool {
-        self.generate_feeds.unwrap_or(false)
+        match self.generate_feeds {
+            Some(enabled) => enabled,
+            None => match &self.feeds {
+                None => false,
+                Some(RawFeedsConfig::Toggle(enabled)) => *enabled,
+                Some(RawFeedsConfig::Config(_)) => true,
+            },
+        }
+    }
+
+    pub(super) fn feeds_config(&self) -> Option<&FeedsConfig> {
+        match &self.feeds {
+            Some(RawFeedsConfig::Config(config)) => Some(config),
+            _ => None,
+        }
     }
 }
 
@@ -94,13 +128,16 @@ impl WebsiteConfig {
 #[serde(default, deny_unknown_fields)]
 pub(super) struct LanguageConfig {
     pub(super) label: Option<String>,
+    #[serde(rename(deserialize = "content-dir"), alias = "content_dir")]
     pub(super) content_dir: Option<PathBuf>,
+    #[serde(rename(deserialize = "url-prefix"), alias = "url_prefix")]
     pub(super) url_prefix: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub(super) struct SidebarConfig {
+    #[serde(rename(deserialize = "show-hidden"), alias = "show_hidden")]
     pub(super) show_hidden: bool,
     pub(super) fold: bool,
     pub(super) section: Vec<SidebarSectionConfig>,

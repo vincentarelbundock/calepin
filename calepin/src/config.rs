@@ -193,21 +193,27 @@ fn parse_override_path(raw_path: &str) -> Result<Vec<&str>> {
 fn validate_override_root(root: &str) -> Result<()> {
     const ALLOWED_ROOTS: &[&str] = &[
         "asset-dir",
+        "base-url",
         "base_url",
+        "default-language",
         "default_language",
         "description",
         "executables",
         "favicon",
         "feeds",
         "footer",
+        "generate-feeds",
         "generate_feeds",
         "highlight-dark",
         "highlight-light",
         "languages",
         "logo",
+        "logo-alt",
         "logo_alt",
         "menus",
         "minify",
+        "output",
+        "output-dir",
         "pages",
         "pdf",
         "robots",
@@ -218,6 +224,7 @@ fn validate_override_root(root: &str) -> Result<()> {
         "title",
         "toc",
         "store",
+        "typ",
     ];
     if ALLOWED_ROOTS.contains(&root) {
         return Ok(());

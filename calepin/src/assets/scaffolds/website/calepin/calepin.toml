@@ -1,29 +1,27 @@
 title = "Example Site"
 description = "A bilingual Calepin website scaffold with pages, posts, and theme-friendly content."
-# base_url = "https://example.com"
+# base-url = "https://example.com"
 # Try the bundled themes:
 # theme = "calepin"
 # theme = "academic"
 theme = "calepin"
 
 pdf = true
-default_language = "en"
+default-language = "en"
 
 # Uncomment to generate static search if Pagefind is available.
 # search = "pagefind"
 
-# Uncomment feeds after setting base_url.
-# generate_feeds = true
-# [feeds]
-# filenames = ["atom.xml", "rss.xml"]
+# Uncomment to generate web feeds after setting base-url.
+# feeds = true
 
 [languages.en]
 label = "English"
-content_dir = "."
+content-dir = "."
 
 [languages.fr]
 label = "Français"
-content_dir = "fr"
+content-dir = "fr"
 
 [static]
 include = ["assets/**"]

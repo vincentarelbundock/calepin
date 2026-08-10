@@ -178,7 +178,13 @@
   if fig-align == none or fig-align == auto {
     linked
   } else {
-    align(fig-align)[#linked]
+    // A Typst `figure` ignores an outer `align()` (it centers itself by
+    // default), so aligning a captioned/labeled figure requires a show rule.
+    // `align(...)` still handles the bare-image (uncaptioned) case.
+    [
+      #show figure: set align(fig-align)
+      #align(fig-align)[#linked]
+    ]
   }
 }
 

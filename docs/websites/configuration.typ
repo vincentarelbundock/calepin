@@ -20,7 +20,7 @@ description = "A static website built from Typst documents."
 
 # Public site URL, used for sitemap.xml and canonical URLs.
 # Default: none.
-base_url = "https://example.com"
+base-url = "https://example.com"
 
 # Theme: "calepin", "academic", a local theme directory, or false for raw output.
 # Default: "calepin".
@@ -39,9 +39,19 @@ typ = false
 # Default: false.
 minify = true
 
+# Default output directory for website builds, relative to calepin.toml.
+# A positional output path on the command line takes precedence.
+# Default: build in place, in the website source directory.
+output-dir = "../_site"
+
 # Static search engine. Set to "pagefind" to generate a search index.
 # Default: none.
 search = "pagefind"
+
+# Generate web feeds (requires base-url). Use `feeds = true` for a default
+# atom.xml, or a [feeds] table for custom filenames and templates.
+# Default: false.
+feeds = true
 
 # Logo image path for the top bar.
 # Default: none.
@@ -49,7 +59,7 @@ logo = "assets/logo.svg"
 
 # Alternative text for the logo image. Defaults to `title` when omitted.
 # Default: none.
-logo_alt = "My Site"
+logo-alt = "My Site"
 
 # Output directory for browser-facing generated assets.
 # Also controls where the Calepin runtime is written.
@@ -65,6 +75,8 @@ favicon = "assets/favicon.ico"
 highlight-light = "themes/syntax/light.tmTheme"
 highlight-dark = "themes/syntax/dark.tmTheme"
 ```
+
+Multi-word keys use kebab-case (`base-url`, `logo-alt`, `output-dir`). The older snake_case spellings (`base_url`, `logo_alt`, ...) are still accepted for backward compatibility.
 
 Use `--format html` for a one-time HTML-only build, regardless of `pdf`. Use `--minify` to minify HTML for a single build without changing `calepin.toml`.
 
@@ -82,7 +94,7 @@ Bundled website themes emit a small set of page-level head tags from config:
 - `<meta name="description">` and `<meta property="og:description">` from `description`
 - `<meta property="og:title">` from page title and site title
 - `<meta property="og:site_name">` from `title`
-- `<meta property="og:url">` and `<link rel="canonical">` from `base_url` plus the page route
+- `<meta property="og:url">` and `<link rel="canonical">` from `base-url` plus the page route
 
 If you inject your own tags for these fields in a theme override, check for
 duplication with what the theme already emits.
@@ -158,7 +170,7 @@ Allow: /
 Sitemap: https://example.com/sitemap.xml
 ```
 
-The `Sitemap:` line is included when `base_url` is set. To disable generation:
+The `Sitemap:` line is included when `base-url` is set. To disable generation:
 
 ```toml
 robots = false

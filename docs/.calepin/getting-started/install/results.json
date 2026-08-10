@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.42",
+  "calepin_version": "0.0.44",
   "input": "getting-started/install.typ",
-  "generation": "fe41a88f0f2cc8f5-1349cde127705c16",
+  "generation": "02472b3875f03453-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {

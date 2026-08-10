@@ -1,21 +1,23 @@
 title = "Calepin"
 description = "A Typst-native computational notebook and static website generator."
-base_url = "https://vincentarelbundock.github.io/calepin"
+base-url = "https://vincentarelbundock.github.io/calepin"
 logo = "assets/logo_short.svg"
-logo_alt = "Calepin"
+logo-alt = "Calepin"
 pdf = true
 minify = false
 search = "pagefind"
 highlight-light = "assets/Catppuccin Latte.tmTheme"
 highlight-dark = "assets/Catppuccin Mocha.tmTheme"
-generate_feeds = true
 
 [executables]
 python = "../.venv/bin/python"
 typst = "typst"
 
-[feeds]
-filenames = ["atom.xml", "rss.xml"]
+[[feeds.file]]
+filename = "atom.xml"
+
+[[feeds.file]]
+filename = "rss.xml"
 
 [static]
 include = ["assets/**", "index.typ", "themes/examples/tufte/**"]

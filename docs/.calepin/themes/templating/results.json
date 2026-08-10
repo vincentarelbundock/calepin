@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.42",
+  "calepin_version": "0.0.44",
   "input": "themes/templating.typ",
-  "generation": "10e5091131471e24-1349cde127705c16",
+  "generation": "074c398bfe9f8f90-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {

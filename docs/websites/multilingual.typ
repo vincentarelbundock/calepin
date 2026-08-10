@@ -6,15 +6,15 @@
 Configure languages with one content directory per language:
 
 ```toml
-default_language = "en"
+default-language = "en"
 
 [languages.en]
 label = "English"
-content_dir = "."
+content-dir = "."
 
 [languages.fr]
 label = "Français"
-content_dir = "fr"
+content-dir = "fr"
 ```
 
 With this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; other languages use their language code as a URL prefix, such as `fr/about.html`.

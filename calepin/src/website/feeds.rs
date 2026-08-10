@@ -60,9 +60,13 @@ const DEFAULT_RSS_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 #[serde(default, deny_unknown_fields)]
 pub(super) struct FeedsConfig {
     pub(super) limit: Option<usize>,
+    /// Deprecated shorthand kept for backward compatibility; prefer
+    /// `[[feeds.file]]` tables.
     pub(super) filenames: Vec<String>,
     pub(super) file: Vec<FeedFileConfig>,
+    #[serde(rename(deserialize = "atom-template"), alias = "atom_template")]
     pub(super) atom_template: Option<String>,
+    #[serde(rename(deserialize = "rss-template"), alias = "rss_template")]
     pub(super) rss_template: Option<String>,
 }
 
@@ -128,7 +132,7 @@ pub(super) fn feed_targets(config: &WebsiteConfig) -> Result<Vec<FeedTarget>> {
         return Ok(Vec::new());
     }
 
-    let feeds = config.feeds.as_ref();
+    let feeds = config.feeds_config();
     let mut targets = Vec::new();
     if let Some(feeds) = feeds {
         for filename in &feeds.filenames {
@@ -222,10 +226,10 @@ pub(super) fn write_feeds(
         return Ok(());
     }
     let Some(base_url) = base_url else {
-        bail!("generate_feeds = true requires base_url so feed links can be absolute");
+        bail!("enabling feeds requires base-url so feed links can be absolute");
     };
 
-    let limit = config.feeds.as_ref().and_then(|feeds| feeds.limit);
+    let limit = config.feeds_config().and_then(|feeds| feeds.limit);
     let items = feed_items_from_pages(pages_index, base_url, limit);
     let mut env = no_autoescape_env();
     env.add_template(DEFAULT_ATOM_TEMPLATE_NAME, DEFAULT_ATOM_TEMPLATE)

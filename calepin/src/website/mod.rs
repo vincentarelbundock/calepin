@@ -320,7 +320,16 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     );
     let out_dir = match args.out.as_deref() {
         Some(out) => resolve_cli_path(&current_dir, out),
-        None => src_dir.clone(),
+        None => match config.output_dir.as_deref() {
+            Some(out) => {
+                if out.as_os_str().is_empty() {
+                    bail!("website `output-dir` must not be empty");
+                }
+                let config_dir = config_path.parent().unwrap_or(Path::new("."));
+                absolutize_from(config_dir, out)
+            }
+            None => src_dir.clone(),
+        },
     };
     if !src_dir.is_dir() {
         return Err(anyhow!("source directory not found: {}", src_dir.display()));

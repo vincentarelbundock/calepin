@@ -44,6 +44,12 @@ To compile the same source directory somewhere else, pass an output directory as
 calepin compile my_site/ public/
 ```
 
+To make a separate build directory the default, set `output-dir` in `calepin.toml` (see #link("configuration.html")[Site configuration]); a positional output path on the command line still takes precedence:
+
+```toml
+output-dir = "../_site"
+```
+
 When the input path is a directory, _Calepin_ looks for `calepin.toml` at the root of that directory. An explicit `--config <path>` supersedes the automatic lookup; if no config is found either way, the build fails.
 
 By default, website pages render to HTML. Configure PDF output and site settings in #link("configuration.html")[Site configuration].

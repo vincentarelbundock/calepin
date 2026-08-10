@@ -331,6 +331,168 @@ fn website_build_result_normalizes_created_output_dir_inside_source() {
 }
 
 #[test]
+fn website_config_output_dir_sets_default_build_directory() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-website-test-");
+    let root = dir.path();
+    let src = root.join("docs");
+    std::fs::create_dir_all(&src).unwrap();
+    std::fs::write(
+        src.join("calepin.toml"),
+        "theme = \"calepin\"\noutput-dir = \"../_site\"\n",
+    )
+    .unwrap();
+    std::fs::write(src.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
+
+    let result = build_site(WebsiteBuildOptions {
+        config: src.join("calepin.toml"),
+        src: Some(src.clone()),
+        out: None,
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        config_overrides: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        incremental_changed: Vec::new(),
+        clean: true,
+        minify_html: false,
+    })
+    .unwrap();
+
+    let expected = root.join("_site").canonicalize().unwrap();
+    assert_eq!(result.out_dir, expected);
+    assert!(expected.join("index.html").is_file());
+    assert!(!src.join("index.html").exists());
+}
+
+#[test]
+fn website_cli_output_overrides_config_output_dir() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-website-test-");
+    let root = dir.path();
+    let src = root.join("docs");
+    std::fs::create_dir_all(&src).unwrap();
+    std::fs::write(
+        src.join("calepin.toml"),
+        "theme = \"calepin\"\noutput-dir = \"../_site\"\n",
+    )
+    .unwrap();
+    std::fs::write(src.join("index.typ"), "#set document(title: [Home])\nHome").unwrap();
+
+    let result = build_site(WebsiteBuildOptions {
+        config: src.join("calepin.toml"),
+        src: Some(src.clone()),
+        out: Some(root.join("cli_out")),
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        config_overrides: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        incremental_changed: Vec::new(),
+        clean: true,
+        minify_html: false,
+    })
+    .unwrap();
+
+    assert_eq!(result.out_dir, root.join("cli_out").canonicalize().unwrap());
+    assert!(!root.join("_site").exists());
+}
+
+#[test]
+fn website_config_accepts_kebab_and_snake_spellings() {
+    let kebab = website_config_from_toml(
+        r#"
+default-language = "en"
+base-url = "https://example.com"
+logo-alt = "My Site"
+
+[languages.en]
+content-dir = "docs"
+url-prefix = "en"
+
+[sidebar]
+show-hidden = true
+
+[feeds]
+atom-template = "atom.tmpl"
+rss-template = "rss.tmpl"
+"#,
+    );
+    let snake = website_config_from_toml(
+        r#"
+default_language = "en"
+base_url = "https://example.com"
+logo_alt = "My Site"
+
+[languages.en]
+content_dir = "docs"
+url_prefix = "en"
+
+[sidebar]
+show_hidden = true
+
+[feeds]
+atom_template = "atom.tmpl"
+rss_template = "rss.tmpl"
+"#,
+    );
+
+    for config in [&kebab, &snake] {
+        assert_eq!(config.default_language.as_deref(), Some("en"));
+        assert_eq!(config.base_url.as_deref(), Some("https://example.com"));
+        assert_eq!(config.logo_alt.as_deref(), Some("My Site"));
+        let language = &config.languages["en"];
+        assert_eq!(language.content_dir.as_deref(), Some(Path::new("docs")));
+        assert_eq!(language.url_prefix.as_deref(), Some("en"));
+        assert!(config.sidebar.as_ref().unwrap().show_hidden);
+        let feeds = config.feeds_config().unwrap();
+        assert_eq!(feeds.atom_template.as_deref(), Some("atom.tmpl"));
+        assert_eq!(feeds.rss_template.as_deref(), Some("rss.tmpl"));
+    }
+}
+
+#[test]
+fn feeds_config_accepts_toggle_table_or_deprecated_key() {
+    // Default: disabled.
+    assert!(!website_config_from_toml("").feeds_enabled());
+
+    // Bare toggle.
+    assert!(website_config_from_toml("feeds = true").feeds_enabled());
+    assert!(!website_config_from_toml("feeds = false").feeds_enabled());
+
+    // A [feeds] table implies the toggle.
+    let config = website_config_from_toml("[feeds]\nlimit = 5");
+    assert!(config.feeds_enabled());
+    assert_eq!(config.feeds_config().unwrap().limit, Some(5));
+
+    // Deprecated key still works and takes precedence.
+    assert!(website_config_from_toml("generate_feeds = true").feeds_enabled());
+    assert!(website_config_from_toml("generate-feeds = true").feeds_enabled());
+    assert!(!website_config_from_toml("generate_feeds = false\n[feeds]\nlimit = 5").feeds_enabled());
+}
+
+#[test]
+fn website_config_parses_output_dir_and_alias() {
+    let config = website_config_from_toml("output-dir = \"_site\"");
+    assert_eq!(config.output_dir.as_deref(), Some(Path::new("_site")));
+
+    let config = website_config_from_toml("output = \"_build\"");
+    assert_eq!(config.output_dir.as_deref(), Some(Path::new("_build")));
+
+    assert!(website_config_from_toml("").output_dir.is_none());
+}
+
+#[test]
 fn watch_roots_include_configured_theme_dirs() {
     let temp = tempfile::tempdir().unwrap();
     let src = temp.path().join("docs");
@@ -786,7 +948,7 @@ fn language_config_rejects_unknown_fields() {
     let error = try_website_config_from_toml(
         r#"
 [languages.en]
-content-dir = "docs"
+bogus-key = "docs"
 "#,
     )
     .unwrap_err();

@@ -1,5 +1,10 @@
 # Changelog
 
+## Development
+
+- New `output-dir` option in `calepin.toml` sets the default output directory for website builds, so generated HTML no longer has to live next to the `.typ` sources. Relative paths resolve from the directory holding `calepin.toml` (e.g. `output-dir = "../_site"`), and a positional output path on the command line still takes precedence. Both `calepin compile` and `calepin watch` honor the setting. Thanks to [@maucejo](https://github.com/maucejo) for [the suggestion](https://github.com/vincentarelbundock/calepin/issues/100).
+- Website configuration keys are now consistently kebab-case: `default-language`, `base-url`, `logo-alt`, `content-dir`, `url-prefix`, `show-hidden`, `atom-template`, `rss-template`. The old snake_case spellings remain accepted for backward compatibility. Feed generation is now toggled with `feeds = true` or an explicit `[feeds]` table (which implies the toggle), in the same style as `robots`; the old `generate_feeds` key still works and takes precedence when set. The `filenames` shorthand in `[feeds]` is deprecated in favor of `[[feeds.file]]` tables.
+
 ## 0.0.44
 
 - `fig-align: left` and `fig-align: right` now take effect in paged (PDF) output for captioned or labeled chunks. A Typst `figure` centers itself and ignores an outer `align()`, so _Calepin_ silently rendered every captioned figure centered regardless of `fig-align`; uncaptioned images were unaffected. The alignment is now applied through a show rule so both cases honor the setting. Thanks to [@beingalink](https://github.com/beingalink) for [the report](https://github.com/vincentarelbundock/calepin/issues/103).

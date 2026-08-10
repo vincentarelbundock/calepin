@@ -1,8 +1,8 @@
 {
   "schema": 2,
-  "calepin_version": "0.0.42",
+  "calepin_version": "0.0.44",
   "input": "notebooks/data_store.typ",
-  "generation": "5773da85abb18c64-792dc73c2c5950e1",
+  "generation": "eb62d6b2ca367d10-792dc73c2c5950e1",
   "store": {
     "analysis_config": {
       "include_intercept": true,
