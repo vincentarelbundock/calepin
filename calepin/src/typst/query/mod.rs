@@ -52,7 +52,7 @@ pub fn parse_chunks_with_warnings(
             if raw_observation_has_matching_metadata(&values, index) {
                 // A broad theme show rule can leave the original raw element
                 // one or more times immediately before the metadata emitted
-                // by `chunk_from_raw_plain`. Treat that adjacent observation
+                // by `_fenced-chunk`. Treat that adjacent observation
                 // run as one chunk, while preserving repeated authored blocks
                 // when no matching metadata follows.
                 index += 1;

@@ -1848,9 +1848,9 @@ mod tests {
             )
             .unwrap()
             .unwrap();
-            assert!(source.source.contains("_html-themed-raw-block"));
-            assert!(source.source.contains("_raw-chunk-langs.contains(it.lang)"));
-            assert!(source.source.contains("_fenced-chunks-runs"));
+            // Chunk styling is installed by the generated wrapper, not by the
+            // bundles, so a bundle carries only its own layout concerns.
+            assert!(!source.source.contains("_default-chunk-chrome"));
         }
         assert!(crate::theme::notebook_source(
             &crate::theme::ThemeSelection::Typst,

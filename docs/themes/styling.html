@@ -1,6 +1,6 @@
 
 
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Data store and transport</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Styling chunks</title>
     
     
     <meta name="description" content="A Typst-native computational notebook and static website generator.">
@@ -14,12 +14,12 @@
     
     
     
-    <meta property="og:title" content="Data store and transport | Calepin">
+    <meta property="og:title" content="Styling chunks | Calepin">
     
     
     
-    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/notebooks/data_store.html">
-    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/notebooks/data_store.html">
+    <link rel="canonical" href="https://vincentarelbundock.github.io/calepin/themes/styling.html">
+    <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/themes/styling.html">
     
     
     <link rel="icon" href="../.calepin/favicon.svg">
@@ -4191,7 +4191,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#import \"/.calepin/calepin.typ\" as calepin\n#show: calepin.document\n\n#set document(title: [Data store and transport])\n#metadata((\n  title: \"Data transport\",\n  tags: (\"notebooks\", \"data store\", \"parameters\", \"R\", \"Python\"),\n)) <website-metadata>\n\n#calepin.setup(echo: true, eval: true, results: \"verbatim\")\n\n#calepin.store.set(\"species\", \"versicolor\")\n#calepin.store.set(\"min_petal_length\", 4.5)\n#calepin.store.set(\"course\", \"Data Science\")\n#calepin.store.set(\"analysis_config\", (\n  model: \"linear\",\n  include_intercept: true,\n  terms: (\"petal_length\", \"petal_width\"),\n))\n\n#title()\n\nThe document store moves small, structured values between Typst, R, and Python. Use the Calepin store for parameters, labels, counts, and nested configuration. Avoid the store for more complex objects. Prefer ordinary files to save and exchange data frames, model objects, images, and other large or language-specific values.\n\n= Value store\n\nInitialize parameters in Typst with `#calepin.store.set`:\n\n````typ\n#calepin.store.set(\"species\", \"versicolor\")\n#calepin.store.set(\"min_petal_length\", 4.5)\n\n```r\n#| store-get: (\"species\", \"min_petal_length\")\n#| echo: false\nfiltered <- subset(\n  iris,\n  Species == species & Petal.Length >= min_petal_length\n)\ncat(nrow(filtered), \"rows selected\")\n```\n````\n\nThe named values become direct engine bindings only for that chunk. In R the example receives `species` and `min_petal_length`.\n\n```r\n#| store-get: (\"species\", \"min_petal_length\")\n#| echo: false\nfiltered <- subset(\n  iris,\n  Species == species & Petal.Length >= min_petal_length\n)\ncat(nrow(filtered), \"rows selected\")\n```\n\nProject defaults can live in `calepin.toml`:\n\n```toml\n[store]\nspecies = \"versicolor\"\nmin_petal_length = 4.5\n```\n\nOverride them without editing the notebook:\n\n```sh\n#| eval: false\n#| echo: true\ncalepin compile iris.typ \\\n  --set store.species=setosa \\\n  --set store.min_petal_length=1.5\n```\n\nPrecedence is project `[store]`, then document `calepin.store.set`, then CLI `--set store.*`. Dotted CLI paths update nested mappings.\n\nCalepin persists the completed store with the other generated artifacts under `.calepin/`. Running `calepin clean` removes that cached store by deleting `.calepin/`.\n\n= Engine to Engine\n\nA chunk publishes engine variables with `store-set`. A later chunk imports them with `store-get`. Names are identical in the engine and the document store.\n\n````typ\n```r\n#| store-set: (\"species_levels\", \"row_count\")\n#| results: hide\nspecies_levels <- levels(iris$Species)\nrow_count <- nrow(iris)\n```\n\n```python\n#| store-get: (\"species_levels\", \"row_count\")\n#| store-set: python_summary\npython_summary = (\n    f\"{row_count} rows; species: {', '.join(species_levels)}\"\n)\nprint(python_summary)\n```\n````\n\nThe R and Python sessions remain persistent, but chunks execute in document order. This makes alternating pipelines such as R → Python → R deterministic.\n\n```r\n#| store-set: (\"species_levels\", \"row_count\")\n#| results: hide\n#| echo: false\nspecies_levels <- levels(iris$Species)\nrow_count <- nrow(iris)\n```\n\n```python\n#| store-get: (\"species_levels\", \"row_count\")\n#| store-set: python_summary\n#| echo: false\npython_summary = (\n    f\"{row_count} rows; species: {', '.join(species_levels)}\"\n)\nprint(python_summary)\n```\n\n= Engine to Typst\n\nAfter the R writer above commits `species_levels`, Typst can read it with `calepin.store.get`:\n\n````typ\n#let levels = calepin.store.get(\"species_levels\", default: ())\nThe species are #levels.join(\", \").\n````\n\n#let levels = calepin.store.get(\"species_levels\", default: ())\n\nThe species are #levels.join(\", \").\n\n= Typst to Engine\n\nThe reverse direction starts with a Typst initializer and names it in the R chunk's `store-get` option:\n\n````typ\n#calepin.store.set(\"course\", \"Data Science\")\n\nThe course is #calepin.inline(\"r\", raw(\"cat(course)\"), store-get: \"course\",).\n````\n\nThe course is #calepin.inline(\"r\", raw(\"cat(course)\"), store-get: \"course\",).\n\nA Typst dictionary becomes a named list in R and a dictionary in Python:\n\n````typ\n#calepin.store.set(\"analysis_config\", (\n  model: \"linear\",\n  include_intercept: true,\n  terms: (\"petal_length\", \"petal_width\"),\n))\n\n```r\n#| store-get: analysis_config\nstopifnot(is.list(analysis_config))\ncat(\n  analysis_config$model,\n  \"model with terms:\",\n  paste(analysis_config$terms, collapse = \", \")\n)\n```\n\n```python\n#| store-get: analysis_config\nassert isinstance(analysis_config, dict)\nprint(\n    f\"{analysis_config['model']} model with terms: \"\n    + \", \".join(analysis_config[\"terms\"])\n)\n```\n````\n\n```r\n#| store-get: analysis_config\n#| echo: false\nstopifnot(is.list(analysis_config))\ncat(\n  analysis_config$model,\n  \"model with terms:\",\n  paste(analysis_config$terms, collapse = \", \")\n)\n```\n\n```python\n#| store-get: analysis_config\n#| echo: false\nassert isinstance(analysis_config, dict)\nprint(\n    f\"{analysis_config['model']} model with terms: \"\n    + \", \".join(analysis_config[\"terms\"])\n)\n```\n\nSequences become Python lists and either R atomic vectors or lists, depending on their contents.\n\n= Case study\n\nData transport between an Engine and Typst is a powerful feature that allows us to do complex typsetting very easily. For example, in this example, we use #link(\"websites/elements.html\")[Tab HTML Element] to wrap `R` code chunks. We create two named lists, store their names in the store, and define a custom Typst function that loops over names and creates tabs automatically.\n\n\n````typ\n#import \"/.calepin/calepin.typ\" as calepin\n#show: calepin.document\n\n// The data frames stay in R; Typst receives only their names through the store.\n#let r-tabset(list-name, names-key, echo: false) = {\n  let names = calepin.store.get(names-key, default: ())\n  if names.len() > 0 {\n    calepin.elements.tabs[\n      #for (index, name) in names.enumerate() [\n        #calepin.elements.tab(name, active: index == 0,)[\n          #calepin.chunk(\"r\",\n            raw(\"get(\" + json.encode(list-name) + \")[[\" + json.encode(name) + \"]]\",),\n            echo: echo,\n          )\n        ]\n      ]\n    ]\n  }\n}\n\n```r\n#| echo: false\n#| results: hide\n#| store-set: (list1names, list2names)\nlist1 <- list(\n  A = data.frame(x = 1:2),\n  B = data.frame(x = 1:2, y = 11:12)\n)\nlist2 <- list(\n  K = head(iris),\n  Z = head(mtcars)\n)\nlist1names <- names(list1)\nlist2names <- names(list2)\n```\n\n#r-tabset(\"list1\", \"list1names\")\n\n#r-tabset(\"list2\", \"list2names\")\n````\n\n// The data frames stay in R; Typst receives only their names through the store.\n#let r-tabset(list-name, names-key, echo: false) = {\n  let names = calepin.store.get(names-key, default: ())\n  if names.len() > 0 {\n    calepin.elements.tabs[\n      #for (index, name) in names.enumerate() [\n        #calepin.elements.tab(name, active: index == 0,)[\n          #calepin.chunk(\"r\", \n            raw(\"get(\" + json.encode(list-name) + \")[[\" + json.encode(name) + \"]]\",),\n            echo: echo,\n          )\n        ]\n      ]\n    ]\n  }\n}\n\n```r\n#| echo: false\n#| results: hide\n#| store-set: (list1names, list2names)\nlist1 <- list(\n  A = data.frame(x = 1:2),\n  B = data.frame(x = 1:2, y = 11:12)\n)\nlist2 <- list(\n  K = head(iris),\n  Z = head(mtcars)\n)\nlist1names <- names(list1)\nlist2names <- names(list2)\n```\n\n#r-tabset(\"list1\", \"list1names\")\n\n#r-tabset(\"list2\", \"list2names\")\n\n= Limitations\n\nStore values may contain:\n\n- `none` / null;\n- booleans;\n- signed 64-bit integers;\n- finite floating-point numbers;\n- Unicode strings;\n- arrays; and\n- dictionaries with string keys.\n\nR and Python exports must use their supported built-in shapes. Unsupported classes and objects fail instead of being silently converted to strings. Store keys are limited to 256 UTF-8 bytes, values to 1 MiB, the complete store to 8 MiB, and nesting to 64 levels.\n\nOnly the built-in R and Python engines support `store-get` and `store-set`. Diagram and arbitrary Jupyter engines do not.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Styling chunks])\n#import \"/.calepin/calepin.typ\" as calepin\n#show: calepin.document\n#metadata((tags: (\"themes\", \"chunks\", \"styling\"))) <website-metadata>\n#title()\n\nCalepin wraps executed code and its output in a small amount of visual chrome: a tinted box around echoed source, a bordered box around output. Every piece of that chrome is applied by a Typst show rule targeting a labeled element, so you can restyle or remove any of it with plain Typst and no Calepin-specific API.\n\n```typ\n#show <calepin-input>: it => it.body   // strip Calepin's box entirely\n```\n\n= The labels\n\nEach label marks a `block` whose `body` field holds the bare, unstyled content.\n\n#table(\n  columns: 3,\n  table.header[Label][Emitted by][`.body` holds],\n  [`<calepin-input>`], [Echoed chunk source, and fenced blocks Calepin renders], [the syntax-highlighted `raw` element],\n  [`<calepin-output>`], [Text printed by a chunk (stdout)], [the output text],\n  [`<calepin-result>`], [A value returned by a chunk], [the formatted value],\n  [`<calepin-warning>`], [Warnings raised during execution], [the warning text],\n  [`<calepin-error>`], [Errors raised during execution], [the error message],\n)\n\nWarnings and errors carry separate labels so a theme can distinguish a chunk that complained from a chunk that failed.\n\n= Writing an override\n\nAlways reconstruct from `it.body`. Never re-display `it`.\n\n```typ\n#show <calepin-input>: it => it.body                // strip\n#show <calepin-input>: it => my-frame(it.body)      // restyle echoed source\n#show <calepin-output>: it => box(it.body)          // restyle stdout\n#show <calepin-result>: it => box(it.body)          // restyle returned values\n#show <calepin-error>: it => text(red, it.body)     // errors, distinct from warnings\n```\n\n#calepin.elements.callout(kind: \"warning\")[\n  Re-displaying `it` does not replace the default rule. It nests inside it.\n\n  This is ordinary Typst show-rule behavior: when a later rule re-emits `it`, the earlier rule fires again on the re-displayed element. So `it => it` changes nothing at all, and `it => my-frame(it)` puts your frame *around* Calepin's box instead of replacing it. Neither produces an error; you simply get the wrong output.\n\n  Reconstructing from a field (`it.body`) never re-displays the labeled element, so the default rule has nothing left to fire on and your rule wins.\n]\n\nA show-set rule composes rather than replaces, which is usually what you want:\n\n```typ\n#show raw: set text(size: 9pt)   // resizes the code; Calepin's box stays\n```\n\n= Removing all chrome at once\n\nSet `theme = \"typst\"` in your config or front matter. That injects no theme bundle, so nothing installs the default rules and the labeled carriers render bare. Chunks still execute normally, because execution does not depend on the theme.\n\n= For theme authors\n\nA theme restyles chunks by writing the same show rules in its `layouts/pdf.typ`. There is nothing to opt into and no Calepin-specific function to call:\n\n```typ\n#show <calepin-input>: it => my-code-frame(it.body)\n\n{{ doc.body }}\n```\n\nBecause a document body is inlined *after* the theme preamble, a document author's rules are always defined later than a theme's and take precedence, as long as both sides reconstruct from `it.body`.\n\n= Stability\n\nThe following are stable API and will not change without a deprecation path:\n\n- the five label names,\n- the guarantee that each labels a `block` whose `.body` is the bare unstyled content,\n- the rule that all default chrome is applied through show rules you can displace.\n\nEverything else about the default appearance (colors, strokes, insets, corner radius, the exact markup `code-block` produces) may change between versions without notice. Style your documents against the labels, not against the defaults.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4309,28 +4309,28 @@ html:not([data-theme]) {
                     
                     
                     
-                    <details class="calepin-website-sidebar-section" open>
+                    <details class="calepin-website-sidebar-section">
                         <summary>Code execution</summary>
                         <ul>
                             
                             
-<li class="calepin-website-sidebar-link"><a href="code_execution.html" aria-label="Code execution">Code execution</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="figures.html" aria-label="Figures and tables">Figures and tables</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="cross-references.html" aria-label="Cross-references">Cross-references</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="data_store.html" aria-label="Data transport" class="active" aria-current="page">Data transport</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/data_store.html" aria-label="Data transport">Data transport</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="diagrams.html" aria-label="Diagrams">Diagrams</a></li>
+<li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
                             
                         </ul>
@@ -4353,11 +4353,11 @@ html:not([data-theme]) {
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
+<li class="calepin-website-sidebar-link"><a href="html_templates.html" aria-label="HTML">HTML</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
+<li class="calepin-website-sidebar-link"><a href="css.html" aria-label="CSS">CSS</a></li>
 
                             
                         </ul>
@@ -4421,28 +4421,28 @@ html:not([data-theme]) {
                     
                     
                     
-                    <details class="calepin-website-sidebar-section">
+                    <details class="calepin-website-sidebar-section" open>
                         <summary>Themes</summary>
                         <ul>
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/themes.html" aria-label="Themes">Themes</a></li>
+<li class="calepin-website-sidebar-link"><a href="themes.html" aria-label="Themes">Themes</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/templating.html" aria-label="Templating">Templating</a></li>
+<li class="calepin-website-sidebar-link"><a href="templating.html" aria-label="Templating">Templating</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/pdf_templates.html" aria-label="PDF">PDF</a></li>
+<li class="calepin-website-sidebar-link"><a href="pdf_templates.html" aria-label="PDF">PDF</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/styling.html" aria-label="Styling chunks">Styling chunks</a></li>
+<li class="calepin-website-sidebar-link"><a href="styling.html" aria-label="Styling chunks" class="active" aria-current="page">Styling chunks</a></li>
 
                             
                             
-<li class="calepin-website-sidebar-link"><a href="../themes/case_studies.html" aria-label="Case studies">Case studies</a></li>
+<li class="calepin-website-sidebar-link"><a href="case_studies.html" aria-label="Case studies">Case studies</a></li>
 
                             
                         </ul>
@@ -4473,164 +4473,13 @@ html:not([data-theme]) {
             </nav>
         </aside>
         <main class="calepin-website-main calepin-content" data-pagefind-body>
-            <h1 id="data-store-and-transport">Data store and transport</h1><p>The document store moves small, structured values between Typst, R, and Python. Use the Calepin store for parameters, labels, counts, and nested configuration. Avoid the store for more complex objects. Prefer ordinary files to save and exchange data frames, model objects, images, and other large or language-specific values.</p><h2 id="value-store">Value store</h2><p>Initialize parameters in Typst with <code>#calepin.store.set</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">#calepin<span class="calepin-syntax-scope-2">.</span>store<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">set</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"species"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"versicolor"</span><span class="calepin-syntax-scope-2">)</span>
-#calepin<span class="calepin-syntax-scope-2">.</span>store<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">set</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"min_petal_length"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-6">4.5</span><span class="calepin-syntax-scope-2">)</span>
+            <h1 id="styling-chunks">Styling chunks</h1><p>Calepin wraps executed code and its output in a small amount of visual chrome: a tinted box around echoed source, a bordered box around output. Every piece of that chrome is applied by a Typst show rule targeting a labeled element, so you can restyle or remove any of it with plain Typst and no Calepin-specific API.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-183">&lt;calepin-input></span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> it<span class="calepin-syntax-scope-2">.</span>body   <span class="calepin-syntax-scope-3">// strip Calepin's box entirely</span></code></pre></div><h2 id="the-labels">The labels</h2><p>Each label marks a <code>block</code> whose <code>body</code> field holds the bare, unstyled content.</p><table><thead><tr><th>Label</th><th>Emitted by</th><th><code>.body</code> holds</th></tr></thead><tbody><tr><td><code>&lt;calepin-input></code></td><td>Echoed chunk source, and fenced blocks Calepin renders</td><td>the syntax-highlighted <code>raw</code> element</td></tr><tr><td><code>&lt;calepin-output></code></td><td>Text printed by a chunk (stdout)</td><td>the output text</td></tr><tr><td><code>&lt;calepin-result></code></td><td>A value returned by a chunk</td><td>the formatted value</td></tr><tr><td><code>&lt;calepin-warning></code></td><td>Warnings raised during execution</td><td>the warning text</td></tr><tr><td><code>&lt;calepin-error></code></td><td>Errors raised during execution</td><td>the error message</td></tr></tbody></table><p>Warnings and errors carry separate labels so a theme can distinguish a chunk that complained from a chunk that failed.</p><h2 id="writing-an-override">Writing an override</h2><p>Always reconstruct from <code>it.body</code>. Never re-display <code>it</code>.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-183">&lt;calepin-input></span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> it<span class="calepin-syntax-scope-2">.</span>body                <span class="calepin-syntax-scope-3">// strip</span>
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-183">&lt;calepin-input></span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> <span class="calepin-syntax-scope-10">my-frame</span><span class="calepin-syntax-scope-2">(</span>it<span class="calepin-syntax-scope-2">.</span>body<span class="calepin-syntax-scope-2">)</span>      <span class="calepin-syntax-scope-3">// restyle echoed source</span>
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-183">&lt;calepin-output></span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> <span class="calepin-syntax-scope-10">box</span><span class="calepin-syntax-scope-2">(</span>it<span class="calepin-syntax-scope-2">.</span>body<span class="calepin-syntax-scope-2">)</span>          <span class="calepin-syntax-scope-3">// restyle stdout</span>
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-183">&lt;calepin-result></span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> <span class="calepin-syntax-scope-10">box</span><span class="calepin-syntax-scope-2">(</span>it<span class="calepin-syntax-scope-2">.</span>body<span class="calepin-syntax-scope-2">)</span>          <span class="calepin-syntax-scope-3">// restyle returned values</span>
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-183">&lt;calepin-error></span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> <span class="calepin-syntax-scope-10">text</span><span class="calepin-syntax-scope-2">(</span>red<span class="calepin-syntax-scope-2">,</span> it<span class="calepin-syntax-scope-2">.</span>body<span class="calepin-syntax-scope-2">)</span>     <span class="calepin-syntax-scope-3">// errors, distinct from warnings</span></code></pre></div><div class="calepin-callout calepin-callout-warning"><div class="calepin-callout-title">Warning</div><div class="calepin-callout-body"><p>Re-displaying <code>it</code> does not replace the default rule. It nests inside it.</p><p>This is ordinary Typst show-rule behavior: when a later rule re-emits <code>it</code>, the earlier rule fires again on the re-displayed element. So <code>it => it</code> changes nothing at all, and <code>it => my-frame(it)</code> puts your frame <strong>around</strong> Calepin’s box instead of replacing it. Neither produces an error; you simply get the wrong output.</p><p>Reconstructing from a field (<code>it.body</code>) never re-displays the labeled element, so the default rule has nothing left to fire on and your rule wins.</p></div></div><p>A show-set rule composes rather than replaces, which is usually what you want:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-10">raw</span><span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">text</span><span class="calepin-syntax-scope-2">(</span>size<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-6">9pt</span><span class="calepin-syntax-scope-2">)</span>   <span class="calepin-syntax-scope-3">// resizes the code; Calepin's box stays</span></code></pre></div><h2 id="removing-all-chrome-at-once">Removing all chrome at once</h2><p>Set <code>theme = "typst"</code> in your config or front matter. That injects no theme bundle, so nothing installs the default rules and the labeled carriers render bare. Chunks still execute normally, because execution does not depend on the theme.</p><h2 id="for-theme-authors">For theme authors</h2><p>A theme restyles chunks by writing the same show rules in its <code>layouts/pdf.typ</code>. There is nothing to opt into and no Calepin-specific function to call:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-183">&lt;calepin-input></span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> <span class="calepin-syntax-scope-10">my-code-frame</span><span class="calepin-syntax-scope-2">(</span>it<span class="calepin-syntax-scope-2">.</span>body<span class="calepin-syntax-scope-2">)</span>
 
-```r
-#| store-get: ("species", "min_petal_length")
-#| echo: false
-filtered &lt;- subset(
-  iris,
-  Species == species &amp; Petal.Length >= min_petal_length
-)
-cat(nrow(filtered), "rows selected")
-```</code></pre></div><p>The named values become direct engine bindings only for that chunk. In R the example receives <code>species</code> and <code>min_petal_length</code>.</p><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">21 rows selected</span></code></pre></div><p>Project defaults can live in <code>calepin.toml</code>:</p><div class="sourceCode" data-lang="toml"><pre><code data-lang="toml"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-183">store</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-67">species</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">versicolor</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-67">min_petal_length</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">4.5</span></code></pre></div><p>Override them without editing the notebook:</p><div class="sourceCode" data-lang="sh"><pre><code data-lang="sh"><span class="calepin-syntax-scope-10">[store]</span>
-<span class="calepin-syntax-scope-10">species</span><span class="calepin-syntax-scope-1"> = </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">versicolor</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-10">min_petal_length</span><span class="calepin-syntax-scope-1"> = 4.5</span></code></pre></div><p>Precedence is project <code>[store]</code>, then document <code>calepin.store.set</code>, then CLI <code>--set store.*</code>. Dotted CLI paths update nested mappings.</p><p>Calepin persists the completed store with the other generated artifacts under <code>.calepin/</code>. Running <code>calepin clean</code> removes that cached store by deleting <code>.calepin/</code>.</p><h2 id="engine-to-engine">Engine to Engine</h2><p>A chunk publishes engine variables with <code>store-set</code>. A later chunk imports them with <code>store-get</code>. Names are identical in the engine and the document store.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">```r
-#| store-set: ("species_levels", "row_count")
-#| results: hide
-species_levels &lt;- levels(iris$Species)
-row_count &lt;- nrow(iris)
-```
-
-```python
-#| store-get: ("species_levels", "row_count")
-#| store-set: python_summary
-python_summary = (
-    f"{row_count} rows; species: {', '.join(species_levels)}"
-)
-print(python_summary)
-```</code></pre></div><p>The R and Python sessions remain persistent, but chunks execute in document order. This makes alternating pipelines such as R → Python → R deterministic.</p><div class="sourceCode" data-lang="R"><pre><code data-lang="r"><span class="calepin-syntax-scope-2">[</span><span class="calepin-syntax-scope-1">store</span><span class="calepin-syntax-scope-2">]</span>
-<span class="calepin-syntax-scope-1">species </span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-4">"</span><span class="calepin-syntax-scope-4">versicolor</span><span class="calepin-syntax-scope-4">"</span>
-<span class="calepin-syntax-scope-1">min_petal_length </span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-6">4</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-6">5</span></code></pre></div><div class="sourceCode" data-lang="python"><pre><code data-lang="python"><span class="calepin-syntax-scope-1">calepin</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-132">compile</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">iris</span><span class="calepin-syntax-scope-9">.</span><span class="calepin-syntax-scope-1">typ</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">\</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">-</span><span class="calepin-syntax-scope-9">-</span><span class="calepin-syntax-scope-133">set</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">store</span><span class="calepin-syntax-scope-9">.</span><span class="calepin-syntax-scope-1">species</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-1">setosa</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-2">\</span>
-<span class="calepin-syntax-scope-1">  </span><span class="calepin-syntax-scope-9">-</span><span class="calepin-syntax-scope-9">-</span><span class="calepin-syntax-scope-133">set</span><span class="calepin-syntax-scope-1"> </span><span class="calepin-syntax-scope-1">store</span><span class="calepin-syntax-scope-9">.</span><span class="calepin-syntax-scope-1">min_petal_length</span><span class="calepin-syntax-scope-9">=</span><span class="calepin-syntax-scope-6">1</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-6">5</span>
-</code></pre></div><h2 id="engine-to-typst">Engine to Typst</h2><p>After the R writer above commits <code>species_levels</code>, Typst can read it with <code>calepin.store.get</code>:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> levels <span class="calepin-syntax-scope-9">=</span> calepin<span class="calepin-syntax-scope-2">.</span>store<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">get</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"species_levels"</span><span class="calepin-syntax-scope-2">,</span> default<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span>
-The species are #levels<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">join</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">", "</span><span class="calepin-syntax-scope-2">)</span>.</code></pre></div><p>The species are setosa, versicolor, virginica.</p><h2 id="typst-to-engine">Typst to Engine</h2><p>The reverse direction starts with a Typst initializer and names it in the R chunk’s <code>store-get</code> option:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">#calepin<span class="calepin-syntax-scope-2">.</span>store<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">set</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"course"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"Data Science"</span><span class="calepin-syntax-scope-2">)</span>
-
-The course is #calepin<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">inline</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"r"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-10">raw</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"cat(course)"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">,</span> store-get<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"course"</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-2">)</span>.</code></pre></div><p>The course is Data Science.</p><p>A Typst dictionary becomes a named list in R and a dictionary in Python:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ">#calepin<span class="calepin-syntax-scope-2">.</span>store<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">set</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"analysis_config"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-2">(</span>
-  model<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"linear"</span><span class="calepin-syntax-scope-2">,</span>
-  include_intercept<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">true</span><span class="calepin-syntax-scope-2">,</span>
-  terms<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"petal_length"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"petal_width"</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">,</span>
-<span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span>
-
-```r
-#| store-get: analysis_config
-stopifnot(is.list(analysis_config))
-cat(
-  analysis_config$model,
-  "model with terms:",
-  paste(analysis_config$terms, collapse = ", ")
-)
-```
-
-```python
-#| store-get: analysis_config
-assert isinstance(analysis_config, dict)
-print(
-    f"{analysis_config['model']} model with terms: "
-    + ", ".join(analysis_config["terms"])
-)
-```</code></pre></div><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">150 rows; species: setosa, versicolor, virginica</span></code></pre></div><p>Sequences become Python lists and either R atomic vectors or lists, depending on their contents.</p><h2 id="case-study">Case study</h2><p>Data transport between an Engine and Typst is a powerful feature that allows us to do complex typsetting very easily. For example, in this example, we use <a href="websites/elements.html">Tab HTML Element</a> to wrap <code>R</code> code chunks. We create two named lists, store their names in the store, and define a custom Typst function that loops over names and creates tabs automatically.</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">import</span> <span class="calepin-syntax-scope-4">"/.calepin/calepin.typ"</span> <span class="calepin-syntax-scope-7">as</span> calepin
-<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span><span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">document</span>
-
-<span class="calepin-syntax-scope-3">// The data frames stay in R; Typst receives only their names through the store.</span>
-<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">let</span> <span class="calepin-syntax-scope-10">r-tabset</span><span class="calepin-syntax-scope-2">(</span>list-name<span class="calepin-syntax-scope-2">,</span> names-key<span class="calepin-syntax-scope-2">,</span> echo<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">false</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-9">=</span> <span class="calepin-syntax-scope-2">{</span>
-  <span class="calepin-syntax-scope-7">let</span> names <span class="calepin-syntax-scope-9">=</span> calepin<span class="calepin-syntax-scope-2">.</span>store<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">get</span><span class="calepin-syntax-scope-2">(</span>names-key<span class="calepin-syntax-scope-2">,</span> default<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">)</span>
-  <span class="calepin-syntax-scope-7">if</span> names<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">len</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-9">></span> <span class="calepin-syntax-scope-6">0</span> <span class="calepin-syntax-scope-2">{</span>
-    calepin<span class="calepin-syntax-scope-2">.</span>elements<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">tabs</span><span class="calepin-syntax-scope-2">[</span>
-      <span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">for</span> <span class="calepin-syntax-scope-2">(</span>index<span class="calepin-syntax-scope-2">,</span> name<span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-7">in</span> names<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">enumerate</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-2">[</span>
-        #calepin<span class="calepin-syntax-scope-2">.</span>elements<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">tab</span><span class="calepin-syntax-scope-2">(</span>name<span class="calepin-syntax-scope-2">,</span> active<span class="calepin-syntax-scope-2">:</span> index <span class="calepin-syntax-scope-9">==</span> <span class="calepin-syntax-scope-6">0</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">[</span>
-          #calepin<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">chunk</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"r"</span><span class="calepin-syntax-scope-2">,</span>
-            <span class="calepin-syntax-scope-10">raw</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"get("</span> <span class="calepin-syntax-scope-9">+</span> json<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">encode</span><span class="calepin-syntax-scope-2">(</span>list-name<span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-9">+</span> <span class="calepin-syntax-scope-4">")[["</span> <span class="calepin-syntax-scope-9">+</span> json<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">encode</span><span class="calepin-syntax-scope-2">(</span>name<span class="calepin-syntax-scope-2">)</span> <span class="calepin-syntax-scope-9">+</span> <span class="calepin-syntax-scope-4">"]]"</span><span class="calepin-syntax-scope-2">,</span><span class="calepin-syntax-scope-2">)</span><span class="calepin-syntax-scope-2">,</span>
-            echo<span class="calepin-syntax-scope-2">:</span> echo<span class="calepin-syntax-scope-2">,</span>
-          <span class="calepin-syntax-scope-2">)</span>
-        <span class="calepin-syntax-scope-2">]</span>
-      <span class="calepin-syntax-scope-2">]</span>
-    <span class="calepin-syntax-scope-2">]</span>
-  <span class="calepin-syntax-scope-2">}</span>
-<span class="calepin-syntax-scope-2">}</span>
-
-```r
-#| echo: false
-#| results: hide
-#| store-set: (list1names, list2names)
-list1 &lt;- list(
-  A = data.frame(x = 1:2),
-  B = data.frame(x = 1:2, y = 11:12)
-)
-list2 &lt;- list(
-  K = head(iris),
-  Z = head(mtcars)
-)
-list1names &lt;- names(list1)
-list2names &lt;- names(list2)
-```
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">r-tabset</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"list1"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"list1names"</span><span class="calepin-syntax-scope-2">)</span>
-
-<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">r-tabset</span><span class="calepin-syntax-scope-2">(</span><span class="calepin-syntax-scope-4">"list2"</span><span class="calepin-syntax-scope-2">,</span> <span class="calepin-syntax-scope-4">"list2names"</span><span class="calepin-syntax-scope-2">)</span></code></pre></div><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">linear model with terms: petal_length, petal_width</span></code></pre></div><script type="module">import "https://ka-f.webawesome.com/webawesome@3.8.0/components/tab-group/tab-group.js";
-
-        let syncingTabGroup = false;
-        document.addEventListener('wa-tab-show', event => {
-          if (syncingTabGroup) return;
-
-          const source = event.target;
-          const group = source.dataset.calepinTabGroup;
-          const sourceTabs = Array.from(source.querySelectorAll('wa-tab'));
-          const activeTab = sourceTabs.find(tab => tab.panel === source.active);
-          const key = activeTab?.dataset.calepinTabKey;
-          if (!group || !key) return;
-          const occurrence = sourceTabs
-            .filter(tab => tab.dataset.calepinTabKey === key && !tab.disabled)
-            .indexOf(activeTab);
-
-          syncingTabGroup = true;
-          try {
-            document.querySelectorAll('wa-tab-group[data-calepin-tab-group]').forEach(target => {
-              if (target !== source && target.dataset.calepinTabGroup === group) {
-                const tab = Array.from(target.querySelectorAll('wa-tab'))
-                  .filter(candidate => candidate.dataset.calepinTabKey === key && !candidate.disabled)
-                  .at(occurrence);
-                if (tab) target.active = tab.panel;
-              }
-            });
-          } finally {
-            syncingTabGroup = false;
-          }
-        });
-      </script><style>
-        wa-tab-group.calepin-elements-tabs {
-          display: block;
-          margin-block: 1rem;
-          --indicator-color: transparent;
-          --track-color: var(--pico-muted-border-color, #d0d7de);
-          --track-width: 1px;
-        }
-
-        wa-tab-group.calepin-elements-tabs::part(nav) {
-          border-bottom: 1px solid var(--pico-muted-border-color, #d0d7de);
-        }
-
-        wa-tab-group.calepin-elements-tabs::part(body) {
-          padding-block-start: 0.75rem;
-        }
-
-        wa-tab-group.calepin-elements-tabs wa-tab {
-          border-bottom: 0.1875rem solid transparent;
-          margin-block-end: -1px;
-        }
-
-        wa-tab-group.calepin-elements-tabs wa-tab[active] {
-          border-bottom-color: var(--pico-primary, #0172ad);
-        }
-      </style><wa-tab-group class="calepin-elements-tabs"><wa-tab panel="calepin-tab-A-1" data-calepin-tab-key="A" active>A</wa-tab><wa-tab-panel name="calepin-tab-A-1" active><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">linear model with terms: petal_length, petal_width</span></code></pre></div></wa-tab-panel><wa-tab panel="calepin-tab-B-2" data-calepin-tab-key="B">B</wa-tab><wa-tab-panel name="calepin-tab-B-2"></wa-tab-panel></wa-tab-group><wa-tab-group class="calepin-elements-tabs"><wa-tab panel="calepin-tab-K-3" data-calepin-tab-key="K" active>K</wa-tab><wa-tab-panel name="calepin-tab-K-3" active><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">  x</span>
-<span class="calepin-syntax-scope-1">1 1</span>
-<span class="calepin-syntax-scope-1">2 2</span></code></pre></div></wa-tab-panel><wa-tab panel="calepin-tab-Z-4" data-calepin-tab-key="Z">Z</wa-tab><wa-tab-panel name="calepin-tab-Z-4"><div class="cell-output cell-output-stdout"><pre><code><span class="calepin-syntax-scope-1">  x  y</span>
-<span class="calepin-syntax-scope-1">1 1 11</span>
-<span class="calepin-syntax-scope-1">2 2 12</span></code></pre></div></wa-tab-panel></wa-tab-group><h2 id="limitations">Limitations</h2><p>Store values may contain:</p><ul><li><code>none</code> / null;</li><li>booleans;</li><li>signed 64-bit integers;</li><li>finite floating-point numbers;</li><li>Unicode strings;</li><li>arrays; and</li><li>dictionaries with string keys.</li></ul><p>R and Python exports must use their supported built-in shapes. Unsupported classes and objects fail instead of being silently converted to strings. Store keys are limited to 256 UTF-8 bytes, values to 1 MiB, the complete store to 8 MiB, and nesting to 64 levels.</p><p>Only the built-in R and Python engines support <code>store-get</code> and <code>store-set</code>. Diagram and arbitrary Jupyter engines do not.</p>
+{{ doc.body }}</code></pre></div><p>Because a document body is inlined <strong>after</strong> the theme preamble, a document author’s rules are always defined later than a theme’s and take precedence, as long as both sides reconstruct from <code>it.body</code>.</p><h2 id="stability">Stability</h2><p>The following are stable API and will not change without a deprecation path:</p><ul><li>the five label names,</li><li>the guarantee that each labels a <code>block</code> whose <code>.body</code> is the bare unstyled content,</li><li>the rule that all default chrome is applied through show rules you can displace.</li></ul><p>Everything else about the default appearance (colors, strokes, insets, corner radius, the exact markup <code>code-block</code> produces) may change between versions without notice. Style your documents against the labels, not against the defaults.</p>
         </main>
                 
         <aside class="calepin-website-toc is-floating">
@@ -4638,17 +4487,15 @@ list2names &lt;- names(list2)
             <nav aria-label="On this page">
                 <ul>
                     
-                    <li class="level-2"><a href="#value-store">Value store</a></li>
+                    <li class="level-2"><a href="#the-labels">The labels</a></li>
                     
-                    <li class="level-2"><a href="#engine-to-engine">Engine to Engine</a></li>
+                    <li class="level-2"><a href="#writing-an-override">Writing an override</a></li>
                     
-                    <li class="level-2"><a href="#engine-to-typst">Engine to Typst</a></li>
+                    <li class="level-2"><a href="#removing-all-chrome-at-once">Removing all chrome at once</a></li>
                     
-                    <li class="level-2"><a href="#typst-to-engine">Typst to Engine</a></li>
+                    <li class="level-2"><a href="#for-theme-authors">For theme authors</a></li>
                     
-                    <li class="level-2"><a href="#case-study">Case study</a></li>
-                    
-                    <li class="level-2"><a href="#limitations">Limitations</a></li>
+                    <li class="level-2"><a href="#stability">Stability</a></li>
                     
                 </ul>
             </nav>
@@ -4716,17 +4563,6 @@ list2names &lt;- names(list2)
     
         
         
-            
-            
-        
-        
-        
-    
-        
-        
-            
-            
-        
         
             
         
@@ -4845,6 +4681,17 @@ list2names &lt;- names(list2)
         
     
         
+        
+            
+            
+        
+        
+        
+    
+        
+        
+            
+            
         
         
             
@@ -4870,20 +4717,20 @@ list2names &lt;- names(list2)
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
       <div class="calepin-website-page-nav-inner">
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="cross-references.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--prev outline secondary" href="pdf_templates.html" role="button">
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&larr;</span>
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Previous</span>
-            <span class="calepin-website-page-nav-title">Cross-references</span>
+            <span class="calepin-website-page-nav-title">PDF</span>
           </span>
         </a>
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="diagrams.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="case_studies.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Diagrams</span>
+            <span class="calepin-website-page-nav-title">Case studies</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>

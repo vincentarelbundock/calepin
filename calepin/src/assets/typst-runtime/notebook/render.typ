@@ -528,9 +528,9 @@
       eval(value, mode: "markup")
     }
   } else if mime == "application/json" {
-    _output-block(repr(value))
+    _output-block(repr(value), kind: "result")
   } else {
-    _output-block(str(value))
+    _output-block(str(value), kind: "result")
   }
 }
 
@@ -559,11 +559,11 @@
     } else {
       _output-block(
         item.at("text", default: ""),
-        stream: if level == "warning" { "stderr" } else { "stdout" },
+        kind: if level == "warning" { "warning" } else { "stdout" },
       )
     }
   } else if item-type == "error" {
-    _output-block(item.at("message", default: ""), stream: "stderr")
+    _output-block(item.at("message", default: ""), kind: "error")
   } else if item-type == "display" or item-type == "result" {
     _render-display-item(item, label, opts, fig-labels, anchor: anchor)
   }

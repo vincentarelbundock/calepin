@@ -695,7 +695,7 @@ fn rewrite_raw_block(mut block: RawBlock) -> RewrittenRawBlock {
     let had_trailing_label = rewrite_trailing_fence_label(&mut block, should_rewrite_as_chunk);
     if should_rewrite_as_chunk {
         return RewrittenRawBlock {
-            source: rewrite_raw_block_as_chunk_from_raw_plain(&block, had_trailing_label),
+            source: rewrite_raw_block_as_fenced_chunk(&block, had_trailing_label),
             needs_runtime_alias: true,
         };
     }
@@ -742,14 +742,14 @@ fn rewrite_trailing_fence_label(block: &mut RawBlock, rewrite_plain_labels: bool
     true
 }
 
-fn rewrite_raw_block_as_chunk_from_raw_plain(block: &RawBlock, had_trailing_label: bool) -> String {
+fn rewrite_raw_block_as_fenced_chunk(block: &RawBlock, had_trailing_label: bool) -> String {
     let Some(lang) = block.lang.as_deref() else {
         return block.original_source();
     };
     let code = raw_block_code(block);
     let label_metadata = raw_block_label_metadata(block, had_trailing_label);
     format!(
-        "{}#{RUNTIME_ALIAS}.chunk_from_raw_plain({}, raw({}, block: true, lang: {})){}{}",
+        "{}#{RUNTIME_ALIAS}._fenced-chunk({}, raw({}, block: true, lang: {})){}{}",
         block.opening_prefix,
         qmd_string_literal(lang),
         qmd_string_literal(&code),
@@ -1231,7 +1231,7 @@ print("comment")
         let layout = testfixtures::layout(dir.path());
         std::fs::write(
             &layout.input,
-            r##"#let marker = "#calepin_runtime.chunk_from_raw_plain(\"python\")"
+            r##"#let marker = "#calepin_runtime._fenced-chunk(\"python\")"
 "##,
         )
         .unwrap();
@@ -1391,15 +1391,15 @@ print("comment")
         let rewritten = rewrite_calepin_imports(source);
 
         assert!(
-            rewritten.contains("chunk_from_raw_plain(\"julia\""),
+            rewritten.contains("_fenced-chunk(\"julia\""),
             "{rewritten}"
         );
         assert!(
-            rewritten.contains("chunk_from_raw_plain(\"bash\""),
+            rewritten.contains("_fenced-chunk(\"bash\""),
             "{rewritten}"
         );
         assert!(
-            rewritten.contains("chunk_from_raw_plain(\"sh\""),
+            rewritten.contains("_fenced-chunk(\"sh\""),
             "{rewritten}"
         );
     }
@@ -1411,7 +1411,7 @@ print("comment")
 
         assert_eq!(
             rewritten,
-            "#calepin_runtime.chunk_from_raw_plain(\"julia-1.2\", raw(\"println(1)\\n\", block: true, lang: \"julia-1.2\"))\n"
+            "#calepin_runtime._fenced-chunk(\"julia-1.2\", raw(\"println(1)\\n\", block: true, lang: \"julia-1.2\"))\n"
         );
     }
 
@@ -1421,7 +1421,7 @@ print("comment")
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(
             rewritten,
-            "#calepin_runtime.chunk_from_raw_plain(\"r\", raw(\"#| label: \\\"fig-plot\\\"\\nplot(1)\\n\", block: true, lang: \"r\"))\n"
+            "#calepin_runtime._fenced-chunk(\"r\", raw(\"#| label: \\\"fig-plot\\\"\\nplot(1)\\n\", block: true, lang: \"r\"))\n"
         );
     }
 
@@ -1431,7 +1431,7 @@ print("comment")
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(
             rewritten,
-            "#calepin_runtime.chunk_from_raw_plain(\"r\", raw(\"#| label: \\\"plot\\\"\\nplot(1)\\n\", block: true, lang: \"r\"))\n```typ\n#strong[x]\n```<fig-typ>\n"
+            "#calepin_runtime._fenced-chunk(\"r\", raw(\"#| label: \\\"plot\\\"\\nplot(1)\\n\", block: true, lang: \"r\"))\n```typ\n#strong[x]\n```<fig-typ>\n"
         );
     }
 
@@ -1440,7 +1440,7 @@ print("comment")
         let source = "```r\nplot(1)\n```< fig-plot>\n";
         let rewritten = rewrite_calepin_imports(source);
 
-        assert!(rewritten.contains("chunk_from_raw_plain"), "{rewritten}");
+        assert!(rewritten.contains("_fenced-chunk"), "{rewritten}");
         assert!(
             rewritten.contains(r#"#metadata((label: " fig-plot")) <calepin-fence-label>"#),
             "{rewritten}"
@@ -1454,7 +1454,7 @@ print("comment")
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(
             rewritten,
-            "Before\n#calepin_runtime.chunk_from_raw_plain(\"python\", raw(\"print(\\\"x\\\")\\n\", block: true, lang: \"python\"))\nAfter\n"
+            "Before\n#calepin_runtime._fenced-chunk(\"python\", raw(\"print(\\\"x\\\")\\n\", block: true, lang: \"python\"))\nAfter\n"
         );
     }
 
@@ -1494,7 +1494,7 @@ print("comment")
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(
             rewritten,
-            "#python_figure()[```python\nplot()\n```]\n\n#calepin_runtime.chunk_from_raw_plain(\"python\", raw(\"print(\\\"after\\\")\\n\", block: true, lang: \"python\"))\n"
+            "#python_figure()[```python\nplot()\n```]\n\n#calepin_runtime._fenced-chunk(\"python\", raw(\"print(\\\"after\\\")\\n\", block: true, lang: \"python\"))\n"
         );
     }
 

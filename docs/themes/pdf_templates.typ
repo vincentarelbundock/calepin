@@ -43,3 +43,5 @@ Useful `layouts/pdf.typ` values:
 `doc.body` must be included explicitly if you want the notebook body in the rendered output.
 
 `theme = "typst"` disables notebook-specific theming, and `extends = "typst"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout.
+
+Code blocks and chunk output are styled through labeled elements, so a layout restyles them with ordinary show rules. See #link("styling.html")[Styling chunks].

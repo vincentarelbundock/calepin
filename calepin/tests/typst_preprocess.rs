@@ -1910,6 +1910,77 @@ fn document_body_can_call_theme_exported_helpers() {
 }
 
 #[test]
+fn typst_theme_emits_no_chunk_chrome_but_still_executes_chunks() {
+    if !has_command("typst") || !has_command("sh") {
+        return;
+    }
+
+    // `theme = "typst"` injects no bundle, so nothing opts into the default
+    // chunk chrome and packages such as codly own code rendering completely.
+    // Chunk execution is driven by the generated wrapper, not by the theme, so
+    // it must be unaffected.
+    let compile = |theme: &str, dir: &std::path::Path| -> String {
+        std::fs::write(dir.join("paper.toml"), format!("theme = \"{theme}\"\n")).unwrap();
+        std::fs::write(
+            dir.join("paper.typ"),
+            r#"#import "/.calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: true)
+
+#calepin.chunk("sh")[
+```sh
+echo CHUNK_RAN
+```
+]
+"#,
+        )
+        .unwrap();
+        let output = Command::new(calepin_bin())
+            .args([
+                "compile",
+                "paper.typ",
+                "paper.svg",
+                "--format",
+                "svg",
+                "--config",
+                "paper.toml",
+                "--quiet",
+            ])
+            .current_dir(dir)
+            .output()
+            .expect("failed to run calepin compile");
+        assert!(
+            output.status.success(),
+            "compile failed:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        std::fs::read_to_string(dir.join("paper.svg")).unwrap()
+    };
+
+    let themed_dir = typst_accessible_tempdir();
+    let themed = compile("calepin", themed_dir.path());
+    assert!(
+        themed.contains("#f7f7f5"),
+        "the default theme should draw input chrome: {themed}"
+    );
+
+    let bare_dir = typst_accessible_tempdir();
+    let bare = compile("typst", bare_dir.path());
+    assert!(
+        !bare.contains("#f7f7f5") && !bare.contains("#fbfbfa"),
+        "theme = \"typst\" should emit no Calepin chunk chrome: {bare}"
+    );
+
+    // Both documents ran the chunk: the printed marker reaches the page.
+    let results = std::fs::read_to_string(bare_dir.path().join(".calepin/paper/results.json"))
+        .expect("results.json should exist for a `typst` themed document");
+    assert!(
+        results.contains("CHUNK_RAN"),
+        "fenced chunks must still execute under theme = \"typst\": {results}"
+    );
+}
+
+#[test]
 fn compile_resolves_relative_paths_from_the_document_directory() {
     if !has_command("typst") || !has_pdftotext() {
         return;

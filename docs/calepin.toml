@@ -24,7 +24,7 @@ include = ["assets/**", "index.typ", "themes/examples/tufte/**"]
 
 [pages]
 include = ["blog/*.typ"]
-exclude = ["themes/examples/**", "slides/examples/**"]
+exclude = ["themes/examples/**", "slides/examples/**", "tips/examples/**"]
 
 [menus]
 
@@ -142,6 +142,9 @@ title = "Themes"
 
   [[sidebar.section.item]]
   target = "themes/pdf_templates.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/styling.typ"
 
   [[sidebar.section.item]]
   target = "themes/case_studies.typ"
