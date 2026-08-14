@@ -8,7 +8,10 @@ fingerprint.xxh3
 /result
 
 __pycache__
-.claude
+.claude/
+**/.claude/
+settings.local.json
+**/settings.local.json
 quarto_website/
 *_files/
 *_cache/
@@ -68,9 +71,6 @@ _calepin_cache/
 _site/
 *.tar.gz
 .agents
-.claude
 .uv-cache
-.agents
-.DS_Store
 # roborev snapshots
 /.roborev/
