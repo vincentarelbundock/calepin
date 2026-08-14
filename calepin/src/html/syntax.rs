@@ -61,6 +61,16 @@ impl HtmlSyntaxTheme {
         syntax_theme::typst_runtime_source(&self.runtime_theme_source, &self.paged_theme_source)
     }
 
+    /// The palette Calepin paints paged code with, as a `.tmTheme` document.
+    ///
+    /// Written next to the runtime so a document can hand the same colors to a
+    /// package that renders `raw` itself: such a package intercepts the block
+    /// before Calepin's show rule sees it, so without this its blocks would
+    /// keep Typst's built-in palette while chunks use Calepin's.
+    pub(crate) fn paged_theme_source(&self) -> &str {
+        &self.paged_theme_source
+    }
+
     pub(crate) fn declarations(&self, dark: bool) -> String {
         let mut declarations = String::new();
         declarations.push_str("  --calepin-syntax-foreground: ");

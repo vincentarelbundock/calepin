@@ -13,7 +13,10 @@
 // show rules, so nobody outside Calepin needs to name this transform.
 //
 // A document compiled with `theme = "typst"` never has it applied, so the
-// carriers stay bare and packages such as codly own code rendering completely.
+// carriers stay bare and packages such as codly own the chrome around code
+// completely. Syntax colors are not part of that: chunk source keeps Calepin's
+// palette under every theme (see `code.typ`), so a chunk and a plain fenced
+// block can differ in color even where all other chrome is gone.
 // Chunks still execute either way — execution is driven by the fenced-chunk
 // rules in the wrapper, not by this transform.
 //

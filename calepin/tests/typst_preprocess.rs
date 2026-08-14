@@ -1916,7 +1916,7 @@ fn typst_theme_emits_no_chunk_chrome_but_still_executes_chunks() {
     }
 
     // `theme = "typst"` injects no bundle, so nothing opts into the default
-    // chunk chrome and packages such as codly own code rendering completely.
+    // chunk chrome and packages such as codly own the chrome around code.
     // Chunk execution is driven by the generated wrapper, not by the theme, so
     // it must be unaffected.
     let compile = |theme: &str, dir: &std::path::Path| -> String {
@@ -1977,6 +1977,155 @@ echo CHUNK_RAN
     assert!(
         results.contains("CHUNK_RAN"),
         "fenced chunks must still execute under theme = \"typst\": {results}"
+    );
+}
+
+/// A `.tmTheme` that paints numeric literals a color no built-in palette uses,
+/// so its presence in rendered output is unambiguous. Only scope rules show up:
+/// Typst leaves unscoped tokens on the surrounding text fill rather than the
+/// theme's global foreground.
+const SIGNATURE_SYNTAX_THEME: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>name</key>
+  <string>Signature</string>
+  <key>settings</key>
+  <array>
+    <dict>
+      <key>settings</key>
+      <dict>
+        <key>foreground</key>
+        <string>#000000</string>
+      </dict>
+    </dict>
+    <dict>
+      <key>scope</key>
+      <string>constant.numeric</string>
+      <key>settings</key>
+      <dict>
+        <key>foreground</key>
+        <string>#ff00ff</string>
+      </dict>
+    </dict>
+  </array>
+</dict>
+</plist>
+"#;
+
+fn compile_svg_with_signature_theme(dir: &std::path::Path, body: &str) -> String {
+    std::fs::write(dir.join("signature.tmTheme"), SIGNATURE_SYNTAX_THEME).unwrap();
+    std::fs::write(
+        dir.join("paper.toml"),
+        "highlight-light = \"signature.tmTheme\"\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join("paper.typ"), body).unwrap();
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.svg",
+            "--format",
+            "svg",
+            "--config",
+            "paper.toml",
+            "--quiet",
+        ])
+        .current_dir(dir)
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    std::fs::read_to_string(dir.join("paper.svg")).unwrap()
+}
+
+#[test]
+fn highlight_config_applies_to_paged_output() {
+    if !has_command("typst") {
+        return;
+    }
+
+    // `highlight-light` is not HTML-only: it is the palette paged code is
+    // painted with, for a single document as much as for a website.
+    let dir = typst_accessible_tempdir();
+    let svg = compile_svg_with_signature_theme(
+        dir.path(),
+        r#"#import "/.calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: true)
+
+```python
+x = 41
+```
+"#,
+    );
+
+    assert!(
+        svg.contains("#ff00ff"),
+        "the configured highlight theme should paint paged chunk source: {svg}"
+    );
+}
+
+#[test]
+fn syntax_theme_artifact_gives_packages_the_chunk_palette() {
+    if !has_command("typst") {
+        return;
+    }
+
+    // A package that renders `raw` itself claims plain fenced blocks before
+    // Calepin's rules reach them, so those blocks keep Typst's built-in colors
+    // while chunks keep Calepin's. Pointing `set raw` at the generated palette
+    // is what lets an author line the two up. The show rule below stands in for
+    // such a package: it rebuilds the block from its pre-highlighted lines, the
+    // way codly does, without pulling a package into the test.
+    let document = |prelude: &str| {
+        format!(
+            r#"#import "/.calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: true)
+{prelude}
+#show raw.where(block: true): it => it.lines.map(line => line.body).join(linebreak())
+
+```python
+x = 41
+```
+
+```rust
+let x = 41;
+```
+"#
+        )
+    };
+
+    let matched_dir = typst_accessible_tempdir();
+    let matched = compile_svg_with_signature_theme(
+        matched_dir.path(),
+        &document("#set raw(theme: \"/.calepin/syntax.tmTheme\")"),
+    );
+    assert!(
+        matched_dir.path().join(".calepin/syntax.tmTheme").is_file(),
+        "the palette should be written where documents name it"
+    );
+
+    let default_dir = typst_accessible_tempdir();
+    let default = compile_svg_with_signature_theme(default_dir.path(), &document(""));
+
+    // Both documents theme the chunk; only the one pointing `set raw` at the
+    // generated palette also themes the block the package claimed.
+    let matched_hits = matched.matches("#ff00ff").count();
+    let default_hits = default.matches("#ff00ff").count();
+    assert!(
+        default_hits > 0,
+        "chunk source carries Calepin's palette either way: {default}"
+    );
+    assert!(
+        matched_hits > default_hits,
+        "the generated palette should reach the package-rendered block too \
+         ({matched_hits} vs {default_hits}): {matched}"
     );
 }
 

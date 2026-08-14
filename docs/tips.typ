@@ -60,3 +60,29 @@ Rendered result:
 Chunk output is untouched: it is not a `raw` element on the paged target, so codly never reaches it. The override reconstructs from `it.body` rather than re-emitting `it`; re-emitting would nest your rule around Calepin's default instead of replacing it. See #link("themes/styling.html")[Styling chunks] for the other labels and the full explanation.
 
 Setting `theme = "typst"` removes Calepin's chrome everywhere at once, with no show rules at all. Chunks still execute either way.
+
+== Matching the two palettes
+
+A document that mixes executed chunks with ordinary fenced blocks will show two sets of syntax colors under codly:
+
+````typ
+```python
+x = 41       # executed chunk: Calepin's palette
+```
+
+```rust
+let x = 41;  // plain fence: Typst's built-in palette
+```
+````
+
+Calepin paints the code it renders itself, but codly installs its `show raw:` rules after Calepin's, so it claims plain fenced blocks first and they keep Typst's built-in colors. Executed chunks took the other path: Calepin had already highlighted them before codly saw them.
+
+Calepin writes its palette to `.calepin/syntax.tmTheme` on every build. Point Typst at that file and both paths line up:
+
+```typ
+#set raw(theme: "/.calepin/syntax.tmTheme")
+```
+
+The file is regenerated from `highlight-light` on every build, so it follows your configured colors without being kept in sync by hand. Use `asset-dir`/`syntax.tmTheme` if you moved the asset directory.
+
+This applies to any package that renders `raw` itself, not just codly.

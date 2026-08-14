@@ -181,10 +181,20 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
     let config_theme = config.theme_selection()?;
     assert_supported_typst(&config.executables.typst)?;
 
-    let html_syntax_theme = options
-        .html_syntax_theme
-        .clone()
-        .unwrap_or_else(crate::html::HtmlSyntaxTheme::builtin);
+    // A website build resolves `highlight-*` once for the whole site and passes
+    // the result down. A single document resolves its own, so the same two keys
+    // mean the same thing either way, on both targets.
+    let html_syntax_theme = match options.html_syntax_theme.clone() {
+        Some(theme) => theme,
+        None if config.highlight_light.is_some() || config.highlight_dark.is_some() => {
+            crate::html::HtmlSyntaxTheme::from_paths(
+                &config.config_dir,
+                config.highlight_light.as_deref(),
+                config.highlight_dark.as_deref(),
+            )?
+        }
+        None => crate::html::HtmlSyntaxTheme::builtin(),
+    };
     let asset_dir = options
         .asset_dir
         .as_deref()

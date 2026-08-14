@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.47
+
+- Fix syntax highlighting in paged output, which 0.0.46 rendered in a single near-black color. Code chunks and fenced blocks were painted with the internal palette _Calepin_ uses to map HTML colors onto CSS classes; those colors are placeholders that a post-processing step replaces, not colors meant to be seen. Thanks to [@peterpf](https://github.com/peterpf) for [the report](https://github.com/vincentarelbundock/calepin/issues/104).
+- `highlight-light` and `highlight-dark` now apply to paged output (PDF, SVG, PNG) as well as HTML, and to single documents as well as websites: `calepin compile paper.typ --config calepin.toml` reads the same two keys. Paged output uses the light theme, since paper has no light/dark switch.
+- _Calepin_ now writes its paged syntax palette to `.calepin/syntax.tmTheme` on every build. A package that renders `raw` itself, such as [codly](https://typst.app/universe/package/codly), claims plain fenced blocks before _Calepin_'s own rules reach them, so those blocks kept Typst's built-in colors while executed chunks used _Calepin_'s. Pointing Typst at the generated file lines the two up: `#set raw(theme: "/.calepin/syntax.tmTheme")`. The file is regenerated from `highlight-light` on every build, so it follows the configured colors.
+
 ## 0.0.46
 
 - Code chunks and their output are now emitted as labeled elements, so a document can restyle or remove _Calepin_'s code-block chrome with an ordinary Typst show rule and no _Calepin_-specific API: `#show <calepin-input>: it => it.body` hands the code to a package such as [codly](https://typst.app/universe/package/codly) with no box around it. The labels are `<calepin-input>`, `<calepin-output>`, `<calepin-result>`, `<calepin-warning>`, and `<calepin-error>`; each marks a `block` whose `body` holds the bare content, and an override must reconstruct from `it.body` rather than re-emit `it`. Setting `theme = "typst"` now removes chunk chrome everywhere while chunks still execute. Paged output is no longer a `raw` element, so a document-wide `show raw:` rule styles the code a chunk contains without also reaching what the chunk printed. Thanks to [@peterpf](https://github.com/peterpf) for [the report](https://github.com/vincentarelbundock/calepin/issues/104).

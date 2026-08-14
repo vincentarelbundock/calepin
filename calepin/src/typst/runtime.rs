@@ -9,6 +9,11 @@ use crate::typst::paths::{artifact_reference, slash_path, CALEPIN_DIR};
 
 const RUNTIME_DIR: &str = "runtime";
 const GENERATED_SYNTAX_THEME_FILE: &str = "00_syntax-theme.typ";
+/// Calepin's paged palette, written where a document can point
+/// `set raw(theme: ..)` at it. Lives beside `calepin.typ` rather than under
+/// `runtime/` because users name this path; the rest of the directory is
+/// private.
+pub(crate) const SYNTAX_THEME_FILE: &str = "syntax.tmTheme";
 const FACADE_FILE: &str = "calepin.typ";
 const ACTIVE_FILE: &str = "active.typ";
 const NOTEBOOK_CONFIG_FILE: &str = "runtime-config.typ";
@@ -168,6 +173,11 @@ pub(crate) fn write_runtime_with_syntax_theme_in_dir(
     write_if_changed(
         &generated_runtime_dir.join(GENERATED_SYNTAX_THEME_FILE),
         syntax_theme.typst_runtime_source(),
+    )?;
+
+    write_if_changed(
+        &calepin_dir.join(SYNTAX_THEME_FILE),
+        syntax_theme.paged_theme_source(),
     )?;
 
     for source_file in runtime_source_files() {

@@ -36,6 +36,11 @@ pub struct CalepinConfig {
     /// `None` means the built-in default `.calepin`.
     pub asset_dir: Option<PathBuf>,
     pub toc: TocConfig,
+    /// `.tmTheme` files for syntax colors, resolved from `config_dir`. They
+    /// drive both targets: the CSS variables behind HTML's light/dark classes,
+    /// and the palette paged code is painted with.
+    pub highlight_light: Option<PathBuf>,
+    pub highlight_dark: Option<PathBuf>,
 }
 
 impl CalepinConfig {
@@ -94,6 +99,8 @@ impl CalepinConfig {
             store: raw.store,
             asset_dir,
             toc,
+            highlight_light: raw.highlight_light,
+            highlight_dark: raw.highlight_dark,
         })
     }
 
@@ -348,6 +355,10 @@ struct RawCalepinConfig {
     asset_dir: Option<PathBuf>,
     #[serde(default)]
     toc: TocConfig,
+    #[serde(rename = "highlight-light")]
+    highlight_light: Option<PathBuf>,
+    #[serde(rename = "highlight-dark")]
+    highlight_dark: Option<PathBuf>,
 }
 
 #[derive(Debug, Default, Deserialize)]

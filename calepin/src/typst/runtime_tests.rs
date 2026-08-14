@@ -1463,6 +1463,127 @@ fn typst_compile_stripped_input_does_not_re_enter_chunk_detection() {
     );
 }
 
+/// Distinct glyph fills in a Typst SVG, as `#rrggbb`.
+fn svg_glyph_fills(svg: &str) -> std::collections::BTreeSet<String> {
+    let mut fills = std::collections::BTreeSet::new();
+    for part in svg.split("fill=\"#").skip(1) {
+        if let Some(hex) = part.split('"').next() {
+            if hex.len() == 6 && hex.chars().all(|ch| ch.is_ascii_hexdigit()) {
+                fills.insert(format!("#{}", hex.to_ascii_lowercase()));
+            }
+        }
+    }
+    fills
+}
+
+/// The HTML pipeline emits scope colors as `#000001`, `#000002`, ... and swaps
+/// them for CSS classes after export. Those sentinels are indistinguishable
+/// from black on paper, so seeing one in paged output means the wrong theme
+/// reached the page.
+fn is_html_sentinel_color(color: &str) -> bool {
+    let Some(hex) = color.strip_prefix('#') else {
+        return false;
+    };
+    let Ok(value) = u32::from_str_radix(hex, 16) else {
+        return false;
+    };
+    value > 0 && value < 0x40
+}
+
+#[test]
+fn write_runtime_writes_the_paged_palette_where_documents_can_name_it() {
+    let dir = tempfile::tempdir().unwrap();
+    write_runtime(dir.path()).unwrap();
+
+    // Documents point `set raw(theme: ..)` at this path, so it sits beside
+    // `calepin.typ` rather than inside the private `runtime/` directory.
+    let theme = dir.path().join(".calepin").join("syntax.tmTheme");
+    assert!(theme.is_file(), "expected {}", theme.display());
+
+    let source = std::fs::read_to_string(&theme).unwrap();
+    let expected = crate::html::HtmlSyntaxTheme::builtin();
+    assert_eq!(
+        source,
+        expected.paged_theme_source(),
+        "the artifact must be the same palette paged code is painted with"
+    );
+}
+
+#[test]
+fn typst_compile_paged_chunk_source_is_syntax_highlighted() {
+    skip_if_no_typst!();
+
+    let svg = compile_chunk_chrome_svg("");
+    let fills = svg_glyph_fills(&svg);
+
+    assert!(
+        !fills.iter().any(|color| is_html_sentinel_color(color)),
+        "paged source must not be painted with the HTML sentinel palette: {fills:?}"
+    );
+    assert!(
+        fills.len() >= 3,
+        "echoed source should be syntax-highlighted in more than one color: {fills:?}"
+    );
+}
+
+#[test]
+fn typst_compile_document_raw_theme_leaves_chunk_detection_intact() {
+    skip_if_no_typst!();
+
+    // A document-wide `set raw(theme: ..)` supplies the field through the style
+    // chain rather than setting it on the element, so the fenced-chunk rules
+    // still match the user's own fences. Chunk source keeps Calepin's palette:
+    // the theme value is a path resolved against the file holding it, and
+    // Calepin's raw lives in a different file, so it cannot be forwarded.
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    std::fs::write(
+        dir.path().join("custom.tmTheme"),
+        crate::syntax_theme::textmate_theme_source(
+            "Custom",
+            "#000000",
+            None,
+            &[crate::syntax_theme::TextMateRule {
+                name: Some("Numbers".to_string()),
+                scope: Some("constant.numeric".to_string()),
+                foreground: Some("#ff00ff".to_string()),
+                background: None,
+                font_style: None,
+            }],
+        ),
+    )
+    .unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.svg");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#set page(width: 420pt, height: 260pt, margin: 16pt)
+#calepin.setup(fenced-chunks: true, echo: true)
+#show: calepin._default-chunk-chrome
+#set raw(theme: "custom.tmTheme")
+
+#calepin._fenced-chunk("python", raw("x = 41\n", block: true, lang: "python"))
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    let svg = std::fs::read_to_string(&output).unwrap();
+
+    assert_eq!(
+        svg_path_heights(&svg, "#f7f7f5").len(),
+        1,
+        "the chunk should still be detected and echoed: {svg}"
+    );
+    let fills = svg_glyph_fills(&svg);
+    assert!(
+        !fills.iter().any(|color| is_html_sentinel_color(color)),
+        "paged source must not fall back to the HTML sentinel palette: {fills:?}"
+    );
+}
+
 #[test]
 fn typst_compile_output_kinds_are_separately_targetable() {
     skip_if_no_typst!();

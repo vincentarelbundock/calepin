@@ -127,27 +127,34 @@ Paths inside `.typ` files follow Typst path rules, not `calepin.toml` rules. In 
 
 = Syntax highlighting
 
-Configure HTML syntax highlighting with full TextMate `.tmTheme` files:
+Configure syntax colors with full TextMate `.tmTheme` files:
 
 ```toml
 highlight-light = "themes/syntax/light.tmTheme"
 highlight-dark = "themes/syntax/dark.tmTheme"
 ```
 
-Paths are resolved relative to `calepin.toml`. The light theme is used for
-light browser mode, and the dark theme is used for dark browser mode.
+Paths are resolved relative to `calepin.toml`. Both keys apply to every target,
+and to single documents as well as websites: `calepin compile paper.typ
+--config calepin.toml` reads the same two keys.
 
-Paged output is different: PDF, SVG, and PNG are rendered directly by Typst, so
-they use Typst's standard `raw` highlighting. If you want a fixed paged syntax
-theme, customize it in Typst:
+In HTML, the light theme is used for light browser mode and the dark theme for
+dark browser mode. Paged output has no such switch, so PDF, SVG, and PNG are
+painted with the light theme.
+
+_Calepin_ writes the resolved paged palette to `asset-dir`/`syntax.tmTheme` on
+every build, so a document can hand the same colors to a package that renders
+`raw` itself:
 
 ```typ
-#let paper-code-theme = read("themes/syntax/paper.tmTheme", encoding: none)
-
-#show raw.where(block: true): it => {
-  raw(it.text, block: true, lang: it.lang, theme: paper-code-theme)
-}
+#set raw(theme: "/.calepin/syntax.tmTheme")
 ```
+
+Such a package intercepts fenced blocks before _Calepin_'s own rules reach
+them, so without that line its blocks keep Typst's built-in palette while
+executed chunks use _Calepin_'s. The file is regenerated from `highlight-light`
+on every build, so the two stay in step. See
+#link("../tips.html")[Tips & tricks] for a worked codly example.
 
 For HTML, _Calepin_ keeps syntax tokenization consistent with Typst. Typst
 still reads Sublime syntax definitions (`.sublime-syntax`) and highlights the

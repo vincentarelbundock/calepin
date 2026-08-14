@@ -103,31 +103,42 @@
   }
 }
 
-#let _source-block(code, lang: none, theme: _input-syntax-theme) = {
-  // The carrier body keeps its explicit syntax `theme:`, which serves double
-  // duty: highlighting survives a user strip rule, and the fenced-chunk show
-  // rules (which select `theme: auto`) never match Calepin-emitted raw, so the
-  // sentinel holds even after a user reconstructs `it.body` elsewhere.
-  let carrier = _input-carrier(_raw-block(code, lang: lang, theme: theme))
+// The carrier body always carries an explicit syntax `theme:`, which serves
+// double duty: highlighting survives a user strip rule, and the fenced-chunk
+// show rules (which select `theme: auto`) never match Calepin-emitted raw, so
+// the sentinel holds even after a user reconstructs `it.body` elsewhere. A
+// document-level `set raw(theme: ..)` does not set the field on the element, so
+// chunk detection keeps matching the user's own fences either way.
+//
+// The two targets need different themes. HTML gets the sentinel, whose colors
+// are rewritten into CSS classes after export; that rewrite is what drives
+// light/dark. Paged gets the real palette, since nothing rewrites it later.
+//
+// A document's own `set raw(theme: ..)` therefore does not reach chunk source.
+// Forwarding it is not merely unimplemented: the value arrives as the path the
+// user wrote, and Typst resolves a relative path against the file holding the
+// expression, which here is this module under `.calepin/runtime/`. Only bytes
+// and root-absolute paths would survive the trip.
+#let _source-block(code, lang: none) = {
   if _is-html() {
     std.html.elem("div", attrs: (
       class: "sourceCode",
       "data-lang": _block-lang-label(lang),
     ))[
-      #carrier
+      #_input-carrier(_raw-block(code, lang: lang, theme: _input-syntax-theme))
     ]
   } else {
-    carrier
+    _input-carrier(_raw-block(code, lang: lang, theme: _paged-syntax-theme))
   }
 }
 
 #let _html-themed-raw-block(it) = {
   let lang = if it.has("lang") { it.lang } else { none }
-  _source-block(it.text, lang: lang, theme: _input-syntax-theme)
+  _source-block(it.text, lang: lang)
 }
 
 #let _input-block(code, lang: none) = {
-  _source-block(code, lang: lang, theme: _input-syntax-theme)
+  _source-block(code, lang: lang)
 }
 
 #let _output-block(output, kind: "stdout") = {
