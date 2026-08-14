@@ -237,6 +237,22 @@
   }
 }
 
+// Sizes written by a relocation call go through the same string-to-length
+// conversion the serialized chunk options get, so `fig-width: "50%"` and
+// `fig-width: 50%` behave alike in paged output.
+#let _relocation-override-values(overrides) = {
+  if _is-html() {
+    return overrides
+  }
+  let out = overrides
+  for key in ("fig-width", "fig-height") {
+    if key in out and out.at(key) != none {
+      out.insert(key, _paged-layout-size(out.at(key)))
+    }
+  }
+  out
+}
+
 #let _results-hidden(mode) = mode in ("hide", "hidden")
 
 #let _figure-options(opts) = (
@@ -583,7 +599,7 @@
 // label) are attached. The inline render owns the anchor; a relocated copy that
 // does not own it passes `anchor: false` so the same output can appear more than
 // once without defining a Typst label twice.
-#let _render-results(label, opts, anchor: true, config: none) = {
+#let _render-results(label, opts, anchor: true, overrides: (:), config: none) = {
   let runtime-config = _runtime-config(bound: config)
   let results-path = runtime-config.at("results", default: none)
   if results-path == none or results-path == "" {
@@ -593,7 +609,10 @@
   if chunk == none {
     panic("calepin results do not contain label `" + label + "`")
   }
-  let opts = _merge-result-options(opts, chunk)
+  // Relocation-specific choices must win over the serialized chunk options,
+  // especially for HTML where `_merge-result-options` restores every stored
+  // display option.
+  let opts = _merge-result-options(opts, chunk) + _relocation-override-values(overrides)
   // `results: "hide"` only suppresses a chunk's own inline render. Reaching
   // `_render-results` at all (e.g. through a `#calepin.results` relocation)
   // means the output should be shown here.

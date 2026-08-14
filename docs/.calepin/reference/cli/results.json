@@ -2,7 +2,7 @@
   "schema": 2,
   "calepin_version": "0.0.44",
   "input": "reference/cli.typ",
-  "generation": "b77cf9d4d39d54b1-1349cde127705c16",
+  "generation": "fef431ffbcd8cd8c-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {
@@ -89,7 +89,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "text",
-      "source": "Preprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format, including source-code script extraction\n          \n          [possible values: pdf, png, svg, html, script]\n\n      --minify\n          Minify HTML output after theming and asset processing\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n      --set <KEY=VALUE>\n          Override a Calepin config value as `key=value` (repeatable).\n          \n          Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.\n\n  -h, --help\n          Print help (see a summary with '-h')",
+      "source": "Preprocess, then invoke typst compile\n\nUsage: calepin compile [OPTIONS] <INPUT> [OUTPUT] [TYPST_ARGS]...\n\nArguments:\n  <INPUT>\n          Input .typ file, or a website source directory containing calepin.toml\n\n  [OUTPUT]\n          Output file path, or website output directory when INPUT is a directory\n\n  [TYPST_ARGS]...\n          Arguments forwarded to typst compile after `--`\n\nOptions:\n      --format <FORMAT>\n          Output format, including source-code script extraction\n          \n          [possible values: pdf, png, svg, html, script]\n\n      --minify\n          Minify HTML output after theming and asset processing\n\n  -f, --force\n          Re-execute all code chunks even when cached results are up to date\n\n      --config <CONFIG>\n          Path to project config TOML\n\n  -q, --quiet\n          Quiet mode\n\n      --timeout <TIMEOUT>\n          Per-chunk timeout in seconds\n\n      --set <KEY=VALUE>\n          Override a Calepin config value as `key=value` (repeatable).\n          \n          Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.\n\n  -h, --help\n          Print help (see a summary with '-h')",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -197,7 +197,7 @@
     "chunk-8": {
       "label": "chunk-8",
       "engine": "text",
-      "source": "Remove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS]\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help",
+      "source": "Remove `.calepin` directories and generated artifacts\n\nUsage: calepin clean [OPTIONS] [DIR]\n\nArguments:\n  [DIR]  Directory to search for Calepin artifacts (default: current directory)\n\nOptions:\n  -d, --depth <DEPTH>  Maximum recursion depth when searching for `.calepin` directories\n  -y, --yes            Skip interactive confirmation and delete immediately\n  -h, --help           Print help",
       "status": "skipped",
       "options": {
         "echo": true,

@@ -1,7 +1,8 @@
 # Changelog
 
-## Development
+## 0.0.45
 
+- Relocated output from a hidden chunk (`results: "hide"` plus `#calepin.results("label")`) now inherits the document-wide `calepin.setup(results: ...)` mode instead of always rendering verbatim, and `#calepin.results` accepts display options (`results`, `inline-output`, `warning`, `message`, and the `fig-*` family, also via `.with()`) that override the chunk's own choice for that rendering. Execution options are rejected with an error rather than silently ignored. Note that documents setting a non-default `results` mode in `calepin.setup` will see relocated hidden output change accordingly. Thanks to [@beingalink](https://github.com/beingalink) for reporting [#107](https://github.com/vincentarelbundock/calepin/issues/107).
 - New `--force` (`-f`) flag for `calepin compile` re-executes all code chunks even when cached results are up to date. Useful when a chunk depends on an external file (e.g. a data set) that changed without the chunk code changing, which the cache fingerprint cannot detect. Unlike `calepin clean`, it does not delete `.calepin/`; it re-runs the chunks and refreshes the cache. Works for single documents, website directory builds (forcing every page), and `--format script` extraction. Thanks to [@dcangst](https://github.com/dcangst) for [the suggestion](https://github.com/vincentarelbundock/calepin/issues/102).
 - `calepin clean` now accepts an optional directory argument (`calepin clean [DIR]`) and only sweeps for `.calepin` directories and stray entry files under it, defaulting to the current directory as before. This makes it harder to accidentally delete artifacts across unrelated projects when running from a broad root. Thanks to [@dcangst](https://github.com/dcangst) for [the suggestion](https://github.com/vincentarelbundock/calepin/issues/102).
 

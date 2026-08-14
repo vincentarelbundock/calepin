@@ -342,10 +342,58 @@
 
 #let inline(engine, body, ..args) = _inline(none, engine, body, ..args)
 
+// Options a `#calepin.results` relocation may override. These are exactly the
+// options the renderer consults; execution options (`eval`, `script`, the
+// `fig-device-*` family) are settled when the chunk runs and cannot be changed
+// after the fact, so passing one is an error rather than a silent no-op.
+#let _relocation-options = (
+  "results",
+  "inline-output",
+  "warning",
+  "message",
+  "fig-width",
+  "fig-height",
+  "fig-align",
+  "fig-responsive",
+  "fig-link",
+  "fig-caption",
+  "fig-cap-location",
+  "fig-alt-text",
+  "fig-subcaptions",
+  "fig-layout-columns",
+  "fig-layout-rows",
+)
+
+#let _relocation-overrides(named) = {
+  let out = (:)
+  for (key, value) in named.pairs() {
+    if key == "label" {
+      continue
+    }
+    if key not in _relocation-options {
+      panic(
+        "calepin.results: `"
+          + key
+          + "` cannot be overridden here; accepted options are "
+          + _relocation-options.join(", "),
+      )
+    }
+    // `auto` keeps whatever the chunk itself resolved.
+    if value != auto {
+      out.insert(key, value)
+    }
+  }
+  out
+}
+
 // Render a chunk's output at this location instead of (or in addition to) the
 // chunk's own position. Pair it with `results: "hide"` or `results: "hidden"`
 // on the chunk to move the output elsewhere. The label is given positionally
 // (`calepin.results("foo")`) or named (`calepin.results(label: "foo")`).
+// The relocated rendering mode defaults to `calepin.setup(results: ...)` for a
+// hidden chunk. Any display option accepted by `calepin.chunk` can be given
+// here to override the chunk's own choice for this rendering, directly or
+// through Typst's `.with()`; `auto` means "inherit from the chunk".
 //
 // A cross-reference anchor (a `fig-`/`tbl-`/`lst-` label) lives wherever the
 // figure is shown: at the chunk's own position when it is visible, and here when
@@ -382,7 +430,21 @@
         // The anchor follows the figure: attach it here only when the source
         // chunk is hidden (and so renders nothing at its own position).
         let hidden = _results-hidden(opts.at("results", default: "render"))
-        _render-results(label, opts, anchor: hidden, config: runtime-config)
+        let overrides = _relocation-overrides(named)
+        // A hidden chunk spends its own `results` slot on hiding, so an
+        // unspecified relocation falls back to the document-wide default
+        // rather than to the chunk's `"hide"`.
+        if "results" not in overrides and hidden {
+          let defaults = _resolve-options-for(_call-defaults)
+          overrides.insert("results", defaults.at("results"))
+        }
+        _render-results(
+          label,
+          opts,
+          anchor: hidden,
+          overrides: overrides,
+          config: runtime-config,
+        )
       }
     }
   }
