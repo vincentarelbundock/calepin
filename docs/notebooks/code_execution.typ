@@ -44,6 +44,14 @@ Run live, the chunk above shows nothing where it is defined, and its output appe
 
 `#calepin.results("summary")` prints that chunk's full output: text, figures, warnings, everything it would have shown in place. You can put the call before or after the chunk, and you can call it more than once to repeat the output.
 
+Because a hidden chunk spends its own `results` option on hiding, the relocated output falls back to the document-wide `calepin.setup(results: ...)` mode. Pass any display option to `#calepin.results` to override the chunk's choice for that rendering:
+
+````typ
+#calepin.results("summary", results: "typst", fig-caption: "Shown later")
+````
+
+The accepted options are `results`, `inline-output`, `warning`, `message`, and the `fig-*` display options (`fig-width`, `fig-height`, `fig-align`, `fig-responsive`, `fig-link`, `fig-caption`, `fig-cap-location`, `fig-alt-text`, `fig-subcaptions`, `fig-layout-columns`, `fig-layout-rows`). Passing `auto` keeps whatever the chunk resolved. Execution options such as `eval` or the `fig-device-*` family are settled when the chunk runs and cannot be changed here, so passing one is an error.
+
 When the chunk produces a cross-referenced figure or table (a `fig-`, `tbl-`, or `lst-` label), the `@label` reference points to where the figure is shown: the chunk's own position when it is visible, or the relocation when the chunk is hidden. Printing the same figure in more than one place and then referencing it is ambiguous, so Typst reports an error.
 
 Run live, the hidden chunk below shows nothing where it is defined, and its output is printed on request:

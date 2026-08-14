@@ -23,6 +23,18 @@ On Windows via powershell:
 powershell -ExecutionPolicy Bypass -c "irm https://github.com/vincentarelbundock/calepin/releases/latest/download/calepin-installer.ps1 | iex"
 ```
 
+On MacOS, you can also install Calepin with #link("https://brew.sh")[Homebrew]:
+
+```sh
+brew install vincentarelbundock/tap/calepin
+```
+
+Upgrade a Homebrew installation with:
+
+```sh
+brew upgrade calepin
+```
+
 If you are a `cargo` for Rust user, you can install with:
 
 ```sh

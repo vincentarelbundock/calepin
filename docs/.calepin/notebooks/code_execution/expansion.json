@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "fingerprint": 13625588026667560663,
-  "generation": "bd17d01e6955eed7-1349cde127705c16",
+  "fingerprint": 12266030283666968146,
+  "generation": "aa39b18e06274e52-1349cde127705c16",
   "completed_store": {},
   "stabilized_chunks": [
     {
@@ -40,7 +40,7 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "ordinal": 2,
+      "ordinal": 4,
       "crossref_labels": []
     },
     {
@@ -79,7 +79,7 @@
         "fig-layout-rows": null,
         "kind": null
       },
-      "ordinal": 11,
+      "ordinal": 13,
       "crossref_labels": []
     }
   ],

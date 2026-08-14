@@ -2618,6 +2618,34 @@ fn write_figure_results(dir: &Path, label: &str) {
 
 const RELOCATE_RESULTS_INPUT: &str = "calepin-results=/.calepin/paper/results.json";
 
+fn assert_relocated_typst_result(
+    source: &str,
+    result: &str,
+    hidden_marker: &str,
+    visible_marker: &str,
+) {
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_stream_results(dir.path(), "greeting", result);
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(&input, source).unwrap();
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+
+    let extracted = pdf_text(&output);
+    assert!(extracted.contains(visible_marker), "{extracted}");
+    assert!(
+        !extracted.contains(hidden_marker),
+        "expected Typst evaluation for relocated output: {extracted}"
+    );
+}
+
 #[test]
 fn typst_compile_relocates_hidden_chunk_output_once() {
     skip_if_no_typst!();
@@ -2657,6 +2685,130 @@ Body text before relocation.
     assert_eq!(
         count, 1,
         "expected relocated output exactly once: {extracted}"
+    );
+}
+
+#[test]
+fn typst_compile_relocated_hidden_output_uses_setup_result_mode() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    assert_relocated_typst_result(
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(echo: false, results: "typst")
+
+#calepin.chunk("python", label: "greeting", results: "hide")[`
+pass
+`]
+
+#calepin.results("greeting")
+"##,
+        "#hide[SETUP_LITERAL_12345]SETUP_VISIBLE_12345",
+        "SETUP_LITERAL_12345",
+        "SETUP_VISIBLE_12345",
+    );
+}
+
+#[test]
+fn typst_compile_relocated_output_accepts_with_result_override() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    assert_relocated_typst_result(
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(echo: false, results: "render")
+
+#calepin.chunk("python", label: "greeting", results: "hide")[`
+pass
+`]
+
+#let typst-results = calepin.results.with(results: "typst")
+#typst-results("greeting")
+"##,
+        "#hide[WITH_LITERAL_12345]WITH_VISIBLE_12345",
+        "WITH_LITERAL_12345",
+        "WITH_VISIBLE_12345",
+    );
+}
+
+#[test]
+fn typst_compile_relocation_overrides_display_options() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_figure_results(dir.path(), "plot");
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(echo: false)
+
+#calepin.chunk("python", label: "plot", results: "hide")[`
+pass
+`]
+
+#calepin.results("plot", fig-caption: "RELOCATED_CAPTION_12345")
+"##,
+    )
+    .unwrap();
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+
+    let extracted = pdf_text(&output);
+    assert!(extracted.contains("RELOCATED_CAPTION_12345"), "{extracted}");
+}
+
+#[test]
+fn typst_compile_relocation_rejects_execution_options() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_stream_results(dir.path(), "greeting", "hello");
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", label: "greeting", results: "hide")[`
+pass
+`]
+
+#calepin.results("greeting", eval: false)
+"##,
+    )
+    .unwrap();
+
+    let result = typst_compile_output(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+    assert!(!result.status.success());
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(
+        stderr.contains("`eval` cannot be overridden here"),
+        "{stderr}"
     );
 }
 
