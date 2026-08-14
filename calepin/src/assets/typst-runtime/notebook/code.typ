@@ -1,6 +1,18 @@
 #import "../00_syntax-theme.typ": _input-syntax-theme, _output-syntax-theme, _paged-syntax-theme
 #import "../core/target.typ": _is-html
 
+// Chunk chrome is emitted as *labeled, unstyled* carriers. Every visual
+// treatment is applied later by show rules (see `chrome.typ`), so a document
+// author can restyle or strip it with plain Typst:
+//
+//   #show <calepin-input>: it => it.body            // strip Calepin's box
+//   #show <calepin-input>: it => my-frame(it.body)  // restyle
+//
+// Overrides must reconstruct from `it.body` rather than re-display `it`:
+// re-displaying re-fires the default rule, so `it => it` is a no-op and
+// `it => my-frame(it)` nests around the default chrome instead of replacing it.
+// That is why the carrier is a `block` (one field access) and not the `raw`.
+
 #let _block-lang-label(lang) = {
   if lang == none {
     ""
@@ -15,6 +27,8 @@
   raw(value, block: true, lang: lang, theme: theme)
 }
 
+// Default chrome for echoed source. Kept exported: it is the body of the
+// default `<calepin-input>` show rule, not something call sites invoke.
 #let code-block(
   body,
   fill: rgb("#f7f7f5"),
@@ -40,22 +54,70 @@
   ]
 }
 
-#let _paged-input-code-block(code, lang: none) = {
-  code-block[
-    #_raw-block(code, lang: lang, theme: _paged-syntax-theme)
+// Program output is not source code. On the paged target it is set as plain
+// monospaced text rather than a `raw` element, so a document-wide `show raw:`
+// rule from a package such as codly styles the code a chunk contains without
+// also reaching what the chunk printed. Spaces become non-breaking so column
+// alignment in printed tables survives; `raw` gave us that for free.
+#let _mono-text(value) = {
+  let lines = value.trim("\n", at: end).split("\n")
+  set text(font: "DejaVu Sans Mono")
+  lines.map(line => line.replace(" ", "\u{00A0}")).join(linebreak())
+}
+
+// Default chrome for the four output kinds; the body of the default show rules.
+#let _output-chrome(body, kind: "stdout") = {
+  let erroring = kind == "error" or kind == "warning"
+  let fill = if erroring { rgb("#fffaf7") } else { rgb("#fbfbfa") }
+  let stroke = if erroring {
+    (rest: 0.5pt + rgb("#e2c7ba"), left: 1.5pt + rgb("#c48672"))
+  } else {
+    (rest: 0.5pt + rgb("#ddddda"), left: 1.5pt + rgb("#cfcfc8"))
+  }
+  code-block(
+    fill: fill,
+    stroke: stroke,
+    radius: 2pt,
+    inset: (x: 0.65em, y: 0.4em),
+    plain: true,
+  )[
+    #if erroring {
+      text(fill: rgb("#5f3328"))[#body]
+    } else {
+      body
+    }
   ]
 }
 
+#let _input-carrier(body) = [#block(body) <calepin-input>]
+
+#let _output-carrier(body, kind: "stdout") = {
+  if kind == "result" {
+    [#block(body) <calepin-result>]
+  } else if kind == "warning" {
+    [#block(body) <calepin-warning>]
+  } else if kind == "error" {
+    [#block(body) <calepin-error>]
+  } else {
+    [#block(body) <calepin-output>]
+  }
+}
+
 #let _source-block(code, lang: none, theme: _input-syntax-theme) = {
+  // The carrier body keeps its explicit syntax `theme:`, which serves double
+  // duty: highlighting survives a user strip rule, and the fenced-chunk show
+  // rules (which select `theme: auto`) never match Calepin-emitted raw, so the
+  // sentinel holds even after a user reconstructs `it.body` elsewhere.
+  let carrier = _input-carrier(_raw-block(code, lang: lang, theme: theme))
   if _is-html() {
     std.html.elem("div", attrs: (
       class: "sourceCode",
       "data-lang": _block-lang-label(lang),
     ))[
-      #_raw-block(code, lang: lang, theme: theme)
+      #carrier
     ]
   } else {
-    _paged-input-code-block(code, lang: lang)
+    carrier
   }
 }
 
@@ -68,47 +130,25 @@
   _source-block(code, lang: lang, theme: _input-syntax-theme)
 }
 
-#let _output-block(output, stream: "stdout") = {
+#let _output-block(output, kind: "stdout") = {
+  // HTML keeps a real `raw`, which exports as `<pre><code>`: whitespace is
+  // preserved by the browser and the markup stays semantic.
+  let body = if _is-html() {
+    _raw-block(output, theme: _output-syntax-theme)
+  } else {
+    _mono-text(output)
+  }
+  let carrier = _output-carrier(body, kind: kind)
   if _is-html() {
-    let class = if stream == "stderr" {
+    let class = if kind == "error" or kind == "warning" {
       "cell-output cell-output-stderr"
     } else {
       "cell-output cell-output-stdout"
     }
     std.html.elem("div", attrs: (class: class))[
-      #_raw-block(output, theme: _output-syntax-theme)
+      #carrier
     ]
   } else {
-    let fill = if stream == "stderr" {
-      rgb("#fffaf7")
-    } else {
-      rgb("#fbfbfa")
-    }
-    let stroke = if stream == "stderr" {
-      (
-        rest: 0.5pt + rgb("#e2c7ba"),
-        left: 1.5pt + rgb("#c48672"),
-      )
-    } else {
-      (
-        rest: 0.5pt + rgb("#ddddda"),
-        left: 1.5pt + rgb("#cfcfc8"),
-      )
-    }
-    code-block(
-      fill: fill,
-      stroke: stroke,
-      radius: 2pt,
-      inset: (x: 0.65em, y: 0.4em),
-      plain: true,
-    )[
-      #if stream == "stderr" {
-        text(fill: rgb("#5f3328"))[
-          #_raw-block(output, theme: _paged-syntax-theme)
-        ]
-      } else {
-        _raw-block(output, theme: _paged-syntax-theme)
-      }
-    ]
+    carrier
   }
 }

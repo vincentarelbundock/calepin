@@ -78,6 +78,17 @@ echo "hello from bash"
 ```
 ````
 
+= Styling code blocks
+
+Echoed source and chunk output are wrapped in labeled elements, so a show rule restyles or removes Calepin's chrome:
+
+```typ
+#show <calepin-input>: it => it.body             // bare code, no box
+#show <calepin-output>: it => my-frame(it.body)  // custom output frame
+```
+
+Overrides must reconstruct from `it.body` rather than re-emit `it`. See #link("../themes/styling.html")[Styling chunks] for the full list of labels and the reason for that rule.
+
 = Options
 
 Options can be set in three places: as document-wide defaults, as arguments to one chunk, or as `#|` header lines inside a block.

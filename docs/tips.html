@@ -4191,7 +4191,7 @@ html:not([data-theme]) {
     <script src="pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Tips & tricks])\n#metadata((tags: (\"tips\", \"notebooks\", \"websites\"))) <website-metadata>\n\n#title()\n\n= Conditional output\n\nUse `calepin-target` when a small piece of Typst should change between HTML and paged output:\n\n```typ\n#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" [\n  This appears only in HTML.\n] else [\n  This appears in PDF, SVG, and PNG output.\n]\n```\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Tips & tricks])\n#metadata((tags: (\"tips\", \"notebooks\", \"websites\"))) <website-metadata>\n\n#title()\n\n= Conditional output\n\nUse `calepin-target` when a small piece of Typst should change between HTML and paged output:\n\n```typ\n#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" [\n  This appears only in HTML.\n] else [\n  This appears in PDF, SVG, and PNG output.\n]\n```\n\n= Using codly with executed chunks\n\n#link(\"https://typst.app/universe/package/codly\")[codly] installs its own `show raw:` rules. Calepin wraps echoed source in a labeled block *around* that `raw`, so without an override you get codly's frame nested inside Calepin's box.\n\nOne show rule fixes it. This is a complete document, using the default Calepin theme:\n\n````typ\n#import \"/.calepin/calepin.typ\" as calepin\n#import \"@preview/codly:1.3.0\": *\n#import \"@preview/codly-languages:0.1.1\": *\n\n#show: calepin.document\n#show: codly-init\n#codly(languages: codly-languages)\n\n// Hand the code to codly, and drop Calepin's own box from around it.\n#show <calepin-input>: it => it.body\n\n#calepin.setup(echo: true)\n\n```python\nimport math\nprint(f\"circumference: {2 * math.pi:.4f}\")\n```\n````\n\nRendered result:\n\n#let target = sys.inputs.at(\"calepin-target\", default: \"paged\")\n\n#if target == \"html\" [\n  #html.elem(\"iframe\", attrs: (\n    src: \"assets/codly.pdf\",\n    title: \"Calepin chunk styled by codly\",\n    style: \"display: block; width: 100%; height: min(40vh, 20rem); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);\",\n  ))[]\n] else [\n  #link(\"assets/codly.pdf\")[Open the rendered PDF.]\n]\n\nChunk output is untouched: it is not a `raw` element on the paged target, so codly never reaches it. The override reconstructs from `it.body` rather than re-emitting `it`; re-emitting would nest your rule around Calepin's default instead of replacing it. See #link(\"themes/styling.html\")[Styling chunks] for the other labels and the full explanation.\n\nSetting `theme = \"typst\"` removes Calepin's chrome everywhere at once, with no show rules at all. Chunks still execute either way.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4438,6 +4438,10 @@ html:not([data-theme]) {
 
                             
                             
+<li class="calepin-website-sidebar-link"><a href="themes/styling.html" aria-label="Styling chunks">Styling chunks</a></li>
+
+                            
+                            
 <li class="calepin-website-sidebar-link"><a href="themes/case_studies.html" aria-label="Case studies">Case studies</a></li>
 
                             
@@ -4475,7 +4479,23 @@ html:not([data-theme]) {
   This appears only in HTML.
 <span class="calepin-syntax-scope-2">]</span> <span class="calepin-syntax-scope-7">else</span> <span class="calepin-syntax-scope-2">[</span>
   This appears in PDF, SVG, and PNG output.
-<span class="calepin-syntax-scope-2">]</span></code></pre></div>
+<span class="calepin-syntax-scope-2">]</span></code></pre></div><h2 id="using-codly-with-executed-chunks">Using codly with executed chunks</h2><p><a href="https://typst.app/universe/package/codly">codly</a> installs its own <code>show raw:</code> rules. Calepin wraps echoed source in a labeled block <strong>around</strong> that <code>raw</code>, so without an override you get codly’s frame nested inside Calepin’s box.</p><p>One show rule fixes it. This is a complete document, using the default Calepin theme:</p><div class="sourceCode" data-lang="typ"><pre><code data-lang="typ"><span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">import</span> <span class="calepin-syntax-scope-4">"/.calepin/calepin.typ"</span> <span class="calepin-syntax-scope-7">as</span> calepin
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">import</span> <span class="calepin-syntax-scope-4">"@preview/codly:1.3.0"</span><span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-9">*</span>
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">import</span> <span class="calepin-syntax-scope-4">"@preview/codly-languages:0.1.1"</span><span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-9">*</span>
+
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span><span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-10">calepin</span><span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">document</span>
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span><span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-10">codly-init</span>
+<span class="calepin-syntax-scope-10">#</span><span class="calepin-syntax-scope-10">codly</span><span class="calepin-syntax-scope-2">(</span>languages<span class="calepin-syntax-scope-2">:</span> codly-languages<span class="calepin-syntax-scope-2">)</span>
+
+<span class="calepin-syntax-scope-3">// Hand the code to codly, and drop Calepin's own box from around it.</span>
+<span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">show</span> <span class="calepin-syntax-scope-183">&lt;calepin-input></span><span class="calepin-syntax-scope-2">:</span> it <span class="calepin-syntax-scope-9">=></span> it<span class="calepin-syntax-scope-2">.</span>body
+
+#calepin<span class="calepin-syntax-scope-2">.</span><span class="calepin-syntax-scope-10">setup</span><span class="calepin-syntax-scope-2">(</span>echo<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-7">true</span><span class="calepin-syntax-scope-2">)</span>
+
+```python
+import math
+print(f"circumference: {2 * math.pi:.4f}")
+```</code></pre></div><p>Rendered result:</p><p><iframe src="assets/codly.pdf" title="Calepin chunk styled by codly" style="display: block; width: 100%; height: min(40vh, 20rem); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius);"></iframe></p><p>Chunk output is untouched: it is not a <code>raw</code> element on the paged target, so codly never reaches it. The override reconstructs from <code>it.body</code> rather than re-emitting <code>it</code>; re-emitting would nest your rule around Calepin’s default instead of replacing it. See <a href="themes/styling.html">Styling chunks</a> for the other labels and the full explanation.</p><p>Setting <code>theme = "typst"</code> removes Calepin’s chrome everywhere at once, with no show rules at all. Chunks still execute either way.</p>
         </main>
                 
         <aside class="calepin-website-toc is-floating">
@@ -4485,6 +4505,8 @@ html:not([data-theme]) {
                     
                     <li class="level-2"><a href="#conditional-output">Conditional output</a></li>
                     
+                    <li class="level-2"><a href="#using-codly-with-executed-chunks">Using codly with executed chunks</a></li>
+                    
                 </ul>
             </nav>
         </aside>
@@ -4492,6 +4514,13 @@ html:not([data-theme]) {
     </div>
     
     
+    
+        
+        
+        
+            
+        
+        
     
         
         

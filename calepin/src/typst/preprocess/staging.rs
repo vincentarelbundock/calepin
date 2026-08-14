@@ -154,6 +154,18 @@ fn write_wrapper(
     lines.push('\n');
     lines.push_str(heading_anchor_show_rule());
 
+    // Default chunk styling. Installed here, and only alongside a notebook
+    // theme, so that `theme = "typst"` leaves the labeled carriers bare while
+    // chunks still execute. Defined after the fenced-chunk rules above so its
+    // own raw rule is the outermost one, and before the theme source and
+    // document body so both can displace it with their own label rules.
+    if notebook_theme.is_some() {
+        lines.push('\n');
+        lines.push_str(
+            "#show: _default-chunk-chrome.with(raw-chunk-langs: _raw-chunk-langs)\n",
+        );
+    }
+
     if let Some(notebook_theme) = notebook_theme {
         lines.push_str("\n// Notebook theme\n");
         let theme_source = rewrite_runtime_imports(&notebook_theme.source, runtime_import);
@@ -192,7 +204,7 @@ fn typst_string(value: &str) -> String {
 fn raw_show_rule(lang: &str) -> String {
     let lang = typst_string(lang);
     format!(
-        "#show raw.where(block: true, lang: {lang}, theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ chunk_from_raw_plain({lang}, it) }}\n"
+        "#show raw.where(block: true, lang: {lang}, theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ _fenced-chunk({lang}, it) }}\n"
     )
 }
 
@@ -221,7 +233,7 @@ fn html_raw_show_rule() -> &'static str {
     it.lang,
     _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
   ) {
-    chunk_from_raw_plain(it.lang, it)
+    _fenced-chunk(it.lang, it)
   } else {
     _html-themed-raw-block(it)
   }
@@ -240,7 +252,7 @@ mod tests {
 
         assert!(rule.contains(r#"lang: "weird\"kernel""#), "{rule}");
         assert!(
-            rule.contains(r#"chunk_from_raw_plain("weird\"kernel""#),
+            rule.contains(r#"_fenced-chunk("weird\"kernel""#),
             "{rule}"
         );
     }

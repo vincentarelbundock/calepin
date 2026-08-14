@@ -1,5 +1,16 @@
 #let _disable-raw-chunk-transforms = state("calepin-disable-raw-chunk-transforms", false)
 
+// Render `body()` with the fenced-chunk show rules suppressed, so Calepin's own
+// rendered code never re-enters chunk detection. Lives here rather than in
+// `chunk.typ` because `code.typ` needs it too and `chunk.typ` imports `code.typ`.
+#let _without-raw-chunk-transforms(body) = context {
+  let disabled = _disable-raw-chunk-transforms.get()
+  _disable-raw-chunk-transforms.update(_ => true)
+  let rendered = body()
+  _disable-raw-chunk-transforms.update(_ => disabled)
+  rendered
+}
+
 // Deferred output. A chunk stashes its resolved render options here keyed by
 // label, so a `#calepin.results(label)` call placed elsewhere can render the
 // same output with identical settings. Read with `.final()` so the lookup works

@@ -25,12 +25,16 @@ do not share scope across modules.
 8. `assets/typst-runtime/notebook/defaults.typ`
    - Document and call option defaults plus automatic-label counters.
 9. `assets/typst-runtime/notebook/chunk-support.typ`
-   - Chunk relocation state, raw-node parsing, and label derivation.
+   - Chunk relocation state, raw-node parsing, label derivation, and the
+     `_without-raw-chunk-transforms` recursion guard.
 10. `assets/typst-runtime/notebook/result-support.typ`
     - Result representation selection, artifact paths, and label attachment.
 11. `assets/typst-runtime/notebook/code.typ`
-   - Styled input/output code rendering (`code-block`, `_input-block`,
-     `_output-block`) and HTML/paged source wrappers.
+   - Labeled, unstyled input/output carriers (`_input-block`, `_output-block`)
+     plus the default chrome helpers (`code-block`, `output-block`) and the
+     HTML/paged source wrappers. Styling is applied by show rules, not here.
+   - `chrome.typ` holds `default-chunk-chrome`, the show rules a theme bundle
+     opts into for that styling, plus fenced-block handling in themed documents.
 12. `assets/typst-runtime/notebook/render.typ`
    - Figure and result rendering utilities
      (`_render-results` -> `_render-item` -> `_render-display-item`), with
@@ -39,7 +43,7 @@ do not share scope across modules.
     - `setup()` plus internal option resolution, with the historical
       `_resolve-options(engine, args)` wrapper retained for themes.
 14. `assets/typst-runtime/notebook/chunk.typ`
-    - Public chunking API (`chunk`, `inline`, `chunk_from_raw_plain`)
+    - Public chunking API (`chunk`, `inline`, `_fenced-chunk`)
     - Query/render dispatch (`_emit-chunk`), label handling, raw-block interception
 
 15. `assets/typst-runtime/elements/mod.typ`

@@ -285,6 +285,22 @@
     "translations": {}
   },
   {
+    "href": "themes/styling.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "themes",
+        "chunks",
+        "styling"
+      ]
+    },
+    "path": "themes/styling.typ",
+    "pdf": "themes/styling.pdf",
+    "title": "Styling chunks",
+    "translation_key": "themes/styling",
+    "translations": {}
+  },
+  {
     "href": "themes/templating.html",
     "language": null,
     "meta": {

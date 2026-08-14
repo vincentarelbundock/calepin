@@ -1309,8 +1309,9 @@ fn typst_compile_raw_size_applies_to_rewritten_and_explicit_chunks() {
 #set page(width: 420pt, height: 220pt, margin: 16pt)
 #set text(size: 20pt)
 #calepin.setup(fenced-chunks: true, echo: true)
+#show: calepin._default-chunk-chrome
 
-#calepin.chunk_from_raw_plain("python", raw("print(\"rewritten\")\n", block: true, lang: "python"))
+#calepin._fenced-chunk("python", raw("print(\"rewritten\")\n", block: true, lang: "python"))
 
 #calepin.chunk("python", label: "explicit")[
 ```python
@@ -1336,6 +1337,240 @@ print("explicit")
     assert!(
         input_heights.iter().all(|height| *height < 28.0),
         "raw text sizing should reduce both input cells: {input_heights:?}"
+    );
+}
+
+/// Compile a paged document that installs the default chunk chrome and then
+/// applies `extra` (the show rules under test) before echoing one chunk.
+fn compile_chunk_chrome_svg(extra: &str) -> String {
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.svg");
+    std::fs::write(
+        &input,
+        format!(
+            r##"#import ".calepin/calepin.typ"
+
+#set page(width: 420pt, height: 260pt, margin: 16pt)
+#calepin.setup(fenced-chunks: true, echo: true)
+#show: calepin._default-chunk-chrome
+{extra}
+
+#calepin._fenced-chunk("python", raw("print(\"hello\")\n", block: true, lang: "python"))
+"##
+        ),
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    std::fs::read_to_string(&output).unwrap()
+}
+
+#[test]
+fn typst_compile_input_label_rule_strips_default_chunk_chrome() {
+    skip_if_no_typst!();
+
+    let default = compile_chunk_chrome_svg("");
+    assert_eq!(
+        svg_path_heights(&default, "#f7f7f5").len(),
+        1,
+        "expected default input chrome: {default}"
+    );
+
+    let stripped = compile_chunk_chrome_svg("#show <calepin-input>: it => it.body");
+    assert!(
+        svg_path_heights(&stripped, "#f7f7f5").is_empty(),
+        "input label rule should remove Calepin's box: {stripped}"
+    );
+    assert!(
+        stripped.contains("<use"),
+        "echoed source should still render after stripping: {stripped}"
+    );
+}
+
+#[test]
+fn typst_compile_input_label_rule_replaces_rather_than_nests() {
+    skip_if_no_typst!();
+
+    // Reconstructing from `it.body` must displace the default rule. Re-emitting
+    // `it` instead would nest the frame around the default chrome.
+    let svg = compile_chunk_chrome_svg(
+        r##"#show <calepin-input>: it => block(fill: rgb("#00ff00"), it.body)"##,
+    );
+
+    assert_eq!(
+        svg_path_heights(&svg, "#00ff00").len(),
+        1,
+        "custom frame should render: {svg}"
+    );
+    assert!(
+        svg_path_heights(&svg, "#f7f7f5").is_empty(),
+        "custom frame should replace the default chrome, not wrap it: {svg}"
+    );
+}
+
+#[test]
+fn typst_compile_show_set_raw_rule_composes_with_default_chunk_chrome() {
+    skip_if_no_typst!();
+
+    let svg = compile_chunk_chrome_svg("#show raw: set text(fill: rgb(\"#ff0000\"))");
+
+    assert_eq!(
+        svg_path_heights(&svg, "#f7f7f5").len(),
+        1,
+        "a show-set rule on raw must not displace the default chrome: {svg}"
+    );
+    assert!(
+        svg.contains("#ff0000"),
+        "the show-set rule should still reach the echoed source: {svg}"
+    );
+}
+
+#[test]
+fn typst_compile_stripped_input_does_not_re_enter_chunk_detection() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    // The recursion guard is the `theme:` argument the carrier's `raw` keeps:
+    // the fenced-chunk show rules select `theme: auto`, so Calepin-emitted raw
+    // stays out of chunk detection even after a user reconstructs `it.body`.
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.setup(fenced-chunks: true, echo: true)
+#show: calepin._default-chunk-chrome
+#show <calepin-input>: it => it.body
+
+#calepin._fenced-chunk("python", raw("print(\"unique-marker\")\n", block: true, lang: "python"))
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    let text = pdf_text(&output);
+    assert_eq!(
+        text.matches("unique-marker").count(),
+        1,
+        "echoed source must render once, not be re-processed: {text}"
+    );
+}
+
+#[test]
+fn typst_compile_output_kinds_are_separately_targetable() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.svg");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ": _default-chunk-chrome
+
+#set page(width: 420pt, height: 320pt, margin: 16pt)
+#show: _default-chunk-chrome
+
+#[#block[#raw("out", block: true)] <calepin-output>]
+#[#block[#raw("res", block: true)] <calepin-result>]
+#[#block[#raw("warn", block: true)] <calepin-warning>]
+#[#block[#raw("err", block: true)] <calepin-error>]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    let svg = std::fs::read_to_string(&output).unwrap();
+
+    // stdout and result share the neutral fill; warning and error share the
+    // alert fill. All four are reachable, and the two families are distinct.
+    assert_eq!(
+        svg_path_heights(&svg, "#fbfbfa").len(),
+        2,
+        "expected stdout and result cells: {svg}"
+    );
+    assert_eq!(
+        svg_path_heights(&svg, "#fffaf7").len(),
+        2,
+        "expected warning and error cells: {svg}"
+    );
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.svg");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ": _default-chunk-chrome
+
+#set page(width: 420pt, height: 320pt, margin: 16pt)
+#show: _default-chunk-chrome
+#show <calepin-error>: it => block(fill: rgb("#00ff00"), it.body)
+
+#[#block[#raw("out", block: true)] <calepin-output>]
+#[#block[#raw("err", block: true)] <calepin-error>]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &[]);
+    let svg = std::fs::read_to_string(&output).unwrap();
+    assert_eq!(
+        svg_path_heights(&svg, "#00ff00").len(),
+        1,
+        "errors should be targetable on their own: {svg}"
+    );
+    assert!(
+        svg_path_heights(&svg, "#fffaf7").is_empty(),
+        "the error rule should displace only the error default: {svg}"
+    );
+    assert_eq!(
+        svg_path_heights(&svg, "#fbfbfa").len(),
+        1,
+        "stdout chrome should be untouched: {svg}"
+    );
+}
+
+#[test]
+fn typst_compile_html_keeps_css_hooks_and_honors_label_rules() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ": _html-themed-raw-block
+
+#show <calepin-input>: it => html.elem("calepin-stripped")[#it.body]
+
+#_html-themed-raw-block(raw("print('plain')", block: true, lang: "python"))
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--features", "html", "--input", "calepin-target=html"],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("sourceCode"),
+        "CSS hook must survive a Typst-side override: {html}"
+    );
+    assert!(
+        html.contains("calepin-stripped"),
+        "label rules must apply on the HTML target: {html}"
     );
 }
 

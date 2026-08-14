@@ -1,5 +1,9 @@
 # Changelog
 
+## Development
+
+- Code chunks and their output are now emitted as labeled elements, so a document can restyle or remove _Calepin_'s code-block chrome with an ordinary Typst show rule and no _Calepin_-specific API: `#show <calepin-input>: it => it.body` hands the code to a package such as [codly](https://typst.app/universe/package/codly) with no box around it. The labels are `<calepin-input>`, `<calepin-output>`, `<calepin-result>`, `<calepin-warning>`, and `<calepin-error>`; each marks a `block` whose `body` holds the bare content, and an override must reconstruct from `it.body` rather than re-emit `it`. Setting `theme = "typst"` now removes chunk chrome everywhere while chunks still execute. Paged output is no longer a `raw` element, so a document-wide `show raw:` rule styles the code a chunk contains without also reaching what the chunk printed. Thanks to [@peterpf](https://github.com/peterpf) for [the report](https://github.com/vincentarelbundock/calepin/issues/104).
+
 ## 0.0.45
 
 - Relocated output from a hidden chunk (`results: "hide"` plus `#calepin.results("label")`) now inherits the document-wide `calepin.setup(results: ...)` mode instead of always rendering verbatim, and `#calepin.results` accepts display options (`results`, `inline-output`, `warning`, `message`, and the `fig-*` family, also via `.with()`) that override the chunk's own choice for that rendering. Execution options are rejected with an error rather than silently ignored. Note that documents setting a non-default `results` mode in `calepin.setup` will see relocated hidden output change accordingly. Thanks to [@beingalink](https://github.com/beingalink) for reporting [#107](https://github.com/vincentarelbundock/calepin/issues/107).

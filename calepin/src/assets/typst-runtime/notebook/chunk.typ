@@ -1,7 +1,7 @@
 #import "../core/config.typ": _runtime-config
 #import "../core/results.typ": _result-chunk, _results-document
 #import "../core/target.typ": _is-query
-#import "chunk-support.typ": _derive-label, _disable-raw-chunk-transforms
+#import "chunk-support.typ": _derive-label, _disable-raw-chunk-transforms, _without-raw-chunk-transforms
 #import "chunk-support.typ": _raw-node, _raw-text, _relocate-opts, _sync-auto-label-counter
 #import "code.typ": _html-themed-raw-block, _input-block
 #import "defaults.typ": _auto-inline-label-index, _base-options, _call-defaults
@@ -261,14 +261,6 @@
   }
 }
 
-#let _without-raw-chunk-transforms(body) = context {
-  let disabled = _disable-raw-chunk-transforms.get()
-  _disable-raw-chunk-transforms.update(_ => true)
-  let rendered = body()
-  _disable-raw-chunk-transforms.update(_ => disabled)
-  rendered
-}
-
 // `fenced-chunks` is the single switch for auto-running plain fenced blocks:
 // `true` (every engine), an engine name, or a list of engine names.
 #let _fenced-chunks-runs(engine, setting) = {
@@ -294,7 +286,7 @@
   }
 }
 
-#let chunk_from_raw_plain(engine, it) = _chunk-from-raw-plain(none, engine, it)
+#let _fenced-chunk(engine, it) = _chunk-from-raw-plain(none, engine, it)
 
 #let _infer-engine(body) = {
   let node = _raw-node(body)

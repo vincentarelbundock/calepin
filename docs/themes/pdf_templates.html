@@ -4191,7 +4191,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [PDF])\n#import \"/.calepin/calepin.typ\" as calepin\n#show: calepin.document\n#metadata((tags: (\"themes\", \"PDF\", \"templates\"))) <website-metadata>\n#title()\n\n`layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.\n\n```text\nthemes/my-theme/\n  layouts/\n    pdf.typ\n```\n\nBefore Typst runs, Calepin renders this file with MiniJinja, the same engine used for HTML layouts (see #link(\"templating.html\")[Templating]), so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.\n\nInside the layout, place notebook content with `doc.body`:\n\n```typ\n#set page(\n  paper: \"us-letter\",\n  margin: (x: 1in, y: 0.85in),\n  numbering: \"1\",\n)\n\n#set text(font: \"Libertinus Serif\", size: 10.5pt)\n\n{{ doc.body }}\n```\n\nUseful `layouts/pdf.typ` values:\n\n- `theme`: local theme directory name\n- `target`: `paged`\n- `doc.path`: `.typ` input path relative to workspace\n- `doc.dir`: input directory relative to workspace\n- `doc.stem`: input filename without `.typ`\n- `doc.title`: document title, or an empty string\n- `doc.body`: notebook body, injected as a `#include`\n- `doc.meta`: values from `#metadata(...) <website-metadata>`\n- `store`: the completed document store from `[store]`, `calepin.store.set()`, successful `store-set` chunks, and CLI `--set store.<name>=...` overrides\n\n`doc.body` must be included explicitly if you want the notebook body in the rendered output.\n\n`theme = \"typst\"` disables notebook-specific theming, and `extends = \"typst\"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [PDF])\n#import \"/.calepin/calepin.typ\" as calepin\n#show: calepin.document\n#metadata((tags: (\"themes\", \"PDF\", \"templates\"))) <website-metadata>\n#title()\n\n`layouts/pdf.typ` is the Typst-side layout used by PDF and SVG notebook outputs.\n\n```text\nthemes/my-theme/\n  layouts/\n    pdf.typ\n```\n\nBefore Typst runs, Calepin renders this file with MiniJinja, the same engine used for HTML layouts (see #link(\"templating.html\")[Templating]), so the output is still valid Typst source. The file uses a `.typ` extension because it renders to Typst, even though it is a MiniJinja template.\n\nInside the layout, place notebook content with `doc.body`:\n\n```typ\n#set page(\n  paper: \"us-letter\",\n  margin: (x: 1in, y: 0.85in),\n  numbering: \"1\",\n)\n\n#set text(font: \"Libertinus Serif\", size: 10.5pt)\n\n{{ doc.body }}\n```\n\nUseful `layouts/pdf.typ` values:\n\n- `theme`: local theme directory name\n- `target`: `paged`\n- `doc.path`: `.typ` input path relative to workspace\n- `doc.dir`: input directory relative to workspace\n- `doc.stem`: input filename without `.typ`\n- `doc.title`: document title, or an empty string\n- `doc.body`: notebook body, injected as a `#include`\n- `doc.meta`: values from `#metadata(...) <website-metadata>`\n- `store`: the completed document store from `[store]`, `calepin.store.set()`, successful `store-set` chunks, and CLI `--set store.<name>=...` overrides\n\n`doc.body` must be included explicitly if you want the notebook body in the rendered output.\n\n`theme = \"typst\"` disables notebook-specific theming, and `extends = \"typst\"` creates a local theme with no inherited Calepin base. Use an empty `layouts/pdf.typ` for a minimal pass-through layout.\n\nCode blocks and chunk output are styled through labeled elements, so a layout restyles them with ordinary show rules. See #link(\"styling.html\")[Styling chunks].\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -4438,6 +4438,10 @@ html:not([data-theme]) {
 
                             
                             
+<li class="calepin-website-sidebar-link"><a href="styling.html" aria-label="Styling chunks">Styling chunks</a></li>
+
+                            
+                            
 <li class="calepin-website-sidebar-link"><a href="case_studies.html" aria-label="Case studies">Case studies</a></li>
 
                             
@@ -4479,7 +4483,7 @@ html:not([data-theme]) {
 
 <span class="calepin-syntax-scope-7">#</span><span class="calepin-syntax-scope-7">set</span> <span class="calepin-syntax-scope-10">text</span><span class="calepin-syntax-scope-2">(</span>font<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-4">"Libertinus Serif"</span><span class="calepin-syntax-scope-2">,</span> size<span class="calepin-syntax-scope-2">:</span> <span class="calepin-syntax-scope-6">10.5pt</span><span class="calepin-syntax-scope-2">)</span>
 
-{{ doc.body }}</code></pre></div><p>Useful <code>layouts/pdf.typ</code> values:</p><ul><li><code>theme</code>: local theme directory name</li><li><code>target</code>: <code>paged</code></li><li><code>doc.path</code>: <code>.typ</code> input path relative to workspace</li><li><code>doc.dir</code>: input directory relative to workspace</li><li><code>doc.stem</code>: input filename without <code>.typ</code></li><li><code>doc.title</code>: document title, or an empty string</li><li><code>doc.body</code>: notebook body, injected as a <code>#include</code></li><li><code>doc.meta</code>: values from <code>#metadata(...) &lt;website-metadata></code></li><li><code>store</code>: the completed document store from <code>[store]</code>, <code>calepin.store.set()</code>, successful <code>store-set</code> chunks, and CLI <code>--set store.&lt;name>=...</code> overrides</li></ul><p><code>doc.body</code> must be included explicitly if you want the notebook body in the rendered output.</p><p><code>theme = "typst"</code> disables notebook-specific theming, and <code>extends = "typst"</code> creates a local theme with no inherited Calepin base. Use an empty <code>layouts/pdf.typ</code> for a minimal pass-through layout.</p>
+{{ doc.body }}</code></pre></div><p>Useful <code>layouts/pdf.typ</code> values:</p><ul><li><code>theme</code>: local theme directory name</li><li><code>target</code>: <code>paged</code></li><li><code>doc.path</code>: <code>.typ</code> input path relative to workspace</li><li><code>doc.dir</code>: input directory relative to workspace</li><li><code>doc.stem</code>: input filename without <code>.typ</code></li><li><code>doc.title</code>: document title, or an empty string</li><li><code>doc.body</code>: notebook body, injected as a <code>#include</code></li><li><code>doc.meta</code>: values from <code>#metadata(...) &lt;website-metadata></code></li><li><code>store</code>: the completed document store from <code>[store]</code>, <code>calepin.store.set()</code>, successful <code>store-set</code> chunks, and CLI <code>--set store.&lt;name>=...</code> overrides</li></ul><p><code>doc.body</code> must be included explicitly if you want the notebook body in the rendered output.</p><p><code>theme = "typst"</code> disables notebook-specific theming, and <code>extends = "typst"</code> creates a local theme with no inherited Calepin base. Use an empty <code>layouts/pdf.typ</code> for a minimal pass-through layout.</p><p>Code blocks and chunk output are styled through labeled elements, so a layout restyles them with ordinary show rules. See <a href="styling.html">Styling chunks</a>.</p>
         </main>
                 
     </div>
@@ -4686,6 +4690,13 @@ html:not([data-theme]) {
         
         
     
+        
+        
+        
+            
+        
+        
+    
 
     
     <footer class="calepin-website-page-nav" aria-label="Page navigation">
@@ -4701,10 +4712,10 @@ html:not([data-theme]) {
         
 
         
-        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="case_studies.html" role="button">
+        <a class="calepin-website-page-nav-link calepin-website-page-nav-link--next outline secondary" href="styling.html" role="button">
           <span class="calepin-website-page-nav-content">
             <span class="calepin-website-page-nav-kind">Next</span>
-            <span class="calepin-website-page-nav-title">Case studies</span>
+            <span class="calepin-website-page-nav-title">Styling chunks</span>
           </span>
           <span class="calepin-website-page-nav-arrow" aria-hidden="true">&rarr;</span>
         </a>
