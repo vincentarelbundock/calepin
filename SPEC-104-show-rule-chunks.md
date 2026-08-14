@@ -160,6 +160,41 @@ never displays `it`.** Consequences, all desirable:
   is the themeless one), so author rules are always defined later than theme rules —
   and because both sides reconstruct rather than re-emit, later-defined genuinely wins.
 
+Bundles must **share** these defaults rather than duplicate them — but not via the theme
+chain. `notebook_source()` resolves the paged layout with `find_notebook_template`
+(`theme/notebook.rs:87-107`), which walks layers in reverse and returns the *first*
+`layouts/pdf.typ` it finds. Paged resolution is winner-takes-all; it never concatenates
+layers, so `academic` cannot inherit `calepin`'s show rules by sitting on top of it in
+the chain. (`ThemeLayer` composition is real, but only `theme/html.rs` uses it, and only
+for partials, styles, and scripts.)
+
+The mechanism that does work is a **runtime-exported show transform**. A `#show` written
+inside a module does not escape it, but a module may export a *function* that the
+importer applies with `#show:`. Define the five default rules once in the runtime
+(`notebook/code.typ`, re-exported from `.calepin/calepin.typ`) as
+`default-chunk-chrome`, and have each bundle's `layouts/pdf.typ` opt in with one line:
+
+```typst
+#import "/.calepin/calepin.typ" as calepin
+#show: calepin.default-chunk-chrome
+```
+
+This also absorbs the duplication that already exists: the entire
+`show raw.where(block: true)` rule plus the `_calepin-body-size` state is **byte-identical**
+between `assets/themes/calepin/layouts/pdf.typ:9-27` and `academic/layouts/pdf.typ:38-56`
+today. Fold both into the same exported transform.
+
+Properties this preserves:
+
+- `theme = "typst"` still yields bare carriers — nothing invokes the transform, so
+  opting in stays the bundle's decision rather than the runtime's.
+- A user bundle gets Calepin's defaults by adding the one `#show:` line, or omits it for
+  a structurally bare start. Neither is the accidental default.
+- The transform's rules still reconstruct from `it.body`, so a document author's
+  later-defined rule displaces them exactly as in the inline case.
+
+This resolves former open question 1.
+
 ### 4. Recursion guard — the load-bearing wrinkle
 
 The forced `theme:` argument is used as a sentinel in two places to prevent Calepin's own
@@ -210,7 +245,12 @@ CSS classes remain addressable even for users who override in Typst.
   whose body is monospaced text, not a `raw`.
 - `code-block`: keep it exported as the default styling helper — it becomes the body of
   the default show rules rather than something call sites invoke.
-- `_paged-input-code-block` becomes dead; delete it.
+- `_paged-input-code-block` becomes dead; delete it. Check first that nothing else
+  reaches for it or for `_paged-syntax-theme` (`00_syntax-theme.typ`) — if
+  `_paged-syntax-theme` has no other consumer once the paged default rule owns
+  highlighting, it goes with it.
+- Export `default-chunk-chrome`, the show transform holding the five default rules plus
+  the `_calepin-body-size` sizing treatment (§3), for bundles to apply with `#show:`.
 
 **`assets/typst-runtime/notebook/render.typ`**
 - Update the five `_output-block` call sites to pass `kind:` (`:531,533,553,560,566`).
@@ -222,10 +262,14 @@ CSS classes remain addressable even for users who override in Typst.
   reachable via show rule, never by rebinding the module-level name.
 
 **`assets/themes/{calepin,academic}/layouts/pdf.typ`**
-- Add the five default show rules, each reconstructing via `it.body`, each carrying the
-  0.8× body-size treatment formerly attached to the `it.theme != auto` branch.
-- Replace the `it.theme != auto` guard in the `show raw.where(block: true)` rule with a
-  `_disable-raw-chunk-transforms` state read (§4); delete the sizing branch.
+- Replace the duplicated `show raw.where(block: true)` rule and `_calepin-body-size`
+  state (identical in both bundles) with a single `#show: calepin.default-chunk-chrome`
+  line (§3). `academic` keeps only its own marginalia setup and numbering helpers.
+- The five default rules, each reconstructing via `it.body` and each carrying the 0.8×
+  body-size treatment formerly attached to the `it.theme != auto` branch, now live in
+  the runtime transform, not in the bundles.
+- The `it.theme != auto` guard becomes a `_disable-raw-chunk-transforms` state read (§4)
+  inside that transform; the sizing branch is deleted.
 
 **`typst/preprocess/staging.rs`**
 - Drop `theme: auto` from the generated selectors (`raw_show_rule:192`,
@@ -244,7 +288,7 @@ pass.
 
 ## User-facing contract
 
-Document in `docs/notebooks/code_execution.typ` and the themes docs:
+See "Documentation plan" below for where each piece of this lands on the website.
 
 ```typst
 #show <calepin-input>: it => it.body             // strip Calepin's chrome; bare code
@@ -278,6 +322,66 @@ content, and the rule that all default chrome is applied via displaceable show r
 stable across versions. Everything else about default styling (colors, strokes, insets,
 `code-block`'s look) may change freely between versions without notice. This is what
 lets the defaults evolve forever without breaking documents that override them.
+
+## Documentation plan
+
+The labels are public API, so they need a page of their own rather than a paragraph
+buried in a how-to. Three places, each with a distinct job:
+
+**1. `docs/themes/styling.typ` — new page, canonical reference.** Sidebar section
+"Themes" (`docs/calepin.toml`), after `themes/templating.typ`. This is the page the
+stability guarantee attaches to. Contents:
+
+- The table of five labels: name, what emits it, what `.body` holds.
+- The `it.body` idiom, with the "never `it`" warning as a callout — this is the single
+  most likely user error and re-emitting `it` fails *silently* (`it => it` is a no-op,
+  `it => my-frame(it)` nests). It earns a `#callout` box, not a sentence.
+- The stability guarantee, stated as such: label names and carrier shape are
+  semver-relevant; colors, strokes, insets, and `code-block`'s look are not.
+- How theme bundles opt into the defaults (`#show: calepin.default-chunk-chrome`) and
+  what omitting that line gives you.
+- A note that `theme = "typst"` emits these carriers bare, with chunks still executing.
+
+**2. `docs/notebooks/code_execution.typ` — pointer, not a duplicate.** A short
+"Styling code blocks" section: one strip example, one restyle example, and a link to the
+reference page. Readers arrive here asking "how do I run code", and discover the
+override hook in passing.
+
+**3. `docs/tips.typ` — the codly worked example** (see below). There is no FAQ page;
+"Tips & tricks" is the de-facto one, and it already holds exactly this kind of
+short recipe.
+
+`docs/themes/pdf_templates.typ` should also gain a cross-reference, since a theme author
+writing `layouts/pdf.typ` is the other audience for the label contract.
+
+### The codly example (for `docs/tips.typ`)
+
+Worth a full worked example rather than a fragment, because #104 shows the failure mode
+is visual and easy to misdiagnose — you get *two* nested boxes and no error.
+
+```typ
+= Using codly with executed chunks
+
+Packages such as #link("https://typst.app/universe/package/codly")[codly] install their
+own `show raw:` rules. Calepin's chunk chrome is a separate labeled block wrapped
+*around* that raw, so without the third line below you get codly's frame inside
+Calepin's:
+
+```typ
+#import "@preview/codly:1.3.0": *
+#show: codly-init
+#show <calepin-input>: it => it.body   // hand the raw to codly, drop Calepin's box
+```
+
+Add `#show <calepin-output>: it => it.body` as well if you want program output bare too;
+output is not a `raw` element, so codly does not reach it either way.
+
+Set `theme = "typst"` in the document front matter to drop Calepin's chrome everywhere at
+once, without any show rules. Chunks still execute.
+```
+
+The example should be a real executed chunk on the page where feasible, so the docs build
+catches drift in the contract.
 
 This contract is also the forward-migration path: when Typst ships user-defined
 elements, `<calepin-input>` + `it.body` translates mechanically into a real
@@ -353,8 +457,11 @@ Explicitly *not* candidates:
   side effect for every user. One documented line that works beats zero lines that
   sometimes do.
 
-## Open questions
+## Resolved questions
 
-1. Whether `academic` should inherit the `calepin` bundle's chunk rules via the theme
-   chain rather than duplicating them — the chain machinery already exists
-   (`ThemeLayer`, `theme/mod.rs:224`) but is not currently used for show rules.
+1. **Should `academic` inherit `calepin`'s chunk rules rather than duplicating them?**
+   Yes — but not through the theme chain. Paged layout resolution is winner-takes-all
+   (`find_notebook_template` returns the first `layouts/pdf.typ` it finds), so chain
+   position cannot compose show rules. Sharing goes through a runtime-exported
+   `default-chunk-chrome` transform that each bundle applies with one `#show:` line. See
+   §3; this also removes duplication that exists today.
