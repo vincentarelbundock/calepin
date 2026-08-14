@@ -2,7 +2,7 @@
   "schema": 2,
   "calepin_version": "0.0.44",
   "input": "getting-started/install.typ",
-  "generation": "02472b3875f03453-1349cde127705c16",
+  "generation": "c10d5706c3f1363f-1349cde127705c16",
   "store": {},
   "chunks": {
     "chunk-1": {
@@ -62,7 +62,7 @@
     "chunk-3": {
       "label": "chunk-3",
       "engine": "sh",
-      "source": "cargo install calepin\n",
+      "source": "brew install vincentarelbundock/tap/calepin\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -89,7 +89,7 @@
     "chunk-4": {
       "label": "chunk-4",
       "engine": "sh",
-      "source": "calepin update\n",
+      "source": "brew upgrade calepin\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -116,7 +116,7 @@
     "chunk-5": {
       "label": "chunk-5",
       "engine": "sh",
-      "source": "pip install jupyter_client\n",
+      "source": "cargo install calepin\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -143,7 +143,7 @@
     "chunk-6": {
       "label": "chunk-6",
       "engine": "sh",
-      "source": "pip install bash_kernel       # Bash\npip install octave_kernel     # GNU Octave\npip install gnuplot_kernel    # Gnuplot\n",
+      "source": "calepin update\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -170,7 +170,7 @@
     "chunk-7": {
       "label": "chunk-7",
       "engine": "sh",
-      "source": "python -m bash_kernel.install --sys-prefix\n",
+      "source": "pip install jupyter_client\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -197,7 +197,7 @@
     "chunk-8": {
       "label": "chunk-8",
       "engine": "sh",
-      "source": "uv run python -m bash_kernel.install --sys-prefix\n",
+      "source": "pip install bash_kernel       # Bash\npip install octave_kernel     # GNU Octave\npip install gnuplot_kernel    # Gnuplot\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -224,7 +224,7 @@
     "chunk-9": {
       "label": "chunk-9",
       "engine": "sh",
-      "source": "# Julia\njulia -e 'using Pkg; Pkg.add(\"IJulia\")'\n",
+      "source": "python -m bash_kernel.install --sys-prefix\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -251,7 +251,7 @@
     "chunk-10": {
       "label": "chunk-10",
       "engine": "sh",
-      "source": "nix run github:vincentarelbundock/calepin -- --help\nnix run github:vincentarelbundock/calepin#calepin -- compile paper.typ\n",
+      "source": "uv run python -m bash_kernel.install --sys-prefix\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -278,7 +278,7 @@
     "chunk-11": {
       "label": "chunk-11",
       "engine": "sh",
-      "source": "nix build github:vincentarelbundock/calepin\n",
+      "source": "# Julia\njulia -e 'using Pkg; Pkg.add(\"IJulia\")'\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -305,7 +305,7 @@
     "chunk-12": {
       "label": "chunk-12",
       "engine": "sh",
-      "source": "nix develop github:vincentarelbundock/calepin\n",
+      "source": "nix run github:vincentarelbundock/calepin -- --help\nnix run github:vincentarelbundock/calepin#calepin -- compile paper.typ\n",
       "status": "skipped",
       "options": {
         "echo": true,
@@ -331,6 +331,60 @@
     },
     "chunk-13": {
       "label": "chunk-13",
+      "engine": "sh",
+      "source": "nix build github:vincentarelbundock/calepin\n",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-14": {
+      "label": "chunk-14",
+      "engine": "sh",
+      "source": "nix develop github:vincentarelbundock/calepin\n",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-15": {
+      "label": "chunk-15",
       "engine": "sh",
       "source": "nix develop github:vincentarelbundock/calepin#website\nmake website\n",
       "status": "skipped",
