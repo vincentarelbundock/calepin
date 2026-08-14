@@ -1,6 +1,6 @@
 # Changelog
 
-## Development
+## 0.0.46
 
 - Code chunks and their output are now emitted as labeled elements, so a document can restyle or remove _Calepin_'s code-block chrome with an ordinary Typst show rule and no _Calepin_-specific API: `#show <calepin-input>: it => it.body` hands the code to a package such as [codly](https://typst.app/universe/package/codly) with no box around it. The labels are `<calepin-input>`, `<calepin-output>`, `<calepin-result>`, `<calepin-warning>`, and `<calepin-error>`; each marks a `block` whose `body` holds the bare content, and an override must reconstruct from `it.body` rather than re-emit `it`. Setting `theme = "typst"` now removes chunk chrome everywhere while chunks still execute. Paged output is no longer a `raw` element, so a document-wide `show raw:` rule styles the code a chunk contains without also reaching what the chunk printed. Thanks to [@peterpf](https://github.com/peterpf) for [the report](https://github.com/vincentarelbundock/calepin/issues/104).
 
