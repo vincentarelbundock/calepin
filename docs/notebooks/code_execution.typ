@@ -79,7 +79,7 @@ Echoed source and chunk output are wrapped in labeled elements, so a show rule r
 #show <calepin-output>: it => my-frame(it.body)  // custom output frame
 ```
 
-Overrides must reconstruct from `it.body` rather than re-emit `it`. See #link("../themes/styling.html")[Styling chunks] for the full list of labels, the reason for that rule, and what is guaranteed stable across versions.
+Overrides must reconstruct from `it.body` rather than re-emit `it`. See #link("../themes/styling.html")[Styling chunks] for the full list of labels and the reason for that rule.
 
 = Options
 

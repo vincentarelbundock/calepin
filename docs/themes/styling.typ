@@ -68,12 +68,4 @@ A theme restyles chunks by writing the same show rules in its `layouts/pdf.typ`.
 
 Because a document body is inlined *after* the theme preamble, a document author's rules are always defined later than a theme's and take precedence, as long as both sides reconstruct from `it.body`.
 
-= Stability
-
-The following are stable API and will not change without a deprecation path:
-
-- the five label names,
-- the guarantee that each labels a `block` whose `.body` is the bare unstyled content,
-- the rule that all default chrome is applied through show rules you can displace.
-
-Everything else about the default appearance (colors, strokes, insets, corner radius, the exact markup `code-block` produces) may change between versions without notice. Style your documents against the labels, not against the defaults.
+Style your documents against the labels rather than against the details of the default appearance.
