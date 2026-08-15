@@ -9,6 +9,7 @@ use crate::typst::fence_label::{
 use crate::typst::io::write_if_changed;
 use crate::typst::markdown_fence::{is_closing_fence, leading_backtick_count};
 use crate::typst::model::LayoutPaths;
+#[cfg(test)]
 const DEFAULT_RUNTIME_IMPORT: &str = "/.calepin/calepin.typ";
 const RUNTIME_IMPORT_LEGACY: &str = "_calepin/calepin.typ";
 const RUNTIME_ALIAS: &str = "calepin_runtime";
@@ -20,72 +21,11 @@ pub fn write_staged_source(layout: &LayoutPaths, runtime_import: &str) -> Result
 
     let source = std::fs::read_to_string(&layout.input)
         .with_context(|| format!("failed to read {}", layout.input.display()))?;
-    reject_preview_calepin_imports(&source)?;
     let staged = stage_user_source(&source, runtime_import);
     let staged_path = layout.root.join(&staged_relative);
 
     write_if_changed(&staged_path, staged)?;
     Ok(staged_relative)
-}
-
-fn reject_preview_calepin_imports(source: &str) -> Result<()> {
-    if let Some(suggestion) = preview_calepin_import_suggestion(source) {
-        return Err(anyhow::anyhow!(
-            "unsupported Calepin Typst package import. Calepin documents must import the binary-written local runtime instead:\n{suggestion}\nRun `calepin compile` or `calepin watch` so Calepin writes its local runtime before Typst renders the document."
-        ));
-    }
-    Ok(())
-}
-
-fn preview_calepin_import_suggestion(source: &str) -> Option<String> {
-    let mut raw_block: Option<usize> = None;
-    let mut lex = LexState::default();
-
-    for segment in source.split_inclusive('\n') {
-        let (line, _) = split_segment(segment);
-        let trimmed = line.trim_start();
-
-        if let Some(fence_len) = raw_block {
-            if is_closing_fence(trimmed, fence_len) {
-                raw_block = None;
-            }
-            continue;
-        }
-
-        if !lex.in_block_comment() {
-            if let Some((fence_len, _)) = opening_fence(trimmed) {
-                raw_block = Some(fence_len);
-                continue;
-            }
-        }
-
-        if let Some(suggestion) = preview_calepin_import_suggestion_in_line(line, &mut lex) {
-            return Some(suggestion);
-        }
-    }
-
-    None
-}
-
-fn preview_calepin_import_suggestion_in_line(line: &str, lex: &mut LexState) -> Option<String> {
-    scan_line_for_imports(line, lex, |candidate| {
-        preview_import_candidate_suggestion(candidate).map(|(suggestion, _)| suggestion)
-    })
-}
-
-fn preview_import_candidate_suggestion(candidate: &str) -> Option<(String, &str)> {
-    let import = parse_import_candidate(candidate)?;
-    if !import.literal.value.starts_with(PREVIEW_IMPORT_PREFIX) {
-        return None;
-    }
-
-    Some((
-        format!(
-            "#import{}\"{}\"{}",
-            import.whitespace, DEFAULT_RUNTIME_IMPORT, import.tail
-        ),
-        import.tail,
-    ))
 }
 
 pub(crate) fn rewrite_runtime_imports(source: &str, runtime_import: &str) -> String {
@@ -1055,6 +995,12 @@ fn parse_string_literal(input: &str) -> Option<StringLiteral> {
 }
 
 fn is_calepin_runtime_import(value: &str, runtime_import: &str) -> bool {
+    // A Typst Universe import of the fallback shim is swapped for the local
+    // runtime whenever Calepin drives the compile, so one import line serves
+    // both plain `typst` and `calepin compile`.
+    if value.strip_prefix(PREVIEW_IMPORT_PREFIX).is_some() {
+        return true;
+    }
     if matches!(
         value,
         ".calepin/calepin.typ"
@@ -1093,16 +1039,16 @@ mod tests {
     use crate::typst::testfixtures;
 
     #[test]
-    fn leaves_preview_import_path_for_migration_diagnostic() {
-        let source = r#"#import "@preview/calepin:0.0.1" as cp
+    fn rewrites_preview_imports_to_local_runtime() {
+        let source = r#"#import "@preview/calepin:0.1.0" as cp
 #import "@preview/calepin:9.8.7": chunk, inline
 #import "@preview/other:1.0.0" as other
 "#;
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(
             rewritten,
-            r#"#import "@preview/calepin:0.0.1" as cp
-#import "@preview/calepin:9.8.7": chunk, inline
+            r#"#import "/.calepin/calepin.typ" as cp
+#import "/.calepin/calepin.typ": chunk, inline
 #import "@preview/other:1.0.0" as other
 "#
         );
@@ -1174,21 +1120,21 @@ mod tests {
     }
 
     #[test]
-    fn does_not_rewrite_comments_raw_blocks_or_preview_imports() {
-        let source = r#"// #import "@preview/calepin:0.0.1"
+    fn does_not_rewrite_comments_or_raw_blocks() {
+        let source = r#"// #import "@preview/calepin:0.1.0"
 ```typ
-#import "@preview/calepin:0.0.1"
+#import "@preview/calepin:0.1.0"
 ```
-#import "@preview/calepin:0.0.1" as calepin
+#import "@preview/calepin:0.1.0" as calepin
 "#;
         let rewritten = rewrite_calepin_imports(source);
         assert_eq!(
             rewritten,
-            r#"// #import "@preview/calepin:0.0.1"
+            r#"// #import "@preview/calepin:0.1.0"
 ```typ
-#import "@preview/calepin:0.0.1"
+#import "@preview/calepin:0.1.0"
 ```
-#import "@preview/calepin:0.0.1" as calepin
+#import "/.calepin/calepin.typ" as calepin
 "#
         );
     }
@@ -1197,11 +1143,10 @@ mod tests {
     fn ignores_imports_inside_block_comments() {
         let source = r#"/*
 #import ".calepin/calepin.typ"
-#import "@preview/calepin:0.0.1"
+#import "@preview/calepin:0.1.0"
 */
 "#;
 
-        reject_preview_calepin_imports(source).unwrap();
         assert_eq!(rewrite_calepin_imports(source), source);
     }
 

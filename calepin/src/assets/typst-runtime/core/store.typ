@@ -62,7 +62,7 @@
   }
 }
 
-#let bind(config) = (
+#let _bind(config) = (
   get: (key, ..args) => _get(config, key, ..args),
   "set": set_,
 )

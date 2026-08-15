@@ -7,7 +7,6 @@
 #import "result-support.typ": _artifact-path, _attach-label, _attach-labels
 #import "result-support.typ": _crossref-labels-for, _select-representation
 
-#let code-block = codemod.code-block
 #let _html-themed-raw-block = codemod._html-themed-raw-block
 #let _input-block = codemod._input-block
 #let _output-block = codemod._output-block

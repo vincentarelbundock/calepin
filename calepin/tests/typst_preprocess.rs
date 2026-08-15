@@ -578,8 +578,8 @@ print("cached")
 }
 
 #[test]
-fn compile_rejects_preview_package_import_with_migration_message() {
-    if !has_command("typst") || !has_command("python3") {
+fn compile_rewrites_preview_package_import_to_local_runtime() {
+    if !has_command("typst") || !has_command("python3") || !has_pdftotext() {
         return;
     }
 
@@ -587,10 +587,10 @@ fn compile_rejects_preview_package_import_with_migration_message() {
     let input = dir.path().join("paper.typ");
     std::fs::write(
         &input,
-        r##"#import "@preview/calepin:0.0.1" as cp
+        r##"#import "@preview/calepin:0.1.0" as cp
 
-#cp.chunk("python", echo: false)[```
-print(42)
+#cp.chunk("python", echo: false, results: "typst")[```
+print("preview import executed")
 ```]
 "##,
     )
@@ -602,16 +602,19 @@ print(42)
         .output()
         .expect("failed to run calepin compile");
 
-    assert!(!output.status.success(), "compile unexpectedly succeeded");
-    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("unsupported Calepin Typst package import"),
-        "{stderr}"
+        output.status.success(),
+        "compile failed: {}",
+        String::from_utf8_lossy(&output.stderr)
     );
-    assert!(
-        stderr.contains(r#"#import "/.calepin/calepin.typ" as cp"#),
-        "{stderr}"
-    );
+    let text = Command::new("pdftotext")
+        .args(["paper.pdf", "-"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to extract pdf text");
+    assert!(text.status.success());
+    let text = String::from_utf8_lossy(&text.stdout);
+    assert!(text.contains("preview import executed"), "{text}");
 }
 
 #[test]

@@ -13,7 +13,7 @@
 #let lightbox-image = lightboxmod.lightbox-image
 #let lightbox-video = lightboxmod.lightbox-video
 
-#let bind(config) = (
+#let _bind(config) = (
   card: card,
   callout: callout,
   gallery: (items, ..args) => gallerymod._gallery(config, items, ..args),

@@ -105,14 +105,12 @@ fn typst_compile_preserves_runtime_module_compatibility_facades() {
     std::fs::write(
         &input,
         r#"#import ".calepin/runtime/core/state.typ": _base-options, _call-defaults, pages
-#import ".calepin/runtime/notebook/render.typ": code-block, _html-themed-raw-block
+#import ".calepin/runtime/notebook/render.typ": _html-themed-raw-block
 
 #assert(type(_base-options) == dictionary)
 #assert(type(_call-defaults) == dictionary)
 #assert(type(pages) == function)
 #assert(type(_html-themed-raw-block) == function)
-
-#code-block[Compatibility facade]
 "#,
     )
     .unwrap();
@@ -1073,7 +1071,7 @@ fn typst_compile_paged_gallery_resolves_bound_source_directory() {
     std::fs::write(
         &input,
         r##"#import ".calepin/calepin.typ"
-#let bound = calepin.bind(("source-dir": "images"))
+#let bound = calepin._bind(("source-dir": "images"))
 #(bound.elements.gallery)((("pixel.svg", "A pixel"),))
 "##,
     )

@@ -31,7 +31,7 @@ do not share scope across modules.
     - Result representation selection, artifact paths, and label attachment.
 11. `assets/typst-runtime/notebook/code.typ`
    - Labeled, unstyled input/output carriers (`_input-block`, `_output-block`)
-     plus the default chrome helpers (`code-block`, `output-block`) and the
+     plus the internal chrome helpers (`code-block`, `_output-block`) and the
      HTML/paged source wrappers. Styling is applied by show rules, not here.
    - `chrome.typ` holds `default-chunk-chrome`, the show rules a theme bundle
      opts into for that styling, plus fenced-block handling in themed documents.
