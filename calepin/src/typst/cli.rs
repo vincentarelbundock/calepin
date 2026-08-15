@@ -263,6 +263,7 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
     }
 
     let format = args.format.map(OutputFormat::try_from).transpose()?;
+    let keep_intermediates = args.common.keep_intermediates;
     let mut site_context = SiteContextInput::default();
     let output = preprocess_cached(PreprocessOptions {
         input: args.input,
@@ -281,6 +282,8 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         config_overrides: args.common.sets,
         force: args.force,
     })?;
+    let panic_guard =
+        crate::typst::paths::EntryFilePanicGuard::new(&output.layout, keep_intermediates);
     // The HTML theme step reuses the merged document variables (config < setup
     // < CLI) resolved during preprocessing.
     site_context.store = output.store.clone();
@@ -304,7 +307,10 @@ pub fn handle_compile(args: CompileArgs) -> Result<()> {
         },
     )?;
     publish_active_binding(&output.layout)?;
-    crate::typst::paths::remove_entry_files(&output.layout);
+    drop(panic_guard);
+    if !keep_intermediates {
+        crate::typst::paths::remove_entry_files(&output.layout);
+    }
     Ok(())
 }
 
@@ -726,6 +732,7 @@ mod tests {
                 quiet: true,
                 timeout: None,
                 sets: Vec::new(),
+                keep_intermediates: false,
             },
             typst_args: Vec::new(),
         }

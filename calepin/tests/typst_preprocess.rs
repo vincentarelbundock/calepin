@@ -2270,6 +2270,106 @@ fn compile_resolves_relative_paths_from_the_document_directory() {
 }
 
 #[test]
+fn compile_leaves_no_entry_files_behind_even_after_a_stray_run() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(dir.path().join("paper.typ"), "Hello\n").unwrap();
+    // A run killed mid-render, or one that failed and kept its entry files so
+    // Typst error spans stayed resolvable, leaves these behind.
+    let stray = dir.path().join(".calepin-entry.paper.source.typ");
+    std::fs::write(&stray, "#let leftover = 1\n").unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        !stray.exists(),
+        "a successful build should leave no generated entry files behind"
+    );
+}
+
+#[test]
+fn compile_keeps_entry_files_when_asked() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(dir.path().join("paper.typ"), "Hello\n").unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "--quiet", "--keep-intermediates"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let kept = std::fs::read_dir(dir.path())
+        .unwrap()
+        .filter_map(|entry| entry.ok())
+        .any(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".calepin-entry.")
+        });
+    assert!(
+        kept,
+        "--keep-intermediates should leave the generated Typst source in place"
+    );
+}
+
+#[test]
+fn script_extraction_leaves_no_entry_files_behind() {
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        "```{python}\nprint(1)\n```\n",
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "--format", "script", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "script extraction failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let leaked = std::fs::read_dir(dir.path())
+        .unwrap()
+        .filter_map(|entry| entry.ok())
+        .any(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".calepin-entry.")
+        });
+    assert!(
+        !leaked,
+        "script extraction never renders, so it should stage nothing permanently"
+    );
+}
+
+#[test]
 fn website_build_resolves_relative_paths_from_each_page_directory() {
     if !has_command("typst") {
         return;

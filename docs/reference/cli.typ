@@ -112,6 +112,11 @@ Options:
           
           Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.
 
+      --keep-intermediates
+          Keep the generated Typst files staged beside each document.
+          
+          Calepin renders a generated entry file that carries the document body. It is normally removed once the render succeeds; keep it to inspect the exact source Typst saw.
+
   -h, --help
           Print help (see a summary with '-h')
 ```
@@ -170,6 +175,11 @@ Options:
           Override a Calepin config value as `key=value` (repeatable).
           
           Uses dotted paths for nested config, such as `theme=./theme`, `store.region=CA`, or `toc.enabled=false`.
+
+      --keep-intermediates
+          Keep the generated Typst files staged beside each document.
+          
+          Calepin renders a generated entry file that carries the document body. It is normally removed once the render succeeds; keep it to inspect the exact source Typst saw.
 
   -h, --help
           Print help (see a summary with '-h')

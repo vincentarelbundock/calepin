@@ -32,6 +32,66 @@ pub fn remove_entry_files(layout: &LayoutPaths) {
     }
 }
 
+/// Documents whose stale entry files this process has already swept.
+static SWEPT_DOCUMENTS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<PathBuf>>> =
+    std::sync::OnceLock::new();
+
+/// Remove leftover entry files for one document, once per process.
+///
+/// A build removes its own entry files on success, but a failed render keeps
+/// them on purpose so Typst's error spans still resolve, and a panic or a
+/// `SIGKILL` skips cleanup entirely. Sweeping before the first staging of each
+/// document makes those strays self-healing rather than cumulative.
+///
+/// The once-per-process guard matters: `prepare_preprocess_plan` runs again on
+/// every watch iteration, and `write_staged_source` leaves an unchanged file
+/// untouched so its mtime stays put. Deleting on each iteration would bump the
+/// mtime every time and make the child `typst watch` re-render on edits that
+/// change nothing it can see.
+pub fn sweep_stale_entry_files(layout: &LayoutPaths) {
+    let swept = SWEPT_DOCUMENTS.get_or_init(Default::default);
+    let Ok(mut swept) = swept.lock() else {
+        return;
+    };
+    if !swept.insert(layout.input.clone()) {
+        return;
+    }
+    remove_entry_files(layout);
+}
+
+/// Removes a document's entry files if the current thread unwinds.
+///
+/// The normal cleanup paths are explicit calls after a render, and a *failed*
+/// render deliberately keeps its entry files so Typst's error spans still
+/// resolve. A panic is different: there are no diagnostics pointing into the
+/// file, so nothing is lost by removing it. Dropping without a panic does
+/// nothing, leaving the deliberate keep-on-failure behavior intact.
+///
+/// This cannot help with `SIGKILL`; `sweep_stale_entry_files` is what makes
+/// those strays self-healing.
+pub struct EntryFilePanicGuard {
+    layout: LayoutPaths,
+    keep: bool,
+}
+
+impl EntryFilePanicGuard {
+    pub fn new(layout: &LayoutPaths, keep: bool) -> Self {
+        Self {
+            layout: layout.clone(),
+            keep,
+        }
+    }
+}
+
+impl Drop for EntryFilePanicGuard {
+    fn drop(&mut self) {
+        if self.keep || !std::thread::panicking() {
+            return;
+        }
+        remove_entry_files(&self.layout);
+    }
+}
+
 /// Name of one generated entry file for the document with this stem.
 pub fn entry_file_name_for(stem: &str, name: &str) -> String {
     format!("{ENTRY_FILE_PREFIX}{stem}.{name}")

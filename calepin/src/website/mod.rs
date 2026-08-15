@@ -167,6 +167,7 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
         }
     };
     set_quiet(args.common.quiet);
+    let keep_intermediates = args.common.keep_intermediates;
     let result = build_site(WebsiteBuildOptions {
         config: config_path,
         src: Some(args.input),
@@ -186,8 +187,10 @@ pub(crate) fn build_from_compile_args(args: CompileArgs) -> Result<()> {
     // Each page stages entry files beside its source; the build no longer needs
     // them once every page has rendered. Clean up page by page so a concurrent
     // build or watcher keeps its own in-flight files.
-    for page in result.page_fingerprints.keys() {
-        crate::typst::paths::remove_entry_files_for_document(page);
+    if !keep_intermediates {
+        for page in result.page_fingerprints.keys() {
+            crate::typst::paths::remove_entry_files_for_document(page);
+        }
     }
     Ok(())
 }
@@ -241,7 +244,13 @@ pub(crate) fn watch_from_watch_args(args: WatchArgs) -> Result<()> {
         None
     };
 
-    let result = watch_site(options, initial, live, args.common.quiet);
+    let result = watch_site(
+        options,
+        initial,
+        live,
+        args.common.quiet,
+        args.common.keep_intermediates,
+    );
     if let Some(server) = server {
         server.stop();
     }
@@ -636,8 +645,14 @@ fn watch_site(
     initial: WebsiteBuildResult,
     live: Arc<serve::LiveReload>,
     quiet: bool,
+    keep_intermediates: bool,
 ) -> Result<()> {
     let mut current = initial;
+    // Pages can be renamed or deleted across a rebuild, which drops them from
+    // `page_fingerprints`. Track every page this session has staged so their
+    // entry files are still cleaned up at exit rather than orphaned.
+    let mut staged_pages: std::collections::HashSet<PathBuf> =
+        current.page_fingerprints.keys().cloned().collect();
     let stop = Arc::new(AtomicBool::new(false));
     let stop_for_handler = Arc::clone(&stop);
     ctrlc::set_handler(move || {
@@ -694,11 +709,14 @@ fn watch_site(
                 }
             },
         )?;
+        staged_pages.extend(current.page_fingerprints.keys().cloned());
         if stop.load(Ordering::Relaxed) || !restart {
             // Clean up the pages this session staged, leaving any other build's
             // in-flight entry files alone.
-            for page in current.page_fingerprints.keys() {
-                crate::typst::paths::remove_entry_files_for_document(page);
+            if !keep_intermediates {
+                for page in &staged_pages {
+                    crate::typst::paths::remove_entry_files_for_document(page);
+                }
             }
             return Ok(());
         }

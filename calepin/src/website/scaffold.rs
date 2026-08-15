@@ -58,7 +58,17 @@ fn write_scaffold_file(path: &Path, contents: &str, force: bool) -> Result<()> {
     write_scaffold_bytes(path, contents.as_bytes(), force)
 }
 
+/// Shared by every website scaffold: keeps Calepin's regenerable artifacts and
+/// the generated entry files staged beside each document out of the user's
+/// repository. The entry files are hidden, so without this a `git add -A` after
+/// an interrupted build quietly commits them.
+const SCAFFOLD_GITIGNORE: (&str, &str) = (
+    ".gitignore",
+    include_str!("../assets/scaffolds/website/gitignore"),
+);
+
 const CALEPIN_WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
+    SCAFFOLD_GITIGNORE,
     (
         "calepin.toml",
         include_str!("../assets/scaffolds/website/calepin/calepin.toml"),
@@ -167,6 +177,7 @@ const CALEPIN_WEBSITE_SCAFFOLD_BINARY_FILES: &[(&str, &[u8])] = &[
 ];
 
 const ACADEMIC_WEBSITE_SCAFFOLD_FILES: &[(&str, &str)] = &[
+    SCAFFOLD_GITIGNORE,
     (
         "calepin.toml",
         include_str!("../assets/scaffolds/website/academic/calepin.toml"),

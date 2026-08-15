@@ -1,0 +1,7 @@
+# Calepin artifacts: results, figures, and metadata for each document.
+.calepin/
+
+# Generated Typst entry files, written beside each source document while it
+# renders. A build removes its own; strays are left by interrupted runs and
+# swept up by `calepin clean`.
+.calepin-entry.*

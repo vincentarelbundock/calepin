@@ -211,6 +211,7 @@ pub fn prepare_preprocess_plan(options: PreprocessOptions) -> Result<PreprocessP
         write_runtime_with_syntax_theme_in_dir(&layout.root, asset_dir, &html_syntax_theme)?;
     }
     let runtime_import = format!("/{}/calepin.typ", slash_path(asset_dir));
+    crate::typst::paths::sweep_stale_entry_files(&layout);
     let staged_input = write_staged_source(&layout, &runtime_import)?;
     let image_meta = write_image_meta(&layout)?;
     // Metadata collection runs before the final target is known. The query pass

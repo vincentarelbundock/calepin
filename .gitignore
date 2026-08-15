@@ -17,6 +17,8 @@ quarto_website/
 *_cache/
 .calepin/
 **/.calepin/
+# Generated Typst entry files, written beside each source document.
+.calepin-entry.*
 *_output/
 cache/
 _astro/

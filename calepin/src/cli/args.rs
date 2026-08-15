@@ -270,6 +270,14 @@ pub struct CommonArgs {
     /// `store.region=CA`, or `toc.enabled=false`.
     #[arg(long = "set", value_name = "KEY=VALUE")]
     pub sets: Vec<String>,
+
+    /// Keep the generated Typst files staged beside each document.
+    ///
+    /// Calepin renders a generated entry file that carries the document body.
+    /// It is normally removed once the render succeeds; keep it to inspect the
+    /// exact source Typst saw.
+    #[arg(long)]
+    pub keep_intermediates: bool,
 }
 
 /// Print a yellow warning to stderr.

@@ -57,6 +57,7 @@ impl ScriptGroup {
 pub fn extract_scripts(args: CompileArgs) -> Result<()> {
     let input = args.input.clone();
     let output_template = args.output.clone();
+    let keep_intermediates = args.common.keep_intermediates;
     let plan = prepare_preprocess_plan(PreprocessOptions {
         input: args.input,
         root: None,
@@ -74,6 +75,11 @@ pub fn extract_scripts(args: CompileArgs) -> Result<()> {
         config_overrides: args.common.sets,
         force: args.force,
     })?;
+    // Planning stages the document body beside the source. Script extraction
+    // never renders, so nothing downstream needs those files.
+    if !keep_intermediates {
+        crate::typst::paths::remove_entry_files(&plan.layout);
+    }
     let groups = group_script_chunks(preprocess_plan_into_chunks(plan));
 
     if groups.is_empty() {
