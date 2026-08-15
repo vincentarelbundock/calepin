@@ -53,10 +53,11 @@ bump: ## Bump package version (usage: make bump VERSION=x.y.z)
 	fi
 	@sed -i.bak -E 's/^version = "[^"]*"/version = "$(VERSION)"/' calepin/Cargo.toml && rm calepin/Cargo.toml.bak
 	@cargo update -w >/dev/null
+	@$(MAKE) --no-print-directory vscode-sync-version VERSION=$(VERSION)
 	@echo "Bumped calepin to $(VERSION)."
-	@git diff --stat calepin/Cargo.toml Cargo.lock
+	@git diff --stat calepin/Cargo.toml Cargo.lock $(VSCODE_DIR)/package.json
 	@echo ""
-	@echo "Next: update docs if needed, commit calepin/Cargo.toml + Cargo.lock, then 'make release'."
+	@echo "Next: update docs if needed, commit calepin/Cargo.toml + Cargo.lock + $(VSCODE_DIR)/package.json, then 'make release'."
 
 # Tag the current commit and push the tag. This triggers:
 #   - .github/workflows/release.yml        cargo-dist binaries and installers
