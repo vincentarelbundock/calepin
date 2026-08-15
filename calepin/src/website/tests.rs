@@ -3957,6 +3957,38 @@ Prose that follows the chunk.
 }
 
 #[test]
+fn extract_excerpt_skips_multi_line_code_calls() {
+    let source = r#"
+#metadata((
+  title: "Post",
+  tags: ("websites", "metadata"),
+)) <website-metadata>
+
+#calepin.setup(
+  echo: true,
+  results: "verbatim",
+)
+
+The real opening paragraph.
+"#;
+
+    assert_eq!(
+        extract_excerpt(source).unwrap(),
+        "The real opening paragraph."
+    );
+}
+
+#[test]
+fn extract_excerpt_keeps_inline_raw_text() {
+    let source = "\nIn Typst, `#let` is your primary building block.\n";
+
+    assert_eq!(
+        extract_excerpt(source).unwrap(),
+        "In Typst, #let is your primary building block."
+    );
+}
+
+#[test]
 fn extract_excerpt_is_none_without_prose() {
     let source = "#set document(title: \"Empty\")\n\n= Heading\n\n- item\n";
 

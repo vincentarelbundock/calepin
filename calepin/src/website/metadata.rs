@@ -216,6 +216,10 @@ pub(super) fn extract_excerpt(source: &str) -> Option<String> {
     let mut paragraph = String::new();
     let mut lines = source.lines();
     let mut in_block_comment = false;
+    // Depth of a code expression left open by an earlier line. A multi-line
+    // `#metadata((...))` or `#calepin.setup(...)` call continues with lines
+    // like `title: "Post",` that read as prose on their own.
+    let mut open_code_depth = 0usize;
 
     while let Some(line) = lines.next() {
         let trimmed = line.trim();
@@ -225,6 +229,10 @@ pub(super) fn extract_excerpt(source: &str) -> Option<String> {
         }
         if trimmed.starts_with("/*") {
             in_block_comment = !trimmed.contains("*/");
+            continue;
+        }
+        if open_code_depth > 0 {
+            open_code_depth = code_depth_after(trimmed, open_code_depth);
             continue;
         }
         if let Some(fence) = raw_block_fence(trimmed) {
@@ -249,6 +257,7 @@ pub(super) fn extract_excerpt(source: &str) -> Option<String> {
         // A blank line or a non-prose block ends the first paragraph; before
         // one has started, it is just more preamble to skip.
         if paragraph.is_empty() {
+            open_code_depth = code_depth_after(trimmed, 0);
             continue;
         }
         break;
@@ -256,6 +265,33 @@ pub(super) fn extract_excerpt(source: &str) -> Option<String> {
 
     let text = inline_prose_to_plain_text(&paragraph);
     clean_optional_string(Some(&text)).map(|text| truncate_excerpt(&text, EXCERPT_MAX_CHARS))
+}
+
+/// Tracks how many code delimiters a line leaves open, so a call spanning
+/// several lines is skipped whole. String contents are ignored.
+fn code_depth_after(line: &str, depth: usize) -> usize {
+    let mut depth = depth;
+    let mut chars = line.chars();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '"' => {
+                let mut escaped = false;
+                for ch in chars.by_ref() {
+                    if escaped {
+                        escaped = false;
+                    } else if ch == '\\' {
+                        escaped = true;
+                    } else if ch == '"' {
+                        break;
+                    }
+                }
+            }
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    depth
 }
 
 /// Returns the fence marker when the line opens a fenced raw block.
@@ -319,7 +355,22 @@ fn inline_prose_to_plain_text(value: &str) -> String {
                 }
                 out.push(ch);
             }
-            '[' | ']' | '*' | '_' | '`' => {}
+            '`' => {
+                // Inline raw is literal text: `#let` must survive as `#let`
+                // rather than being read as a code expression.
+                let ticks = value[index..].chars().take_while(|ch| *ch == '`').count();
+                let marker = "`".repeat(ticks);
+                let body_start = index + ticks;
+                match value[body_start..].find(&marker) {
+                    Some(relative) => {
+                        out.push_str(&value[body_start..body_start + relative]);
+                        index = body_start + relative + ticks;
+                    }
+                    None => index = body_start,
+                }
+                continue;
+            }
+            '[' | ']' | '*' | '_' => {}
             _ => out.push(ch),
         }
         index += ch.len_utf8();
