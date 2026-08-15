@@ -2,7 +2,7 @@
   "name": "calepin",
   "displayName": "Calepin for Typst",
   "description": "Calepin brings computational notebooks to Typst",
-  "version": "0.0.50",
+  "version": "0.0.51",
   "publisher": "VincentArel-Bundock",
   "license": "MIT",
   "icon": "logo_short.png",
