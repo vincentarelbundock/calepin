@@ -1,4 +1,7 @@
 #set document(title: [CLI reference])
+#metadata((
+  summary: "Every calepin command and flag, generated from the CLI help output: new, health, compile, watch, serve, update, and clean.",
+)) <website-metadata>
 
 #title() <cli-reference>
 

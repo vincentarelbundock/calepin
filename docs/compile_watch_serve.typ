@@ -1,5 +1,8 @@
 #set document(title: [Compile, watch, serve])
-#metadata((tags: ("getting started", "CLI"))) <website-metadata>
+#metadata((
+  tags: ("getting started", "CLI"),
+  summary: "The three commands that build a Calepin project: compile for one-shot renders, watch for live rebuilds, and serve for previewing a built site locally.",
+)) <website-metadata>
 
 #title() <compile-watch-serve>
 

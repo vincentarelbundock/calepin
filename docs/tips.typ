@@ -1,5 +1,8 @@
 #set document(title: [Tips & tricks])
-#metadata((tags: ("tips", "notebooks", "websites"))) <website-metadata>
+#metadata((
+  tags: ("tips", "notebooks", "websites"),
+  summary: "Short recipes for common Calepin tasks: varying content between HTML and paged output, and using the codly package with executed chunks.",
+)) <website-metadata>
 
 #title()
 

@@ -1,5 +1,9 @@
 #set document(title: [Multilingual sites])
-#metadata((title: "Multilingual", tags: ("websites", "localization"))) <website-metadata>
+#metadata((
+  title: "Multilingual",
+  tags: ("websites", "localization"),
+  summary: "Build a site in several languages: one content directory per language, pages linked as translations of each other, and language-code URL prefixes.",
+)) <website-metadata>
 
 #title()
 

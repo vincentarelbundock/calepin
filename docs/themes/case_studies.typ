@@ -1,7 +1,10 @@
 #set document(title: [Case studies])
 #import "/.calepin/calepin.typ" as calepin
 #show: calepin.document
-#metadata((tags: ("themes", "examples"))) <website-metadata>
+#metadata((
+  tags: ("themes", "examples"),
+  summary: "Worked examples of local themes restyling notebooks and websites, from Tufte and Classicthesis layouts to site fonts, each with reproducible source on GitHub.",
+)) <website-metadata>
 #title()
 
 This page shows how to use local themes to customize various aspects of notebooks and websites in PDF or HTML. Fully reproducible examples for each case study are available on Github:

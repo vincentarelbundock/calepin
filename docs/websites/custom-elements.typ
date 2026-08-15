@@ -2,7 +2,12 @@
 #show: calepin.document
 
 #set document(title: [Custom web elements])
-#metadata((title: "Custom elements", pdf: false, tags: ("websites", "HTML", "elements"))) <website-metadata>
+#metadata((
+  title: "Custom elements",
+  pdf: false,
+  tags: ("websites", "HTML", "elements"),
+  summary: "Build page elements Calepin does not ship, such as a carousel, by pairing Typst functions with your own CSS hooks in a local theme.",
+)) <website-metadata>
 
 #calepin.setup(fenced-chunks: true)
 #let target = sys.inputs.at("calepin-target", default: "paged")

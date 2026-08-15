@@ -1,5 +1,8 @@
 #set document(title: [Configuration])
-#metadata((tags: ("getting started", "configuration"))) <website-metadata>
+#metadata((
+  tags: ("getting started", "configuration"),
+  summary: "How Calepin finds config.toml and what belongs in it: asset directories, executable paths for each language engine, and how relative paths resolve.",
+)) <website-metadata>
 
 #title()
 

@@ -7,6 +7,7 @@
   layout: "layouts/site-landing.html",
   pdf: true,
   tags: ("overview", "getting started"),
+  summary: "Calepin turns standard Typst documents into computational notebooks and static websites, with executable R, Python, Julia, and shell chunks living directly in the .typ file.",
 )) <website-metadata>
 
 #let typst-logo-paths = (

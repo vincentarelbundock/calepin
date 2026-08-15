@@ -1,7 +1,10 @@
 #set document(title: [HTML])
 #import "/.calepin/calepin.typ" as calepin
 #show: calepin.document
-#metadata((tags: ("themes", "HTML", "templates"))) <website-metadata>
+#metadata((
+  tags: ("themes", "HTML", "templates"),
+  summary: "Reference for a theme's MiniJinja HTML templates: the context values they receive, the site and document layouts, partials, and per-page layout overrides.",
+)) <website-metadata>
 #title()
 
 = Context

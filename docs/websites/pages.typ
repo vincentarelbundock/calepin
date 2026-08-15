@@ -1,5 +1,9 @@
 #set document(title: [Pages and metadata])
-#metadata((title: "Pages", tags: ("websites", "metadata"))) <website-metadata>
+#metadata((
+  title: "Pages",
+  tags: ("websites", "metadata"),
+  summary: "How Calepin decides which Typst files become pages, and the website-metadata keys that set a page's title, URL, PDF output, and custom fields for listings.",
+)) <website-metadata>
 
 #title()
 

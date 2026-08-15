@@ -1,5 +1,9 @@
 #set document(title: [Website navigation])
-#metadata((title: "Navigation", tags: ("websites", "navigation"))) <website-metadata>
+#metadata((
+  title: "Navigation",
+  tags: ("websites", "navigation"),
+  summary: "Configure how readers move through a site: the documentation sidebar, per-page tables of contents, top-bar menus, and footer links.",
+)) <website-metadata>
 
 #title()
 
