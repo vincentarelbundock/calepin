@@ -2270,6 +2270,119 @@ fn compile_resolves_relative_paths_from_the_document_directory() {
 }
 
 #[test]
+fn labeled_chunk_with_output_between_plots_is_one_referenceable_figure() {
+    // A chunk that prints between two plots splits its images into separate
+    // batches. Each batch used to attach the chunk's cross-reference label, so
+    // Typst refused the reference as ambiguous and the document failed to
+    // compile. R flushes `cat()` between plot calls, which is what interleaves
+    // the items; Python buffers its stdout ahead of the plots.
+    if !has_command("typst") || !has_command("Rscript") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: false, eval: true)
+
+We mention @fig-split here.
+
+#calepin.chunk(label: "fig-split", fig-caption: [SPLITCAPTION])[```r
+plot(1:3)
+cat("BETWEEN\n")
+plot(3:1)
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "a labeled chunk with output between plots should compile:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8_lossy(&text.stdout).to_string();
+    assert_eq!(
+        extracted.matches("SPLITCAPTION").count(),
+        1,
+        "the chunk's caption names one figure, so it should appear once: {extracted}"
+    );
+    assert!(
+        extracted.contains("Figure 1"),
+        "the reference should resolve to the single figure: {extracted}"
+    );
+}
+
+#[test]
+fn captioned_chunk_with_output_between_plots_numbers_one_figure() {
+    // Same split, without a label: no compile error, but the caption used to be
+    // rendered once per batch and consume two figure numbers.
+    if !has_command("typst") || !has_command("Rscript") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: false, eval: true)
+
+#calepin.chunk(fig-caption: [ONLYCAPTION])[```r
+plot(1:3)
+cat("BETWEEN\n")
+plot(3:1)
+```]
+
+#calepin.chunk(fig-caption: [NEXTCAPTION])[```r
+plot(1:3)
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8_lossy(&text.stdout).to_string();
+    assert_eq!(
+        extracted.matches("ONLYCAPTION").count(),
+        1,
+        "the caption should be rendered once: {extracted}"
+    );
+    assert!(
+        extracted.contains("Figure 2: NEXTCAPTION"),
+        "the split chunk should consume one figure number, not two: {extracted}"
+    );
+}
+
+#[test]
 fn compile_leaves_no_entry_files_behind_even_after_a_stray_run() {
     if !has_command("typst") {
         return;

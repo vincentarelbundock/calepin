@@ -1,5 +1,9 @@
 # Changelog
 
+## Development
+
+- A chunk that prints something between two plots is now a single figure. Output landing between plots split the chunk's images into separate batches, and each batch claimed the chunk's caption and cross-reference label: a `fig-` label made the document fail to compile with `label occurs multiple times`, and a caption without a label was silently rendered twice, consuming two figure numbers. The label, the caption, and the figure counter are now each used once. R interleaves output this way whenever a chunk calls `cat()` or `print()` between plot calls; Python buffers its stdout ahead of the plots and was never affected. Note that a document with such a chunk loses the spurious second figure, so figures after it are renumbered.
+
 ## 0.0.50
 
 - Website scaffolds created by `calepin new website` now include a `.gitignore` covering `.calepin/` and the generated entry files _Calepin_ stages beside each document while it renders. Those files are hidden, so a `git add -A` after an interrupted build used to commit them silently. Follow-up to [#96](https://github.com/vincentarelbundock/calepin/issues/96).

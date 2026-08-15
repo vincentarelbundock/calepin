@@ -595,6 +595,44 @@
   }
 }
 
+// How many runs of consecutive image items the chunk's output contains. Output
+// between two plots (R flushes `cat()` between plot calls; Python buffers its
+// stdout ahead of them) starts a new run.
+#let _image-group-count(items) = {
+  let count = 0
+  let in-group = false
+  for item in items {
+    if _is-image-display-item(item) {
+      if not in-group {
+        count += 1
+        in-group = true
+      }
+    } else {
+      in-group = false
+    }
+  }
+  count
+}
+
+// Render a chunk's items in order, batching consecutive images into one figure
+// each. `fig-labels` and the caption carried by `opts` are attached by every
+// batch, so callers pass them only when a single batch will result.
+#let _render-item-sequence(items, label, opts, anchor, fig-labels: ()) = {
+  let image-group = ()
+  for result-item in items {
+    if _is-image-display-item(result-item) {
+      image-group.push(result-item)
+    } else {
+      if image-group.len() > 0 {
+        _render-image-group(image-group, label, opts, fig-labels, anchor)
+        image-group = ()
+      }
+      _render-item(result-item, label, opts, fig-labels, anchor: anchor)
+    }
+  }
+  _render-image-group(image-group, label, opts, fig-labels, anchor)
+}
+
 // `anchor` controls whether cross-reference labels (and the chunk's internal-id
 // label) are attached. The inline render owns the anchor; a relocated copy that
 // does not own it passes `anchor: false` so the same output can appear more than
@@ -621,17 +659,19 @@
   }
   let fig-labels = if anchor { _crossref-labels-for(chunk, "fig") } else { () }
   let items = chunk.at("items", default: ())
-  let image-group = ()
-  for result-item in items {
-    if _is-image-display-item(result-item) {
-      image-group.push(result-item)
-    } else {
-      if image-group.len() > 0 {
-        _render-image-group(image-group, label, opts, fig-labels, anchor)
-        image-group = ()
-      }
-      _render-item(result-item, label, opts, fig-labels, anchor: anchor)
-    }
+
+  // A chunk's caption and cross-reference label name one figure. When other
+  // output splits the images into several batches, letting each batch attach
+  // them defines the label twice (Typst rejects the reference) and numbers the
+  // caption twice. Render the whole chunk as a single figure instead, so the
+  // label, the caption, and the figure counter are used exactly once.
+  let is-figure = fig-labels.len() > 0 or opts.at("fig-caption", default: none) != none
+  if is-figure and _image-group-count(items) > 1 {
+    // Batches render without a caption or labels of their own, so none of them
+    // becomes a figure and the outer figure is the only one.
+    let body = _render-item-sequence(items, label, opts + ("fig-caption": none), anchor)
+    _finalize-figure-content(body, label, fig-labels, _figure-options(opts), anchor)
+  } else {
+    _render-item-sequence(items, label, opts, anchor, fig-labels: fig-labels)
   }
-  _render-image-group(image-group, label, opts, fig-labels, anchor)
 }
