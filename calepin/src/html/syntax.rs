@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::BTreeSet;
 use std::path::Path;
 
@@ -298,11 +299,20 @@ fn style_for_scope(
     let Some(scope) = scope else {
         return style;
     };
-    if let Some(rule) = theme.rules.iter().find(|rule| {
-        rule.scope
-            .as_deref()
-            .is_some_and(|rule_scope| scope_matches(rule_scope, scope))
-    }) {
+    if let Some(rule) = theme
+        .rules
+        .iter()
+        .enumerate()
+        .filter_map(|(index, rule)| {
+            let score = rule
+                .scope
+                .as_deref()
+                .and_then(|rule_scope| scope_match_score(rule_scope, scope))?;
+            Some((score, Reverse(index), rule))
+        })
+        .max_by_key(|(score, index, _)| (*score, *index))
+        .map(|(_, _, rule)| rule)
+    {
         if rule.foreground.is_some() {
             style.foreground = rule.foreground.clone();
         }
@@ -344,13 +354,30 @@ fn fallback_emitted_colors() -> &'static [(&'static str, &'static str)] {
     ]
 }
 
-fn scope_matches(rule_scope: &str, scope: &str) -> bool {
-    rule_scope == scope
-        || rule_scope.split(',').map(str::trim).any(|part| {
-            part == scope
-                || part.starts_with(&format!("{scope}."))
-                || scope.starts_with(&format!("{part}."))
+/// How well a theme rule matches a scope, or `None` when it does not match.
+///
+/// TextMate resolves a scope against the *most specific* rule that covers it,
+/// not the first one written. Rule lists nest (`keyword` alongside
+/// `keyword.operator`), so picking the first match would paint operators with
+/// the generic keyword color. Higher score wins: an exact hit beats a rule that
+/// names an ancestor of the scope, which beats a rule that only names a
+/// descendant of it. Among ancestors, the longest prefix wins.
+fn scope_match_score(rule_scope: &str, scope: &str) -> Option<usize> {
+    rule_scope
+        .split(',')
+        .map(str::trim)
+        .filter_map(|part| {
+            if part == scope {
+                Some(usize::MAX)
+            } else if scope.starts_with(&format!("{part}.")) {
+                Some(part.len())
+            } else if part.starts_with(&format!("{scope}.")) {
+                Some(0)
+            } else {
+                None
+            }
         })
+        .max()
 }
 
 fn sentinel_color(index: usize) -> String {
@@ -391,5 +418,45 @@ fn html_color_variants(color: &str) -> Vec<String> {
         vec![lower]
     } else {
         vec![lower, upper]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn light_color(scope: &str) -> String {
+        let light = TextMateTheme::default_light();
+        style_for_scope(&light, Some(scope), &light.foreground)
+            .foreground
+            .unwrap()
+    }
+
+    #[test]
+    fn builtin_theme_colors_comments_strings_and_keywords() {
+        let plain = TextMateTheme::default_light().foreground;
+        for scope in ["comment", "string", "keyword", "keyword.control"] {
+            assert_ne!(
+                light_color(scope),
+                plain,
+                "{scope} should not fall back to the plain foreground"
+            );
+        }
+    }
+
+    #[test]
+    fn nested_scopes_resolve_to_the_most_specific_rule() {
+        assert_ne!(light_color("keyword.operator"), light_color("keyword"));
+    }
+
+    #[test]
+    fn paged_theme_carries_the_same_scopes() {
+        let paged = HtmlSyntaxTheme::builtin().paged_theme_source().to_string();
+        for scope in ["comment", "string", "keyword"] {
+            assert!(
+                paged.contains(scope),
+                "paged theme should define a {scope} rule"
+            );
+        }
     }
 }

@@ -190,20 +190,84 @@ pub(crate) fn typst_runtime_source(html_theme_source: &str, paged_theme_source: 
 fn default_rules(dark: bool) -> Vec<TextMateRule> {
     let colors: BTreeMap<&str, &str> = if dark {
         BTreeMap::from([
+            ("comment", "#8b949e"),
+            ("constant", "#ffcc9c"),
             ("function", "#9db8ff"),
+            ("keyword", "#c8a2f0"),
             ("number", "#ffb3a7"),
             ("operator", "#b5bdc9"),
             ("parameter", "#c3d86c"),
+            ("string", "#8fd694"),
+            ("type", "#7fd1de"),
         ])
     } else {
         BTreeMap::from([
+            ("comment", "#5e5e5e"),
+            ("constant", "#8f5902"),
             ("function", "#4759ab"),
+            ("keyword", "#8b41b1"),
             ("number", "#ad0000"),
             ("operator", "#5e5e5e"),
             ("parameter", "#667321"),
+            ("string", "#20794d"),
+            ("type", "#0b6e79"),
         ])
     };
     vec![
+        TextMateRule {
+            name: Some("Comments".to_string()),
+            scope: Some("comment, punctuation.definition.comment".to_string()),
+            foreground: Some(colors["comment"].to_string()),
+            background: None,
+            font_style: None,
+        },
+        TextMateRule {
+            name: Some("Strings".to_string()),
+            scope: Some("string, punctuation.definition.string".to_string()),
+            foreground: Some(colors["string"].to_string()),
+            background: None,
+            font_style: None,
+        },
+        TextMateRule {
+            name: Some("Escape sequences".to_string()),
+            scope: Some("constant.character.escape".to_string()),
+            foreground: Some(colors["constant"].to_string()),
+            background: None,
+            font_style: None,
+        },
+        TextMateRule {
+            name: Some("Keywords".to_string()),
+            scope: Some(
+                "keyword, storage, storage.type, storage.modifier, keyword.control".to_string(),
+            ),
+            foreground: Some(colors["keyword"].to_string()),
+            background: None,
+            font_style: None,
+        },
+        TextMateRule {
+            name: Some("Language constants".to_string()),
+            scope: Some("constant.language, variable.language, support.constant".to_string()),
+            foreground: Some(colors["constant"].to_string()),
+            background: None,
+            font_style: None,
+        },
+        TextMateRule {
+            name: Some("Types and classes".to_string()),
+            scope: Some(
+                "entity.name.type, entity.name.class, entity.name.namespace, support.type, support.class"
+                    .to_string(),
+            ),
+            foreground: Some(colors["type"].to_string()),
+            background: None,
+            font_style: None,
+        },
+        TextMateRule {
+            name: Some("Tags".to_string()),
+            scope: Some("entity.name.tag".to_string()),
+            foreground: Some(colors["keyword"].to_string()),
+            background: None,
+            font_style: None,
+        },
         TextMateRule {
             name: Some("Function calls".to_string()),
             scope: Some("entity.name.function, support.function, variable.function".to_string()),

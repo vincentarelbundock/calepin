@@ -1,5 +1,10 @@
 # Changelog
 
+## Development
+
+- Keywords, strings and comments are now colored in code blocks. _Calepin_'s built-in syntax palette defined rules for only six TextMate scopes (function calls, numbers, operators, named arguments), and a `.tmTheme` handed to Typst replaces its built-in theme wholesale rather than merging with it, so every scope _Calepin_ did not name fell back to the plain foreground color. A Python `import` and a string literal came out black. The palette now also covers comments, strings, escape sequences, keywords and storage modifiers, language constants, types and classes, and tags, in both the light and dark variants. Documents that set `highlight-light` or `highlight-dark` to their own `.tmTheme` are unaffected. Thanks to [@peterpf](https://github.com/peterpf) for [the report](https://github.com/vincentarelbundock/calepin/issues/104).
+- HTML syntax classes now resolve a scope against the most specific rule that covers it, the way TextMate does, instead of the first rule written. With nested scopes in the palette (`keyword` alongside `keyword.operator`), the old first-match rule would have painted operators with the generic keyword color.
+
 ## 0.0.48
 
 - Fix code chunks rendering the source of an earlier block. A fenced block in a language _Calepin_ does not run (```rust, ```json, a kernel that is not installed) stepped the automatic `chunk-1`, `chunk-2`, ... numbering while _Calepin_ scanned the document for chunks, but not while Typst rendered it. The two passes then disagreed about which chunk was which, and every chunk after such a block displayed its predecessor's code. All fenced blocks now take the same path in both passes. Thanks to [@peterpf](https://github.com/peterpf) for [the report](https://github.com/vincentarelbundock/calepin/issues/108).
