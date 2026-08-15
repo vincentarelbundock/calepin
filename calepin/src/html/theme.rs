@@ -59,6 +59,15 @@ pub(crate) struct SiteContextInput {
     pub(crate) favicon: Option<String>,
     pub(crate) page_url: Option<String>,
     pub(crate) page_title: Option<String>,
+    /// Absolute (when `base_url` is set) URL of this page's social-card image,
+    /// from the page's `image` or the site-wide default. Social scrapers do not
+    /// resolve relative URLs, so `None` here means the cards omit the image.
+    pub(crate) page_image: Option<String>,
+    /// Description for this page: an authored summary or the derived excerpt,
+    /// falling back to the site description.
+    pub(crate) page_description: Option<String>,
+    /// `<meta name="theme-color">` value, when configured.
+    pub(crate) theme_color: Option<String>,
     /// Page-relative href of this page's PDF, when one is published. `None`
     /// hides the PDF entry in the theme's view-mode picker.
     pub(crate) page_pdf: Option<String>,

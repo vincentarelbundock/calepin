@@ -20,6 +20,11 @@ pub(super) struct PageMeta {
     pub(super) translation_key: Option<String>,
     pub(super) slug: Option<String>,
     pub(super) url: Option<String>,
+    /// Social-card image for this page: an absolute URL, or a path relative to
+    /// the output root.
+    pub(super) image: Option<String>,
+    /// Old routes that should redirect to this page.
+    pub(super) redirect_from: Vec<String>,
     pub(super) toc: Option<TocConfig>,
     pub(super) raw: serde_json::Value,
     /// First prose paragraph of the page source, derived when the author did
@@ -509,6 +514,10 @@ pub(super) fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
             .or_else(|| string_field(value, "translationKey")),
         slug: string_field(value, "slug"),
         url: string_field(value, "url"),
+        image: string_field(value, "image"),
+        redirect_from: string_list_field(value, "redirect-from")
+            .or_else(|| string_list_field(value, "redirect_from"))
+            .unwrap_or_default(),
         toc: value.get("toc").and_then(toc_field),
         raw: if value.is_object() {
             value.clone()
@@ -543,6 +552,22 @@ fn toc_field(value: &serde_json::Value) -> Option<TocConfig> {
         depth,
         floating,
     })
+}
+
+/// Reads a list-valued string field. A bare string is accepted as a one-element
+/// list, and non-string entries are dropped rather than failing the page.
+fn string_list_field(value: &serde_json::Value, key: &str) -> Option<Vec<String>> {
+    let field = value.get(key)?;
+    if let Some(single) = field.as_str() {
+        return Some(clean_optional_string(Some(single)).into_iter().collect());
+    }
+    let entries = field
+        .as_array()?
+        .iter()
+        .filter_map(|entry| entry.as_str())
+        .filter_map(|entry| clean_optional_string(Some(entry)))
+        .collect();
+    Some(entries)
 }
 
 fn string_field(value: &serde_json::Value, key: &str) -> Option<String> {

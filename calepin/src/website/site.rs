@@ -12,7 +12,10 @@ use super::language::LanguageInfo;
 use super::navigation::{MenusModel, NavSectionModel};
 use super::pagefind::{PAGEFIND_CSS, PAGEFIND_DIR, PAGEFIND_JS};
 use super::paths::{join_normalized_under_root, normalize_path, slash_path};
-use super::url::{absolute_site_url_without_index, is_absolute_or_special_url, page_relative_url};
+use super::url::{
+    absolute_site_url, absolute_site_url_without_index, is_absolute_or_special_url,
+    page_relative_url,
+};
 use super::util::clean_optional_string;
 use super::{PageInfo, PageInfoMap};
 
@@ -24,6 +27,8 @@ pub(super) struct SiteMetadata {
     pub(super) logo: Option<String>,
     pub(super) logo_alt: Option<String>,
     pub(super) favicon: Option<String>,
+    pub(super) image: Option<String>,
+    pub(super) theme_color: Option<String>,
 }
 
 impl SiteMetadata {
@@ -42,6 +47,8 @@ impl SiteMetadata {
                 .or_else(|| clean_optional_string(config.title.as_deref())),
             favicon: source_asset_output_path(src_dir, config.favicon.as_deref(), "favicon")?
                 .or_else(|| Some(default_favicon_path.to_string())),
+            image: source_asset_output_path(src_dir, config.image.as_deref(), "image")?,
+            theme_color: clean_optional_string(config.theme_color.as_deref()),
         })
     }
 }
@@ -184,6 +191,19 @@ impl SiteModel {
                 html_escape(&absolute_site_url_without_index(base_url, current_href))
             }),
             page_title,
+            page_image: social_image_url(
+                self.metadata.base_url.as_deref(),
+                page_info
+                    .and_then(|info| info.image.as_deref())
+                    .or(self.metadata.image.as_deref()),
+            )
+            .as_deref()
+            .map(html_escape),
+            page_description: page_info
+                .and_then(|info| info.description.as_deref())
+                .or(self.metadata.description.as_deref())
+                .map(html_escape),
+            theme_color: self.metadata.theme_color.as_deref().map(html_escape),
             page_pdf: page_info
                 .and_then(|info| info.pdf_href.as_deref())
                 .map(|pdf| html_escape(&page_relative_url(current_href, pdf))),
@@ -201,6 +221,18 @@ impl SiteModel {
             toc_floating: None,
         }
     }
+}
+
+/// Resolves a social-card image to the absolute URL that Open Graph and
+/// Twitter scrapers need. Already-absolute URLs pass through; a site-relative
+/// path needs `base_url` to become absolute, so without one the image is
+/// dropped rather than emitted in a form no scraper will follow.
+fn social_image_url(base_url: Option<&str>, image: Option<&str>) -> Option<String> {
+    let image = clean_optional_string(image)?;
+    if image.starts_with("http://") || image.starts_with("https://") || image.starts_with("//") {
+        return Some(image);
+    }
+    base_url.map(|base_url| absolute_site_url(base_url, &image))
 }
 
 pub(super) fn language_entries(

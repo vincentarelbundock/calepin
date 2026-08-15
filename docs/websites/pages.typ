@@ -113,7 +113,9 @@ Use `calepin.pages()` to get structured information about every built page, incl
 
 `excerpt` saves you from writing a blurb for every page. _Calepin_ uses the page's `summary` metadata key if it has one, then `description`, and otherwise derives one from the page itself: the first paragraph of prose, with markup, code chunks, headings, and comments removed, truncated on a word boundary. Web feeds use the same value for their entry summaries.
 
-Only `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.
+Only `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, `url`, `image`, and `redirect-from`. All other keys are left untouched for your own Typst code.
+
+`image` sets this page's social-card picture and `redirect-from` lists old routes that should redirect here; both are described under #link("configuration.html")[website configuration].
 
 There is no required schema for custom metadata. Common keys include `date`, `tags`, `author`, `authors`, `category`, `venue`, `summary`, and `draft`, but you can use any key your page list or template expects. Since `calepin.pages()` returns a Typst array of dictionaries, you can use Typst functions and methods such as `filter`, `map`, `sorted`, `rev`, `at`, and `contains` to select and format the pages you need.
 

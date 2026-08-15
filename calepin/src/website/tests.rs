@@ -484,7 +484,9 @@ fn feeds_config_accepts_toggle_table_or_deprecated_key() {
     // Deprecated key still works and takes precedence.
     assert!(website_config_from_toml("generate_feeds = true").feeds_enabled());
     assert!(website_config_from_toml("generate-feeds = true").feeds_enabled());
-    assert!(!website_config_from_toml("generate_feeds = false\n[feeds]\nlimit = 5").feeds_enabled());
+    assert!(
+        !website_config_from_toml("generate_feeds = false\n[feeds]\nlimit = 5").feeds_enabled()
+    );
 }
 
 #[test]
@@ -1573,6 +1575,7 @@ fn translation_entries_are_relative_to_current_page() {
                 translation_key: "about".to_string(),
                 href: "about.html".to_string(),
                 pdf_href: None,
+                ..Default::default()
             },
         ),
         (
@@ -1582,6 +1585,7 @@ fn translation_entries_are_relative_to_current_page() {
                 translation_key: "about".to_string(),
                 href: "fr/a-propos.html".to_string(),
                 pdf_href: None,
+                ..Default::default()
             },
         ),
     ]);
@@ -1626,6 +1630,7 @@ fn language_entries_include_all_languages_with_home_fallbacks() {
             translation_key: "about".to_string(),
             href: "about.html".to_string(),
             pdf_href: None,
+            ..Default::default()
         },
     )]);
     let languages = vec![
@@ -1813,6 +1818,7 @@ fn site_context_page_url_uses_directory_style_for_index_routes() {
             logo: None,
             logo_alt: None,
             favicon: None,
+            ..Default::default()
         },
         true,
     );
@@ -2033,6 +2039,7 @@ fn llms_test_metadata() -> SiteMetadata {
         logo: None,
         logo_alt: None,
         favicon: None,
+        ..Default::default()
     }
 }
 
@@ -2191,6 +2198,7 @@ fn theme_context_rewrites_brand_urls_relative_to_current_page() {
             logo: Some("assets/logo.svg".to_string()),
             logo_alt: Some("Example".to_string()),
             favicon: Some("assets/favicon.ico".to_string()),
+            ..Default::default()
         },
         true,
     );
@@ -2257,6 +2265,7 @@ fn theme_context_includes_global_sidebar_sections_with_language_specific_current
             translation_key: "guide-usage".to_string(),
             href: "guide/usage.html".to_string(),
             pdf_href: None,
+            ..Default::default()
         },
     )]);
 
@@ -3672,6 +3681,7 @@ fn theme_context_filters_menu_page_links_by_language() {
                 translation_key: "index".to_string(),
                 href: "index.html".to_string(),
                 pdf_href: None,
+                ..Default::default()
             },
         ),
         (
@@ -3681,6 +3691,7 @@ fn theme_context_filters_menu_page_links_by_language() {
                 translation_key: "index".to_string(),
                 href: "fr/index.html".to_string(),
                 pdf_href: None,
+                ..Default::default()
             },
         ),
     ]);
@@ -4240,4 +4251,291 @@ fn clear_previous_outputs_preserves_in_place_rendered_files() {
     assert!(temp.path().join("index.html").exists());
     assert!(temp.path().join("index.pdf").exists());
     assert!(temp.path().join("notes.html").exists());
+}
+
+fn social_test_site(metadata: SiteMetadata) -> SiteModel {
+    SiteModel::new(Vec::new(), MenusModel::default(), metadata, true)
+}
+
+fn social_test_metadata(base_url: Option<&str>, image: Option<&str>) -> SiteMetadata {
+    SiteMetadata {
+        title: Some("Example".to_string()),
+        description: Some("Site blurb.".to_string()),
+        base_url: base_url.map(str::to_string),
+        image: image.map(str::to_string),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn social_card_image_prefers_the_page_image_over_the_site_default() {
+    let path = PathBuf::from("/site/docs/guide/usage.typ");
+    let page_info = PageInfoMap::from([(
+        path.clone(),
+        PageInfo {
+            href: "guide/usage.html".to_string(),
+            image: Some("assets/usage-card.png".to_string()),
+            ..Default::default()
+        },
+    )]);
+    let site = social_test_site(social_test_metadata(
+        Some("https://example.com"),
+        Some("assets/default-card.png"),
+    ));
+
+    let context = site.theme_context(
+        "guide/usage.html",
+        page_info.get(&path),
+        &page_info,
+        None,
+        None,
+        true,
+    );
+
+    assert_eq!(
+        context.page_image.as_deref(),
+        Some("https://example.com/assets/usage-card.png")
+    );
+}
+
+#[test]
+fn social_card_image_falls_back_to_the_site_default() {
+    let site = social_test_site(social_test_metadata(
+        Some("https://example.com"),
+        Some("assets/default-card.png"),
+    ));
+
+    let context = site.theme_context(
+        "guide/usage.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        true,
+    );
+
+    assert_eq!(
+        context.page_image.as_deref(),
+        Some("https://example.com/assets/default-card.png")
+    );
+}
+
+#[test]
+fn social_card_image_keeps_absolute_urls_and_needs_a_base_url_otherwise() {
+    let site = social_test_site(social_test_metadata(
+        None,
+        Some("https://cdn.test/card.png"),
+    ));
+    let context = site.theme_context("index.html", None, &PageInfoMap::new(), None, None, true);
+    assert_eq!(
+        context.page_image.as_deref(),
+        Some("https://cdn.test/card.png")
+    );
+
+    // A site-relative image cannot be made absolute without `base-url`, and
+    // scrapers ignore relative ones, so no image is advertised at all.
+    let site = social_test_site(social_test_metadata(None, Some("assets/card.png")));
+    let context = site.theme_context("index.html", None, &PageInfoMap::new(), None, None, true);
+    assert_eq!(context.page_image, None);
+}
+
+#[test]
+fn page_description_prefers_the_page_summary_and_falls_back_to_the_site_blurb() {
+    let path = PathBuf::from("/site/docs/guide/usage.typ");
+    let page_info = PageInfoMap::from([(
+        path.clone(),
+        PageInfo {
+            href: "guide/usage.html".to_string(),
+            description: Some("How to use it.".to_string()),
+            ..Default::default()
+        },
+    )]);
+    let site = social_test_site(social_test_metadata(Some("https://example.com"), None));
+
+    let context = site.theme_context(
+        "guide/usage.html",
+        page_info.get(&path),
+        &page_info,
+        None,
+        None,
+        true,
+    );
+    assert_eq!(context.page_description.as_deref(), Some("How to use it."));
+
+    let context = site.theme_context("other.html", None, &page_info, None, None, true);
+    assert_eq!(context.page_description.as_deref(), Some("Site blurb."));
+}
+
+#[test]
+fn theme_color_reaches_the_theme_context() {
+    let site = social_test_site(SiteMetadata {
+        theme_color: Some("#1b1b1b".to_string()),
+        ..Default::default()
+    });
+
+    let context = site.theme_context("index.html", None, &PageInfoMap::new(), None, None, true);
+
+    assert_eq!(context.theme_color.as_deref(), Some("#1b1b1b"));
+}
+
+fn page_meta_with_redirects(routes: &[&str]) -> PageMeta {
+    PageMeta {
+        redirect_from: routes.iter().map(|route| route.to_string()).collect(),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn redirect_routes_normalize_directory_and_extensionless_forms() {
+    let src = Path::new("/site/docs");
+    let page = PathBuf::from("/site/docs/guide/usage.typ");
+    let page_meta = PageMetaMap::from([(
+        page.clone(),
+        page_meta_with_redirects(&["/old/usage", "legacy/", "archive/usage.html", "/old/usage"]),
+    )]);
+
+    let page_info = build_page_info(
+        src,
+        std::slice::from_ref(&page),
+        &page_meta,
+        &BTreeSet::new(),
+        &None,
+    )
+    .unwrap();
+
+    assert_eq!(
+        page_info[&page].redirects,
+        vec![
+            "old/usage.html".to_string(),
+            "legacy/index.html".to_string(),
+            "archive/usage.html".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn redirect_route_escaping_the_output_directory_is_rejected() {
+    let src = Path::new("/site/docs");
+    let page = PathBuf::from("/site/docs/usage.typ");
+    let page_meta = PageMetaMap::from([(page.clone(), page_meta_with_redirects(&["../escape"]))]);
+
+    let error = build_page_info(
+        src,
+        std::slice::from_ref(&page),
+        &page_meta,
+        &BTreeSet::new(),
+        &None,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("output directory"));
+}
+
+#[test]
+fn redirect_route_colliding_with_a_rendered_page_is_rejected() {
+    let src = Path::new("/site/docs");
+    let usage = PathBuf::from("/site/docs/usage.typ");
+    let intro = PathBuf::from("/site/docs/intro.typ");
+    let page_meta = PageMetaMap::from([(usage.clone(), page_meta_with_redirects(&["intro"]))]);
+
+    let error = build_page_info(
+        src,
+        &[usage.clone(), intro.clone()],
+        &page_meta,
+        &BTreeSet::new(),
+        &None,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("collides with a rendered page"));
+}
+
+#[test]
+fn two_pages_claiming_the_same_redirect_route_are_rejected() {
+    let src = Path::new("/site/docs");
+    let usage = PathBuf::from("/site/docs/usage.typ");
+    let intro = PathBuf::from("/site/docs/intro.typ");
+    let page_meta = PageMetaMap::from([
+        (usage.clone(), page_meta_with_redirects(&["old"])),
+        (intro.clone(), page_meta_with_redirects(&["old"])),
+    ]);
+
+    let error = build_page_info(
+        src,
+        &[usage.clone(), intro.clone()],
+        &page_meta,
+        &BTreeSet::new(),
+        &None,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("both redirect from"));
+}
+
+#[test]
+fn redirect_stubs_point_readers_and_crawlers_at_the_new_page() {
+    let temp = tempdir_in_manifest("calepin-website-redirect-test-");
+    let page = PathBuf::from("/site/docs/guide/usage.typ");
+    let page_info = PageInfoMap::from([(
+        page,
+        PageInfo {
+            href: "guide/usage.html".to_string(),
+            redirects: vec!["old/usage.html".to_string()],
+            ..Default::default()
+        },
+    )]);
+
+    write_redirects(temp.path(), Some("https://example.com"), &page_info).unwrap();
+
+    let stub = fs::read_to_string(temp.path().join("old/usage.html")).unwrap();
+    assert!(stub.contains(r#"http-equiv="refresh""#));
+    // The stub sits one directory deep, so the relative target climbs out.
+    assert!(stub.contains("../guide/usage.html"));
+    assert!(stub.contains(r#"<link rel="canonical" href="https://example.com/guide/usage.html">"#));
+    assert!(stub.contains(r#"content="noindex""#));
+}
+
+#[test]
+fn redirect_stubs_are_expected_outputs_so_a_clean_build_keeps_them() {
+    let out_dir = Path::new("/site/out");
+    let page = PathBuf::from("/site/docs/guide/usage.typ");
+    let page_info = PageInfoMap::from([(
+        page.clone(),
+        PageInfo {
+            href: "guide/usage.html".to_string(),
+            redirects: vec!["old/usage.html".to_string()],
+            ..Default::default()
+        },
+    )]);
+
+    let outputs = expected_generated_outputs(GeneratedOutputInputs {
+        out_dir,
+        typ_files: &[page],
+        page_info: &page_info,
+        sitemap_path: &None,
+        robots_path: &None,
+        llms_path: &None,
+        feed_paths: &BTreeSet::new(),
+        default_favicon_path: None,
+    });
+
+    assert!(outputs.contains(&out_dir.join("old/usage.html")));
+}
+
+#[test]
+fn page_metadata_reads_image_and_redirect_from_in_both_spellings() {
+    let meta = page_meta_from_value(&serde_json::json!({
+        "image": "assets/card.png",
+        "redirect-from": ["old/one", "old/two"],
+    }));
+    assert_eq!(meta.image.as_deref(), Some("assets/card.png"));
+    assert_eq!(meta.redirect_from, vec!["old/one", "old/two"]);
+
+    // A bare string is accepted as a one-element list.
+    let meta = page_meta_from_value(&serde_json::json!({"redirect_from": "old/only"}));
+    assert_eq!(meta.redirect_from, vec!["old/only"]);
+
+    let meta = page_meta_from_value(&serde_json::json!({"title": "Hello"}));
+    assert!(meta.redirect_from.is_empty());
+    assert_eq!(meta.image, None);
 }

@@ -27,6 +27,12 @@ pub(super) struct WebsiteConfig {
     #[serde(rename(deserialize = "logo-alt"), alias = "logo_alt")]
     pub(super) logo_alt: Option<String>,
     pub(super) favicon: Option<String>,
+    /// Default social-card image used for `og:image` / `twitter:image` when a
+    /// page does not supply its own `image` in `<website-metadata>`.
+    pub(super) image: Option<String>,
+    /// Value for `<meta name="theme-color">`, which tints browser UI on mobile.
+    #[serde(rename(deserialize = "theme-color"), alias = "theme_color")]
+    pub(super) theme_color: Option<String>,
     #[serde(rename = "asset-dir")]
     pub(super) asset_dir: Option<PathBuf>,
     /// Default output directory for website builds when no output path is

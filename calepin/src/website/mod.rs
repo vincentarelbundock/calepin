@@ -66,7 +66,7 @@ use outputs::MANIFEST_PATH;
 use outputs::{
     clear_previous_outputs, copied_output_paths, copy_static_files, copy_typ_sources,
     expected_generated_outputs, load_manifest, reconcile_manifest_outputs,
-    remove_unexpected_rendered_outputs, write_default_favicon, write_manifest,
+    remove_unexpected_rendered_outputs, write_default_favicon, write_manifest, write_redirects,
     GeneratedOutputInputs,
 };
 use pagefind::{
@@ -279,12 +279,21 @@ struct WebsiteBuildOptions {
     force: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct PageInfo {
     language: Option<String>,
     translation_key: String,
     href: String,
     pdf_href: Option<String>,
+    /// Social-card image for this page, from `image` in `<website-metadata>`.
+    /// Either an absolute URL or a path relative to the output root.
+    image: Option<String>,
+    /// Page-level description for `<meta name="description">` and the social
+    /// cards: an authored `summary`/`description`, else the derived excerpt.
+    description: Option<String>,
+    /// Output-root-relative routes that redirect here, from `redirect-from`
+    /// in `<website-metadata>`. Always normalized to end in `.html`.
+    redirects: Vec<String>,
 }
 
 type PageInfoMap = BTreeMap<PathBuf, PageInfo>;
@@ -587,6 +596,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .collect::<BTreeSet<_>>();
     let site_files_progress = progress.spinner("[site] write sitemap, feeds, robots");
     write_sitemap(&out_dir, metadata.base_url.as_deref(), &sitemap_hrefs)?;
+    write_redirects(&out_dir, metadata.base_url.as_deref(), &page_info)?;
     write_robots(&out_dir, &src_dir, &config, metadata.base_url.as_deref())?;
     write_llms_txt(
         &out_dir,

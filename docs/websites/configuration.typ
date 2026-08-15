@@ -74,6 +74,15 @@ asset-dir = "_calepin"
 # Default: `asset-dir`/favicon.svg.
 favicon = "assets/favicon.ico"
 
+# Default social-card image for link previews. Needs `base-url` unless the
+# value is already an absolute URL. Pages override it with `image`.
+# Default: none.
+image = "assets/social-card.png"
+
+# Tint applied to browser UI on mobile.
+# Default: none.
+theme-color = "#1b1b1b"
+
 # HTML syntax highlighting themes. Paths are relative to calepin.toml.
 # Default: built-in Calepin light and dark themes.
 highlight-light = "themes/syntax/light.tmTheme"
@@ -95,13 +104,71 @@ Paths in `calepin.toml` are interpreted from the website source directory: the d
 Bundled website themes emit a small set of page-level head tags from config:
 
 - `<title>` (fallback when no `<title>` is present in the rendered page)
-- `<meta name="description">` and `<meta property="og:description">` from `description`
-- `<meta property="og:title">` from page title and site title
+- `<meta name="description">`, `<meta property="og:description">`, and `<meta name="twitter:description">` from the page's own summary or excerpt, falling back to the site `description`
+- `<meta property="og:title">` and `<meta name="twitter:title">` from page title and site title
 - `<meta property="og:site_name">` from `title`
 - `<meta property="og:url">` and `<link rel="canonical">` from `base-url` plus the page route
+- `<meta property="og:type">`: `article` for a page with its own title, `website` otherwise
+- `<meta property="og:image">`, `<meta name="twitter:image">`, and `<meta name="twitter:card">` from `image`
+- `<meta name="theme-color">` from `theme-color`
 
 If you inject your own tags for these fields in a theme override, check for
 duplication with what the theme already emits.
+
+== Social cards
+
+`image` sets the picture link previews show on social platforms and chat apps:
+
+```toml
+# calepin.toml
+
+# Default social-card image. Relative paths resolve from the website source
+# directory, exactly like `logo` and `favicon`.
+# Default: none.
+image = "assets/social-card.png"
+
+# Tint for browser UI on mobile.
+# Default: none.
+theme-color = "#1b1b1b"
+```
+
+An individual page overrides the default through its `<website-metadata>`:
+
+```typ
+#metadata((
+  title: "Bootstrap confidence intervals",
+  image: "assets/bootstrap-card.png",
+))<website-metadata>
+```
+
+Social scrapers do not resolve relative URLs, so `image` needs `base-url` to be
+set: without one, no `og:image` or `twitter:image` is emitted. Absolute URLs
+(`https://cdn.example.com/card.png`) work with or without `base-url`. When an
+image is available the card is a `summary_large_image`; otherwise it is a plain
+`summary`.
+
+= Redirects
+
+Static hosts serve no redirect rules of their own, so moving a page normally
+breaks every link that pointed at its old address. List the old routes in a
+page's `redirect-from` and _Calepin_ writes a small stub at each one:
+
+```typ
+#metadata((
+  title: "Bootstrap confidence intervals",
+  redirect-from: ("posts/bootstrap-ci", "old/bootstrap/"),
+))<website-metadata>
+```
+
+Each stub carries `<link rel="canonical">` pointing at the new page (so crawlers
+transfer the old address's ranking), a `<meta http-equiv="refresh">` that moves
+browsers immediately, and a plain link for readers without JavaScript. Routes are
+interpreted from the output root; `posts/bootstrap-ci` becomes
+`posts/bootstrap-ci.html` and a trailing slash becomes `index.html` in that
+directory. A single string is accepted in place of a list.
+
+A redirect may not overwrite a rendered page, and two pages may not claim the
+same old route; either is a build error rather than a silent overwrite.
 
 = Theme customization
 

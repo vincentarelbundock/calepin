@@ -18,7 +18,7 @@ use super::paths::{
     join_normalized_under_root, normalize_path, rel_posix, relative_or_self, slash_path,
     wildcard_match,
 };
-use super::url::{is_safe_output_route, page_relative_url};
+use super::url::{is_absolute_or_special_url, is_safe_output_route, page_relative_url};
 use super::util::clean_optional_string;
 use super::{PageInfo, PageInfoMap, FALLBACK_PAGE, INDEX_PAGE, PAGES_INDEX_FILE};
 
@@ -771,6 +771,10 @@ pub(super) fn build_page_info(
         let pdf_href = pdf_files
             .contains(path)
             .then(|| page_output_href(&rel, language, meta, "pdf"));
+        let redirects = meta
+            .map(|meta| page_redirect_routes(path, &meta.redirect_from))
+            .transpose()?
+            .unwrap_or_default();
         out.insert(
             path.clone(),
             PageInfo {
@@ -778,10 +782,92 @@ pub(super) fn build_page_info(
                 translation_key,
                 href,
                 pdf_href,
+                image: meta
+                    .and_then(|meta| meta.image.as_deref())
+                    .map(social_image_target),
+                description: meta.and_then(page_excerpt),
+                redirects,
             },
         );
     }
+    reject_conflicting_redirects(&out)?;
     Ok(out)
+}
+
+/// Site-relative form of a page's social image: absolute URLs pass through,
+/// everything else is read as a path from the output root.
+fn social_image_target(value: &str) -> String {
+    if is_absolute_or_special_url(value) && !value.starts_with('/') {
+        return value.to_string();
+    }
+    value
+        .trim_start_matches('/')
+        .trim_start_matches("./")
+        .to_string()
+}
+
+/// Normalizes each authored `redirect-from` route to the output path of the
+/// stub that will be written for it. Directory-style routes (`old/`, `old`)
+/// become `old/index.html` and `old.html` respectively.
+fn page_redirect_routes(path: &Path, routes: &[String]) -> Result<Vec<String>> {
+    let mut out = Vec::new();
+    for route in routes {
+        let trimmed = route
+            .trim()
+            .trim_start_matches('/')
+            .trim_start_matches("./");
+        if trimmed.is_empty() {
+            bail!(
+                "page redirect-from route must not be empty ({})",
+                path.display()
+            );
+        }
+        if !is_safe_output_route(trimmed) {
+            bail!(
+                "page redirect-from route must stay inside the output directory: `{route}` ({})",
+                path.display()
+            );
+        }
+        let normalized = if trimmed.ends_with('/') {
+            format!("{}index.html", trimmed)
+        } else if trimmed.ends_with(".html") {
+            trimmed.to_string()
+        } else {
+            format!("{trimmed}.html")
+        };
+        if !out.contains(&normalized) {
+            out.push(normalized);
+        }
+    }
+    Ok(out)
+}
+
+/// A redirect stub may not overwrite a real page, and two pages may not claim
+/// the same old route: either way one of the two outputs would silently win.
+fn reject_conflicting_redirects(page_info: &PageInfoMap) -> Result<()> {
+    let hrefs = page_info
+        .values()
+        .map(|info| info.href.as_str())
+        .collect::<BTreeSet<_>>();
+    let mut claimed: BTreeMap<&str, &Path> = BTreeMap::new();
+    for (path, info) in page_info {
+        for redirect in &info.redirects {
+            if hrefs.contains(redirect.as_str()) {
+                bail!(
+                    "page redirect-from route `{redirect}` collides with a rendered page ({})",
+                    path.display()
+                );
+            }
+            if let Some(other) = claimed.insert(redirect.as_str(), path) {
+                bail!(
+                    "pages {} and {} both redirect from `{redirect}`",
+                    other.display(),
+                    path.display()
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 fn page_language<'a>(

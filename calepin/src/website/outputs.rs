@@ -7,7 +7,10 @@ use anyhow::{bail, Context, Result};
 use crate::typst::io::ensure_parent;
 
 use super::pagefind::PAGEFIND_DIR;
+use crate::utils::html::escape as html_escape;
+
 use super::paths::{output_path_for_source_file, rel_posix, relative_or_self};
+use super::url::{absolute_site_url_without_index, page_relative_url};
 use super::{PageInfoMap, PagefindManifest, WebsiteManifest, SKIP_DIRS};
 
 pub(super) const MANIFEST_PATH: &str = ".calepin/website-manifest.json";
@@ -32,6 +35,9 @@ pub(super) fn expected_generated_outputs(inputs: GeneratedOutputInputs<'_>) -> B
             if let Some(pdf_href) = &info.pdf_href {
                 outputs.insert(inputs.out_dir.join(pdf_href));
             }
+            for redirect in &info.redirects {
+                outputs.insert(inputs.out_dir.join(redirect));
+            }
         }
     }
     if let Some(path) = inputs.sitemap_path {
@@ -48,6 +54,46 @@ pub(super) fn expected_generated_outputs(inputs: GeneratedOutputInputs<'_>) -> B
         outputs.insert(inputs.out_dir.join(path));
     }
     outputs
+}
+
+/// Writes a client-side redirect stub for every `redirect-from` route. Static
+/// hosts serve no redirect rules of their own, so the stub carries a canonical
+/// link (for crawlers), a meta refresh, and a plain link (for no-JS readers).
+pub(super) fn write_redirects(
+    out_dir: &Path,
+    base_url: Option<&str>,
+    page_info: &PageInfoMap,
+) -> Result<()> {
+    for info in page_info.values() {
+        for redirect in &info.redirects {
+            let relative_target = page_relative_url(redirect, &info.href);
+            let canonical = base_url
+                .map(|base_url| absolute_site_url_without_index(base_url, &info.href))
+                .unwrap_or_else(|| relative_target.clone());
+            let target = html_escape(&relative_target);
+            let canonical = html_escape(&canonical);
+            let body = format!(
+                "<!doctype html>\n\
+                 <html lang=\"en\">\n\
+                 <head>\n\
+                 <meta charset=\"utf-8\">\n\
+                 <title>Redirecting…</title>\n\
+                 <link rel=\"canonical\" href=\"{canonical}\">\n\
+                 <meta name=\"robots\" content=\"noindex\">\n\
+                 <meta http-equiv=\"refresh\" content=\"0; url={target}\">\n\
+                 </head>\n\
+                 <body>\n\
+                 <p>This page has moved to <a href=\"{target}\">{canonical}</a>.</p>\n\
+                 </body>\n\
+                 </html>\n"
+            );
+            let path = out_dir.join(redirect);
+            ensure_parent(&path)?;
+            fs::write(&path, body)
+                .with_context(|| format!("failed to write redirect {}", path.display()))?;
+        }
+    }
+    Ok(())
 }
 
 pub(super) fn write_default_favicon(out_dir: &Path, path: &Path) -> Result<()> {

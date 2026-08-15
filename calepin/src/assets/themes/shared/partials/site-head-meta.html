@@ -13,9 +13,14 @@
     {% endif %}
     {% endif %}
     {% endif %}
-    {% if site.description %}
-    <meta name="description" content="{{ site.description }}">
-    <meta property="og:description" content="{{ site.description }}">
+    {% set meta_description = site.page_description or site.description %}
+    {% if meta_description %}
+    <meta name="description" content="{{ meta_description }}">
+    <meta property="og:description" content="{{ meta_description }}">
+    <meta name="twitter:description" content="{{ meta_description }}">
+    {% endif %}
+    {% if site.theme_color %}
+    <meta name="theme-color" content="{{ site.theme_color }}">
     {% endif %}
     {% if site.title %}
     <meta property="og:site_name" content="{{ site.title }}">
@@ -30,9 +35,19 @@
     {% if meta_title %}
     {% if site.title and meta_title != site.title %}
     <meta property="og:title" content="{{ meta_title }} | {{ site.title }}">
+    <meta name="twitter:title" content="{{ meta_title }} | {{ site.title }}">
     {% else %}
     <meta property="og:title" content="{{ meta_title }}">
+    <meta name="twitter:title" content="{{ meta_title }}">
     {% endif %}
+    {% endif %}
+    <meta property="og:type" content="{% if doc.title %}article{% else %}website{% endif %}">
+    {% if site.page_image %}
+    <meta property="og:image" content="{{ site.page_image }}">
+    <meta name="twitter:image" content="{{ site.page_image }}">
+    <meta name="twitter:card" content="summary_large_image">
+    {% else %}
+    <meta name="twitter:card" content="summary">
     {% endif %}
     {% if site.page_url %}
     <link rel="canonical" href="{{ site.page_url }}">
