@@ -516,6 +516,12 @@ pub enum ChunkStatus {
     Ok,
     Error,
     Skipped,
+    /// No engine was available to run this block. Distinct from `Skipped`,
+    /// which means Calepin could have run it and was told not to: the runtime
+    /// renders an unavailable block as ordinary fenced code rather than as
+    /// chunk output, since a fence tagged with a language Calepin has no engine
+    /// for is prose.
+    Unavailable,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

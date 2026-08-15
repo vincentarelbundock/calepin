@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.48
+
+- Fix code chunks rendering the source of an earlier block. A fenced block in a language _Calepin_ does not run (```rust, ```json, a kernel that is not installed) stepped the automatic `chunk-1`, `chunk-2`, ... numbering while _Calepin_ scanned the document for chunks, but not while Typst rendered it. The two passes then disagreed about which chunk was which, and every chunk after such a block displayed its predecessor's code. All fenced blocks now take the same path in both passes. Thanks to [@peterpf](https://github.com/peterpf) for [the report](https://github.com/vincentarelbundock/calepin/issues/108).
+- A fenced block tagged with a language _Calepin_ has no engine for now renders as an ordinary code block instead of as a chunk. _Calepin_ looks up an unrecognized fence language as a Jupyter kernel name, so a ```rust or ```json block written as prose used to be reported as a chunk and styled as one. Blocks in the documented engines (`r`, `python`, `julia`, `sh`/`bash`, and the diagram engines) are unaffected: when the tool is missing they still render as chunks and echo their source, since the document plainly meant them to run. A block in a language with a real kernel installed still executes as before, and `calepin.setup(fenced-chunks: ...)` still controls which languages run automatically.
+- `calepin compile` now reports how many chunks actually ran when some did not, as `[done] paper.typ: 2 of 4 chunks`, rather than counting blocks it could not execute as if it had.
+- Removing a single document's artifact directory (`.calepin/<name>/`) no longer breaks every build in the project. `.calepin/` is meant to be regenerable, but a pointer file left behind still named the deleted directory, and the resulting dangling import failed before any document could compile. The pointer is now repaired automatically.
+
 ## 0.0.47
 
 - Fix syntax highlighting in paged output, which 0.0.46 rendered in a single near-black color. Code chunks and fenced blocks were painted with the internal palette _Calepin_ uses to map HTML colors onto CSS classes; those colors are placeholders that a post-processing step replaces, not colors meant to be seen. Thanks to [@peterpf](https://github.com/peterpf) for [the report](https://github.com/vincentarelbundock/calepin/issues/104).

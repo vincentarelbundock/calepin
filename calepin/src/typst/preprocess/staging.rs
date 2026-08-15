@@ -125,14 +125,6 @@ fn write_wrapper(
 
     lines.push('\n');
     lines.push('\n');
-    lines.push_str(&format!(
-        "#let _raw-chunk-langs = ({})\n",
-        raw_chunk_langs(jupyter_kernels)
-            .iter()
-            .map(|lang| typst_string(lang))
-            .collect::<Vec<_>>()
-            .join(", ")
-    ));
 
     for lang in ["typ", "typst"] {
         lines.push_str(&format!(
@@ -161,9 +153,7 @@ fn write_wrapper(
     // document body so both can displace it with their own label rules.
     if notebook_theme.is_some() {
         lines.push('\n');
-        lines.push_str(
-            "#show: _default-chunk-chrome.with(raw-chunk-langs: _raw-chunk-langs)\n",
-        );
+        lines.push_str("#show: _default-chunk-chrome\n");
     }
 
     if let Some(notebook_theme) = notebook_theme {
@@ -251,10 +241,7 @@ mod tests {
         let rule = raw_show_rule(r#"weird"kernel"#);
 
         assert!(rule.contains(r#"lang: "weird\"kernel""#), "{rule}");
-        assert!(
-            rule.contains(r#"_fenced-chunk("weird\"kernel""#),
-            "{rule}"
-        );
+        assert!(rule.contains(r#"_fenced-chunk("weird\"kernel""#), "{rule}");
     }
 
     #[test]

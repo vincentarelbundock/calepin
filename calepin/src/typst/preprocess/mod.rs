@@ -15,7 +15,8 @@ use crate::typst::execute::{EnginePool, ExecutionConfig};
 use crate::typst::introspect::preprocess_metadata;
 use crate::typst::io::{ensure_parent, write_if_changed};
 use crate::typst::model::{
-    ChunkResultDocument, ChunkSpec, EngineName, LayoutPaths, ResultsDocument, RESULT_SCHEMA_VERSION,
+    ChunkResultDocument, ChunkSpec, ChunkStatus, EngineName, LayoutPaths, ResultsDocument,
+    RESULT_SCHEMA_VERSION,
 };
 use crate::typst::paths::{
     artifact_reference, project_relative_path, resolve_layout, resolve_layout_in_dir, slash_path,
@@ -43,8 +44,7 @@ use fingerprint::{
 };
 use image_meta::write_image_meta;
 use staging::{
-    notebook_template_context, raw_chunk_langs, write_query_wrapper,
-    write_render_wrapper,
+    notebook_template_context, raw_chunk_langs, write_query_wrapper, write_render_wrapper,
 };
 
 pub(crate) use image_meta::image_meta_relative_path;
@@ -866,6 +866,21 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         })
         .collect::<Result<Vec<_>>>()?;
 
+    // A fenced block carries a language, not a promise that Calepin can run it:
+    // an unrecognised name is looked up as a Jupyter kernel and skipped when no
+    // such kernel is installed, and `eval: false` skips too. Reporting the
+    // planned count as if everything ran would claim a prose ```json fence was
+    // executed, so say how many actually were.
+    let executed_count = chunk_results
+        .iter()
+        .filter(|result| {
+            !matches!(
+                result.status,
+                ChunkStatus::Skipped | ChunkStatus::Unavailable
+            )
+        })
+        .count();
+
     publish_staged_figures(&staged_figures_dir, &plan.layout.figures_dir)?;
     let completed_store = pool.store().clone();
     let generation = completed_generation(plan.fingerprint, &completed_store)?;
@@ -894,7 +909,11 @@ pub fn execute_preprocess_plan_with_chunk_progress(
         }
     }
     if let Some(progress) = progress {
-        progress.finish(format!("[done] {input}: {chunk_count} {chunk_word}"));
+        progress.finish(if executed_count == chunk_count {
+            format!("[done] {input}: {chunk_count} {chunk_word}")
+        } else {
+            format!("[done] {input}: {executed_count} of {chunk_count} {chunk_word}")
+        });
     }
 
     Ok(PreprocessOutput {
@@ -1176,10 +1195,16 @@ mod tests {
         let value = serde_json::json!({"title": "Home", "pdf": false});
 
         write_page_meta(&layout, Some(&value)).unwrap();
-        assert_eq!(read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)), Some(value));
+        assert_eq!(
+            read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)),
+            Some(value)
+        );
 
         fs::write(&input, "= Changed\n").unwrap();
-        assert_eq!(read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)), None);
+        assert_eq!(
+            read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)),
+            None
+        );
     }
 
     #[test]
@@ -1193,7 +1218,10 @@ mod tests {
 
         write_page_meta(&layout, Some(&value)).unwrap();
 
-        assert_eq!(read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)), None);
+        assert_eq!(
+            read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)),
+            None
+        );
         assert_eq!(
             read_page_meta_in_dir(&input, None, artifact_dir),
             Some(value)
@@ -1209,7 +1237,10 @@ mod tests {
 
         write_page_meta(&layout, None).unwrap();
 
-        assert_eq!(read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)), None);
+        assert_eq!(
+            read_page_meta_in_dir(&input, None, Path::new(CALEPIN_DIR)),
+            None
+        );
     }
 
     #[test]

@@ -2129,6 +2129,96 @@ let x = 41;
     );
 }
 
+/// A fence in a language Calepin cannot run still has to consume its slot in
+/// the automatic `chunk-N` numbering, in the query pass and the render pass
+/// alike. When only one pass counted it, every later chunk rendered its
+/// predecessor's source (issue #108).
+///
+/// Both themes are exercised because they install different `raw` show rules:
+/// the notebook theme adds the default chunk chrome, `theme = "typst"` leaves
+/// the carriers bare.
+#[test]
+fn unrunnable_fences_do_not_shift_later_chunk_sources() {
+    if !has_command("typst") || !has_pdftotext() {
+        return;
+    }
+
+    for theme in ["typst", "calepin"] {
+        let dir = typst_accessible_tempdir();
+        std::fs::write(
+            dir.path().join("paper.toml"),
+            format!("theme = {theme:?}\n"),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("paper.typ"),
+            r#"#import "/.calepin/calepin.typ" as calepin
+
+#show: calepin.document
+#calepin.setup(echo: true)
+
+// Stand in for packages such as Codly, which claim and rebuild raw blocks.
+#show raw.where(block: true): it => context {
+  it.lines.map(line => line.body).join(linebreak())
+}
+
+```rust
+RUST_SOURCE_MARKER
+```
+
+```python
+PYTHON_SOURCE_MARKER
+```
+
+// Not rewritten in the staged source, so this one reaches the show rules as an
+// ordinary raw element.
+#block[
+```rust
+NESTED_SOURCE_MARKER
+```
+]
+"#,
+        )
+        .unwrap();
+
+        let output = Command::new(calepin_bin())
+            .args([
+                "compile",
+                "paper.typ",
+                "paper.pdf",
+                "--config",
+                "paper.toml",
+                "--quiet",
+            ])
+            .current_dir(dir.path())
+            .output()
+            .expect("failed to run calepin compile");
+        assert!(
+            output.status.success(),
+            "compile failed under theme {theme}:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        let text = Command::new("pdftotext")
+            .arg(dir.path().join("paper.pdf"))
+            .arg("-")
+            .output()
+            .expect("failed to run pdftotext");
+        let extracted = String::from_utf8(text.stdout).unwrap();
+        for marker in [
+            "RUST_SOURCE_MARKER",
+            "PYTHON_SOURCE_MARKER",
+            "NESTED_SOURCE_MARKER",
+        ] {
+            assert_eq!(
+                extracted.matches(marker).count(),
+                1,
+                "`{marker}` under theme {theme}: {extracted}"
+            );
+        }
+    }
+}
+
 #[test]
 fn compile_resolves_relative_paths_from_the_document_directory() {
     if !has_command("typst") || !has_pdftotext() {

@@ -14,7 +14,6 @@ const RUNTIME_IMPORT_LEGACY: &str = "_calepin/calepin.typ";
 const RUNTIME_ALIAS: &str = "calepin_runtime";
 const RUNTIME_DEFAULT_ALIAS: &str = "calepin";
 const PREVIEW_IMPORT_PREFIX: &str = "@preview/calepin:";
-const SOURCE_REWRITTEN_CHUNK_LANGS: &[&str] = &["python", "r", "julia", "sh", "bash"];
 
 pub fn write_staged_source(layout: &LayoutPaths, runtime_import: &str) -> Result<PathBuf> {
     let staged_relative = layout.entry_relative_path("source.typ");
@@ -816,14 +815,7 @@ fn trailing_label_metadata(segments: &[String]) -> Option<&str> {
 }
 
 fn is_source_rewritten_chunk_lang(raw_lang: Option<&str>) -> bool {
-    let Some(lang) = raw_lang else {
-        return false;
-    };
-    if matches!(lang, "typ" | "typst") {
-        return false;
-    }
-    SOURCE_REWRITTEN_CHUNK_LANGS.contains(&lang)
-        || crate::engines::diagram::is_known_diagram_engine_name(lang)
+    !matches!(raw_lang, None | Some("typ" | "typst"))
 }
 
 fn split_segment(segment: &str) -> (&str, &str) {
@@ -1390,18 +1382,9 @@ print("comment")
         let source = "```julia\nprintln(1)\n```\n```bash\necho ok\n```\n```sh\necho sh\n```\n";
         let rewritten = rewrite_calepin_imports(source);
 
-        assert!(
-            rewritten.contains("_fenced-chunk(\"julia\""),
-            "{rewritten}"
-        );
-        assert!(
-            rewritten.contains("_fenced-chunk(\"bash\""),
-            "{rewritten}"
-        );
-        assert!(
-            rewritten.contains("_fenced-chunk(\"sh\""),
-            "{rewritten}"
-        );
+        assert!(rewritten.contains("_fenced-chunk(\"julia\""), "{rewritten}");
+        assert!(rewritten.contains("_fenced-chunk(\"bash\""), "{rewritten}");
+        assert!(rewritten.contains("_fenced-chunk(\"sh\""), "{rewritten}");
     }
 
     #[test]
@@ -1456,6 +1439,36 @@ print("comment")
             rewritten,
             "Before\n#calepin_runtime._fenced-chunk(\"python\", raw(\"print(\\\"x\\\")\\n\", block: true, lang: \"python\"))\nAfter\n"
         );
+    }
+
+    // Every fenced block must reach the runtime through the same entry point,
+    // whatever its language: a language the runtime handles here but not there
+    // steps the automatic `chunk-N` counter in only one of the two passes
+    // (issue #108).
+    #[test]
+    fn routes_every_tagged_fence_through_the_runtime() {
+        for lang in ["python", "r", "julia", "sh", "mermaid", "rust", "json"] {
+            let rewritten = rewrite_calepin_imports(&format!("```{lang}\nbody\n```\n"));
+            assert!(
+                rewritten.contains("_fenced-chunk"),
+                "`{lang}` fence was left for the show rules: {rewritten}"
+            );
+        }
+    }
+
+    #[test]
+    fn leaves_typst_and_untagged_fences_alone() {
+        for source in [
+            "```typ\n#1\n```\n",
+            "```typst\n#1\n```\n",
+            "```\nbody\n```\n",
+        ] {
+            let rewritten = rewrite_calepin_imports(source);
+            assert!(
+                !rewritten.contains("_fenced-chunk"),
+                "fence should not be routed to the runtime: {rewritten}"
+            );
+        }
     }
 
     #[test]

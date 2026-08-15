@@ -1,9 +1,6 @@
-#import "../core/target.typ": _is-query
-#import "chunk.typ": _fenced-chunks-runs, _fenced-chunk
+#import "chunk.typ": _fenced-chunk
 #import "chunk-support.typ": _disable-raw-chunk-transforms
 #import "code.typ": _html-themed-raw-block, _output-chrome, code-block
-#import "defaults.typ": _call-defaults
-#import "options.typ": _resolve-options
 
 // Default paged styling for the labeled chunk carriers emitted by `code.typ`.
 //
@@ -38,7 +35,7 @@
   body
 }
 
-#let _default-chunk-chrome(body, raw-chunk-langs: ()) = {
+#let _default-chunk-chrome(body) = {
   show <calepin-input>: it => _sized(code-block(it.body))
   show <calepin-output>: it => _sized(_output-chrome(it.body, kind: "stdout"))
   show <calepin-result>: it => _sized(_output-chrome(it.body, kind: "result"))
@@ -47,16 +44,20 @@
 
   // Fenced blocks in a themed document. The wrapper installs the same detection
   // for registered languages earlier; this rule is defined last, so it is the
-  // outermost one and owns the query pass, where `<calepin-chunk>` metadata
-  // must be emitted for every fenced block.
+  // outermost one.
+  //
+  // The condition must not distinguish the query pass from the render pass.
+  // It used to admit every language while querying and only the registered
+  // ones while rendering, so the two passes stepped the automatic `chunk-N`
+  // counter at different rates and every chunk after an unregistered fence
+  // rendered its predecessor's source (issue #108). `_fenced-chunk` decides
+  // from the document's own `fenced-chunks` setting, which is identical in
+  // both passes.
   show raw.where(block: true, theme: auto): it => {
     if _disable-raw-chunk-transforms.get() {
       _html-themed-raw-block(it)
-    } else if it.lang != none and (_is-query() or raw-chunk-langs.contains(it.lang)) and _fenced-chunks-runs(
-      it.lang,
-      _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
-    ) {
-      _fenced-chunk(it.lang, it)
+    } else if it.lang != none {
+      _fenced-chunk(none, it.lang, it)
     } else {
       _html-themed-raw-block(it)
     }

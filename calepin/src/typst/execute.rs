@@ -341,14 +341,55 @@ fn engine_results_unavailable(results: &[EngineResult]) -> bool {
         .any(|result| matches!(result, EngineResult::Unavailable(_)))
 }
 
+/// The engines Calepin documents as supported, whatever carries them. `julia`
+/// and `sh`/`bash` have no named `EngineName` variant because they ride the
+/// Jupyter bridge like any third-party kernel, so they have to be named here.
+///
+/// A fence may pin a version (`julia-1`, `julia-1.11`), so the kernel name is
+/// compared on the part before the first `-`.
+fn is_documented_engine(engine: &EngineName) -> bool {
+    match engine {
+        EngineName::R | EngineName::Python | EngineName::Diagram(_) => true,
+        EngineName::Jupyter(kernel) => {
+            let base = kernel
+                .split_once('-')
+                .map_or(kernel.as_str(), |(base, _)| base);
+            matches!(base, "julia" | "sh" | "bash")
+        }
+    }
+}
+
 fn unavailable_chunk_result_document(chunk: &ChunkSpec) -> ChunkResultDocument {
     let mut display_options = chunk.display_options.clone();
     display_options.echo = true;
+    // A missing engine means two different things, and the difference is what
+    // the author intended, not how Calepin routes the language internally.
+    //
+    // A fence in one of the documented engines was written to run: the tool is
+    // merely absent, so the block stays a chunk and echoes its source rather
+    // than disappearing into prose. Whether the engine is built in or reached
+    // through the Jupyter bridge is an implementation detail that must not
+    // change what the page looks like.
+    //
+    // Any other tag reached us because Calepin looks up unrecognised fence
+    // languages as kernel names. With no such kernel installed, ```rust or
+    // ```json is code the author only meant to display, so tell the runtime it
+    // is not a chunk at all (issue #108).
+    //
+    // The gap this leaves is deliberate: a ```ruby fence on a machine that lost
+    // its kernel is indistinguishable from prose without probing
+    // `jupyter kernelspec list` on every build, which is not a cost worth
+    // paying here.
+    let status = if is_documented_engine(&chunk.engine) {
+        ChunkStatus::Skipped
+    } else {
+        ChunkStatus::Unavailable
+    };
     ChunkResultDocument {
         label: chunk.label.clone(),
         engine: chunk.engine.clone(),
         source: chunk.code.clone(),
-        status: ChunkStatus::Skipped,
+        status,
         display_options,
         items: Vec::new(),
         crossref_labels: chunk.crossref_labels.clone(),
@@ -1133,9 +1174,37 @@ mod tests {
         octave_chunk.code = "disp(42)".to_string();
         let result = pool.execute_chunk(&octave_chunk, dir.path(), unused_artifact_path);
         let result = result.unwrap();
-        assert_eq!(result.status, ChunkStatus::Skipped);
+        assert_eq!(result.status, ChunkStatus::Unavailable);
         assert!(result.display_options.echo);
         assert!(result.items.is_empty());
+    }
+
+    /// A missing engine keeps the block a chunk when the document plainly meant
+    /// it to run, and demotes it to prose when the language only reached us by
+    /// being looked up as a kernel name. Which side a language falls on must not
+    /// depend on whether it happens to ride the Jupyter bridge.
+    #[test]
+    fn missing_engine_demotes_only_undocumented_languages_to_prose() {
+        for name in [
+            "r",
+            "python",
+            "mermaid",
+            "julia",
+            "julia-1.11",
+            "sh",
+            "bash",
+        ] {
+            assert!(
+                is_documented_engine(&EngineName::from_name(name)),
+                "`{name}` is a documented engine and should stay a chunk"
+            );
+        }
+        for name in ["rust", "json", "text", "ruby"] {
+            assert!(
+                !is_documented_engine(&EngineName::from_name(name)),
+                "`{name}` is a bare fence tag and should render as prose"
+            );
+        }
     }
 
     #[test]
