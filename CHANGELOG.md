@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Page entries returned by `calepin.pages()` now carry an `excerpt`: the page's `summary` metadata if it has one, then `description`, and otherwise a description derived from the page body — the first paragraph of prose with markup, code chunks, headings, labels, and comments stripped, truncated on a word boundary. Web feeds use the same value, so a post without a hand-written `summary` no longer produces an entry with a bare title.
+- Website builds now write `llms.txt` at the root of the built site: a Markdown index naming the site, its description, and every page with its URL and excerpt, for language models that cannot usefully crawl the rendered HTML. Links are absolute when `base-url` is set and root-relative otherwise. On by default, like `robots.txt`; set `llms = false` to turn it off, which also removes a previously generated file.
+
 ## 0.0.51
 
 - Panels of a multi-plot chunk can now be referenced individually. Give a labeled chunk `fig-subcaptions` and each plot becomes a sub-figure, lettered within its parent: `@fig-name-1` is the first panel and `@fig-name-2` the second, and a reference reads "Figure 1b". Panel letters restart inside every figure, and panels consume no figure numbers of their own, so the figures around them are unaffected. A grid without sub-captions or a `fig-` label is left exactly as it was, with no letters and no counter. Reference formatting relies on the `#show: calepin.document` rule that scaffolded documents already apply; panel captions do not.

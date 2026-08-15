@@ -54,6 +54,9 @@ pub(super) struct WebsiteConfig {
     pub(super) generate_feeds: Option<bool>,
     pub(super) feeds: Option<RawFeedsConfig>,
     pub(super) robots: Option<RawRobotsConfig>,
+    /// Generate `llms.txt`, a Markdown index of the site for LLM consumers.
+    /// On by default, like robots.txt.
+    pub(super) llms: Option<bool>,
     pub(super) pages: Option<PagesConfig>,
     #[serde(rename = "static")]
     pub(super) static_files: Option<StaticConfig>,
@@ -103,6 +106,10 @@ impl WebsiteConfig {
             Some(RawRobotsConfig::Toggle(enabled)) => *enabled,
             Some(RawRobotsConfig::Config(config)) => config.enabled,
         }
+    }
+
+    pub(super) fn llms_enabled(&self) -> bool {
+        self.llms.unwrap_or(true)
     }
 
     pub(super) fn feeds_enabled(&self) -> bool {

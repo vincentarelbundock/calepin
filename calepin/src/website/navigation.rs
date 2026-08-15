@@ -999,6 +999,7 @@ pub(super) fn build_pages_index(
                 .map(|meta| meta.raw.clone())
                 .filter(serde_json::Value::is_object)
                 .unwrap_or_else(|| serde_json::json!({}));
+            let excerpt = meta.and_then(page_excerpt);
             serde_json::json!({
                 "path": rel_posix(src_dir, path),
                 "href": page_info.get(path).map(|info| info.href.clone()).unwrap_or_default(),
@@ -1007,11 +1008,24 @@ pub(super) fn build_pages_index(
                 "translation_key": page_info.get(path).map(|info| info.translation_key.clone()).unwrap_or_default(),
                 "translations": page_translations_json(path, page_info),
                 "pdf": page_info.get(path).and_then(|info| info.pdf_href.clone()),
+                "excerpt": excerpt,
                 "meta": raw,
             })
         })
         .collect::<Vec<_>>();
     serde_json::Value::Array(entries)
+}
+
+/// An authored `summary` (or `description`) always wins over the excerpt
+/// derived from the page body, so `excerpt` is a single field a template can
+/// use without checking both.
+fn page_excerpt(meta: &PageMeta) -> Option<String> {
+    meta.raw
+        .get("summary")
+        .or_else(|| meta.raw.get("description"))
+        .and_then(|value| value.as_str())
+        .and_then(|value| clean_optional_string(Some(value)))
+        .or_else(|| meta.excerpt.clone())
 }
 
 fn page_translations_json(path: &Path, page_info: &PageInfoMap) -> serde_json::Value {

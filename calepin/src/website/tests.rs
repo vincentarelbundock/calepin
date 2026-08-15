@@ -2025,6 +2025,76 @@ fn manifest_output_paths_rejects_windows_prefixed_paths() {
     assert!(error.to_string().contains("invalid Pagefind output path"));
 }
 
+fn llms_test_metadata() -> SiteMetadata {
+    SiteMetadata {
+        title: Some("Example Site".to_string()),
+        description: Some("Notes and papers.".to_string()),
+        base_url: Some("https://example.com".to_string()),
+        logo: None,
+        logo_alt: None,
+        favicon: None,
+    }
+}
+
+#[test]
+fn write_llms_txt_lists_pages_with_titles_urls_and_excerpts() {
+    let temp = tempfile::tempdir().unwrap();
+    let pages = serde_json::json!([
+        {"href": "guide/usage.html", "title": "Usage", "excerpt": "How to use it."},
+        {"href": "index.html", "title": "Home", "excerpt": serde_json::Value::Null},
+    ]);
+
+    write_llms_txt(
+        temp.path(),
+        true,
+        Some("https://example.com"),
+        &llms_test_metadata(),
+        &pages,
+    )
+    .unwrap();
+
+    let llms = fs::read_to_string(temp.path().join("llms.txt")).unwrap();
+    assert!(llms.starts_with("# Example Site\n"));
+    assert!(llms.contains("> Notes and papers."));
+    assert!(llms.contains("- [Usage](https://example.com/guide/usage.html): How to use it.\n"));
+    assert!(llms.contains("- [Home](https://example.com/)\n"));
+}
+
+#[test]
+fn write_llms_txt_falls_back_to_root_relative_links_without_base_url() {
+    let temp = tempfile::tempdir().unwrap();
+    let pages = serde_json::json!([{"href": "guide/usage.html", "title": "Usage"}]);
+
+    write_llms_txt(temp.path(), true, None, &llms_test_metadata(), &pages).unwrap();
+
+    let llms = fs::read_to_string(temp.path().join("llms.txt")).unwrap();
+    assert!(llms.contains("- [Usage](/guide/usage.html)\n"));
+}
+
+#[test]
+fn write_llms_txt_removes_stale_file_when_disabled() {
+    let temp = tempfile::tempdir().unwrap();
+    fs::write(temp.path().join("llms.txt"), "old").unwrap();
+
+    write_llms_txt(
+        temp.path(),
+        false,
+        Some("https://example.com"),
+        &llms_test_metadata(),
+        &serde_json::json!([]),
+    )
+    .unwrap();
+
+    assert!(!temp.path().join("llms.txt").exists());
+}
+
+#[test]
+fn website_config_llms_is_on_unless_disabled() {
+    assert!(website_config_from_toml("").llms_enabled());
+    assert!(website_config_from_toml("llms = true").llms_enabled());
+    assert!(!website_config_from_toml("llms = false").llms_enabled());
+}
+
 #[test]
 fn write_robots_uses_default_template_and_sitemap_url() {
     let temp = tempfile::tempdir().unwrap();
@@ -3843,6 +3913,104 @@ fn build_pages_index_resolves_titles_and_excludes_fallback_page() {
     assert_eq!(entries[1]["title"], "index");
     assert_eq!(entries[1]["pdf"], serde_json::Value::Null);
     assert_eq!(entries[1]["meta"], serde_json::json!({}));
+}
+
+#[test]
+fn extract_excerpt_uses_first_prose_paragraph_without_markup() {
+    let source = r#"
+#import "@preview/calepin:0.1.0": *
+#show: calepin.setup()
+
+#metadata((title: "Post")) <website-metadata>
+
+= A Heading <intro>
+
+The _first_ paragraph of *real* prose, with a #link("https://example.com")[link]
+and a footnote reference.
+
+A second paragraph that should not appear.
+"#;
+
+    let excerpt = extract_excerpt(source).unwrap();
+
+    assert_eq!(
+        excerpt,
+        "The first paragraph of real prose, with a link and a footnote reference."
+    );
+}
+
+#[test]
+fn extract_excerpt_skips_code_chunks_and_comments() {
+    let source = r#"
+// A comment about the page.
+```python
+print("not prose")
+```
+
+Prose that follows the chunk.
+"#;
+
+    assert_eq!(
+        extract_excerpt(source).unwrap(),
+        "Prose that follows the chunk."
+    );
+}
+
+#[test]
+fn extract_excerpt_is_none_without_prose() {
+    let source = "#set document(title: \"Empty\")\n\n= Heading\n\n- item\n";
+
+    assert_eq!(extract_excerpt(source), None);
+}
+
+#[test]
+fn extract_excerpt_truncates_long_paragraphs_on_a_word_boundary() {
+    let word = "alpha ";
+    let source = format!("\n{}\n", word.repeat(200));
+
+    let excerpt = extract_excerpt(&source).unwrap();
+
+    assert!(excerpt.ends_with('…'));
+    assert!(excerpt.chars().count() <= 281);
+    assert!(!excerpt.contains("alph…"));
+}
+
+#[test]
+fn pages_index_excerpt_prefers_authored_summary_over_page_body() {
+    let src = Path::new("/site/docs");
+    let authored = PathBuf::from("/site/docs/blog/authored.typ");
+    let derived = PathBuf::from("/site/docs/blog/derived.typ");
+    let typ_files = vec![authored.clone(), derived.clone()];
+    let mut authored_meta =
+        page_meta_from_value(&serde_json::json!({"summary": "Authored summary."}));
+    authored_meta.excerpt = Some("Body prose.".to_string());
+    let mut derived_meta = page_meta_from_value(&serde_json::json!({}));
+    derived_meta.excerpt = Some("Body prose.".to_string());
+    let meta = PageMetaMap::from([
+        (authored.clone(), authored_meta),
+        (derived.clone(), derived_meta),
+    ]);
+    let page_info = build_page_info(src, &typ_files, &meta, &BTreeSet::new(), &None).unwrap();
+
+    let index = build_pages_index(src, &typ_files, &Vec::new(), &meta, &page_info);
+
+    let entries = index.as_array().unwrap();
+    assert_eq!(entries[0]["excerpt"], "Authored summary.");
+    assert_eq!(entries[1]["excerpt"], "Body prose.");
+}
+
+#[test]
+fn feed_items_fall_back_to_page_excerpt_for_summary() {
+    let pages = serde_json::json!([{
+        "href": "blog/post.html",
+        "title": "Post",
+        "excerpt": "Derived opening line.",
+        "meta": {"date": "2026-06-10"}
+    }]);
+
+    let items = feed_items_from_pages(&pages, "https://example.com", None);
+
+    assert_eq!(items[0].summary.as_deref(), Some("Derived opening line."));
 }
 
 #[test]

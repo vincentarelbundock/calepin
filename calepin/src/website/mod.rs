@@ -50,7 +50,7 @@ use language::{configured_languages, LanguageInfo};
 #[cfg(test)]
 use metadata::PageMeta;
 #[cfg(test)]
-use metadata::{extract_document_title, page_meta_from_value};
+use metadata::{extract_document_title, extract_excerpt, page_meta_from_value};
 use metadata::{load_page_meta, PageMetaMap};
 use navigation::{
     build_page_info, build_pages_index, discover_site_build_pages, discover_site_menus,
@@ -84,7 +84,7 @@ use site::{language_entries, translation_entries};
 use site::{SiteMetadata, SiteModel};
 #[cfg(test)]
 use svg::sanitize_icon_svg;
-use templates::{write_robots, write_sitemap};
+use templates::{write_llms_txt, write_robots, write_sitemap};
 #[cfg(test)]
 use url::page_relative_url;
 use util::clean_optional_string;
@@ -101,6 +101,7 @@ const ICON_CACHE_DIR: &str = ".calepin/icons";
 const ICON_CACHE_SUBDIR: &str = "icons";
 const PAGES_INDEX_FILE: &str = "website-pages.json";
 const ROBOTS_FILE: &str = "robots.txt";
+const LLMS_FILE: &str = "llms.txt";
 const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
@@ -439,6 +440,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         .as_ref()
         .map(|_| out_dir.join("sitemap.xml"));
     let robots_path = config.robots_enabled().then(|| out_dir.join(ROBOTS_FILE));
+    let llms_path = config.llms_enabled().then(|| out_dir.join(LLMS_FILE));
     let feed_targets = feed_targets(&config)?;
     let feed_paths: BTreeSet<PathBuf> = if config.feeds_enabled() {
         feed_targets
@@ -473,6 +475,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
         page_info: &page_info,
         sitemap_path: &sitemap_path,
         robots_path: &robots_path,
+        llms_path: &llms_path,
         feed_paths: &feed_paths,
         default_favicon_path: default_favicon_path.as_deref(),
     });
@@ -585,6 +588,13 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let site_files_progress = progress.spinner("[site] write sitemap, feeds, robots");
     write_sitemap(&out_dir, metadata.base_url.as_deref(), &sitemap_hrefs)?;
     write_robots(&out_dir, &src_dir, &config, metadata.base_url.as_deref())?;
+    write_llms_txt(
+        &out_dir,
+        config.llms_enabled(),
+        metadata.base_url.as_deref(),
+        &metadata,
+        &pages_index,
+    )?;
     write_feeds(
         &out_dir,
         &src_dir,

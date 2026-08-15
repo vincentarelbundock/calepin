@@ -123,7 +123,7 @@ pub(super) struct FeedTemplateItem {
     date: String,
     pub(super) updated: String,
     pub(super) rss_date: String,
-    summary: Option<String>,
+    pub(super) summary: Option<String>,
     pub(super) author: Option<String>,
 }
 
@@ -320,9 +320,12 @@ fn feed_item_from_page(entry: &serde_json::Value, base_url: &str) -> Option<Feed
         .and_then(|title| title.as_str())
         .and_then(|title| clean_optional_string(Some(title)))
         .unwrap_or_else(|| href.clone());
+    // `excerpt` already resolves authored `summary`/`description` first and
+    // falls back to the page's opening prose.
     let summary = meta
         .get("summary")
         .or_else(|| meta.get("description"))
+        .or_else(|| entry.get("excerpt"))
         .and_then(|summary| summary.as_str())
         .and_then(|summary| clean_optional_string(Some(summary)))
         .map(|summary| xml_escape(&summary));

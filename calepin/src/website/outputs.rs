@@ -19,6 +19,7 @@ pub(super) struct GeneratedOutputInputs<'a> {
     pub page_info: &'a PageInfoMap,
     pub sitemap_path: &'a Option<PathBuf>,
     pub robots_path: &'a Option<PathBuf>,
+    pub llms_path: &'a Option<PathBuf>,
     pub feed_paths: &'a BTreeSet<PathBuf>,
     pub default_favicon_path: Option<&'a Path>,
 }
@@ -37,6 +38,9 @@ pub(super) fn expected_generated_outputs(inputs: GeneratedOutputInputs<'_>) -> B
         outputs.insert(path.clone());
     }
     if let Some(path) = inputs.robots_path {
+        outputs.insert(path.clone());
+    }
+    if let Some(path) = inputs.llms_path {
         outputs.insert(path.clone());
     }
     outputs.extend(inputs.feed_paths.iter().cloned());

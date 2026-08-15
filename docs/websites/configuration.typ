@@ -53,6 +53,10 @@ search = "pagefind"
 # Default: false.
 feeds = true
 
+# Generate llms.txt, a Markdown index of the site for LLM consumers.
+# Default: true.
+llms = false
+
 # Logo image path for the top bar.
 # Default: none.
 logo = "assets/logo.svg"
@@ -206,6 +210,29 @@ Files under `templates/` can be included or extended from the robots template:
 User-agent: *
 Allow: /
 {% endblock %}
+```
+
+= llms.txt
+
+_Calepin_ writes `llms.txt` at the root of the built site: a Markdown index that lets language models find the site's pages without crawling the rendered HTML.
+
+```txt
+# Example Site
+
+> Notes and papers.
+
+## Pages
+
+- [Home](https://example.com/): The opening paragraph of the home page.
+- [Usage](https://example.com/guide/usage.html): How to use it.
+```
+
+The heading and blurb come from `title` and `description`. Each entry uses the page title and its excerpt, so pages get a useful one-line description whether or not you wrote a `summary` (see #link("pages.html")[pages]). Links are absolute when `base-url` is set and root-relative otherwise.
+
+To disable generation:
+
+```toml
+llms = false
 ```
 
 = Static files

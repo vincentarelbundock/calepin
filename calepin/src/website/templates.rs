@@ -9,10 +9,12 @@ use crate::utils::static_files::collect_files_by;
 use crate::utils::template::no_autoescape_env;
 
 use super::paths::{relative_or_self, slash_path};
+use super::site::SiteMetadata;
 use super::url::{absolute_site_url, absolute_site_url_without_index};
-use super::util::xml_escape;
+use super::util::{clean_optional_string, xml_escape};
 use super::{
-    WebsiteConfig, DEFAULT_ROBOTS_TEMPLATE, ROBOTS_FILE, ROBOTS_TEMPLATE_DIR, ROBOTS_TEMPLATE_FILE,
+    WebsiteConfig, DEFAULT_ROBOTS_TEMPLATE, LLMS_FILE, ROBOTS_FILE, ROBOTS_TEMPLATE_DIR,
+    ROBOTS_TEMPLATE_FILE,
 };
 
 /// Writes the sitemap from every built page except the 404 page.
@@ -43,6 +45,69 @@ pub(super) fn write_sitemap(
     xml.push_str("</urlset>\n");
 
     fs::write(&path, xml).with_context(|| format!("failed to write {}", path.display()))
+}
+
+/// Writes `llms.txt`: a Markdown index of the site — title, description, and
+/// one linked, described entry per page — for LLM consumers that cannot walk
+/// the rendered HTML. Links are absolute when `base-url` is configured and
+/// root-relative otherwise.
+pub(super) fn write_llms_txt(
+    out_dir: &Path,
+    enabled: bool,
+    base_url: Option<&str>,
+    metadata: &SiteMetadata,
+    pages_index: &serde_json::Value,
+) -> Result<()> {
+    let path = out_dir.join(LLMS_FILE);
+    if !enabled {
+        if path.exists() {
+            fs::remove_file(&path)
+                .with_context(|| format!("failed to remove stale {}", path.display()))?;
+        }
+        return Ok(());
+    }
+
+    let mut out = format!(
+        "# {}\n",
+        metadata.title.as_deref().unwrap_or("Documentation")
+    );
+    if let Some(description) = metadata.description.as_deref() {
+        out.push_str(&format!("\n> {description}\n"));
+    }
+    out.push_str("\n## Pages\n\n");
+
+    let mut entries = pages_index
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| llms_entry(entry, base_url))
+        .collect::<Vec<_>>();
+    entries.sort();
+    for (_, line) in &entries {
+        out.push_str(line);
+    }
+
+    fs::write(&path, out).with_context(|| format!("failed to write {}", path.display()))
+}
+
+/// Returns the sort key and rendered list line for one page.
+fn llms_entry(entry: &serde_json::Value, base_url: Option<&str>) -> Option<(String, String)> {
+    let href = clean_optional_string(entry.get("href")?.as_str())?;
+    let url = match base_url {
+        Some(base_url) => absolute_site_url_without_index(base_url, &href),
+        None => format!("/{}", href.trim_start_matches('/')),
+    };
+    let title = clean_optional_string(entry.get("title").and_then(|title| title.as_str()))
+        .unwrap_or_else(|| href.clone());
+    let excerpt = entry
+        .get("excerpt")
+        .and_then(|excerpt| excerpt.as_str())
+        .and_then(|excerpt| clean_optional_string(Some(excerpt)));
+    let line = match excerpt {
+        Some(excerpt) => format!("- [{title}]({url}): {excerpt}\n"),
+        None => format!("- [{title}]({url})\n"),
+    };
+    Some((href, line))
 }
 
 #[derive(Serialize)]

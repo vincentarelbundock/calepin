@@ -22,6 +22,9 @@ pub(super) struct PageMeta {
     pub(super) url: Option<String>,
     pub(super) toc: Option<TocConfig>,
     pub(super) raw: serde_json::Value,
+    /// First prose paragraph of the page source, derived when the author did
+    /// not supply `summary` or `description` in `<website-metadata>`.
+    pub(super) excerpt: Option<String>,
 }
 
 pub(super) type PageMetaMap = BTreeMap<PathBuf, PageMeta>;
@@ -39,17 +42,16 @@ pub(super) fn load_page_meta(
             let mut meta = read_page_meta_in_dir(path, Some(src_dir), asset_dir)
                 .map(|value| page_meta_from_value(&value))
                 .unwrap_or_default();
+            let source = fs::read_to_string(path).ok();
             if meta.title.is_none() {
-                meta.title = document_title_from_source(path);
+                meta.title = source.as_deref().and_then(extract_document_title);
+            }
+            if meta.excerpt.is_none() {
+                meta.excerpt = source.as_deref().and_then(extract_excerpt);
             }
             (path.clone(), meta)
         })
         .collect()
-}
-
-fn document_title_from_source(path: &Path) -> Option<String> {
-    let source = fs::read_to_string(path).ok()?;
-    extract_document_title(&source)
 }
 
 pub(super) fn extract_document_title(source: &str) -> Option<String> {
@@ -202,6 +204,172 @@ fn title_value_to_text(value: &str) -> Option<String> {
     clean_optional_string(Some(&typst_content_to_plain_text(value)))
 }
 
+/// Upper bound on a derived excerpt, in characters. Long enough for a feed
+/// blurb or a listing subtitle, short enough that a whole paragraph never
+/// lands in a `<summary>` element.
+const EXCERPT_MAX_CHARS: usize = 280;
+
+/// Derives a one-paragraph excerpt from a page's Typst source: the first run
+/// of prose lines, with markup, code, headings, labels, and comments removed.
+/// Returns `None` when the page has no prose before its first non-prose block.
+pub(super) fn extract_excerpt(source: &str) -> Option<String> {
+    let mut paragraph = String::new();
+    let mut lines = source.lines();
+    let mut in_block_comment = false;
+
+    while let Some(line) = lines.next() {
+        let trimmed = line.trim();
+        if in_block_comment {
+            in_block_comment = !trimmed.contains("*/");
+            continue;
+        }
+        if trimmed.starts_with("/*") {
+            in_block_comment = !trimmed.contains("*/");
+            continue;
+        }
+        if let Some(fence) = raw_block_fence(trimmed) {
+            // Skip the whole fenced block, including code chunks.
+            for line in lines.by_ref() {
+                if line.trim().starts_with(&fence) {
+                    break;
+                }
+            }
+            if paragraph.is_empty() {
+                continue;
+            }
+            break;
+        }
+        if is_prose_line(trimmed) {
+            if !paragraph.is_empty() {
+                paragraph.push(' ');
+            }
+            paragraph.push_str(trimmed);
+            continue;
+        }
+        // A blank line or a non-prose block ends the first paragraph; before
+        // one has started, it is just more preamble to skip.
+        if paragraph.is_empty() {
+            continue;
+        }
+        break;
+    }
+
+    let text = inline_prose_to_plain_text(&paragraph);
+    clean_optional_string(Some(&text)).map(|text| truncate_excerpt(&text, EXCERPT_MAX_CHARS))
+}
+
+/// Returns the fence marker when the line opens a fenced raw block.
+fn raw_block_fence(line: &str) -> Option<String> {
+    let ticks = line.chars().take_while(|ch| *ch == '`').count();
+    (ticks >= 3).then(|| "`".repeat(ticks))
+}
+
+/// Prose is everything that is not blank, a comment, or the start of a Typst
+/// construct that carries no readable sentence (code, headings, labels, math,
+/// lists, and table or figure markup).
+fn is_prose_line(line: &str) -> bool {
+    if line.is_empty() || line.starts_with("//") {
+        return false;
+    }
+    !matches!(
+        line.chars().next(),
+        Some('#' | '=' | '<' | '$' | '-' | '+' | '/' | '*' | '|' | ')' | ']' | '}')
+    )
+}
+
+/// Strips inline Typst markup down to readable text: code expressions and
+/// their arguments go away, bracketed content bodies stay.
+fn inline_prose_to_plain_text(value: &str) -> String {
+    let mut out = String::new();
+    let mut index = 0;
+    while index < value.len() {
+        let Some(ch) = value[index..].chars().next() else {
+            break;
+        };
+        match ch {
+            '\\' => {
+                // Escapes keep their literal character.
+                index += ch.len_utf8();
+                if let Some(next) = value[index..].chars().next() {
+                    out.push(next);
+                    index += next.len_utf8();
+                }
+                continue;
+            }
+            '#' => {
+                index += ch.len_utf8();
+                while value[index..].chars().next().is_some_and(is_call_path_char) {
+                    index += value[index..].chars().next().map_or(0, char::len_utf8);
+                }
+                // Drop the argument list; a trailing content block is prose
+                // and is left for the next iteration to keep.
+                if value[index..].starts_with('(') {
+                    match find_matching_delimiter(value, index, '(', ')') {
+                        Some(close) => index = close + 1,
+                        None => break,
+                    }
+                }
+                continue;
+            }
+            '<' => {
+                // `<label>` attaches to prose without being part of it.
+                if let Some(close) = label_end(value, index) {
+                    index = close + 1;
+                    continue;
+                }
+                out.push(ch);
+            }
+            '[' | ']' | '*' | '_' | '`' => {}
+            _ => out.push(ch),
+        }
+        index += ch.len_utf8();
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn is_call_path_char(ch: char) -> bool {
+    is_identifier_char(ch) || ch == '.'
+}
+
+fn label_end(value: &str, open_index: usize) -> Option<usize> {
+    let mut index = open_index + 1;
+    let mut saw_identifier = false;
+    while let Some(ch) = value[index..].chars().next() {
+        if ch == '>' {
+            return saw_identifier.then_some(index);
+        }
+        if !is_identifier_char(ch) && ch != ':' {
+            return None;
+        }
+        saw_identifier = true;
+        index += ch.len_utf8();
+    }
+    None
+}
+
+/// Truncates on a word boundary so an excerpt never ends mid-word.
+fn truncate_excerpt(text: &str, max_chars: usize) -> String {
+    if text.chars().count() <= max_chars {
+        return text.to_string();
+    }
+    let mut kept = String::new();
+    for word in text.split_whitespace() {
+        let projected = kept.chars().count() + word.chars().count() + usize::from(!kept.is_empty());
+        if projected > max_chars {
+            break;
+        }
+        if !kept.is_empty() {
+            kept.push(' ');
+        }
+        kept.push_str(word);
+    }
+    if kept.is_empty() {
+        kept = text.chars().take(max_chars).collect();
+    }
+    let trimmed = kept.trim_end_matches(['.', ',', ';', ':', ' ']);
+    format!("{trimmed}…")
+}
+
 fn typst_content_to_plain_text(value: &str) -> String {
     let mut out = String::new();
     let mut chars = value.chars().peekable();
@@ -296,6 +464,9 @@ pub(super) fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {
         } else {
             serde_json::json!({})
         },
+        // Derived from the page source by `load_page_meta`, not from
+        // `<website-metadata>`.
+        excerpt: None,
     }
 }
 

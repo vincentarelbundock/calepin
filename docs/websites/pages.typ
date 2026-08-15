@@ -104,7 +104,10 @@ Use `calepin.pages()` to get structured information about every built page, incl
 - `translation_key`: resolved key used to connect translated pages
 - `translations`: matching pages in other languages, or an empty dictionary
 - `pdf`: PDF path, or `none` when the page has no PDF output
+- `excerpt`: short page description, or `none` (see below)
 - `meta`: the page's `<website-metadata>` dictionary, or an empty dictionary
+
+`excerpt` saves you from writing a blurb for every page. _Calepin_ uses the page's `summary` metadata key if it has one, then `description`, and otherwise derives one from the page itself: the first paragraph of prose, with markup, code chunks, headings, and comments removed, truncated on a word boundary. Web feeds use the same value for their entry summaries.
 
 Only `meta` comes from the page's `#metadata` value. _Calepin_ interprets a few optional metadata keys: `title`, `pdf`, `translation_key`, `slug`, and `url`. All other keys are left untouched for your own Typst code.
 
