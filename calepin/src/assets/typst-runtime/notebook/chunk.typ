@@ -26,14 +26,62 @@
   out
 }
 
+// The query pass evaluates the document before any results exist, so a label
+// that only gets attached during the render pass would be undefined here and
+// every `@ref` to it would fail the query. Emit an empty figure of the matching
+// kind per label so the reference resolves in both passes.
+#let _query-placeholder-kinds = (
+  "fig-": image,
+  "tbl-": table,
+  "lst-": raw,
+)
+
 #let _query-crossref-placeholders(crossref-labels) = {
   let out = []
   for name in crossref-labels {
-    if type(name) == str and name.starts-with("fig-") {
-      out += [#figure(box(width: 0pt, height: 0pt), caption: none) #label(name)]
+    if type(name) != str {
+      continue
+    }
+    for (prefix, figure-kind) in _query-placeholder-kinds {
+      if name.starts-with(prefix) {
+        out += [
+          #figure(box(width: 0pt, height: 0pt), kind: figure-kind, caption: none)
+          #label(name)
+        ]
+      }
     }
   }
   out
+}
+
+// An `lst-` label names the chunk's echoed source as a listing. The labels here
+// are the raw names from the chunk header, not the classified docs the results
+// document carries, so match on the prefix.
+#let _listing-names(crossref-labels) = {
+  let out = ()
+  for name in crossref-labels {
+    if type(name) == str and name.starts-with("lst-") {
+      out.push(name)
+    }
+  }
+  out
+}
+
+// Render the echoed source, wrapped as a listing figure when the chunk carries
+// an `lst-` label or caption. Without either, the code renders exactly as it
+// did before, with no figure and no counter consumed.
+#let _listing-block(code, engine, label, crossref-labels, options) = {
+  let block = _input-block(code, lang: engine)
+  let names = _listing-names(crossref-labels)
+  let caption = options.at("lst-caption", default: none)
+  if names.len() == 0 and caption == none {
+    return block
+  }
+  let rendered = figure(block, kind: raw, caption: caption)
+  for name in names {
+    rendered = [#rendered #std.label(name)]
+  }
+  rendered
 }
 
 #let _strip-qmd-label-quotes(value) = {
@@ -269,9 +317,9 @@
       })
 
       if show-echo {
-        _input-block(code, lang: engine)
+        _listing-block(code, engine, label, crossref-labels, options)
       } else if results-path == none or results-path == "" {
-        _input-block(code, lang: engine)
+        _listing-block(code, engine, label, crossref-labels, options)
       }
       // `results: "hide"`/`"hidden"` runs the chunk but renders nothing here; the
       // output can still be shown elsewhere with `#calepin.results(label)`.

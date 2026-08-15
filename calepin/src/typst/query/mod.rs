@@ -973,6 +973,8 @@ mod tests {
             fig_subcaptions: Some(vec!["Left".to_string(), "Right".to_string()]),
             fig_layout_columns: Some(Value::from(2)),
             fig_layout_rows: Some(Value::from(1)),
+            tbl_caption: Some("Default table caption".to_string()),
+            lst_caption: Some("Default listing caption".to_string()),
             kind: Some("figure".to_string()),
             fenced_chunks: FencedChunks::Off,
             theme: None,

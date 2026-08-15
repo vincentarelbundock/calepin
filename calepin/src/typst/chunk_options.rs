@@ -223,7 +223,7 @@ fn resolve_chunk_option_name(raw_key: &str, label: &str, line_no: usize) -> Resu
     ))
 }
 
-const CHUNK_OPTION_ALIASES: [(&str, &str); 13] = [
+const CHUNK_OPTION_ALIASES: [(&str, &str); 17] = [
     ("out-width", "fig-width"),
     ("out-height", "fig-height"),
     ("out-align", "fig-align"),
@@ -234,6 +234,10 @@ const CHUNK_OPTION_ALIASES: [(&str, &str); 13] = [
     ("fig.align", "fig-align"),
     ("fig-alt", "fig-alt-text"),
     ("fig-subcap", "fig-subcaptions"),
+    ("tbl-cap", "tbl-caption"),
+    ("lst-cap", "lst-caption"),
+    ("tbl.cap", "tbl-caption"),
+    ("lst.cap", "lst-caption"),
     ("fig-scap", "fig-caption"),
     ("layout-ncol", "fig-layout-columns"),
     ("layout-nrow", "fig-layout-rows"),
@@ -268,6 +272,8 @@ fn native_chunk_option_names() -> &'static [&'static str] {
         "fig-subcaptions",
         "fig-layout-columns",
         "fig-layout-rows",
+        "tbl-caption",
+        "lst-caption",
         "kind",
     ]
 }

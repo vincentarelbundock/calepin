@@ -79,10 +79,36 @@ Use a recognized prefix so _Calepin_ knows where the label belongs. A label with
   columns: (0.7fr, 1.5fr, 2fr),
   stroke: none,
   inset: 0.55em,
-  [*Prefix*], [*Target*], [*Status*],
-  [`fig-`], [Figure or plot output], [Supported.],
-  [`tbl-`], [Table output], [Reserved for a later milestone.],
-  [`lst-`], [Code listing output], [Reserved for a later milestone.],
+  [*Prefix*], [*Target*], [*Caption option*],
+  [`fig-`], [Figure or plot output], [`fig-caption`],
+  [`tbl-`], [The chunk's non-image output], [`tbl-caption`],
+  [`lst-`], [The chunk's echoed source], [`lst-caption`],
 )
 
-`tbl-` and `lst-` labels are classified and can appear in chunk metadata today, but only `fig-` labels are attached to rendered output for now. Independent labels for sub-captioned panels (so a panel can be referenced as `@fig-name-2`) and multiple labels per chunk (`label: ("fig-name", "lst-name")`) are also planned for later milestones.
+Each kind numbers from its own Typst counter, so a document can hold Figure 1, Table 1, and Listing 1 at once.
+
+= Tables
+
+A `tbl-` label wraps everything the chunk printed, so it works whatever produced the table --- `knitr::kable`, a plain `print()` of a data frame, or text you assembled yourself.
+
+In prose we mention @tbl-cross-summary.
+
+#calepin.chunk(label: "tbl-cross-summary", tbl-caption: [First rows of `mtcars`], echo: false)[
+```r
+knitr::kable(head(mtcars[, 1:3]))
+```]
+
+= Listings
+
+An `lst-` label names the code itself rather than what it produced, so the chunk must echo its source (`echo: true`, the default).
+
+In prose we mention @lst-cross-fit.
+
+#calepin.chunk(label: "lst-cross-fit", lst-caption: [Fitting the model], results: "hide")[
+```r
+fit <- lm(mpg ~ hp, data = mtcars)
+```]
+
+A chunk can carry one label per kind, so `label: ("fig-plot", "lst-plot")` names both the plot and the code that drew it.
+
+Independent labels for sub-captioned panels, so a panel can be referenced as `@fig-name-2`, are planned for a later milestone.

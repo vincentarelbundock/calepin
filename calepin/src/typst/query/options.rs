@@ -147,6 +147,8 @@ fn parse_display_options(
             "fig-layout-rows",
             &defaults.fig_layout_rows,
         )?,
+        tbl_caption: caption_option_with_default(value, "tbl-caption", &defaults.tbl_caption)?,
+        lst_caption: caption_option_with_default(value, "lst-caption", &defaults.lst_caption)?,
         kind: string_option_with_default(value, "kind", &defaults.kind)?,
     })
 }
@@ -190,6 +192,8 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
             &base.fig_layout_columns,
         )?,
         fig_layout_rows: raw_option_with_default(value, "fig-layout-rows", &base.fig_layout_rows)?,
+        tbl_caption: caption_option_with_default(value, "tbl-caption", &base.tbl_caption)?,
+        lst_caption: caption_option_with_default(value, "lst-caption", &base.lst_caption)?,
         kind: string_option_with_default(value, "kind", &base.kind)?,
         fenced_chunks: fenced_chunks_option(value, &base.fenced_chunks)?,
         theme: raw_option(value, "theme").or_else(|| base.theme.clone()),

@@ -633,6 +633,39 @@
   _render-image-group(image-group, label, opts, fig-labels, anchor)
 }
 
+// Render a chunk's items, attaching its `fig-` identity exactly once.
+//
+// A chunk's caption and cross-reference label name one figure. When other
+// output splits the images into several batches, letting each batch attach them
+// defines the label twice (Typst rejects the reference) and numbers the caption
+// twice. Wrap the whole chunk in a single figure instead.
+#let _render-figure-sequence(items, label, opts, fig-labels, anchor) = {
+  let is-figure = fig-labels.len() > 0 or opts.at("fig-caption", default: none) != none
+  if is-figure and _image-group-count(items) > 1 {
+    // Batches render without a caption or labels of their own, so none of them
+    // becomes a figure and the outer figure is the only one.
+    let body = _render-item-sequence(items, label, opts + ("fig-caption": none), anchor)
+    _finalize-figure-content(body, label, fig-labels, _figure-options(opts), anchor)
+  } else {
+    _render-item-sequence(items, label, opts, anchor, fig-labels: fig-labels)
+  }
+}
+
+// Wrap rendered output as a table figure, so `@tbl-name` resolves and the
+// caption is numbered from Typst's table counter rather than the figure one.
+#let _table-figure(content, caption, tbl-labels, opts, anchor) = {
+  let rendered = figure(
+    content,
+    kind: table,
+    caption: _figure-caption(caption, opts.at("fig-cap-location", default: auto)),
+  )
+  if tbl-labels.len() > 0 {
+    _attach-labels(rendered, tbl-labels)
+  } else {
+    rendered
+  }
+}
+
 // `anchor` controls whether cross-reference labels (and the chunk's internal-id
 // label) are attached. The inline render owns the anchor; a relocated copy that
 // does not own it passes `anchor: false` so the same output can appear more than
@@ -658,20 +691,18 @@
     opts.insert("results", "render")
   }
   let fig-labels = if anchor { _crossref-labels-for(chunk, "fig") } else { () }
+  let tbl-labels = if anchor { _crossref-labels-for(chunk, "tbl") } else { () }
   let items = chunk.at("items", default: ())
+  let tbl-caption = opts.at("tbl-caption", default: none)
 
-  // A chunk's caption and cross-reference label name one figure. When other
-  // output splits the images into several batches, letting each batch attach
-  // them defines the label twice (Typst rejects the reference) and numbers the
-  // caption twice. Render the whole chunk as a single figure instead, so the
-  // label, the caption, and the figure counter are used exactly once.
-  let is-figure = fig-labels.len() > 0 or opts.at("fig-caption", default: none) != none
-  if is-figure and _image-group-count(items) > 1 {
-    // Batches render without a caption or labels of their own, so none of them
-    // becomes a figure and the outer figure is the only one.
-    let body = _render-item-sequence(items, label, opts + ("fig-caption": none), anchor)
-    _finalize-figure-content(body, label, fig-labels, _figure-options(opts), anchor)
-  } else {
-    _render-item-sequence(items, label, opts, anchor, fig-labels: fig-labels)
+  // A `tbl-` label names the chunk's non-image output as a table. Wrap the
+  // whole rendered sequence once, the same way a split figure is wrapped: the
+  // inner batches keep their own figure handling for any images the chunk also
+  // produced, and the table figure encloses the result.
+  if tbl-labels.len() > 0 or tbl-caption != none {
+    let body = _render-figure-sequence(items, label, opts, fig-labels, anchor)
+    return _table-figure(body, tbl-caption, tbl-labels, opts, anchor)
   }
+
+  _render-figure-sequence(items, label, opts, fig-labels, anchor)
 }

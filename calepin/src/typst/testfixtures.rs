@@ -40,6 +40,8 @@ pub fn display_options(results: ResultsMode) -> DisplayOptions {
         fig_subcaptions: None,
         fig_layout_columns: None,
         fig_layout_rows: None,
+        tbl_caption: None,
+        lst_caption: None,
         kind: None,
     }
 }

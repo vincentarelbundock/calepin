@@ -26,6 +26,8 @@
   "fig-subcaptions": none,
   "fig-layout-columns": auto,
   "fig-layout-rows": auto,
+  "tbl-caption": none,
+  "lst-caption": none,
   kind: auto,
   "fenced-chunks": true,
 )

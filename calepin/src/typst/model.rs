@@ -170,6 +170,10 @@ pub struct SetupDefaults {
     #[serde(default)]
     pub fig_layout_rows: Option<Value>,
     #[serde(default)]
+    pub tbl_caption: Option<String>,
+    #[serde(default)]
+    pub lst_caption: Option<String>,
+    #[serde(default)]
     pub kind: Option<String>,
     pub fenced_chunks: FencedChunks,
     /// Document-level theme from `calepin.setup(theme: ...)`: a builtin name, a
@@ -206,6 +210,8 @@ impl Default for SetupDefaults {
             fig_subcaptions: None,
             fig_layout_columns: None,
             fig_layout_rows: None,
+            tbl_caption: None,
+            lst_caption: None,
             kind: None,
             fenced_chunks: FencedChunks::All,
             theme: None,
@@ -260,6 +266,10 @@ pub struct DisplayOptions {
     pub fig_subcaptions: Option<Vec<String>>,
     pub fig_layout_columns: Option<Value>,
     pub fig_layout_rows: Option<Value>,
+    /// Caption for a `tbl-` anchored chunk: the chunk's non-image output.
+    pub tbl_caption: Option<String>,
+    /// Caption for an `lst-` anchored chunk: the chunk's echoed source.
+    pub lst_caption: Option<String>,
     pub kind: Option<String>,
 }
 

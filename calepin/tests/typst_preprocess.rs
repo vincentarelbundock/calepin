@@ -2270,6 +2270,111 @@ fn compile_resolves_relative_paths_from_the_document_directory() {
 }
 
 #[test]
+fn tbl_and_lst_labels_resolve_with_their_own_counters() {
+    // `tbl-` anchors the chunk's non-image output as a table; `lst-` anchors the
+    // echoed source as a listing. Each uses its own Typst counter, so a document
+    // with one of each has both a "Table 1" and a "Listing 1".
+    if !has_command("typst") || !has_command("Rscript") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: true, eval: true)
+
+We mention @tbl-nums and @lst-code here.
+
+#calepin.chunk(label: "tbl-nums", tbl-caption: [TABLECAPTION], echo: false)[```r
+cat("a,b\n1,2\n")
+```]
+
+#calepin.chunk(label: "lst-code", lst-caption: [LISTINGCAPTION])[```r
+x <- 1 + 1
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "tbl-/lst- labels should resolve:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8_lossy(&text.stdout).to_string();
+    assert!(
+        extracted.contains("Table 1") && extracted.contains("Listing 1"),
+        "each kind should number from its own counter: {extracted}"
+    );
+    assert!(
+        extracted.contains("TABLECAPTION") && extracted.contains("LISTINGCAPTION"),
+        "both captions should render: {extracted}"
+    );
+}
+
+#[test]
+fn chunks_without_tbl_or_lst_labels_render_no_extra_figures() {
+    // The listing and table wrappers must not appear unless the chunk asks for
+    // them: an ordinary chunk keeps its plain code block and output.
+    if !has_command("typst") || !has_command("Rscript") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: true, eval: true)
+
+#calepin.chunk()[```r
+cat("PLAINOUTPUT\n")
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8_lossy(&text.stdout).to_string();
+    assert!(
+        extracted.contains("PLAINOUTPUT"),
+        "the chunk should still render its output: {extracted}"
+    );
+    assert!(
+        !extracted.contains("Table 1") && !extracted.contains("Listing 1"),
+        "an unlabeled chunk should consume no table or listing number: {extracted}"
+    );
+}
+
+#[test]
 fn labeled_chunk_with_output_between_plots_is_one_referenceable_figure() {
     // A chunk that prints between two plots splits its images into separate
     // batches. Each batch used to attach the chunk's cross-reference label, so
