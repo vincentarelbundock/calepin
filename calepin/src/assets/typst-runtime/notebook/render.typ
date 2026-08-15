@@ -32,12 +32,20 @@
   }
 }
 
-#let _figure-or-content(content, label, fig-labels, caption, caption-location, anchor) = {
+#let _figure-or-content(
+  content,
+  label,
+  fig-labels,
+  caption,
+  caption-location,
+  anchor,
+  kind: auto,
+) = {
   if caption == none and fig-labels.len() == 0 {
     content
   } else {
     _label-figure(
-      figure(content, caption: _figure-caption(caption, caption-location)),
+      figure(content, kind: kind, caption: _figure-caption(caption, caption-location)),
       label,
       fig-labels,
       anchor,
@@ -225,6 +233,12 @@
   if "fig-align" in options and options.at("fig-align") != none {
     out.insert("fig-align", options.at("fig-align"))
   }
+  // Panel captions come from the stored options for a `#|` header chunk: Typst
+  // reads only `label` out of the header, so a `fig-subcap` written there never
+  // reaches the call options this render started from.
+  if "fig-subcaptions" in options and options.at("fig-subcaptions") != none {
+    out.insert("fig-subcaptions", options.at("fig-subcaptions"))
+  }
   out
 }
 
@@ -269,7 +283,7 @@
   rows: opts.at("fig-layout-rows"),
 )
 
-#let _finalize-figure-content(content, label, fig-labels, figure-opts, anchor) = {
+#let _finalize-figure-content(content, label, fig-labels, figure-opts, anchor, kind: auto) = {
   let rendered = _figure-or-content(
     content,
     label,
@@ -277,6 +291,7 @@
     figure-opts.caption,
     figure-opts.at("caption-location"),
     anchor,
+    kind: kind,
   )
   _finalize-figure-display(rendered, figure-opts.align, figure-opts.link)
 }
@@ -419,6 +434,61 @@
   }
 }
 
+// Panels of a multi-plot chunk are figures of their own kind, so they carry a
+// counter Typst can number and a label a reference can resolve, without
+// disturbing the figure counter their parent uses.
+#let _subfigure-kind = "calepin-subfigure"
+
+// `@fig-name-2` names the second panel, 1-based, matching the documented form.
+#let _subfigure-label-name(base, index) = base + "-" + str(index + 1)
+
+#let _subfigure-number(location) = numbering(
+  "a",
+  ..counter(figure.where(kind: _subfigure-kind)).at(location),
+)
+
+// Typst would caption a panel "Figure N"; print the letter and the chunk's own
+// sub-caption text instead. Installed around the grid rather than in
+// `calepin.document`, so a panel is lettered even when the runtime is driven
+// directly. Reference formatting still needs the document rule, since a
+// reference can sit anywhere in the prose.
+#let _subfigure-panel = it => {
+  let n = context _subfigure-number(it.location())
+  block(breakable: false)[
+    #it.body
+    #if it.caption != none {
+      text(size: 0.85em)[(#n)~#it.caption.body]
+    } else {
+      text(size: 0.85em)[(#n)]
+    }
+  ]
+}
+
+// A panel becomes a sub-figure when it can be referenced (the chunk carries a
+// `fig-` label) or when it has a sub-caption to letter. A plain multi-plot
+// chunk keeps its bare grid: no letters, no counter, no labels.
+#let _panels-are-subfigures(subcaptions, fig-labels) = {
+  fig-labels.len() > 0 or (subcaptions != none and subcaptions != auto)
+}
+
+#let _subfigure-cell(content, caption, fig-labels, index, anchor) = {
+  // A custom `kind` has no default supplement, and Typst refuses to render one
+  // without it. Set it here rather than in a document show rule, so a panel is
+  // valid even when the runtime is used outside `calepin.document`. The panel
+  // caption prints its letter itself, so the supplement stays empty.
+  let panel = figure(content, kind: _subfigure-kind, supplement: none, caption: caption)
+  if anchor {
+    for base in fig-labels {
+      panel = [#panel #std.label(_subfigure-label-name(base, index))]
+    }
+  }
+  if _is-html() {
+    std.html.elem("div", attrs: (style: "min-width: 0;"))[#panel]
+  } else {
+    panel
+  }
+}
+
 #let _grid-cell(content, caption) = {
   if _is-html() and caption != none {
     std.html.elem("div", attrs: (style: "min-width: 0;"))[
@@ -451,25 +521,49 @@
 
 #let _render-image-grid(items, label, opts, fig-labels, anchor: true) = {
   let figure-opts = _figure-options(opts)
+  let subfigures = _panels-are-subfigures(figure-opts.subcaptions, fig-labels)
 
   let cells = ()
   for (index, item) in items.enumerate() {
+    let panel = _grid-image(item, figure-opts)
+    let caption = _caption-for-index(figure-opts.subcaptions, index)
     cells.push(
-      _grid-cell(
-        _grid-image(item, figure-opts),
-        _caption-for-index(figure-opts.subcaptions, index),
-      ),
+      if subfigures {
+        _subfigure-cell(panel, caption, fig-labels, index, anchor)
+      } else {
+        _grid-cell(panel, caption)
+      },
     )
   }
 
   let columns = _grid-columns(items.len(), figure-opts.columns, figure-opts.rows)
+  let grid-content = _grid-content(columns, figure-opts.rows, cells)
+  // Panel letters restart inside every parent figure.
+  let grid-content = if subfigures {
+    [
+      #show figure.where(kind: _subfigure-kind): _subfigure-panel
+      #counter(figure.where(kind: _subfigure-kind)).update(0)
+      #grid-content
+    ]
+  } else {
+    grid-content
+  }
   let content = _wrap-grid-display(
-    _grid-content(columns, figure-opts.rows, cells),
+    grid-content,
     figure-opts.width,
     figure-opts.responsive,
     figure-opts.align,
   )
-  _finalize-figure-content(content, label, fig-labels, figure-opts, anchor)
+  // A panel reference reads its parent's number off the image counter, so the
+  // parent must land there rather than in whatever kind Typst infers for a grid.
+  _finalize-figure-content(
+    content,
+    label,
+    fig-labels,
+    figure-opts,
+    anchor,
+    kind: if subfigures { image } else { auto },
+  )
 }
 
 #let _render-display-item(item, label, opts, fig-labels, anchor: true) = {

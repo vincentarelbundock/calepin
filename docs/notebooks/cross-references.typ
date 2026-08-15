@@ -111,4 +111,21 @@ fit <- lm(mpg ~ hp, data = mtcars)
 
 A chunk can carry one label per kind, so `label: ("fig-plot", "lst-plot")` names both the plot and the code that drew it.
 
-Independent labels for sub-captioned panels, so a panel can be referenced as `@fig-name-2`, are planned for a later milestone.
+= Panels
+
+A chunk that draws several plots lays them out in a grid. Give it `fig-subcaptions` and each panel becomes a sub-figure, lettered within its parent and referenceable on its own: `@fig-name-1` is the first panel, `@fig-name-2` the second, and a reference reads "Figure 1b".
+
+In prose we mention @fig-cross-panels, @fig-cross-panels-1 and @fig-cross-panels-2.
+
+#calepin.chunk(
+  label: "fig-cross-panels",
+  fig-caption: [Speed and stopping distance],
+  fig-subcaptions: ("Scatter", "Histogram"),
+  echo: false,
+)[
+```r
+plot(dist ~ speed, data = cars)
+hist(cars$speed, col = "gray80", border = "white")
+```]
+
+A grid without sub-captions or a `fig-` label is left alone: its panels get no letters and consume no numbers.

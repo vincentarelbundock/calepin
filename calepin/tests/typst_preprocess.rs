@@ -2270,6 +2270,121 @@ fn compile_resolves_relative_paths_from_the_document_directory() {
 }
 
 #[test]
+fn panels_of_a_multi_plot_chunk_are_individually_referenceable() {
+    // Each panel is a sub-figure lettered within its parent, so `@fig-x-2`
+    // resolves to "Figure 1b" and the parent keeps a single figure number.
+    if !has_command("typst") || !has_command("Rscript") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#show: calepin.document
+#calepin.setup(echo: false, eval: true)
+
+We mention @fig-diag, @fig-diag-1 and @fig-diag-2.
+
+#calepin.chunk(
+  label: "fig-diag",
+  fig-caption: [PARENTCAPTION],
+  fig-subcaptions: ("Residuals", "QQ"),
+)[```r
+plot(1:3)
+plot(3:1)
+```]
+
+#calepin.chunk(fig-caption: [LATERCAPTION])[```r
+plot(1:5)
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "panel references should resolve:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8_lossy(&text.stdout).to_string();
+    assert!(
+        extracted.contains("Figure 1a") && extracted.contains("Figure 1b"),
+        "a panel reference should carry both the parent number and its letter: {extracted}"
+    );
+    assert!(
+        extracted.contains("(a) Residuals") && extracted.contains("(b) QQ"),
+        "a panel caption should letter the text it was given: {extracted}"
+    );
+    assert!(
+        extracted.contains("Figure 2: LATERCAPTION"),
+        "panels should not consume their parent's figure numbers: {extracted}"
+    );
+}
+
+#[test]
+fn multi_plot_chunk_without_labels_or_subcaptions_gets_no_panel_letters() {
+    // Panels only become sub-figures when they can be referenced or captioned.
+    // A plain multi-plot chunk keeps its bare grid.
+    if !has_command("typst") || !has_command("Rscript") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: false, eval: true)
+
+#calepin.chunk(fig-caption: [PLAINCAPTION])[```r
+plot(1:3)
+plot(3:1)
+```]
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8_lossy(&text.stdout).to_string();
+    assert!(
+        extracted.contains("PLAINCAPTION"),
+        "the parent caption should still render: {extracted}"
+    );
+    assert!(
+        !extracted.contains("(a)") && !extracted.contains("(b)"),
+        "an unlabeled, uncaptioned grid should get no panel letters: {extracted}"
+    );
+}
+
+#[test]
 fn tbl_and_lst_labels_resolve_with_their_own_counters() {
     // `tbl-` anchors the chunk's non-image output as a table; `lst-` anchors the
     // echoed source as a listing. Each uses its own Typst counter, so a document
