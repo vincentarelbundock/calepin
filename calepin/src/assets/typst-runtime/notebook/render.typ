@@ -221,33 +221,25 @@
   value
 }
 
-#let _paged-result-options(options) = {
-  let out = (:)
-  if "fig-width" in options and options.at("fig-width") != none {
-    out.insert("fig-width", _paged-layout-size(options.at("fig-width")))
-  }
-  if "fig-height" in options and options.at("fig-height") != none {
-    out.insert("fig-height", _paged-layout-size(options.at("fig-height")))
-  }
-  if "fig-align" in options and options.at("fig-align") != none {
-    out.insert("fig-align", options.at("fig-align"))
-  }
-  // Panel captions come from the stored options for a `#|` header chunk: Typst
-  // reads only `label` out of the header, so a `fig-subcap` written there never
-  // reaches the call options this render started from.
-  if "fig-subcaptions" in options and options.at("fig-subcaptions") != none {
-    out.insert("fig-subcaptions", options.at("fig-subcaptions"))
+// Display options declared in a fenced `#|` chunk header exist only in the
+// serialized result options: Typst reads nothing but `label` out of the
+// header, so a caption, alt text, or layout written there never reaches the
+// call options this render started from. Restore every stored option that was
+// actually set (unset ones serialize as `none` and must not clobber call-site
+// values); paged output needs size strings converted to lengths, HTML
+// consumes them directly.
+#let _merge-result-options(opts, chunk) = {
+  let out = opts
+  for (key, value) in chunk.at("options", default: (:)) {
+    if value == none {
+      continue
+    }
+    if not _is-html() and key in ("fig-width", "fig-height") {
+      value = _paged-layout-size(value)
+    }
+    out.insert(key, value)
   }
   out
-}
-
-#let _merge-result-options(opts, chunk) = {
-  let options = chunk.at("options", default: (:))
-  if _is-html() {
-    opts + options
-  } else {
-    opts + _paged-result-options(options)
-  }
 }
 
 // Sizes written by a relocation call go through the same string-to-length
@@ -773,9 +765,8 @@
   if chunk == none {
     panic("calepin results do not contain label `" + label + "`")
   }
-  // Relocation-specific choices must win over the serialized chunk options,
-  // especially for HTML where `_merge-result-options` restores every stored
-  // display option.
+  // Relocation-specific choices must win over the serialized chunk options
+  // that `_merge-result-options` restores.
   let opts = _merge-result-options(opts, chunk) + _relocation-override-values(overrides)
   // `results: "hide"` only suppresses a chunk's own inline render. Reaching
   // `_render-results` at all (e.g. through a `#calepin.results` relocation)
