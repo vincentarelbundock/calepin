@@ -8,6 +8,8 @@ VSCODE_BIN_PATH ?= $(if $(BIN_PATH),$(BIN_PATH),target/release/calepin)
 VSCODE_CLI := code
 HOST ?= 127.0.0.1
 PORT ?= 8000
+DOCS_SRC := docs-src
+SITE_DIR := docs
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
   POSITRON_CLI := /Applications/Positron.app/Contents/Resources/app/bin/code
@@ -71,7 +73,8 @@ release: ## Tag and push v$(VERSION); fires cargo-dist + crates.io workflows
 
 clean:  ## Remove build artifacts
 	cargo clean --manifest-path calepin/Cargo.toml
-	rm -rf .calepin docs/.calepin
+	rm -rf .calepin $(SITE_DIR)/.calepin
+	find $(DOCS_SRC) -type d -name .calepin -prune -exec rm -rf {} +
 
 # ==============================================================================
 # Test targets
@@ -142,7 +145,7 @@ positron: vscode-package  ## Install Calepin for Typst in Positron
 # Documentation targets
 # ==============================================================================
 
-cli-reference: build  ## Generate docs/reference/cli.typ from clap help output
+cli-reference: build  ## Generate docs-src/reference/cli.typ from clap help output
 	@set -eu; BIN=target/debug/calepin; { \
 		printf '#set document(title: [CLI reference])\n'; \
 		printf '#metadata((\n  summary: "Every calepin command and flag, generated from the CLI help output: new, health, compile, watch, serve, update, and clean.",\n)) <website-metadata>\n\n'; \
@@ -171,13 +174,13 @@ cli-reference: build  ## Generate docs/reference/cli.typ from clap help output
 		printf '= `calepin clean`\n<calepin-clean>\n\n```text\n'; \
 		$$BIN clean --help; \
 		printf '```\n'; \
-	} > docs/reference/cli.typ
+	} > $(DOCS_SRC)/reference/cli.typ
 
-website: ## Render docs/ via calepin compile directory mode
-	uv run calepin compile docs/themes/examples/tufte/tufte.typ --set theme=./theme --format html
-	uv run calepin compile docs/themes/examples/tufte/tufte.typ --set theme=./theme --format pdf
-	calepin compile docs
+website: ## Render docs-src/ into docs/ via calepin compile directory mode
+	uv run calepin compile $(DOCS_SRC)/themes/examples/tufte/tufte.typ --set theme=./theme --format html
+	uv run calepin compile $(DOCS_SRC)/themes/examples/tufte/tufte.typ --set theme=./theme --format pdf
+	calepin compile $(DOCS_SRC) $(SITE_DIR)
 
 serve:  ## Build and serve the website at http://$(HOST):$(PORT)
 	$(MAKE) website
-	cargo run --manifest-path calepin/Cargo.toml -- serve docs --host $(HOST) --port $(PORT)
+	cargo run --manifest-path calepin/Cargo.toml -- serve $(SITE_DIR) --host $(HOST) --port $(PORT)

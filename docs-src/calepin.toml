@@ -1,0 +1,162 @@
+title = "Calepin"
+description = "A Typst-native computational notebook and static website generator."
+base-url = "https://vincentarelbundock.github.io/calepin"
+logo = "assets/logo_short.svg"
+logo-alt = "Calepin"
+pdf = true
+minify = false
+search = "pagefind"
+highlight-light = "assets/Catppuccin Latte.tmTheme"
+highlight-dark = "assets/Catppuccin Mocha.tmTheme"
+
+[executables]
+python = "../.venv/bin/python"
+typst = "typst"
+
+[[feeds.file]]
+filename = "atom.xml"
+
+[[feeds.file]]
+filename = "rss.xml"
+
+[static]
+include = ["assets/**", "index.typ", "themes/examples/tufte/**"]
+
+[pages]
+include = ["blog/*.typ"]
+exclude = ["themes/examples/**", "slides/examples/**", "tips/examples/**"]
+
+[menus]
+
+  [[menus.main]]
+  target = "getting-started/install.typ"
+  label = "Documentation"
+
+  [[menus.social]]
+  target = "https://github.com/vincentarelbundock/calepin"
+  label = "{icon:github}"
+  aria-label = "GitHub"
+
+[footer]
+
+  [[footer.item]]
+  label = "© 2026 Vincent Arel-Bundock"
+
+  [[footer.item]]
+  label = "Made with Calepin."
+  target = "https://vincentarelbundock.github.io/calepin"
+
+
+[sidebar]
+fold = true
+
+[[sidebar.section]]
+title = "Getting started"
+
+  [[sidebar.section.item]]
+  target = "getting-started/install.typ"
+
+  [[sidebar.section.item]]
+  target = "getting-started/basics.typ"
+
+  [[sidebar.section.item]]
+  target = "getting-started/config.typ"
+
+  [[sidebar.section.item]]
+  target = "compile_watch_serve.typ"
+
+  [[sidebar.section.item]]
+  target = "editors.typ"
+
+[[sidebar.section]]
+title = "Code execution"
+
+  [[sidebar.section.item]]
+  target = "notebooks/code_execution.typ"
+
+  [[sidebar.section.item]]
+  target = "notebooks/figures.typ"
+
+  [[sidebar.section.item]]
+  target = "notebooks/cross-references.typ"
+
+  [[sidebar.section.item]]
+  target = "notebooks/data_store.typ"
+
+  [[sidebar.section.item]]
+  target = "notebooks/diagrams.typ"
+
+[[sidebar.section]]
+title = "HTML"
+
+  [[sidebar.section.item]]
+  target = "websites/elements.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/custom-elements.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/html_templates.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/css.typ"
+
+[[sidebar.section]]
+title = "Websites"
+
+  [[sidebar.section.item]]
+  target = "websites/websites.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/configuration.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/navigation.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/pages.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/tags.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/multilingual.typ"
+
+  [[sidebar.section.item]]
+  target = "websites/health.typ"
+
+[[sidebar.section]]
+title = "Slides"
+
+  [[sidebar.section.item]]
+  target = "slides/touying.typ"
+
+[[sidebar.section]]
+title = "Themes"
+
+  [[sidebar.section.item]]
+  target = "themes/themes.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/templating.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/pdf_templates.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/styling.typ"
+
+  [[sidebar.section.item]]
+  target = "themes/case_studies.typ"
+
+[[sidebar.section]]
+title = "More"
+
+  [[sidebar.section.item]]
+  target = "tips.typ"
+
+  [[sidebar.section.item]]
+  target = "accessibility.typ"
+
+  [[sidebar.section.item]]
+  target = "reference/cli.typ"

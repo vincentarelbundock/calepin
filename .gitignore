@@ -33,6 +33,7 @@ _site/
 **/node_modules/
 
 # Rendered output
+docs/
 TODO.html
 README.html
 website/**/*.html
