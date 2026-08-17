@@ -2703,6 +2703,10 @@ print("not executed by Typst")
 }
 
 fn write_figure_results(dir: &Path, label: &str) {
+    write_figure_results_with_options(dir, label, "");
+}
+
+fn write_figure_results_with_options(dir: &Path, label: &str, options: &str) {
     let figures = dir.join(".calepin/paper/figures");
     std::fs::create_dir_all(&figures).unwrap();
     std::fs::write(
@@ -2723,6 +2727,7 @@ fn write_figure_results(dir: &Path, label: &str) {
       "label": "{label}",
       "engine": "python",
       "status": "ok",
+      {options}
       "crossref-labels": [{{ "kind": "fig", "name": "{label}" }}],
       "items": [
         {{ "type": "display", "data": {{ "image/svg+xml": {{ "path": "/.calepin/paper/figures/{label}.svg" }} }} }}
@@ -2736,6 +2741,47 @@ fn write_figure_results(dir: &Path, label: &str) {
 }
 
 const RELOCATE_RESULTS_INPUT: &str = "calepin-results=/.calepin/paper/results.json";
+
+#[test]
+fn typst_compile_pdf_ua_relocated_figure_preserves_stored_alt_text() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_figure_results_with_options(
+        dir.path(),
+        "fig-efficiency",
+        r#""options": {
+        "fig-alt-text": "Fuel efficiency versus horsepower by transmission type"
+      },"#,
+    );
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+#set document(title: [Accessible computed figure])
+
+#calepin.chunk("python", label: "fig-efficiency", echo: false, results: "hide")[`
+pass
+`]
+
+#calepin.results("fig-efficiency")
+"##,
+    )
+    .unwrap();
+
+    // The alt text exists only in results.json, matching a `fig-alt-text`
+    // option parsed from a fenced chunk header. PDF/UA compilation proves the
+    // relocated image received it.
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT, "--pdf-standard", "ua-1"],
+    );
+}
 
 fn assert_relocated_typst_result(
     source: &str,
