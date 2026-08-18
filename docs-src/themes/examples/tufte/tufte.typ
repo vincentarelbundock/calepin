@@ -45,12 +45,17 @@
 
 Matrix factorization represents a rectangular data matrix as the product of
 two thinner matrices. In recommender systems, the rows are users, the columns
-are items, and the observed entries are ratings. A rank $k$ model writes
+are items, and the observed entries are ratings. A rank #math.equation(alt: "k", block: false, $k$) model writes
 
-$ hat(R)_(i, j) = mu + u_i^T v_j $
+#math.equation(
+  alt: "R hat sub i j equals mu plus u sub i transpose times v sub j",
+  block: true,
+  $ hat(R)_(i, j) = mu + u_i^T v_j $,
+)
 
-where $u_i$ is a user vector, $v_j$ is an item vector, and
-$mu$ is the global average rating. The dot product is large when the
+where #math.equation(alt: "u sub i", block: false, $u_i$) is a user vector,
+#math.equation(alt: "v sub j", block: false, $v_j$) is an item vector, and
+#math.equation(alt: "mu", block: false, $mu$) is the global average rating. The dot product is large when the
 user and item point in similar latent directions.#sidenote(numbering: auto)[The sign and
 rotation of the latent dimensions are not identified. What matters for
 prediction is the dot product, not a unique interpretation of each axis.]
@@ -138,10 +143,14 @@ to a file under `.calepin/`.#sidenote(numbering: none)[#lorem(25)]
 The loss is squared error on observed ratings plus a small penalty that keeps
 the latent vectors from growing too large:
 
-$
-  L = sum_((i, j) in Omega) (r_(i, j) - hat(R)_(i, j))^2
-    + lambda (sum_i ||u_i||^2 + sum_j ||v_j||^2)
+#math.equation(
+  alt: "L equals the sum over observed pairs i j of the squared difference between r sub i j and R hat sub i j, plus lambda times the sum of the squared norms of every user and item vector",
+  block: true,
   $
+    L = sum_((i, j) in Omega) (r_(i, j) - hat(R)_(i, j))^2
+      + lambda (sum_i ||u_i||^2 + sum_j ||v_j||^2)
+  $,
+)
 
 Here is a simple stochastic gradient descent fit.
 
@@ -196,7 +205,7 @@ for epoch, value in checkpoints:
     print(f"epoch {epoch:4d}: observed RMSE = {value:.3f}")
 ```
 
-#sidefigure[
+#sidefigure(alt: "Table of the learned item factors")[
 #calepin.chunk("python", echo: false, results: "typst")[```python
 def cell(value):
     return f"[{value}]"
@@ -252,13 +261,14 @@ for i, row in enumerate(ratings):
 ```r
 #| label: fig-blahblah
 #| fig-width: 100%
+#| fig-alt-text: Scatter plot of fuel efficiency against horsepower
 #| results: hide
 plot(mpg ~ hp, data = mtcars)
 ```
 
 Matrix factorization is useful because it shares information across rows and
-columns.#sidefigure()[#calepin.results("fig-blahblah")] But this sharing is
+columns.#sidefigure(alt: "Scatter plot of fuel efficiency against horsepower")[#calepin.results("fig-blahblah")] But this sharing is
 also a modeling assumption. A practical workflow should check prediction error
-on held-out observed entries, tune the rank $k$, and inspect whether the
+on held-out observed entries, tune the rank #math.equation(alt: "k", block: false, $k$), and inspect whether the
 completed matrix makes domain sense. Calepin is useful here because the prose,
 the fitted model, and the diagnostics all live in the same executable document.

@@ -20,7 +20,11 @@ Diagram engines are stateless external tools. They convert source text to SVG, a
 
 Mermaid is a text-based diagramming tool; learn more at #link("https://mermaid.js.org/")[mermaid.js.org].
 
-#calepin.chunk(label: "fig-mermaid", fig-caption: [Mermaid flowchart])[
+#calepin.chunk(
+  label: "fig-mermaid",
+  fig-caption: [Mermaid flowchart],
+  fig-alt-text: "Flowchart: a Typst document flows through the Calepin query, chunk execution, and the Typst render",
+)[
 ```mermaid
 %%{init: {"htmlLabels": false}}%%
 flowchart LR
@@ -34,7 +38,11 @@ flowchart LR
 
 Graphviz DOT is a graph description language used by Graphviz; learn more at #link("https://graphviz.org/")[graphviz.org].
 
-#calepin.chunk(label: "fig-dot", fig-caption: [Graphviz state graph])[
+#calepin.chunk(
+  label: "fig-dot",
+  fig-caption: [Graphviz state graph],
+  fig-alt-text: "State graph: Draft leads to Review, which leads to Publish, with a revise edge back from Review to Draft",
+)[
 ```dot
 digraph {
   rankdir=LR
@@ -48,7 +56,11 @@ digraph {
 
 TikZ is a LaTeX package for creating vector graphics; learn more at #link("https://tikz.dev/")[tikz.dev].
 
-#calepin.chunk(label: "fig-tikz", fig-caption: [TikZ path])[
+#calepin.chunk(
+  label: "fig-tikz",
+  fig-caption: [TikZ path],
+  fig-alt-text: "A blue two-segment path peaking at a red dot",
+)[
 ```tikz
 \begin{tikzpicture}
   \draw[thick, blue] (0,0) -- (2,1) -- (4,0);
@@ -61,7 +73,11 @@ TikZ is a LaTeX package for creating vector graphics; learn more at #link("https
 
 D2 is a text-to-diagram language; learn more at #link("https://d2lang.com/")[d2lang.com].
 
-#calepin.chunk(label: "fig-d2", fig-caption: [D2 service sketch])[
+#calepin.chunk(
+  label: "fig-d2",
+  fig-caption: [D2 service sketch],
+  fig-alt-text: "Service sketch: a client sends a request to an API, which queues a job to a worker, which writes to a database",
+)[
 ```d2
 direction: right
 

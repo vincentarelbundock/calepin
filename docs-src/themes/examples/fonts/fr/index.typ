@@ -45,7 +45,7 @@ Compilez avec `--set theme=calepin`, `--set theme=academic`, ou
     top + right,
     float: true,
     clearance: 1em,
-    image("/assets/portrait.jpg", width: 32%),
+    image("/assets/portrait.jpg", width: 32%, alt: "Portrait photographique"),
   )
 }
 

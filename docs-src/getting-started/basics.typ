@@ -28,7 +28,7 @@ That means a notebook can begin like any other Typst file:
 
 = Introduction
 
-This is regular Typst prose. The expression $pi r^2$ is regular Typst math.
+This is regular Typst prose. The expression #math.equation(alt: "pi r squared", block: false, $pi r^2$) is regular Typst math.
 ````
 
 During compilation, _Calepin_ creates a regenerable `.calepin` directory beside the document. The generic import above loads the generated Typst runtime and stored results from that directory.

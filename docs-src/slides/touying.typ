@@ -53,6 +53,7 @@ print("Hello, Touying!")
 
 ```r
 #| fig-width: 50%
+#| fig-alt-text: Scatter plot of fuel efficiency against horsepower
 plot(mpg ~ hp, data = mtcars)
 ```
 

@@ -142,6 +142,7 @@ You can also place options at the top of a plain fenced block, one per line, eac
 ```r
 #| echo: false
 #| fig-align: right
+#| fig-alt-text: Scatter plot of fuel efficiency against horsepower
 plot(mpg ~ hp, data = mtcars)
 ```
 ````
@@ -191,7 +192,7 @@ These options can be set in `#calepin.setup` as document-wide defaults and overr
   [fig-link], [`none`], [Wrap the rendered figure in a link to this URL.],
   [fig-caption], [`none`], [Caption text for the figure. When set, the output is wrapped in a numbered `figure` that can be cross-referenced.],
   [fig-cap-location], [`"auto"`], [Where the caption sits relative to the figure: `top`, `bottom`, or `margin`. `auto` uses Typst's default placement.],
-  [fig-alt-text], [`none`], [Accessibility (alt) text for generated images. Empty when unset.],
+  [fig-alt-text], [`none`], [Accessibility (alt) text for generated images, and for the table figure a `tbl-` label creates. Empty when unset.],
   [fig-subcaptions], [`none`], [Per-panel captions for a multi-image chunk, given as an array of strings (one per image, in order).],
   [fig-layout-columns], [`"auto"`], [Column layout for a multi-image chunk: an integer number of equal columns, an array of explicit track sizes, or `auto` to choose a count from the number of images.],
   [fig-layout-rows], [`"auto"`], [Row layout for a multi-image chunk: an integer number of equal rows, an array of explicit track sizes, or `auto`.],

@@ -61,7 +61,7 @@
   ],
   paged: () => [
     #align(center)[
-      #image("/assets/logo_long.svg", width: 30%)
+      #image("/assets/logo_long.svg", width: 30%, alt: "Calepin logo")
       #text(size: 1.35em, weight: "bold")[Computational Notebooks and Static Websites in Typst]
     ]
   ],

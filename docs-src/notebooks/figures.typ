@@ -19,12 +19,14 @@ A chunk that draws a plot becomes a figure, and a chunk that prints Typst markup
 Any chunk that produces a plot is shown as a figure. Nothing extra is required:
 
 ```r
+#| fig-alt-text: Scatter plot of fuel efficiency against horsepower
 plot(mpg ~ hp, data = mtcars)
 ```
 
 `ggplot2` works the same way:
 
 ```r
+#| fig-alt-text: Scatter plot of fuel efficiency against horsepower
 suppressPackageStartupMessages(suppressWarnings(library(ggplot2)))
 ggplot(mtcars, aes(hp, mpg)) +
   geom_point()
@@ -35,14 +37,23 @@ ggplot(mtcars, aes(hp, mpg)) +
 Add `fig-caption` to wrap the plot in a numbered figure. Add a `fig-` `label` so you can refer to it from the prose with `@fig-mpg` (see #link("cross-references.html")[Cross-references]).
 
 ````typ
-#calepin.chunk(label: "fig-mpg", fig-caption: [Mileage and horsepower])[
+#calepin.chunk(
+  label: "fig-mpg",
+  fig-caption: [Mileage and horsepower],
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower",
+)[
 ```r
 plot(mpg ~ hp, data = mtcars)
 ```
 ]
 ````
 
-#calepin.chunk(label: "fig-mpg", echo: false, fig-caption: [Mileage and horsepower])[
+#calepin.chunk(
+  label: "fig-mpg",
+  echo: false,
+  fig-caption: [Mileage and horsepower],
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower",
+)[
 ```r
 plot(mpg ~ hp, data = mtcars)
 ```
@@ -53,14 +64,23 @@ plot(mpg ~ hp, data = mtcars)
 Set the rendered size with `fig-width` and `fig-height`, and the placement with `fig-align`. Sizes accept a Typst length or ratio, such as `50%` or `12cm`.
 
 ````typ
-#calepin.chunk(fig-width: 50%, fig-align: left)[
+#calepin.chunk(
+  fig-width: 50%,
+  fig-align: left,
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower",
+)[
 ```r
 plot(mpg ~ hp, data = mtcars)
 ```
 ]
 ````
 
-#calepin.chunk(echo: false, fig-width: 50%, fig-align: left)[
+#calepin.chunk(
+  echo: false,
+  fig-width: 50%,
+  fig-align: left,
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower",
+)[
 ```r
 plot(mpg ~ hp, data = mtcars)
 ```
@@ -77,18 +97,34 @@ Text, points, and line widths are drawn at fixed sizes on the device, and the wh
 Here is the same plot on a wide device and a narrow one, both shown at the same display width. Only `fig-device-width` differs:
 
 ````typ
-#calepin.chunk(fig-device-width: 8, fig-width: 55%)[
+#calepin.chunk(
+  fig-device-width: 8,
+  fig-width: 55%,
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower",
+)[
 ```r
 plot(mpg ~ hp, data = mtcars, pch = 19)
 ```
 ]
 ````
 
-#calepin.chunk(echo: false, fig-device-width: 8, fig-width: 55%, fig-caption: [Wide device (8 in): smaller text and points])[```r
+#calepin.chunk(
+  echo: false,
+  fig-device-width: 8,
+  fig-width: 55%,
+  fig-caption: [Wide device (8 in): smaller text and points],
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower, drawn on a wide device",
+)[```r
 plot(mpg ~ hp, data = mtcars, pch = 19)
 ```]
 
-#calepin.chunk(echo: false, fig-device-width: 4, fig-width: 55%, fig-caption: [Narrow device (4 in): larger text and points])[```r
+#calepin.chunk(
+  echo: false,
+  fig-device-width: 4,
+  fig-width: 55%,
+  fig-caption: [Narrow device (4 in): larger text and points],
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower, drawn on a narrow device",
+)[```r
 plot(mpg ~ hp, data = mtcars, pch = 19)
 ```]
 
@@ -99,7 +135,11 @@ See #link("code_execution.html")[Code execution] for the full list of device set
 Figures are written as SVG by default. Switch to a raster format with `fig-device-format`, and set its resolution with `fig-device-dpi`:
 
 ````typ
-#calepin.chunk(fig-device-format: "png", fig-device-dpi: 200)[
+#calepin.chunk(
+  fig-device-format: "png",
+  fig-device-dpi: 200,
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower",
+)[
 ```r
 plot(mpg ~ hp, data = mtcars)
 ```
@@ -114,6 +154,7 @@ A chunk that draws several plots can lay them out as one figure. Use `fig-layout
 #calepin.chunk(
   label: "fig-diagnostics",
   fig-caption: [Regression diagnostics],
+  fig-alt-text: "Four regression diagnostic plots for a linear model of fuel efficiency",
   fig-subcaptions: (
     [Residuals vs fitted],
     [Normal Q-Q],
@@ -134,6 +175,7 @@ plot(model, which = 4)
   label: "fig-diagnostics",
   echo: false,
   fig-caption: [Regression diagnostics],
+  fig-alt-text: "Four regression diagnostic plots for a linear model of fuel efficiency",
   fig-subcaptions: (
     [Residuals vs fitted],
     [Normal Q-Q],

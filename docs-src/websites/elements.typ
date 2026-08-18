@@ -152,7 +152,7 @@ Use `numbering: none` for an unnumbered side note.
 Text#calepin.elements.sidenote[A margin note.] continues.
 
 #calepin.elements.sidefigure(caption: [A small figure.])[
-  #image("figure.svg")
+  #image("figure.svg", alt: "A small placeholder figure")
 ]
 ```
 
@@ -371,6 +371,7 @@ This container has no `group` argument, so its selection changes independently o
   "editor-video",
   "/assets/calepin_vscode.mp4",
   poster: "/assets/calepin_vscode-thumb.png",
+  alt: "The Calepin extension running in VS Code",
   width: 16em,
 )
 ```
@@ -391,6 +392,7 @@ This container has no `group` argument, so its selection changes independently o
       "editor-video",
       "/assets/calepin_vscode.mp4",
       poster: "/assets/calepin_vscode-thumb.png",
+      alt: "The Calepin extension running in VS Code",
       width: 16em,
     )
   ],

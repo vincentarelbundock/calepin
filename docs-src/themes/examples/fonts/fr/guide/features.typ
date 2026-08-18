@@ -10,6 +10,7 @@
 #figure(
   rect(width: 100%, height: 12em, fill: luma(92%), stroke: luma(70%)),
   caption: [Une figure factice pour tester les légendes.],
+  alt: "Un simple rectangle gris de remplacement",
 )
 
 #lorem(70)

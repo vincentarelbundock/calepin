@@ -22,7 +22,11 @@ The clearest place for a label is the `label` argument of `#calepin.chunk`, alon
 
 In prose we mention @fig-cross-scatter.
 
-#calepin.chunk(label: "fig-cross-scatter", fig-caption: [Miles per gallon and horsepower])[
+#calepin.chunk(
+  label: "fig-cross-scatter",
+  fig-caption: [Miles per gallon and horsepower],
+  fig-alt-text: "Scatter plot of fuel efficiency against horsepower",
+)[
 ```r
 plot(mpg ~ hp, data = mtcars)
 ```]
@@ -35,13 +39,18 @@ Put `#| label:` at the top of a plain fenced block when you want the label next 
 ```r
 #| label: fig-cross-qmd
 #| fig-caption: Distribution of car weights
+#| fig-alt-text: Histogram of car weights
 hist(mtcars$wt, col = "gray80", border = "white")
 ```
 ````
 
 In prose we mention @fig-cross-qmd.
 
-#calepin.chunk(label: "fig-cross-qmd", fig-caption: [Distribution of car weights])[
+#calepin.chunk(
+  label: "fig-cross-qmd",
+  fig-caption: [Distribution of car weights],
+  fig-alt-text: "Histogram of car weights",
+)[
 ```r
 hist(mtcars$wt, col = "gray80", border = "white")
 ```]
@@ -66,7 +75,11 @@ plot(dist ~ speed, data = cars)
 ```
 ````
 
-#calepin.chunk(label: "fig-cross-trailing", fig-caption: [Speed and stopping distance])[
+#calepin.chunk(
+  label: "fig-cross-trailing",
+  fig-caption: [Speed and stopping distance],
+  fig-alt-text: "Scatter plot of stopping distance against speed",
+)[
 ```r
 plot(dist ~ speed, data = cars)
 ```]
@@ -93,7 +106,12 @@ A `tbl-` label wraps everything the chunk printed, so it works whatever produced
 
 In prose we mention @tbl-cross-summary.
 
-#calepin.chunk(label: "tbl-cross-summary", tbl-caption: [First rows of `mtcars`], echo: false)[
+#calepin.chunk(
+  label: "tbl-cross-summary",
+  tbl-caption: [First rows of `mtcars`],
+  fig-alt-text: "Table of the first rows of the mtcars data set",
+  echo: false,
+)[
 ```r
 knitr::kable(head(mtcars[, 1:3]))
 ```]
@@ -120,6 +138,7 @@ In prose we mention @fig-cross-panels, @fig-cross-panels-1 and @fig-cross-panels
 #calepin.chunk(
   label: "fig-cross-panels",
   fig-caption: [Speed and stopping distance],
+  fig-alt-text: "Scatter plot and histogram of car speed and stopping distance",
   fig-subcaptions: ("Scatter", "Histogram"),
   echo: false,
 )[

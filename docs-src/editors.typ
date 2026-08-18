@@ -16,6 +16,7 @@ The _Calepin for Typst_ extension adds start and stop commands for Calepin in VS
   "vscode-calepin-screencast",
   "/assets/calepin_vscode.mp4",
   poster: "/assets/calepin_vscode-thumb.png",
+  alt: "The Calepin extension running in VS Code",
   width: 48em,
 )
 

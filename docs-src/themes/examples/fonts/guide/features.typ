@@ -19,6 +19,7 @@ bundled theme.
 #figure(
   rect(width: 100%, height: 12em, fill: luma(92%), stroke: luma(70%)),
   caption: [A placeholder figure for checking figure width and captions.],
+  alt: "A plain grey placeholder rectangle",
 )
 
 = Lists

@@ -83,7 +83,7 @@
       let thumbnail = _listing-thumbnail(page)
       let date = _meta(page, "date", default: "")
       if thumbnail != none {
-        cells.push(image(_listing-asset(thumbnail), width: 1.2cm))
+        cells.push(image(_listing-asset(thumbnail), width: 1.2cm, alt: _meta(page, "title", default: "Vignette de l’article")))
       } else {
         cells.push([])
       }
