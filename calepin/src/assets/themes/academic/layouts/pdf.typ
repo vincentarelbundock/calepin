@@ -23,9 +23,10 @@
     if side != auto { args.insert("side", side) }
     marginalia.note(body, ..args)
   },
-  figure: (body, caption: none, side: auto) => {
+  figure: (body, caption: none, side: auto, alt: none) => {
     let args = (:)
     if side != auto { args.insert("side", side) }
+    if alt != none and alt != "" { args.insert("alt", alt) }
     marginalia.notefigure(body, caption: caption, ..args)
   },
 )

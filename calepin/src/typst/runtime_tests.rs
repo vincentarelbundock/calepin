@@ -2783,6 +2783,130 @@ pass
     );
 }
 
+#[test]
+fn typst_compile_paged_grid_accepts_stored_string_track_sizes() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let figures = dir.path().join(".calepin/paper/figures");
+    std::fs::create_dir_all(&figures).unwrap();
+    for name in ["fig-panels.svg", "fig-panels-2.svg"] {
+        std::fs::write(
+            figures.join(name),
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#88c0d0"/></svg>"##,
+        )
+        .unwrap();
+    }
+    std::fs::write(
+        dir.path().join(".calepin/paper/results.json"),
+        r#"{
+  "schema": 1,
+  "calepin_version": "test",
+  "input": "paper.typ",
+  "chunks": {
+    "fig-panels": {
+      "label": "fig-panels",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "fig-layout-columns": ["1fr", "1fr"],
+        "fig-alt-text": "Two panels"
+      },
+      "items": [
+        { "type": "display", "data": { "image/svg+xml": { "path": "/.calepin/paper/figures/fig-panels.svg" } } },
+        { "type": "display", "data": { "image/svg+xml": { "path": "/.calepin/paper/figures/fig-panels-2.svg" } } }
+      ]
+    }
+  }
+}"#,
+    )
+    .unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+#set document(title: [Panel layout])
+
+= Panels
+
+#calepin.chunk("python", label: "fig-panels", echo: false)[`
+pass
+`]
+"##,
+    )
+    .unwrap();
+
+    // Track sizes written by a `#|` header serialize as strings. Paged output
+    // needs them converted back to Typst lengths before `grid` sees them.
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT, "--pdf-standard", "ua-1"],
+    );
+}
+
+#[test]
+fn typst_compile_pdf_ua_table_figure_uses_stored_alt_text() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    std::fs::create_dir_all(dir.path().join(".calepin/paper")).unwrap();
+    std::fs::write(
+        dir.path().join(".calepin/paper/results.json"),
+        r#"{
+  "schema": 1,
+  "calepin_version": "test",
+  "input": "paper.typ",
+  "chunks": {
+    "tbl-summary": {
+      "label": "tbl-summary",
+      "engine": "python",
+      "status": "ok",
+      "options": {
+        "tbl-caption": "First rows",
+        "fig-alt-text": "Table of the first rows of the data set"
+      },
+      "crossref-labels": [{ "kind": "tbl", "name": "tbl-summary" }],
+      "items": [
+        { "type": "stream", "text": "a b\n1 2\n" }
+      ]
+    }
+  }
+}"#,
+    )
+    .unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+#set document(title: [Accessible table])
+
+= Table
+
+#calepin.chunk("python", label: "tbl-summary", echo: false)[`
+pass
+`]
+"##,
+    )
+    .unwrap();
+
+    // A `tbl-` figure wraps printed output rather than an image, so strict
+    // PDF/UA needs the stored alt text to reach the figure itself.
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT, "--pdf-standard", "ua-1"],
+    );
+}
+
 fn assert_relocated_typst_result(
     source: &str,
     result: &str,

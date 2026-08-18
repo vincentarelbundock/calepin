@@ -72,6 +72,7 @@
   id,
   src,
   poster: none,
+  alt: none,
   width: 18em,
   open-label: "Open video preview",
   close-label: "Close video preview",
@@ -82,7 +83,11 @@
   if not _is-html() {
     if poster != none {
       return [
-        #image(_resolve-asset-path(poster, config: config), width: width)
+        #image(
+          _resolve-asset-path(poster, config: config),
+          width: width,
+          alt: if alt == none { open-label } else { alt },
+        )
         #v(0.25em)
         #text(size: 0.82em, fill: luma(40%))[Video: #src]
       ]

@@ -4,7 +4,7 @@
 // A figure placed in the margin. In paged output the placement defers to the
 // installed margin implementation (see `margin.typ`); the default renders an
 // ordinary inline figure.
-#let sidefigure(body, caption: none, side: auto) = {
+#let sidefigure(body, caption: none, side: auto, alt: none) = {
   if _is-query() {
     return body
   }
@@ -20,6 +20,6 @@
 
   context {
     let impl = _margin-impl.get()
-    (impl.figure)(body, caption: caption, side: side)
+    (impl.figure)(body, caption: caption, side: side, alt: alt)
   }
 }

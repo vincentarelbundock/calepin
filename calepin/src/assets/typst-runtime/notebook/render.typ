@@ -218,7 +218,20 @@
   if value.ends-with("in") {
     return float(value.slice(0, value.len() - 2).trim()) * 1in
   }
+  if value.ends-with("fr") {
+    return float(value.slice(0, value.len() - 2).trim()) * 1fr
+  }
   value
+}
+
+// Grid track lists serialize as arrays of size strings, so each entry needs
+// the same string-to-length conversion a scalar size gets.
+#let _paged-layout-tracks(value) = {
+  if type(value) == array {
+    value.map(_paged-layout-size)
+  } else {
+    _paged-layout-size(value)
+  }
 }
 
 // Display options declared in a fenced `#|` chunk header exist only in the
@@ -236,6 +249,8 @@
     }
     if not _is-html() and key in ("fig-width", "fig-height") {
       value = _paged-layout-size(value)
+    } else if not _is-html() and key in ("fig-layout-columns", "fig-layout-rows") {
+      value = _paged-layout-tracks(value)
     }
     out.insert(key, value)
   }
@@ -739,10 +754,15 @@
 // Wrap rendered output as a table figure, so `@tbl-name` resolves and the
 // caption is numbered from Typst's table counter rather than the figure one.
 #let _table-figure(content, caption, tbl-labels, opts, anchor) = {
+  // A table figure whose body is printed output rather than a real `table`
+  // element carries no implicit description, so strict PDF/UA renders demand
+  // one. Reuse the chunk's `fig-alt-text` when the author set it.
+  let alt = opts.at("fig-alt-text", default: none)
   let rendered = figure(
     content,
     kind: table,
     caption: _figure-caption(caption, opts.at("fig-cap-location", default: auto)),
+    ..if alt == none or alt == "" { (:) } else { (alt: alt) },
   )
   if tbl-labels.len() > 0 {
     _attach-labels(rendered, tbl-labels)

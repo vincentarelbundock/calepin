@@ -8,7 +8,11 @@
 
 #let _default-note(body, numbering: auto, side: auto) = footnote(body)
 
-#let _default-figure(body, caption: none, side: auto) = figure(body, caption: caption)
+#let _default-figure(body, caption: none, side: auto, alt: none) = figure(
+  body,
+  caption: caption,
+  ..if alt == none or alt == "" { (:) } else { (alt: alt) },
+)
 
 #let _margin-impl = state(
   "calepin-margin-impl",
