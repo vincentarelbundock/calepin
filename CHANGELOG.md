@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.0.52
+
+- `fig-alt-text` set in a `#|` chunk header now survives relocation with `#calepin.results(...)`. Options written in a fenced header exist only in the serialized results, and the paged path restored just a handful of them by name, silently dropping `fig-caption`, `fig-cap-location`, `fig-link`, `fig-layout-*`, `fig-responsive`, and `fig-alt-text`. A relocated plot therefore reached Typst with no alt text, and a strict `--pdf-standard ua-1` build failed with `missing alt text` pointing inside the runtime. Both targets now forward every option that was actually set. Thanks to [@eddelbuettel](https://github.com/eddelbuettel) for the report.
+- Multi-panel chunks render in paged output again. Restoring every stored option also handed `fig-layout-columns` and `fig-layout-rows` to the paged grid as the strings they serialize to, so any chunk with an explicit track list failed to compile with `expected auto, relative length, or fraction, found string`. Track lists are now converted to Typst lengths the way scalar sizes already were, `fr` included.
+- A `tbl-` label wraps the chunk's printed output in a table figure, which holds no image and so cannot be described automatically. Under `ua-1` Typst demands alt text for it, and no option could supply one. The table figure now reuses the chunk's `fig-alt-text`.
+- `calepin.elements.sidefigure` and `calepin.elements.lightbox-video` accept an `alt` option. Both drew paged figures with no way to attach a description, which failed `ua-1` with nothing the author could do about it.
 - Page entries returned by `calepin.pages()` now carry an `excerpt`: the page's `summary` metadata if it has one, then `description`, and otherwise a description derived from the page body — the first paragraph of prose with markup, code chunks, headings, labels, and comments stripped, truncated on a word boundary. Web feeds use the same value, so a post without a hand-written `summary` no longer produces an entry with a bare title.
 - Website builds now write `llms.txt` at the root of the built site: a Markdown index naming the site, its description, and every page with its URL and excerpt, for language models that cannot usefully crawl the rendered HTML. Links are absolute when `base-url` is set and root-relative otherwise. On by default, like `robots.txt`; set `llms = false` to turn it off, which also removes a previously generated file.
 
