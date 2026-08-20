@@ -129,7 +129,7 @@ title = "Websites"
 title = "Slides"
 
   [[sidebar.section.item]]
-  target = "slides/touying.typ"
+  target = "slides/slides.typ"
 
 [[sidebar.section]]
 title = "Themes"
