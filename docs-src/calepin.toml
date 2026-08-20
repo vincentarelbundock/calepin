@@ -20,7 +20,7 @@ filename = "atom.xml"
 filename = "rss.xml"
 
 [static]
-include = ["assets/**", "index.typ", "themes/examples/tufte/**"]
+include = ["assets/**", "index.typ", "themes/examples/tufte/**", "themes/screenshots/**"]
 
 [pages]
 include = ["blog/*.typ"]
