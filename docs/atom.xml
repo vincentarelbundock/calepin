@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Calepin</title>
+  <id>https://vincentarelbundock.github.io/calepin</id>
+  <link href="https://vincentarelbundock.github.io/calepin"/>
+  <link href="https://vincentarelbundock.github.io/calepin/atom.xml" rel="self"/>
+  <updated>2026-06-19T00:00:00Z</updated>
+  <subtitle>A Typst-native computational notebook and static website generator.</subtitle>
+  
+  <entry>
+    <title>Calepin is now a static website generator</title>
+    <id>https://vincentarelbundock.github.io/calepin/blog/static-website-generation.html</id>
+    <link href="https://vincentarelbundock.github.io/calepin/blog/static-website-generation.html"/>
+    <updated>2026-06-19T00:00:00Z</updated>
+    
+    <summary>The second major Calepin feature: building fast, flexible static websites from standard Typst files.</summary>
+  </entry>
+  
+</feed>

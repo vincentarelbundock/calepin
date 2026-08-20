@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "fingerprint": 219014485194269546,
+  "generation": "030a18838eab636a-1349cde127705c16",
+  "completed_store": {},
+  "stabilized_chunks": [
+    {
+      "label": "chunk-1",
+      "engine": "sh",
+      "code": "calepin new website my_site/\ncalepin compile my_site/\n",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "ordinal": 0,
+      "crossref_labels": []
+    },
+    {
+      "label": "chunk-2",
+      "engine": "sh",
+      "code": "  calepin watch my_site/ my_site/ --serve --open\n",
+      "script": true,
+      "exec_options": {
+        "eval": true,
+        "error": false,
+        "store-get": [],
+        "store-set": [],
+        "fig_device_format": "svg",
+        "fig_device_dpi": 150,
+        "fig_device_width": 6.0,
+        "fig_device_height": null,
+        "fig_device_aspect": 0.618
+      },
+      "display_options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "ordinal": 1,
+      "crossref_labels": []
+    }
+  ],
+  "writers": {}
+}

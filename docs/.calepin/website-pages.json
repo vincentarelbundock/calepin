@@ -1,0 +1,560 @@
+[
+  {
+    "excerpt": "Making Calepin output accessible: alt text for generated figures, accessible PDFs with Typst's PDF/UA support, and accessible HTML navigation.",
+    "href": "accessibility.html",
+    "language": null,
+    "meta": {
+      "summary": "Making Calepin output accessible: alt text for generated figures, accessible PDFs with Typst's PDF/UA support, and accessible HTML navigation.",
+      "tags": [
+        "accessibility",
+        "notebooks",
+        "websites"
+      ]
+    },
+    "path": "accessibility.typ",
+    "pdf": "accessibility.pdf",
+    "title": "Accessibility",
+    "translation_key": "accessibility",
+    "translations": {}
+  },
+  {
+    "excerpt": "The second major Calepin feature: building fast, flexible static websites from standard Typst files.",
+    "href": "blog/static-website-generation.html",
+    "language": null,
+    "meta": {
+      "date": "2026-06-19",
+      "description": "The second major Calepin feature: building fast, flexible static websites from standard Typst files.",
+      "pdf": true,
+      "tags": [
+        "release",
+        "websites",
+        "typst"
+      ],
+      "title": "Calepin is now a static website generator"
+    },
+    "path": "blog/static-website-generation.typ",
+    "pdf": "blog/static-website-generation.pdf",
+    "title": "Calepin is now a static website generator",
+    "translation_key": "blog/static-website-generation",
+    "translations": {}
+  },
+  {
+    "excerpt": "The three commands that build a Calepin project: compile for one-shot renders, watch for live rebuilds, and serve for previewing a built site locally.",
+    "href": "compile_watch_serve.html",
+    "language": null,
+    "meta": {
+      "summary": "The three commands that build a Calepin project: compile for one-shot renders, watch for live rebuilds, and serve for previewing a built site locally.",
+      "tags": [
+        "getting started",
+        "CLI"
+      ]
+    },
+    "path": "compile_watch_serve.typ",
+    "pdf": "compile_watch_serve.pdf",
+    "title": "Compile, watch, serve",
+    "translation_key": "compile_watch_serve",
+    "translations": {}
+  },
+  {
+    "excerpt": "Calepin documents are ordinary Typst files, so you can keep your editor's language tooling and preview while Calepin evaluates computational chunks.",
+    "href": "editors.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "getting started",
+        "editors",
+        "VS Code",
+        "Tinymist"
+      ]
+    },
+    "path": "editors.typ",
+    "pdf": "editors.pdf",
+    "title": "Editor integration",
+    "translation_key": "editors",
+    "translations": {}
+  },
+  {
+    "excerpt": "Calepin turns ordinary Typst documents into computational notebooks. You write prose, equations, figures, tables, and page layout in Typst, then place executable code directly in the same .typ file. When you run calepin compile notebook.typ, Calepin scans the document for chunks…",
+    "href": "getting-started/basics.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "getting started",
+        "notebooks",
+        "overview"
+      ]
+    },
+    "path": "getting-started/basics.typ",
+    "pdf": "getting-started/basics.pdf",
+    "title": "Basics",
+    "translation_key": "getting-started/basics",
+    "translations": {}
+  },
+  {
+    "excerpt": "How Calepin finds config.toml and what belongs in it: asset directories, executable paths for each language engine, and how relative paths resolve.",
+    "href": "getting-started/config.html",
+    "language": null,
+    "meta": {
+      "summary": "How Calepin finds config.toml and what belongs in it: asset directories, executable paths for each language engine, and how relative paths resolve.",
+      "tags": [
+        "getting started",
+        "configuration"
+      ]
+    },
+    "path": "getting-started/config.typ",
+    "pdf": "getting-started/config.pdf",
+    "title": "Configuration",
+    "translation_key": "getting-started/config",
+    "translations": {}
+  },
+  {
+    "excerpt": "Calepin requires Typst 0.15.0 or newer. Install or update the Typst CLI from the Typst installation instructions, and make sure it is available on your PATH.",
+    "href": "getting-started/install.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "getting started",
+        "installation"
+      ]
+    },
+    "path": "getting-started/install.typ",
+    "pdf": "getting-started/install.pdf",
+    "title": "Install",
+    "translation_key": "getting-started/install",
+    "translations": {}
+  },
+  {
+    "excerpt": "Calepin turns standard Typst documents into computational notebooks and static websites, with executable R, Python, Julia, and shell chunks living directly in the .typ file.",
+    "href": "index.html",
+    "language": null,
+    "meta": {
+      "layout": "layouts/site-landing.html",
+      "pdf": true,
+      "summary": "Calepin turns standard Typst documents into computational notebooks and static websites, with executable R, Python, Julia, and shell chunks living directly in the .typ file.",
+      "tags": [
+        "overview",
+        "getting started"
+      ]
+    },
+    "path": "index.typ",
+    "pdf": "index.pdf",
+    "title": "Calepin",
+    "translation_key": "index",
+    "translations": {}
+  },
+  {
+    "excerpt": "This page is the reference for controlling how Calepin runs chunks and displays their output. If you are starting from scratch, read Basics first for the basic document structure, runtime import, code chunks, and inline results.",
+    "href": "notebooks/code_execution.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "notebooks",
+        "code execution"
+      ]
+    },
+    "path": "notebooks/code_execution.typ",
+    "pdf": "notebooks/code_execution.pdf",
+    "title": "Code execution",
+    "translation_key": "notebooks/code_execution",
+    "translations": {}
+  },
+  {
+    "excerpt": "Give a chunk a label and you can refer to its output from the prose with Typst's @label syntax. Use a recognized prefix so Calepin knows what the label points at; a fig- label attaches to figure output.",
+    "href": "notebooks/cross-references.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "notebooks",
+        "cross-references"
+      ]
+    },
+    "path": "notebooks/cross-references.typ",
+    "pdf": "notebooks/cross-references.pdf",
+    "title": "Cross-references",
+    "translation_key": "notebooks/cross-references",
+    "translations": {}
+  },
+  {
+    "excerpt": "The document store moves small, structured values between Typst, R, and Python. Use the Calepin store for parameters, labels, counts, and nested configuration. Avoid the store for more complex objects. Prefer ordinary files to save and exchange data frames, model objects, images…",
+    "href": "notebooks/data_store.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "notebooks",
+        "data store",
+        "parameters",
+        "R",
+        "Python"
+      ],
+      "title": "Data transport"
+    },
+    "path": "notebooks/data_store.typ",
+    "pdf": "notebooks/data_store.pdf",
+    "title": "Data transport",
+    "translation_key": "notebooks/data_store",
+    "translations": {}
+  },
+  {
+    "excerpt": "Calepin can run text-to-diagram engines from the same chunk system used for Python, R, and other computational code. Diagram chunks keep the source for figures in the Typst document, so prose, references, and diagram definitions stay together.",
+    "href": "notebooks/diagrams.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "notebooks",
+        "diagrams"
+      ]
+    },
+    "path": "notebooks/diagrams.typ",
+    "pdf": "notebooks/diagrams.pdf",
+    "title": "Diagrams",
+    "translation_key": "notebooks/diagrams",
+    "translations": {}
+  },
+  {
+    "excerpt": "A chunk that draws a plot becomes a figure, and a chunk that prints Typst markup becomes a table. Calepin runs the code, collects the output, and renders it back into the document in place.",
+    "href": "notebooks/figures.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "notebooks",
+        "figures",
+        "tables"
+      ]
+    },
+    "path": "notebooks/figures.typ",
+    "pdf": "notebooks/figures.pdf",
+    "title": "Figures and tables",
+    "translation_key": "notebooks/figures",
+    "translations": {}
+  },
+  {
+    "excerpt": "Every calepin command and flag, generated from the CLI help output: new, health, compile, watch, serve, update, and clean.",
+    "href": "reference/cli.html",
+    "language": null,
+    "meta": {
+      "summary": "Every calepin command and flag, generated from the CLI help output: new, health, compile, watch, serve, update, and clean."
+    },
+    "path": "reference/cli.typ",
+    "pdf": "reference/cli.pdf",
+    "title": "CLI reference",
+    "translation_key": "reference/cli",
+    "translations": {}
+  },
+  {
+    "excerpt": "This page shows a small Touying slide deck that uses Calepin chunks.",
+    "href": "slides/touying.html",
+    "language": null,
+    "meta": {
+      "pdf": false,
+      "tags": [
+        "slides",
+        "notebooks"
+      ],
+      "title": "Touying"
+    },
+    "path": "slides/touying.typ",
+    "pdf": null,
+    "title": "Touying",
+    "translation_key": "slides/touying",
+    "translations": {}
+  },
+  {
+    "excerpt": "Worked examples of local themes restyling notebooks and websites, from Tufte and Classicthesis layouts to site fonts, each with reproducible source on GitHub.",
+    "href": "themes/case_studies.html",
+    "language": null,
+    "meta": {
+      "summary": "Worked examples of local themes restyling notebooks and websites, from Tufte and Classicthesis layouts to site fonts, each with reproducible source on GitHub.",
+      "tags": [
+        "themes",
+        "examples"
+      ]
+    },
+    "path": "themes/case_studies.typ",
+    "pdf": "themes/case_studies.pdf",
+    "title": "Case studies",
+    "translation_key": "themes/case_studies",
+    "translations": {}
+  },
+  {
+    "excerpt": "Built-in HTML themes expose stable CSS custom properties in the --calepin-* namespace. Prefer overriding these tokens from local theme CSS rather than targeting private theme internals.",
+    "href": "themes/css.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "themes",
+        "CSS",
+        "HTML"
+      ]
+    },
+    "path": "themes/css.typ",
+    "pdf": "themes/css.pdf",
+    "title": "CSS",
+    "translation_key": "themes/css",
+    "translations": {}
+  },
+  {
+    "excerpt": "Reference for a theme's MiniJinja HTML templates: the context values they receive, the site and document layouts, partials, and per-page layout overrides.",
+    "href": "themes/html_templates.html",
+    "language": null,
+    "meta": {
+      "summary": "Reference for a theme's MiniJinja HTML templates: the context values they receive, the site and document layouts, partials, and per-page layout overrides.",
+      "tags": [
+        "themes",
+        "HTML",
+        "templates"
+      ]
+    },
+    "path": "themes/html_templates.typ",
+    "pdf": "themes/html_templates.pdf",
+    "title": "HTML",
+    "translation_key": "themes/html_templates",
+    "translations": {}
+  },
+  {
+    "excerpt": "layouts/pdf.typ is the Typst-side layout used by PDF and SVG notebook outputs.",
+    "href": "themes/pdf_templates.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "themes",
+        "PDF",
+        "templates"
+      ]
+    },
+    "path": "themes/pdf_templates.typ",
+    "pdf": "themes/pdf_templates.pdf",
+    "title": "PDF",
+    "translation_key": "themes/pdf_templates",
+    "translations": {}
+  },
+  {
+    "excerpt": "Calepin wraps executed code and its output in a small amount of visual chrome: a tinted box around echoed source, a bordered box around output. Every piece of that chrome is applied by a Typst show rule targeting a labeled element, so you can restyle or remove any of it with…",
+    "href": "themes/styling.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "themes",
+        "chunks",
+        "styling"
+      ]
+    },
+    "path": "themes/styling.typ",
+    "pdf": "themes/styling.pdf",
+    "title": "Styling chunks",
+    "translation_key": "themes/styling",
+    "translations": {}
+  },
+  {
+    "excerpt": "Theme layouts are MiniJinja templates. The HTML layouts (layouts/site.html and layouts/document.html) and the paged layout (layouts/pdf.typ) all use the same engine, so the syntax on this page applies to both. The HTML templates and PDF templates pages document the values each…",
+    "href": "themes/templating.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "themes",
+        "templates"
+      ]
+    },
+    "path": "themes/templating.typ",
+    "pdf": "themes/templating.pdf",
+    "title": "Templating",
+    "translation_key": "themes/templating",
+    "translations": {}
+  },
+  {
+    "excerpt": "Themes control how Calepin renders websites and notebooks. A theme can provide MiniJinja HTML templates, partials, CSS, JavaScript, and a Typst-side layouts/pdf.typ layout for paged (PDF or SVG) notebook output. The default theme is called calepin.",
+    "href": "themes/themes.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "themes",
+        "overview"
+      ],
+      "title": "Themes"
+    },
+    "path": "themes/themes.typ",
+    "pdf": "themes/themes.pdf",
+    "title": "Themes",
+    "translation_key": "themes/themes",
+    "translations": {}
+  },
+  {
+    "excerpt": "Short recipes for common Calepin tasks: varying content between HTML and paged output, and using the codly package with executed chunks.",
+    "href": "tips.html",
+    "language": null,
+    "meta": {
+      "summary": "Short recipes for common Calepin tasks: varying content between HTML and paged output, and using the codly package with executed chunks.",
+      "tags": [
+        "tips",
+        "notebooks",
+        "websites"
+      ]
+    },
+    "path": "tips.typ",
+    "pdf": "tips.pdf",
+    "title": "Tips & tricks",
+    "translation_key": "tips",
+    "translations": {}
+  },
+  {
+    "excerpt": "Website settings live in calepin.toml at the root of your website source directory. Use --config <path> only when the config file lives somewhere else.",
+    "href": "websites/configuration.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "websites",
+        "configuration"
+      ],
+      "title": "Configuration"
+    },
+    "path": "websites/configuration.typ",
+    "pdf": "websites/configuration.pdf",
+    "title": "Configuration",
+    "translation_key": "websites/configuration",
+    "translations": {}
+  },
+  {
+    "excerpt": "Build page elements Calepin does not ship, such as a carousel, by pairing Typst functions with your own CSS hooks in a local theme.",
+    "href": "websites/custom-elements.html",
+    "language": null,
+    "meta": {
+      "pdf": false,
+      "summary": "Build page elements Calepin does not ship, such as a carousel, by pairing Typst functions with your own CSS hooks in a local theme.",
+      "tags": [
+        "websites",
+        "HTML",
+        "elements"
+      ],
+      "title": "Custom elements"
+    },
+    "path": "websites/custom-elements.typ",
+    "pdf": null,
+    "title": "Custom elements",
+    "translation_key": "websites/custom-elements",
+    "translations": {}
+  },
+  {
+    "excerpt": "In Typst, #let is your primary building block for reusable formatting and construction. Use it to avoid repeating the same patterns.",
+    "href": "websites/elements.html",
+    "language": null,
+    "meta": {
+      "pdf": false,
+      "tags": [
+        "websites",
+        "elements"
+      ],
+      "title": "Elements"
+    },
+    "path": "websites/elements.typ",
+    "pdf": null,
+    "title": "Elements",
+    "translation_key": "websites/elements",
+    "translations": {}
+  },
+  {
+    "excerpt": "calepin health runs quick diagnostic checks on the current project (notebook or website) and reports anything that could break rendering or execution.",
+    "href": "websites/health.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "websites",
+        "CLI",
+        "validation"
+      ],
+      "title": "Health"
+    },
+    "path": "websites/health.typ",
+    "pdf": "websites/health.pdf",
+    "title": "Health",
+    "translation_key": "websites/health",
+    "translations": {}
+  },
+  {
+    "excerpt": "Build a site in several languages: one content directory per language, pages linked as translations of each other, and language-code URL prefixes.",
+    "href": "websites/multilingual.html",
+    "language": null,
+    "meta": {
+      "summary": "Build a site in several languages: one content directory per language, pages linked as translations of each other, and language-code URL prefixes.",
+      "tags": [
+        "websites",
+        "localization"
+      ],
+      "title": "Multilingual"
+    },
+    "path": "websites/multilingual.typ",
+    "pdf": "websites/multilingual.pdf",
+    "title": "Multilingual",
+    "translation_key": "websites/multilingual",
+    "translations": {}
+  },
+  {
+    "excerpt": "Configure how readers move through a site: the documentation sidebar, per-page tables of contents, top-bar menus, and footer links.",
+    "href": "websites/navigation.html",
+    "language": null,
+    "meta": {
+      "summary": "Configure how readers move through a site: the documentation sidebar, per-page tables of contents, top-bar menus, and footer links.",
+      "tags": [
+        "websites",
+        "navigation"
+      ],
+      "title": "Navigation"
+    },
+    "path": "websites/navigation.typ",
+    "pdf": "websites/navigation.pdf",
+    "title": "Navigation",
+    "translation_key": "websites/navigation",
+    "translations": {}
+  },
+  {
+    "excerpt": "How Calepin decides which Typst files become pages, and the website-metadata keys that set a page's title, URL, PDF output, and custom fields for listings.",
+    "href": "websites/pages.html",
+    "language": null,
+    "meta": {
+      "summary": "How Calepin decides which Typst files become pages, and the website-metadata keys that set a page's title, URL, PDF output, and custom fields for listings.",
+      "tags": [
+        "websites",
+        "metadata"
+      ],
+      "title": "Pages"
+    },
+    "path": "websites/pages.typ",
+    "pdf": "websites/pages.pdf",
+    "title": "Pages",
+    "translation_key": "websites/pages",
+    "translations": {}
+  },
+  {
+    "excerpt": "A taxonomy groups pages by shared metadata such as tags, categories, authors, or topics. You can build one without special configuration: add an array to each page's <website-metadata>, then filter the entries returned by calepin.pages().",
+    "href": "websites/tags.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "websites",
+        "metadata",
+        "navigation"
+      ],
+      "title": "Tags"
+    },
+    "path": "websites/tags.typ",
+    "pdf": "websites/tags.pdf",
+    "title": "Tags",
+    "translation_key": "websites/tags",
+    "translations": {}
+  },
+  {
+    "excerpt": "Calepin can turn a directory of Typst documents into a website. In fact, the website you are reading now was entirely generated with Calepin.",
+    "href": "websites/websites.html",
+    "language": null,
+    "meta": {
+      "tags": [
+        "websites",
+        "overview"
+      ],
+      "title": "Overview"
+    },
+    "path": "websites/websites.typ",
+    "pdf": "websites/websites.pdf",
+    "title": "Overview",
+    "translation_key": "websites/websites",
+    "translations": {}
+  }
+]

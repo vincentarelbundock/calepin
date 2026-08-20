@@ -1,0 +1,272 @@
+{
+  "schema": 2,
+  "calepin_version": "0.0.51",
+  "input": "notebooks/cross-references.typ",
+  "generation": "957e7e21d6a849b9-1349cde127705c16",
+  "store": {},
+  "chunks": {
+    "fig-cross-scatter": {
+      "label": "fig-cross-scatter",
+      "engine": "r",
+      "source": "plot(mpg ~ hp, data = mtcars)",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Miles per gallon and horsepower",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/cross-references/figures/fig-cross-scatter.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-cross-scatter"
+        }
+      ]
+    },
+    "fig-cross-qmd": {
+      "label": "fig-cross-qmd",
+      "engine": "r",
+      "source": "hist(mtcars$wt, col = \"gray80\", border = \"white\")",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Distribution of car weights",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/cross-references/figures/fig-cross-qmd.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-cross-qmd"
+        }
+      ]
+    },
+    "fig-cross-trailing": {
+      "label": "fig-cross-trailing",
+      "engine": "r",
+      "source": "plot(dist ~ speed, data = cars)",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Speed and stopping distance",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/cross-references/figures/fig-cross-trailing.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-cross-trailing"
+        }
+      ]
+    },
+    "tbl-cross-summary": {
+      "label": "tbl-cross-summary",
+      "engine": "r",
+      "source": "knitr::kable(head(mtcars[, 1:3]))",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": "First rows ofmtcars",
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n\n|                  |  mpg| cyl| disp|\n|:-----------------|----:|---:|----:|\n|Mazda RX4         | 21.0|   6|  160|\n|Mazda RX4 Wag     | 21.0|   6|  160|\n|Datsun 710        | 22.8|   4|  108|\n|Hornet 4 Drive    | 21.4|   6|  258|\n|Hornet Sportabout | 18.7|   8|  360|\n|Valiant           | 18.1|   6|  225|"
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "tbl",
+          "name": "tbl-cross-summary"
+        }
+      ]
+    },
+    "lst-cross-fit": {
+      "label": "lst-cross-fit",
+      "engine": "r",
+      "source": "fit <- lm(mpg ~ hp, data = mtcars)",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "hide",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": "Fitting the model",
+        "kind": null
+      },
+      "items": [],
+      "crossref-labels": [
+        {
+          "kind": "lst",
+          "name": "lst-cross-fit"
+        }
+      ]
+    },
+    "fig-cross-panels": {
+      "label": "fig-cross-panels",
+      "engine": "r",
+      "source": "plot(dist ~ speed, data = cars)\nhist(cars$speed, col = \"gray80\", border = \"white\")",
+      "status": "ok",
+      "options": {
+        "echo": false,
+        "output": true,
+        "results": "verbatim",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": "Speed and stopping distance",
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": [
+          "Scatter",
+          "Histogram"
+        ],
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/cross-references/figures/fig-cross-panels.svg"
+            }
+          }
+        },
+        {
+          "type": "display",
+          "data": {
+            "image/svg+xml": {
+              "path": "/.calepin/notebooks/cross-references/figures/fig-cross-panels-2.svg"
+            }
+          }
+        }
+      ],
+      "crossref-labels": [
+        {
+          "kind": "fig",
+          "name": "fig-cross-panels"
+        }
+      ]
+    }
+  }
+}

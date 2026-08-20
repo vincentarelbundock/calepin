@@ -1,0 +1,67 @@
+{
+  "schema": 2,
+  "calepin_version": "0.0.51",
+  "input": "getting-started/config.typ",
+  "generation": "5653af15f17ae3a1-1349cde127705c16",
+  "store": {},
+  "chunks": {
+    "chunk-1": {
+      "label": "chunk-1",
+      "engine": "bash",
+      "source": "calepin compile --config config.toml paper.typ\n",
+      "status": "skipped",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": []
+    },
+    "chunk-2": {
+      "label": "chunk-2",
+      "engine": "toml",
+      "source": "# config.toml\n\n# Directory for generated Calepin runtime and website assets.\n# Default: \".calepin\". Use \"_calepin\" for Netlify or GitHub Pages.\nasset-dir = \".calepin\"\n\n[executables]\ntypst = \"typst\"                    # Typst binary (can be name or full path)\npython = \".venv/bin/python\"         # Python interpreter\nrscript = \"Rscript\"                # R executable\nmmdc = \"mmdc\"                      # Mermaid\n#dot = \"/opt/homebrew/bin/dot\"     # optional, if needed\n#d2 = \"d2\"                          # optional\n#tectonic = \"tectonic\"              # optional\n#dvisvgm = \"dvisvgm\"                # optional\n#pdf2svg = \"pdf2svg\"                # optional\n",
+      "status": "unavailable",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": []
+    }
+  }
+}

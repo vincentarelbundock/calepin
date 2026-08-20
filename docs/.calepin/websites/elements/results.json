@@ -1,0 +1,79 @@
+{
+  "schema": 2,
+  "calepin_version": "0.0.51",
+  "input": "websites/elements.typ",
+  "generation": "9f86027170c86114-1349cde127705c16",
+  "store": {},
+  "chunks": {
+    "chunk-1": {
+      "label": "chunk-1",
+      "engine": "r",
+      "source": "x <- c(1, 2, 3, 4, 5)\nmean(x)\n",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[1] 3"
+        }
+      ]
+    },
+    "chunk-2": {
+      "label": "chunk-2",
+      "engine": "python",
+      "source": "x = [1, 2, 3, 4, 5]\nsum(x) / len(x)\n",
+      "status": "ok",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3.0"
+        }
+      ]
+    }
+  }
+}

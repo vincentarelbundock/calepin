@@ -1,0 +1,35 @@
+/*
+ *
+ * Built as a lightweight CSS overlay on top of the built-in `academic` theme.
+ * Sidenotes and side figures use `academic`'s existing classes.
+ */
+
+:root, html[data-theme="light"] {
+  --calepin-font-body: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --calepin-font-heading: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --calepin-surface-code: #fffdf0;
+  --calepin-surface-output: #fffdf0;
+  --calepin-surface: #fffdf0;
+  --calepin-surface-muted: #fff8eb;
+  --calepin-color-background: #fffff8;
+  --calepin-color-text: #12110f;
+  --calepin-color-muted: #5a5650;
+  --calepin-color-accent: #7a2e2a;
+  --calepin-color-accent-hover: #5f2520;
+  --calepin-color-link: #7a2e2a;
+  --calepin-color-link-hover: #5f2520;
+}
+
+html[data-theme="dark"] {
+  --calepin-color-background: #18130d;
+  --calepin-color-text: #f6efe8;
+  --calepin-color-muted: #c5baa7;
+  --calepin-color-accent: #d58a7f;
+  --calepin-color-accent-hover: #f0b7ab;
+  --calepin-color-link: #d58a7f;
+  --calepin-color-link-hover: #f0b7ab;
+  --calepin-surface-code: #1f1a14;
+  --calepin-surface-output: #1f1a14;
+  --calepin-surface: #1f1a14;
+  --calepin-surface-muted: #2b241b;
+}

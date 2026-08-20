@@ -1,0 +1,38 @@
+{
+  "schema": 2,
+  "calepin_version": "0.0.51",
+  "input": "websites/multilingual.typ",
+  "generation": "f7e3bbbb823c3ede-1349cde127705c16",
+  "store": {},
+  "chunks": {
+    "chunk-1": {
+      "label": "chunk-1",
+      "engine": "toml",
+      "source": "default-language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent-dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent-dir = \"fr\"\n",
+      "status": "unavailable",
+      "options": {
+        "echo": true,
+        "output": true,
+        "results": "render",
+        "warning": true,
+        "message": true,
+        "placeholder": true,
+        "fig-width": "70%",
+        "fig-height": null,
+        "fig-align": "center",
+        "fig-responsive": true,
+        "fig-link": null,
+        "fig-caption": null,
+        "fig-cap-location": null,
+        "fig-alt-text": null,
+        "fig-subcaptions": null,
+        "fig-layout-columns": null,
+        "fig-layout-rows": null,
+        "tbl-caption": null,
+        "lst-caption": null,
+        "kind": null
+      },
+      "items": []
+    }
+  }
+}
