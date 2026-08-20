@@ -1,6 +1,15 @@
 #set document(title: [Page not found])
 
 #let target = sys.inputs.at("calepin-target", default: "paged")
+#let base-url = sys.inputs.at("calepin-base-url", default: none)
+
+#let site-link(path) = {
+  if base-url == none {
+    path
+  } else {
+    base-url.trim(regex("/+$")) + "/" + path
+  }
+}
 
 #if target == "html" [
   #html.elem("section", attrs: (class: "calepin-website-404"))[
@@ -10,12 +19,12 @@
       Sorry, the page you are looking for does not exist or may have moved.
     ]
     #html.elem("p", attrs: (class: "calepin-website-404-actions"))[
-      #html.elem("a", attrs: (href: "index.html", role: "button"))[Back to home]
+      #html.elem("a", attrs: (href: site-link("index.html"), role: "button"))[Back to home]
     ]
     #html.elem("nav", attrs: (class: "calepin-website-404-links", "aria-label": "Helpful links"))[
-      #html.elem("a", attrs: (href: "index.html"))[Home]
-      #html.elem("a", attrs: (href: "reference/cli.html"))[CLI reference]
-      #html.elem("a", attrs: (href: "notebooks/example.html"))[Example notebook]
+      #html.elem("a", attrs: (href: site-link("index.html")))[Home]
+      #html.elem("a", attrs: (href: site-link("reference/cli.html")))[CLI reference]
+      #html.elem("a", attrs: (href: site-link("notebooks/diagrams.html")))[Example diagrams]
     ]
   ]
 ] else [

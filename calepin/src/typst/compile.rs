@@ -10,7 +10,7 @@ use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
 use crate::typst::run::{
     push_calepin_inputs, push_input, run_typst_status, source_dir_input, CalepinMode,
-    CalepinTarget, INPUT_ASSETS, INPUT_CURRENT_HREF, INPUT_IMAGE_META, INPUT_PAGES,
+    CalepinTarget, INPUT_ASSETS, INPUT_BASE_URL, INPUT_CURRENT_HREF, INPUT_IMAGE_META, INPUT_PAGES,
     INPUT_SOURCE_DIR, RESERVED_INPUT_KEYS,
 };
 use crate::typst::version::assert_supported_typst;
@@ -110,6 +110,7 @@ pub(crate) struct ReservedInputs<'a> {
     pub asset_base: Option<&'a str>,
     pub pages: Option<&'a str>,
     pub current_href: Option<&'a str>,
+    pub base_url: Option<&'a str>,
 }
 
 pub fn reject_reserved_typst_inputs(args: &[String]) -> Result<()> {
@@ -282,6 +283,9 @@ fn typst_subcommand_args(
     if let Some(current_href_input) = inputs.current_href {
         push_input(&mut args, INPUT_CURRENT_HREF, current_href_input);
     }
+    if let Some(base_url) = inputs.base_url {
+        push_input(&mut args, INPUT_BASE_URL, base_url);
+    }
     if let Some(path) = dependencies_path {
         args.push("--deps".into());
         args.push(path.as_os_str().into());
@@ -447,6 +451,9 @@ pub fn compile_with_typst(
             asset_base: None,
             pages: options.pages_input,
             current_href: options.current_href_input,
+            base_url: options
+                .site_context
+                .and_then(|context| context.base_url.as_deref()),
         },
         options.dependencies_path,
     )?;
@@ -531,6 +538,14 @@ mod tests {
         ])
         .unwrap_err()
         .to_string();
+        assert!(err.contains("reserved Calepin input"));
+
+        let err = reject_reserved_typst_inputs(&[
+            "--input=calepin-base-url=https://example.com/project".to_string(),
+        ])
+        .unwrap_err()
+        .to_string();
+
         assert!(err.contains("reserved Calepin input"));
     }
 
@@ -631,6 +646,34 @@ mod tests {
             .any(|pair| pair == ["--input", "calepin-target=html"]));
         assert!(args.windows(2).any(|pair| pair == ["--format", "html"]));
         assert!(args.contains(&"--features=html".to_string()));
+    }
+
+    #[test]
+    fn compile_args_include_base_url_input() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("paper.typ");
+        std::fs::write(&input, "").unwrap();
+        let layout = resolve_layout(&input, Some(dir.path())).unwrap();
+
+        let args = typst_compile_args(
+            &layout,
+            Some(&PathBuf::from("paper.html")),
+            Some(OutputFormat::Html),
+            &[],
+            ReservedInputs {
+                base_url: Some("https://example.com/project"),
+                ..ReservedInputs::default()
+            },
+        );
+
+        let args: Vec<_> = args
+            .into_iter()
+            .map(|arg| arg.to_string_lossy().to_string())
+            .collect();
+
+        assert!(args
+            .windows(2)
+            .any(|pair| { pair == ["--input", "calepin-base-url=https://example.com/project",] }));
     }
 
     #[test]
