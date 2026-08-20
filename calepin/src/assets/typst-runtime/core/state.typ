@@ -6,6 +6,7 @@
 #import "../notebook/result-support.typ" as resultsupport
 
 #let pages = pagesmod.pages
+#let url = pagesmod.url
 #let _site-root-prefix = pagesmod._site-root-prefix
 
 #let _auto-label-index = defaults._auto-label-index

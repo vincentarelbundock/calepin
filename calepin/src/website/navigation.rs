@@ -18,7 +18,7 @@ use super::paths::{
     join_normalized_under_root, normalize_path, rel_posix, relative_or_self, slash_path,
     wildcard_match,
 };
-use super::url::{is_absolute_or_special_url, is_safe_output_route, page_relative_url};
+use super::url::{is_absolute_or_special_url, is_safe_output_route, LinkStyle};
 use super::util::clean_optional_string;
 use super::{PageInfo, PageInfoMap, FALLBACK_PAGE, INDEX_PAGE, PAGES_INDEX_FILE};
 
@@ -47,6 +47,7 @@ impl MenusModel {
         &self,
         current_href: &str,
         current_language: Option<&str>,
+        links: LinkStyle,
     ) -> BTreeMap<String, Vec<SiteNavEntry>> {
         self.items
             .iter()
@@ -59,7 +60,7 @@ impl MenusModel {
                             .is_none_or(|language| Some(language) == current_language)
                     })
                     .map(|item| SiteNavEntry {
-                        href: html_escape(&menu_item_href(current_href, &item.href)),
+                        href: html_escape(&menu_item_href(current_href, &item.href, links)),
                         label: html_escape(&item.label),
                         label_html: item.label_html.clone(),
                         active: item.href == current_href,
@@ -71,11 +72,11 @@ impl MenusModel {
     }
 }
 
-fn menu_item_href(current_href: &str, href: &str) -> String {
+fn menu_item_href(current_href: &str, href: &str, links: LinkStyle) -> String {
     if href.is_empty() {
         String::new()
     } else {
-        page_relative_url(current_href, href)
+        links.resolve(current_href, href)
     }
 }
 

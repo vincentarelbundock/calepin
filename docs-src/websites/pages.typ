@@ -34,6 +34,16 @@ Put the page title in the document and keep website metadata for fields used by 
 
 `index.typ` and `404.typ` are always built when present. If `404.typ` exists, _Calepin_ writes `404.html`; if PDF rendering is enabled for that page, it also writes `404.pdf`.
 
+A host serves the not-found page under whatever URL was requested, not under `/404.html`, so a link relative to the page itself would resolve against the requested directory. _Calepin_ therefore writes every link it generates for that page (navigation, logo, favicon, search assets) from the site root, behind the path component of `base-url`. Write the page's own links the same way, with `calepin.url()`:
+
+```typ
+#import "/.calepin/calepin.typ" as calepin
+
+#link(calepin.url("/index.html"))[Back to home]
+```
+
+`calepin.url()` takes a path relative to the website root and returns a URL the current page can use: relative to the page on ordinary pages, rooted at the site root on `404.typ`. Anything that is not a site-root path, such as an external URL or an anchor, is returned unchanged.
+
 = Import shared Typst code
 
 Reusable helper functions can live in an ordinary `.typ` file that pages import. Paths behave exactly as they do in plain Typst: a relative path resolves from the directory of the file that writes it, and a path starting with `/` resolves from the website source directory.

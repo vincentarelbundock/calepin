@@ -17,6 +17,7 @@ pub const INPUT_PAGES: &str = "calepin-pages";
 pub const INPUT_CURRENT_HREF: &str = "calepin-current-href";
 pub const INPUT_IMAGE_META: &str = "calepin-image-meta";
 pub const INPUT_SOURCE_DIR: &str = "calepin-source-dir";
+pub const INPUT_SITE_ROOT: &str = "calepin-site-root";
 
 pub const RESERVED_INPUT_KEYS: &[&str] = &[
     INPUT_MODE,
@@ -28,6 +29,7 @@ pub const RESERVED_INPUT_KEYS: &[&str] = &[
     INPUT_CURRENT_HREF,
     INPUT_IMAGE_META,
     INPUT_SOURCE_DIR,
+    INPUT_SITE_ROOT,
 ];
 
 pub fn run_typst_capture(
@@ -227,6 +229,7 @@ mod tests {
             INPUT_CURRENT_HREF,
             INPUT_IMAGE_META,
             INPUT_SOURCE_DIR,
+            INPUT_SITE_ROOT,
         ] {
             assert!(
                 RESERVED_INPUT_KEYS.contains(&key),

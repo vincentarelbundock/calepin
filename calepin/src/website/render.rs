@@ -12,8 +12,8 @@ use crate::typst::preprocess::PreprocessOutput;
 
 use super::paths::normalize_path;
 use super::preprocess::run_parallel;
-use super::site::SiteModel;
-use super::{BuildContext, SOURCE_DATA_ID};
+use super::site::{PageFlags, SiteModel};
+use super::{BuildContext, FALLBACK_PAGE, SOURCE_DATA_ID};
 
 pub(super) fn render_documents(
     context: &BuildContext,
@@ -150,6 +150,12 @@ fn render_document(
     let html_output = context.out_dir.join(&page_info.href);
 
     let current_href = page_info.href.clone();
+    let fallback_page =
+        input_path.file_name().and_then(|name| name.to_str()) == Some(FALLBACK_PAGE);
+    // The fallback page is served under arbitrary request URLs, so its links
+    // and assets are addressed from the site root rather than from its own
+    // directory.
+    let site_root = fallback_page.then(|| format!("{}/", site.site_root_prefix()));
     let page_meta = context.page_meta.get(input_path);
     let mut site_context = site.theme_context(
         &current_href,
@@ -157,7 +163,10 @@ fn render_document(
         &context.page_info,
         context.languages.as_deref(),
         context.search,
-        context.publish_sources,
+        PageFlags {
+            publish_source: context.publish_sources,
+            fallback: fallback_page,
+        },
     );
     // Each page's HTML template sees its merged variables (config < setup < CLI),
     // resolved during that page's preprocessing.
@@ -195,6 +204,7 @@ fn render_document(
                 site_context,
                 pages_input: Some(&context.pages_index_ref),
                 current_href_input: Some(&current_href),
+                site_root_input: site_root.as_deref(),
                 dependencies_path: Some(dependencies_path),
                 minify_html: false,
                 progress: false,

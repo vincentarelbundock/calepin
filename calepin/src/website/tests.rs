@@ -1611,6 +1611,7 @@ fn translation_entries_are_relative_to_current_page() {
         page_info.get(&fr).unwrap(),
         &page_info,
         &languages,
+        LinkStyle::PageRelative,
     );
 
     assert_eq!(entries[0].href, "../about.html");
@@ -1650,7 +1651,13 @@ fn language_entries_include_all_languages_with_home_fallbacks() {
         },
     ];
 
-    let entries = language_entries("about.html", page_info.get(&en), &page_info, &languages);
+    let entries = language_entries(
+        "about.html",
+        page_info.get(&en),
+        &page_info,
+        &languages,
+        LinkStyle::PageRelative,
+    );
 
     assert_eq!(entries.len(), 2);
     assert_eq!(entries[0].href, "about.html");
@@ -1824,13 +1831,33 @@ fn site_context_page_url_uses_directory_style_for_index_routes() {
     );
     let empty_page_info = PageInfoMap::new();
 
-    let home = site.theme_context("index.html", None, &empty_page_info, None, None, true);
+    let home = site.theme_context(
+        "index.html",
+        None,
+        &empty_page_info,
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
+    );
     assert_eq!(
         home.page_url.as_deref(),
         Some("https://example.com/project/")
     );
 
-    let section = site.theme_context("guide/index.html", None, &empty_page_info, None, None, true);
+    let section = site.theme_context(
+        "guide/index.html",
+        None,
+        &empty_page_info,
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
+    );
     assert_eq!(
         section.page_url.as_deref(),
         Some("https://example.com/project/guide/")
@@ -2209,7 +2236,10 @@ fn theme_context_rewrites_brand_urls_relative_to_current_page() {
         &PageInfoMap::new(),
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert_eq!(context.logo.as_deref(), Some("../assets/logo.svg"));
@@ -2275,7 +2305,10 @@ fn theme_context_includes_global_sidebar_sections_with_language_specific_current
         &page_info,
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert_eq!(context.sidebar_sections.len(), 2);
@@ -2327,7 +2360,10 @@ fn theme_context_rewrites_nav_urls_relative_to_current_page() {
         &PageInfoMap::new(),
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
     let hrefs = context
         .sidebar
@@ -2378,7 +2414,10 @@ fn theme_context_keeps_sidebar_subheadings_unlinked() {
         &PageInfoMap::new(),
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert_eq!(context.sidebar_sections[0].items[0].href, "");
@@ -2419,7 +2458,10 @@ fn theme_context_keeps_sidebar_external_links_absolute() {
         &PageInfoMap::new(),
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert_eq!(
@@ -2458,7 +2500,10 @@ fn theme_context_marks_section_containing_current_page_active() {
         &PageInfoMap::new(),
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert!(context.sidebar_fold);
@@ -2556,7 +2601,10 @@ fn theme_context_exposes_pagefind_assets_when_search_enabled() {
         &PageInfoMap::new(),
         None,
         Some(SearchEngine::Pagefind),
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
     let pagefind = context.pagefind.expect("Pagefind search context");
 
@@ -3659,7 +3707,10 @@ fn theme_context_exposes_relative_named_menus() {
         &PageInfoMap::new(),
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert_eq!(context.menus["main"][0].href, "../index.html");
@@ -3737,7 +3788,10 @@ fn theme_context_filters_menu_page_links_by_language() {
         &page_info,
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert_eq!(context.menus["main"].len(), 1);
@@ -4289,7 +4343,10 @@ fn social_card_image_prefers_the_page_image_over_the_site_default() {
         &page_info,
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert_eq!(
@@ -4311,7 +4368,10 @@ fn social_card_image_falls_back_to_the_site_default() {
         &PageInfoMap::new(),
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
 
     assert_eq!(
@@ -4326,7 +4386,17 @@ fn social_card_image_keeps_absolute_urls_and_needs_a_base_url_otherwise() {
         None,
         Some("https://cdn.test/card.png"),
     ));
-    let context = site.theme_context("index.html", None, &PageInfoMap::new(), None, None, true);
+    let context = site.theme_context(
+        "index.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
+    );
     assert_eq!(
         context.page_image.as_deref(),
         Some("https://cdn.test/card.png")
@@ -4335,7 +4405,17 @@ fn social_card_image_keeps_absolute_urls_and_needs_a_base_url_otherwise() {
     // A site-relative image cannot be made absolute without `base-url`, and
     // scrapers ignore relative ones, so no image is advertised at all.
     let site = social_test_site(social_test_metadata(None, Some("assets/card.png")));
-    let context = site.theme_context("index.html", None, &PageInfoMap::new(), None, None, true);
+    let context = site.theme_context(
+        "index.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
+    );
     assert_eq!(context.page_image, None);
 }
 
@@ -4358,11 +4438,24 @@ fn page_description_prefers_the_page_summary_and_falls_back_to_the_site_blurb() 
         &page_info,
         None,
         None,
-        true,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
     );
     assert_eq!(context.page_description.as_deref(), Some("How to use it."));
 
-    let context = site.theme_context("other.html", None, &page_info, None, None, true);
+    let context = site.theme_context(
+        "other.html",
+        None,
+        &page_info,
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
+    );
     assert_eq!(context.page_description.as_deref(), Some("Site blurb."));
 }
 
@@ -4373,7 +4466,17 @@ fn theme_color_reaches_the_theme_context() {
         ..Default::default()
     });
 
-    let context = site.theme_context("index.html", None, &PageInfoMap::new(), None, None, true);
+    let context = site.theme_context(
+        "index.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
+    );
 
     assert_eq!(context.theme_color.as_deref(), Some("#1b1b1b"));
 }
@@ -4538,4 +4641,153 @@ fn page_metadata_reads_image_and_redirect_from_in_both_spellings() {
     let meta = page_meta_from_value(&serde_json::json!({"title": "Hello"}));
     assert!(meta.redirect_from.is_empty());
     assert_eq!(meta.image, None);
+}
+
+fn fallback_site_model(base_url: Option<&str>) -> SiteModel {
+    SiteModel::new(
+        vec![NavSectionModel {
+            language: None,
+            title: Some("Guide".to_string()),
+            items: vec![NavItemModel {
+                language: None,
+                href: "guide/usage.html".to_string(),
+                label: "Usage".to_string(),
+                label_html: html_escape("Usage"),
+            }],
+        }],
+        MenusModel::default(),
+        SiteMetadata {
+            base_url: base_url.map(str::to_string),
+            logo: Some("assets/logo.svg".to_string()),
+            favicon: Some("assets/favicon.ico".to_string()),
+            ..Default::default()
+        },
+        true,
+    )
+}
+
+#[test]
+fn fallback_page_links_from_the_site_root_under_the_base_url_prefix() {
+    let site = fallback_site_model(Some("https://example.com/project"));
+
+    let context = site.theme_context(
+        "404.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        Some(SearchEngine::Pagefind),
+        PageFlags {
+            publish_source: true,
+            fallback: true,
+        },
+    );
+
+    // The host serves this page under arbitrary request URLs, so page-relative
+    // links would resolve against the requested directory instead of the site.
+    assert_eq!(context.home_url.as_deref(), Some("/project/index.html"));
+    assert_eq!(context.logo.as_deref(), Some("/project/assets/logo.svg"));
+    assert_eq!(
+        context.favicon.as_deref(),
+        Some("/project/assets/favicon.ico")
+    );
+    assert_eq!(context.sidebar[0].href, "/project/guide/usage.html");
+    let pagefind = context.pagefind.expect("Pagefind search context");
+    assert_eq!(pagefind.css, "/project/pagefind/pagefind-component-ui.css");
+    assert_eq!(pagefind.bundle, "/project/pagefind/");
+}
+
+#[test]
+fn fallback_page_links_from_the_domain_root_without_a_base_url_path() {
+    let site = fallback_site_model(Some("https://example.com"));
+
+    let context = site.theme_context(
+        "404.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: true,
+        },
+    );
+
+    assert_eq!(context.home_url.as_deref(), Some("/index.html"));
+    assert_eq!(context.sidebar[0].href, "/guide/usage.html");
+}
+
+#[test]
+fn ordinary_pages_keep_page_relative_links() {
+    let site = fallback_site_model(Some("https://example.com/project"));
+
+    let context = site.theme_context(
+        "guide/usage.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
+    );
+
+    assert_eq!(context.home_url.as_deref(), Some("../index.html"));
+    assert_eq!(context.logo.as_deref(), Some("../assets/logo.svg"));
+}
+
+#[test]
+fn fallback_page_renders_links_and_assets_from_the_site_root() {
+    if !command_available("typst") {
+        return;
+    }
+
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().to_path_buf();
+    std::fs::write(
+        src.join("calepin.toml"),
+        "base-url = \"https://example.com/project\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        src.join("index.typ"),
+        "#set document(title: [Home])\n#heading[Home]\n",
+    )
+    .unwrap();
+    std::fs::write(
+        src.join("404.typ"),
+        "#import \"/.calepin/calepin.typ\" as calepin\n\
+         #set document(title: [Not found])\n\
+         #heading[Not found]\n\
+         #link(calepin.url(\"/index.html\"))[Home]\n",
+    )
+    .unwrap();
+
+    let result = build_site(WebsiteBuildOptions {
+        config: src.join("calepin.toml"),
+        src: Some(src.clone()),
+        out: Some(src.join("public")),
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        config_overrides: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        incremental_changed: Vec::new(),
+        clean: true,
+        minify_html: false,
+        force: false,
+    })
+    .unwrap();
+
+    // The host serves this page under any missing URL, so both the theme chrome
+    // and the page's own links have to be rooted at the site root.
+    let fallback = std::fs::read_to_string(result.out_dir.join("404.html")).unwrap();
+    assert!(fallback.contains("\"/project/index.html\""));
+    assert!(!fallback.contains("\"index.html\""));
+
+    // Ordinary pages keep links relative to themselves.
+    let home = std::fs::read_to_string(result.out_dir.join("index.html")).unwrap();
+    assert!(!home.contains("\"/project/index.html\""));
 }

@@ -1,3 +1,5 @@
+#import "/.calepin/calepin.typ" as calepin
+
 #set document(title: [Page not found])
 
 #let target = sys.inputs.at("calepin-target", default: "paged")
@@ -10,12 +12,12 @@
       Sorry, the page you are looking for does not exist or may have moved.
     ]
     #html.elem("p", attrs: (class: "calepin-website-404-actions"))[
-      #html.elem("a", attrs: (href: "index.html", role: "button"))[Back to home]
+      #html.elem("a", attrs: (href: calepin.url("/index.html"), role: "button"))[Back to home]
     ]
     #html.elem("nav", attrs: (class: "calepin-website-404-links", "aria-label": "Helpful links"))[
-      #html.elem("a", attrs: (href: "index.html"))[Home]
-      #html.elem("a", attrs: (href: "reference/cli.html"))[CLI reference]
-      #html.elem("a", attrs: (href: "notebooks/example.html"))[Example notebook]
+      #html.elem("a", attrs: (href: calepin.url("/index.html")))[Home]
+      #html.elem("a", attrs: (href: calepin.url("/reference/cli.html")))[CLI reference]
+      #html.elem("a", attrs: (href: calepin.url("/notebooks/code_execution.html")))[Code execution]
     ]
   ]
 ] else [

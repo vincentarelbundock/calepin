@@ -84,3 +84,35 @@ pub(super) fn page_relative_url(current_href: &str, target: &str) -> String {
         (_, true) => "../".repeat(up_levels).trim_end_matches('/').to_string(),
     }
 }
+
+/// How a page addresses the rest of the site. Ordinary pages are only ever
+/// served from their own URL, so page-relative links are shortest and survive
+/// a move of the whole site. The fallback (404) page is different: the host
+/// serves it under whatever URL was requested, so links relative to the page
+/// resolve against the wrong directory and break. That page links from the
+/// site root instead, behind the path prefix of the configured `base-url`.
+#[derive(Debug, Clone, Copy)]
+pub(super) enum LinkStyle<'a> {
+    PageRelative,
+    SiteRoot { prefix: &'a str },
+}
+
+impl LinkStyle<'_> {
+    pub(super) fn resolve(self, current_href: &str, target: &str) -> String {
+        match self {
+            LinkStyle::PageRelative => page_relative_url(current_href, target),
+            LinkStyle::SiteRoot { prefix } => site_root_url(prefix, target),
+        }
+    }
+}
+
+/// Root-absolute URL for an output-root-relative `target`, under the site's
+/// path prefix (empty when the site is hosted at a domain root).
+pub(super) fn site_root_url(prefix: &str, target: &str) -> String {
+    if is_absolute_or_special_url(target) {
+        return target.to_string();
+    }
+    let target = target.trim_start_matches("./");
+    let prefix = prefix.trim_end_matches('/');
+    format!("{prefix}/{target}")
+}

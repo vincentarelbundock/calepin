@@ -10,11 +10,10 @@ use crate::utils::html::escape as html_escape;
 use super::config::{SearchEngine, WebsiteConfig};
 use super::language::LanguageInfo;
 use super::navigation::{MenusModel, NavSectionModel};
-use super::pagefind::{PAGEFIND_CSS, PAGEFIND_DIR, PAGEFIND_JS};
+use super::pagefind::{base_url_path_prefix, PAGEFIND_CSS, PAGEFIND_DIR, PAGEFIND_JS};
 use super::paths::{join_normalized_under_root, normalize_path, slash_path};
 use super::url::{
-    absolute_site_url, absolute_site_url_without_index, is_absolute_or_special_url,
-    page_relative_url,
+    absolute_site_url, absolute_site_url_without_index, is_absolute_or_special_url, LinkStyle,
 };
 use super::util::clean_optional_string;
 use super::{PageInfo, PageInfoMap};
@@ -77,6 +76,16 @@ fn source_asset_output_path(
     Ok(Some(slash_path(rel)))
 }
 
+/// Per-page facts that shape the rendered chrome.
+#[derive(Debug, Clone, Copy, Default)]
+pub(super) struct PageFlags {
+    /// Link to the page source alongside the rendered page.
+    pub(super) publish_source: bool,
+    /// This is the website fallback page, served by the host under whatever
+    /// URL was requested rather than under its own.
+    pub(super) fallback: bool,
+}
+
 #[derive(Debug)]
 pub(super) struct SiteModel {
     sections: Vec<NavSectionModel>,
@@ -100,6 +109,17 @@ impl SiteModel {
         }
     }
 
+    /// URL prefix that a page served from arbitrary request paths must use to
+    /// address the site root: the path component of the configured `base-url`,
+    /// or empty when the site is hosted at a domain root.
+    pub(super) fn site_root_prefix(&self) -> String {
+        self.metadata
+            .base_url
+            .as_deref()
+            .and_then(base_url_path_prefix)
+            .unwrap_or_default()
+    }
+
     pub(super) fn theme_context(
         &self,
         current_href: &str,
@@ -107,8 +127,27 @@ impl SiteModel {
         page_info_map: &PageInfoMap,
         languages: Option<&[LanguageInfo]>,
         search: Option<SearchEngine>,
-        publish_source: bool,
+        page: PageFlags,
     ) -> SiteContextInput {
+        let PageFlags {
+            publish_source,
+            fallback,
+        } = page;
+        // The fallback page is served under whatever URL was requested, so
+        // links relative to the page itself resolve against the wrong
+        // directory. It addresses the site from the root instead.
+        let root_prefix = if fallback {
+            self.site_root_prefix()
+        } else {
+            String::new()
+        };
+        let links = if fallback {
+            LinkStyle::SiteRoot {
+                prefix: &root_prefix,
+            }
+        } else {
+            LinkStyle::PageRelative
+        };
         let mut sidebar = Vec::new();
         let mut sidebar_sections = Vec::new();
         let mut page_title = None;
@@ -133,7 +172,7 @@ impl SiteModel {
                 } else if is_current_page && section.language.is_some() {
                     item.href.clone()
                 } else {
-                    page_relative_url(current_href, &item.href)
+                    links.resolve(current_href, &item.href)
                 };
                 let entry = SiteNavEntry {
                     href: html_escape(&item_href),
@@ -151,18 +190,20 @@ impl SiteModel {
             });
         }
         let language_entries = languages
-            .map(|languages| language_entries(current_href, page_info, page_info_map, languages))
+            .map(|languages| {
+                language_entries(current_href, page_info, page_info_map, languages, links)
+            })
             .unwrap_or_default();
         let translations = page_info
             .and_then(|info| {
                 languages.map(|languages| {
-                    translation_entries(current_href, info, page_info_map, languages)
+                    translation_entries(current_href, info, page_info_map, languages, links)
                 })
             })
             .unwrap_or_default();
         let menus = self
             .menus
-            .entries_for_current_page(current_href, current_language);
+            .entries_for_current_page(current_href, current_language, links);
 
         SiteContextInput {
             sidebar,
@@ -179,14 +220,14 @@ impl SiteModel {
                 .metadata
                 .logo
                 .as_deref()
-                .map(|logo| html_escape(&page_relative_url(current_href, logo))),
+                .map(|logo| html_escape(&links.resolve(current_href, logo))),
             logo_alt: self.metadata.logo_alt.as_deref().map(html_escape),
-            home_url: Some(html_escape(&page_relative_url(current_href, "index.html"))),
+            home_url: Some(html_escape(&links.resolve(current_href, "index.html"))),
             favicon: self
                 .metadata
                 .favicon
                 .as_deref()
-                .map(|favicon| html_escape(&page_relative_url(current_href, favicon))),
+                .map(|favicon| html_escape(&links.resolve(current_href, favicon))),
             page_url: self.metadata.base_url.as_deref().map(|base_url| {
                 html_escape(&absolute_site_url_without_index(base_url, current_href))
             }),
@@ -206,15 +247,12 @@ impl SiteModel {
             theme_color: self.metadata.theme_color.as_deref().map(html_escape),
             page_pdf: page_info
                 .and_then(|info| info.pdf_href.as_deref())
-                .map(|pdf| html_escape(&page_relative_url(current_href, pdf))),
+                .map(|pdf| html_escape(&links.resolve(current_href, pdf))),
             page_source: publish_source,
             pagefind: (search == Some(SearchEngine::Pagefind)).then(|| SitePagefindEntry {
-                css: html_escape(&page_relative_url(current_href, PAGEFIND_CSS)),
-                js: html_escape(&page_relative_url(current_href, PAGEFIND_JS)),
-                bundle: html_escape(&page_relative_url(
-                    current_href,
-                    &format!("{PAGEFIND_DIR}/"),
-                )),
+                css: html_escape(&links.resolve(current_href, PAGEFIND_CSS)),
+                js: html_escape(&links.resolve(current_href, PAGEFIND_JS)),
+                bundle: html_escape(&links.resolve(current_href, &format!("{PAGEFIND_DIR}/"))),
             }),
             store: Default::default(),
             toc_depth: None,
@@ -240,6 +278,7 @@ pub(super) fn language_entries(
     current: Option<&PageInfo>,
     page_info: &PageInfoMap,
     languages: &[LanguageInfo],
+    links: LinkStyle,
 ) -> Vec<SiteLanguageEntry> {
     languages
         .iter()
@@ -256,7 +295,7 @@ pub(super) fn language_entries(
             SiteLanguageEntry {
                 code: language.code.clone(),
                 label: html_escape(&language.label),
-                href: html_escape(&page_relative_url(current_href, &href)),
+                href: html_escape(&links.resolve(current_href, &href)),
                 active: current
                     .and_then(|info| info.language.as_deref())
                     .is_some_and(|code| code == language.code),
@@ -278,6 +317,7 @@ pub(super) fn translation_entries(
     current: &PageInfo,
     page_info: &PageInfoMap,
     languages: &[LanguageInfo],
+    links: LinkStyle,
 ) -> Vec<SiteLanguageEntry> {
     languages
         .iter()
@@ -291,7 +331,7 @@ pub(super) fn translation_entries(
                 .map(|info| SiteLanguageEntry {
                     code: language.code.clone(),
                     label: html_escape(&language.label),
-                    href: html_escape(&page_relative_url(current_href, &info.href)),
+                    href: html_escape(&links.resolve(current_href, &info.href)),
                     active: info.language == current.language,
                 })
         })

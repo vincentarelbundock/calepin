@@ -80,13 +80,15 @@ use preprocess::{preprocess_documents, WebsitePreprocessOptions};
 use render::render_documents;
 pub(crate) use scaffold::scaffold_website;
 #[cfg(test)]
-use site::{language_entries, translation_entries};
+use site::{language_entries, translation_entries, PageFlags};
 use site::{SiteMetadata, SiteModel};
 #[cfg(test)]
 use svg::sanitize_icon_svg;
 use templates::{write_llms_txt, write_robots, write_sitemap};
 #[cfg(test)]
 use url::page_relative_url;
+#[cfg(test)]
+use url::LinkStyle;
 use util::clean_optional_string;
 
 const DEFAULT_CONFIG: &str = "calepin.toml";

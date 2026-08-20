@@ -11,7 +11,7 @@ use crate::typst::paths::artifact_reference;
 use crate::typst::run::{
     push_calepin_inputs, push_input, run_typst_status, source_dir_input, CalepinMode,
     CalepinTarget, INPUT_ASSETS, INPUT_CURRENT_HREF, INPUT_IMAGE_META, INPUT_PAGES,
-    INPUT_SOURCE_DIR, RESERVED_INPUT_KEYS,
+    INPUT_SITE_ROOT, INPUT_SOURCE_DIR, RESERVED_INPUT_KEYS,
 };
 use crate::typst::version::assert_supported_typst;
 use crate::utils::progress::Progress;
@@ -96,6 +96,11 @@ pub struct CompileOptions<'a> {
     /// Site-relative html path of the page being rendered, exposed as the
     /// `calepin-current-href` input.
     pub current_href_input: Option<&'a str>,
+    /// Absolute URL prefix the page should use to address the site root,
+    /// exposed as the `calepin-site-root` input. Set for pages served from
+    /// arbitrary request URLs (the fallback page), where a prefix computed
+    /// from the page's own depth would be wrong.
+    pub site_root_input: Option<&'a str>,
     /// Write Typst's native dependency manifest to this path.
     pub dependencies_path: Option<&'a Path>,
     /// Minify final HTML output after theming and asset processing.
@@ -110,6 +115,7 @@ pub(crate) struct ReservedInputs<'a> {
     pub asset_base: Option<&'a str>,
     pub pages: Option<&'a str>,
     pub current_href: Option<&'a str>,
+    pub site_root: Option<&'a str>,
 }
 
 pub fn reject_reserved_typst_inputs(args: &[String]) -> Result<()> {
@@ -282,6 +288,9 @@ fn typst_subcommand_args(
     if let Some(current_href_input) = inputs.current_href {
         push_input(&mut args, INPUT_CURRENT_HREF, current_href_input);
     }
+    if let Some(site_root_input) = inputs.site_root {
+        push_input(&mut args, INPUT_SITE_ROOT, site_root_input);
+    }
     if let Some(path) = dependencies_path {
         args.push("--deps".into());
         args.push(path.as_os_str().into());
@@ -447,6 +456,7 @@ pub fn compile_with_typst(
             asset_base: None,
             pages: options.pages_input,
             current_href: options.current_href_input,
+            site_root: options.site_root_input,
         },
         options.dependencies_path,
     )?;
