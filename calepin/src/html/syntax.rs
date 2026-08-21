@@ -269,19 +269,23 @@ fn union_rule_specs(light: &TextMateTheme, dark: &TextMateTheme) -> Vec<TextMate
     let mut seen = BTreeSet::new();
     let mut specs = Vec::new();
     for rule in light.rules.iter().chain(dark.rules.iter()) {
-        let Some(scope) = rule.scope.as_deref() else {
+        let Some(scope_list) = rule.scope.as_deref() else {
             continue;
         };
-        if !seen.insert(scope.to_string()) {
-            continue;
+        // One spec per individual scope: a comma list kept whole would never
+        // match any rule during the per-theme style lookup.
+        for scope in scope_list.split(',').map(str::trim) {
+            if scope.is_empty() || !seen.insert(scope.to_string()) {
+                continue;
+            }
+            specs.push(TextMateRule {
+                name: rule.name.clone(),
+                scope: Some(scope.to_string()),
+                foreground: None,
+                background: None,
+                font_style: None,
+            });
         }
-        specs.push(TextMateRule {
-            name: rule.name.clone(),
-            scope: Some(scope.to_string()),
-            foreground: None,
-            background: None,
-            font_style: None,
-        });
     }
     specs
 }
@@ -442,6 +446,31 @@ mod tests {
                 "{scope} should not fall back to the plain foreground"
             );
         }
+    }
+
+    #[test]
+    fn comma_list_rules_color_their_html_tokens() {
+        let theme = TextMateTheme {
+            foreground: "#111111".to_string(),
+            background: "#ffffff".to_string(),
+            rules: vec![TextMateRule {
+                name: None,
+                scope: Some("keyword, storage.type".to_string()),
+                foreground: Some("#8839ef".to_string()),
+                background: None,
+                font_style: None,
+            }],
+        };
+        let html = HtmlSyntaxTheme::from_textmate_themes(theme.clone(), theme);
+        let declarations = html.declarations(false);
+        let scope_hits = declarations
+            .lines()
+            .filter(|line| line.trim_start().starts_with("--scope-") && line.contains("#8839ef"))
+            .count();
+        assert_eq!(
+            scope_hits, 2,
+            "both scopes in the list should carry the rule's color, got:\n{declarations}"
+        );
     }
 
     #[test]

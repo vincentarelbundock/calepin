@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- HTML output colors code with the full syntax theme again. A `.tmTheme` rule may name several scopes in one comma-separated list, and 0.0.49's specificity-based scope lookup compared each candidate against the whole list, so such a rule matched nothing — not even the scopes it itself declared — and those tokens fell back to the plain foreground. Themes like Catppuccin define keywords, strings, and functions almost exclusively in lists, so HTML code blocks rendered nearly monochrome; the builtin palette's own comment, string, and keyword rules were affected too. Scope lists are now split into individual scopes before matching. Paged output was never affected. Thanks to [@maucejo](https://github.com/maucejo) for the report ([#114](https://github.com/vincentarelbundock/calepin/issues/114)).
+
 ## 0.0.52
 
 - `fig-alt-text` set in a `#|` chunk header now survives relocation with `#calepin.results(...)`. Options written in a fenced header exist only in the serialized results, and the paged path restored just a handful of them by name, silently dropping `fig-caption`, `fig-cap-location`, `fig-link`, `fig-layout-*`, `fig-responsive`, and `fig-alt-text`. A relocated plot therefore reached Typst with no alt text, and a strict `--pdf-standard ua-1` build failed with `missing alt text` pointing inside the runtime. Both targets now forward every option that was actually set. Thanks to [@eddelbuettel](https://github.com/eddelbuettel) for the report.
