@@ -12,6 +12,7 @@
     "assets/blog-listings.typ",
     "assets/calepin_vscode-thumb.png",
     "assets/calepin_vscode.mp4",
+    "assets/codly.pdf",
     "assets/default-favicon.svg",
     "assets/design.typ",
     "assets/flowers_01.jpg",
@@ -338,7 +339,7 @@
     "websites/websites.typ"
   ],
   "pagefind": {
-    "signature": 16052597526225763180,
+    "signature": 8913245491705124564,
     "outputs": [
       "pagefind/fragment/en_12aa98a.pf_fragment",
       "pagefind/fragment/en_26e5825.pf_fragment",
