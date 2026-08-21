@@ -179,6 +179,7 @@ cli-reference: build  ## Generate docs-src/reference/cli.typ from clap help outp
 website: ## Render docs-src/ into docs/ via calepin compile directory mode
 	uv run calepin compile $(DOCS_SRC)/themes/examples/tufte/tufte.typ --set theme=./theme --format html
 	uv run calepin compile $(DOCS_SRC)/themes/examples/tufte/tufte.typ --set theme=./theme --format pdf
+	uv run calepin compile $(DOCS_SRC)/tips/examples/codly.typ $(abspath $(DOCS_SRC))/assets/codly.pdf --format pdf
 	calepin compile $(DOCS_SRC) $(SITE_DIR)
 
 serve:  ## Build and serve the website at http://$(HOST):$(PORT)
