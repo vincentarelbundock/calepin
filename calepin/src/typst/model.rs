@@ -101,6 +101,29 @@ impl ResultsMode {
     }
 }
 
+/// Where a chunk's results sit relative to its echoed source: after the
+/// statement that produced them, or all together after the whole chunk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResultsLocation {
+    Statement,
+    Chunk,
+}
+
+impl ResultsLocation {
+    pub fn parse(value: &str) -> anyhow::Result<Self> {
+        match value {
+            "statement" => Ok(Self::Statement),
+            "chunk" => Ok(Self::Chunk),
+            other => Err(anyhow::anyhow!("unsupported results location `{}`", other)),
+        }
+    }
+}
+
+fn default_results_location() -> ResultsLocation {
+    ResultsLocation::Statement
+}
+
 /// Which plain fenced blocks auto-run as chunks: none, every engine, or a
 /// specific set of engine names.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -141,6 +164,8 @@ pub struct SetupDefaults {
     pub eval: bool,
     pub output: bool,
     pub results: ResultsMode,
+    #[serde(default = "default_results_location", rename = "results-location")]
+    pub results_location: ResultsLocation,
     pub warning: bool,
     pub message: bool,
     pub error: bool,
@@ -190,6 +215,7 @@ impl Default for SetupDefaults {
             eval: true,
             output: true,
             results: ResultsMode::Render,
+            results_location: ResultsLocation::Statement,
             warning: true,
             message: true,
             error: false,
@@ -252,6 +278,8 @@ pub struct DisplayOptions {
     pub echo: bool,
     pub output: bool,
     pub results: ResultsMode,
+    #[serde(default = "default_results_location")]
+    pub results_location: ResultsLocation,
     pub warning: bool,
     pub message: bool,
     pub placeholder: bool,
@@ -393,6 +421,11 @@ fn figure_extension(format: &str) -> Option<&'static str> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ResultItemType {
+    /// One segment of the chunk's source, ending at the statement whose output
+    /// follows. Present only when the engine segments its source; the runtime
+    /// uses these to interleave code with output under
+    /// `results-location: "statement"`.
+    Source,
     Stream,
     Diagnostic,
     Error,
@@ -455,6 +488,14 @@ impl ResultItem {
         Self {
             item_type: ResultItemType::Stream,
             name: Some(name),
+            text: Some(text.into()),
+            ..Self::default()
+        }
+    }
+
+    pub fn source(text: impl Into<String>) -> Self {
+        Self {
+            item_type: ResultItemType::Source,
             text: Some(text.into()),
             ..Self::default()
         }

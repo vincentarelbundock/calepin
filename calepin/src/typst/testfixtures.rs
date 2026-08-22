@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::typst::model::{
-    ChunkSpec, DisplayOptions, EngineName, ExecOptions, LayoutPaths, ResultsMode,
+    ChunkSpec, DisplayOptions, EngineName, ExecOptions, LayoutPaths, ResultsLocation, ResultsMode,
     DEFAULT_FIG_DEVICE_ASPECT, DEFAULT_FIG_DEVICE_DPI, DEFAULT_FIG_DEVICE_FORMAT,
     DEFAULT_FIG_DEVICE_HEIGHT, DEFAULT_FIG_DEVICE_WIDTH,
 };
@@ -26,6 +26,7 @@ pub fn display_options(results: ResultsMode) -> DisplayOptions {
         echo: true,
         output: true,
         results,
+        results_location: ResultsLocation::Statement,
         warning: true,
         message: true,
         placeholder: true,

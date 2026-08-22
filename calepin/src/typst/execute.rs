@@ -599,9 +599,8 @@ where
     fn normalize(mut self, engine_results: Vec<EngineResult>) -> Result<Vec<ResultItem>> {
         for result in engine_results {
             match result {
-                EngineResult::Source(_)
-                | EngineResult::Unavailable(_)
-                | EngineResult::Preamble(_) => {}
+                EngineResult::Source(lines) => self.push_source(lines),
+                EngineResult::Unavailable(_) | EngineResult::Preamble(_) => {}
                 EngineResult::Output(text) => self.push_output(text)?,
                 EngineResult::Warning(text) => {
                     self.items
@@ -616,6 +615,18 @@ where
             }
         }
         Ok(self.items)
+    }
+
+    /// Engines that segment their source announce each segment before the
+    /// output it produced. The runtime interleaves code and output from these;
+    /// an engine that emits a single whole-source segment renders exactly as it
+    /// did before, with all output after the code.
+    fn push_source(&mut self, lines: Vec<String>) {
+        let text = lines.join("\n");
+        if text.trim().is_empty() {
+            return;
+        }
+        self.items.push(ResultItem::source(text));
     }
 
     fn push_output(&mut self, text: String) -> Result<()> {
@@ -806,11 +817,42 @@ mod tests {
             unused_artifact_path,
         )
         .unwrap();
-        assert_eq!(items.len(), 3);
-        assert_eq!(items[0].item_type, ResultItemType::Stream);
-        assert_eq!(items[0].text.as_deref(), Some("1"));
-        assert_eq!(items[1].level, Some(DiagnosticLevel::Warning));
-        assert_eq!(items[2].level, Some(DiagnosticLevel::Message));
+        assert_eq!(items.len(), 4);
+        assert_eq!(items[0].item_type, ResultItemType::Source);
+        assert_eq!(items[0].text.as_deref(), Some("x <- 1"));
+        assert_eq!(items[1].item_type, ResultItemType::Stream);
+        assert_eq!(items[1].text.as_deref(), Some("1"));
+        assert_eq!(items[2].level, Some(DiagnosticLevel::Warning));
+        assert_eq!(items[3].level, Some(DiagnosticLevel::Message));
+    }
+
+    #[test]
+    fn source_segments_are_kept_in_order_and_blank_ones_dropped() {
+        let dir = tempfile::tempdir().unwrap();
+        let chunk = chunk(ResultsMode::Render);
+        let figure = figure_for(&chunk);
+        let items = normalize_engine_results(
+            &chunk,
+            dir.path(),
+            &figure,
+            vec![
+                EngineResult::Source(vec!["cat(1)".to_string()]),
+                EngineResult::Output("1".to_string()),
+                EngineResult::Source(vec!["   ".to_string()]),
+                EngineResult::Source(vec!["cat(2)".to_string()]),
+                EngineResult::Output("2".to_string()),
+            ],
+            unused_artifact_path,
+        )
+        .unwrap();
+        let sources: Vec<&str> = items
+            .iter()
+            .filter(|item| item.item_type == ResultItemType::Source)
+            .filter_map(|item| item.text.as_deref())
+            .collect();
+        assert_eq!(sources, vec!["cat(1)", "cat(2)"]);
+        assert_eq!(items[0].item_type, ResultItemType::Source);
+        assert_eq!(items[1].item_type, ResultItemType::Stream);
     }
 
     #[test]

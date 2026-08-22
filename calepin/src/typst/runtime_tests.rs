@@ -3733,3 +3733,236 @@ Body#calepin.elements.sidenote[#metadata("INSIDE_NOTE")<note-probe>] and
         "expected the sidefigure body to pass through in query mode:\n{figure}"
     );
 }
+
+/// Results holding two source segments, each followed by the output it
+/// produced: what an engine that segments its source (R, Python) reports.
+fn write_segmented_results(dir: &Path, label: &str, options: &str) {
+    let path = dir.join(".calepin/paper/results.json");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(
+        &path,
+        format!(
+            r#"{{
+  "schema": 2,
+  "calepin_version": "test",
+  "input": "paper.typ",
+  "chunks": {{
+    "{label}": {{
+      "label": "{label}",
+      "engine": "python",
+      "source": "SEGONE_12345\nSEGTWO_12345",
+      "status": "ok",
+      "options": {{ {options} }},
+      "items": [
+        {{ "type": "source", "text": "SEGONE_12345" }},
+        {{ "type": "stream", "name": "stdout", "text": "OUTONE_12345" }},
+        {{ "type": "source", "text": "SEGTWO_12345" }},
+        {{ "type": "stream", "name": "stdout", "text": "OUTTWO_12345" }}
+      ]
+    }}
+  }}
+}}"#
+        ),
+    )
+    .unwrap();
+}
+
+fn marker_order(text: &str, markers: &[&str]) -> Vec<usize> {
+    markers
+        .iter()
+        .map(|marker| {
+            text.find(marker)
+                .unwrap_or_else(|| panic!("missing `{marker}` in:\n{text}"))
+        })
+        .collect()
+}
+
+fn compile_segmented(label_options: &str, chunk_args: &str) -> String {
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_segmented_results(dir.path(), "segments", label_options);
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        format!(
+            r##"#import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
+
+#calepin.chunk("python", label: "segments"{chunk_args})[`
+pass
+`]
+"##
+        ),
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+    pdf_text(&output)
+}
+
+#[test]
+fn typst_compile_shows_each_source_segment_above_its_own_output() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let extracted = compile_segmented(r#""echo": true"#, "");
+    let order = marker_order(
+        &extracted,
+        &[
+            "SEGONE_12345",
+            "OUTONE_12345",
+            "SEGTWO_12345",
+            "OUTTWO_12345",
+        ],
+    );
+    let mut sorted = order.clone();
+    sorted.sort_unstable();
+    assert_eq!(order, sorted, "expected interleaved order:\n{extracted}");
+}
+
+#[test]
+fn typst_compile_results_location_chunk_collects_output_after_the_source() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    // The location comes from the stored chunk options, the path a fenced
+    // chunk's `#| results-location:` header takes.
+    let extracted = compile_segmented(r#""echo": true, "results-location": "chunk""#, "");
+    let order = marker_order(
+        &extracted,
+        &[
+            "SEGONE_12345",
+            "SEGTWO_12345",
+            "OUTONE_12345",
+            "OUTTWO_12345",
+        ],
+    );
+    let mut sorted = order.clone();
+    sorted.sort_unstable();
+    assert_eq!(order, sorted, "expected batched order:\n{extracted}");
+}
+
+#[test]
+fn typst_compile_relocated_output_carries_no_source_segments() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_segmented_results(dir.path(), "segments", r#""echo": false, "results": "hide""#);
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
+
+#calepin.chunk("python", label: "segments", echo: false, results: "hide")[`
+pass
+`]
+
+#calepin.results("segments")
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+    let extracted = pdf_text(&output);
+    assert!(
+        extracted.contains("OUTONE_12345") && extracted.contains("OUTTWO_12345"),
+        "expected relocated output:\n{extracted}"
+    );
+    assert!(
+        !extracted.contains("SEGONE_12345"),
+        "relocated output should not echo source segments:\n{extracted}"
+    );
+}
+
+#[test]
+fn typst_compile_echoes_whole_source_when_segments_do_not_cover_it() {
+    skip_if_no_typst!();
+    if Command::new("pdftotext").arg("-v").output().is_err() {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    let path = dir.path().join(".calepin/paper/results.json");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    // An engine stops reporting source at the statement that raised, so the
+    // segments here cover less than the chunk holds.
+    std::fs::write(
+        &path,
+        r#"{
+  "schema": 2,
+  "calepin_version": "test",
+  "input": "paper.typ",
+  "chunks": {
+    "segments": {
+      "label": "segments",
+      "engine": "python",
+      "source": "SEGONE_12345\nSEGTWO_12345\nSEGTHREE_12345",
+      "status": "error",
+      "options": { "echo": true },
+      "items": [
+        { "type": "source", "text": "SEGONE_12345" },
+        { "type": "stream", "name": "stdout", "text": "OUTONE_12345" },
+        { "type": "source", "text": "SEGTWO_12345" },
+        { "type": "error", "name": "error", "message": "BOOM_12345" }
+      ]
+    }
+  }
+}"#,
+    )
+    .unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import "/.calepin/calepin.typ" as calepin
+#show: calepin.document
+
+#calepin.chunk("python", label: "segments")[`
+pass
+`]
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+    let extracted = pdf_text(&output);
+    assert!(
+        extracted.contains("SEGTHREE_12345"),
+        "expected the whole stored source to be echoed:\n{extracted}"
+    );
+    let order = marker_order(&extracted, &["SEGTHREE_12345", "OUTONE_12345"]);
+    assert!(
+        order[0] < order[1],
+        "expected the source ahead of the output:\n{extracted}"
+    );
+}

@@ -335,7 +335,7 @@
           }
         }
         let stored = chunk.at("options", default: (:))
-        for key in ("echo", "results", "warning", "message") {
+        for key in ("echo", "results", "results-location", "warning", "message") {
           if key in stored {
             options.insert(key, stored.at(key))
           }
@@ -359,15 +359,27 @@
         reg
       })
 
-      if show-echo {
-        _listing-block(code, engine, label, crossref-labels, options)
-      } else if results-path == none or results-path == "" {
-        _listing-block(code, engine, label, crossref-labels, options)
-      }
       // `results: "hide"`/`"hidden"` runs the chunk but renders nothing here; the
       // output can still be shown elsewhere with `#calepin.results(label)`.
-      if results-path != none and results-path != "" and not _results-hidden(results-mode) {
-        _render-results(label, options, anchor: true, config: runtime-config)
+      let renders-results = (
+        results-path != none and results-path != "" and not _results-hidden(results-mode)
+      )
+      if renders-results {
+        // The renderer owns the echo when results are shown here: under
+        // `results-location: "statement"` it splits the source across the
+        // output, and otherwise emits it once ahead of everything.
+        _render-results(
+          label,
+          options,
+          anchor: true,
+          config: runtime-config,
+          source-block: if show-echo {
+            fragment => _listing-block(fragment, engine, label, crossref-labels, options)
+          },
+          source-code: code,
+        )
+      } else if show-echo or results-path == none or results-path == "" {
+        _listing-block(code, engine, label, crossref-labels, options)
       }
     }
   }

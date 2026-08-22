@@ -250,6 +250,7 @@ fn native_chunk_option_names() -> &'static [&'static str] {
         "error",
         "output",
         "results",
+        "results-location",
         "script",
         "warning",
         "message",

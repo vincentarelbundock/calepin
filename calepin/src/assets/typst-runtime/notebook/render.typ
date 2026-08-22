@@ -650,14 +650,20 @@
   }
 }
 
-#let _render-item(item, label, opts, fig-labels, anchor: true) = {
+#let _render-item(item, label, opts, fig-labels, anchor: true, source-block: none) = {
   let results-mode = opts.at("results")
   let inline-output = opts.at("inline-output")
   let warning = opts.at("warning")
   let message = opts.at("message")
 
   let item-type = item.at("type", default: "")
-  if item-type == "stream" {
+  if item-type == "source" {
+    // Source segments reach this point only when the chunk interleaves; every
+    // other path strips them before rendering.
+    if source-block != none {
+      source-block(item.at("text", default: ""))
+    }
+  } else if item-type == "stream" {
     let text = item.at("text", default: "")
     if _results-hidden(results-mode) {
       none
@@ -717,7 +723,7 @@
 // Render a chunk's items in order, batching consecutive images into one figure
 // each. `fig-labels` and the caption carried by `opts` are attached by every
 // batch, so callers pass them only when a single batch will result.
-#let _render-item-sequence(items, label, opts, anchor, fig-labels: ()) = {
+#let _render-item-sequence(items, label, opts, anchor, fig-labels: (), source-block: none) = {
   let image-group = ()
   for result-item in items {
     if _is-image-display-item(result-item) {
@@ -727,7 +733,7 @@
         _render-image-group(image-group, label, opts, fig-labels, anchor)
         image-group = ()
       }
-      _render-item(result-item, label, opts, fig-labels, anchor: anchor)
+      _render-item(result-item, label, opts, fig-labels, anchor: anchor, source-block: source-block)
     }
   }
   _render-image-group(image-group, label, opts, fig-labels, anchor)
@@ -739,16 +745,86 @@
 // output splits the images into several batches, letting each batch attach them
 // defines the label twice (Typst rejects the reference) and numbers the caption
 // twice. Wrap the whole chunk in a single figure instead.
-#let _render-figure-sequence(items, label, opts, fig-labels, anchor) = {
+#let _render-figure-sequence(items, label, opts, fig-labels, anchor, source-block: none) = {
   let is-figure = fig-labels.len() > 0 or opts.at("fig-caption", default: none) != none
   if is-figure and _image-group-count(items) > 1 {
     // Batches render without a caption or labels of their own, so none of them
     // becomes a figure and the outer figure is the only one.
-    let body = _render-item-sequence(items, label, opts + ("fig-caption": none), anchor)
+    let body = _render-item-sequence(
+      items,
+      label,
+      opts + ("fig-caption": none),
+      anchor,
+      source-block: source-block,
+    )
     _finalize-figure-content(body, label, fig-labels, _figure-options(opts), anchor)
   } else {
-    _render-item-sequence(items, label, opts, anchor, fig-labels: fig-labels)
+    _render-item-sequence(
+      items,
+      label,
+      opts,
+      anchor,
+      fig-labels: fig-labels,
+      source-block: source-block,
+    )
   }
+}
+
+#let _is-source-item(item) = item.at("type", default: "") == "source"
+
+#let _without-source-items(items) = items.filter(item => not _is-source-item(item))
+
+// Whether the chunk's own render splits its source, showing each segment above
+// the output it produced, rather than echoing the source once and following it
+// with everything the chunk printed.
+//
+// `results-location: "chunk"` asks for the latter outright. So do several cases
+// where interleaving would break an identity the chunk carries:
+//
+// - fewer than two source segments: the engine did not split the source (Julia,
+//   `sh`, and the diagram engines never do), so there is nothing to interleave
+//   and the single segment renders as an ordinary echo;
+// - an `lst-` identity, which names the echoed source as one listing;
+// - a `tbl-` identity, whose figure would end up enclosing the source;
+// - a `fig-` identity whose images arrive in more than one batch, since the
+//   chunk is then wrapped in a single outer figure that would enclose the
+//   source too.
+#let _interleaves-source(items, opts, chunk) = {
+  if opts.at("results-location", default: "statement") != "statement" {
+    return false
+  }
+  let segments = items.filter(_is-source-item)
+  if segments.len() < 2 {
+    return false
+  }
+  // Every line of the chunk has to appear in some segment, or interleaving
+  // would echo less code than the chunk holds. An engine stops reporting source
+  // once a statement raises, so a tolerated error (`error: true`) truncates the
+  // segments; fall back to echoing the stored source whole.
+  let source = chunk.at("source", default: "")
+  if source != "" and segments.map(item => item.at("text", default: "")).join("\n").trim() != source.trim() {
+    return false
+  }
+  if (
+    _crossref-labels-for(chunk, "lst").len() > 0
+      or opts.at("lst-caption", default: none) != none
+  ) {
+    return false
+  }
+  if (
+    _crossref-labels-for(chunk, "tbl").len() > 0
+      or opts.at("tbl-caption", default: none) != none
+  ) {
+    return false
+  }
+  let is-figure = (
+    _crossref-labels-for(chunk, "fig").len() > 0
+      or opts.at("fig-caption", default: none) != none
+  )
+  if is-figure and _image-group-count(items) > 1 {
+    return false
+  }
+  true
 }
 
 // Wrap rendered output as a table figure, so `@tbl-name` resolves and the
@@ -775,7 +851,19 @@
 // label) are attached. The inline render owns the anchor; a relocated copy that
 // does not own it passes `anchor: false` so the same output can appear more than
 // once without defining a Typst label twice.
-#let _render-results(label, opts, anchor: true, overrides: (:), config: none) = {
+// `source-block` is how the chunk's own render hands over its echo: a function
+// from one source segment to the rendered code block. Given one, this call owns
+// the echo, either splitting it across the chunk's output or emitting it once
+// ahead of everything. A relocation passes none and never echoes.
+#let _render-results(
+  label,
+  opts,
+  anchor: true,
+  overrides: (:),
+  config: none,
+  source-block: none,
+  source-code: none,
+) = {
   let runtime-config = _runtime-config(bound: config)
   let results-path = runtime-config.at("results", default: none)
   if results-path == none or results-path == "" {
@@ -799,14 +887,35 @@
   let items = chunk.at("items", default: ())
   let tbl-caption = opts.at("tbl-caption", default: none)
 
+  let interleave = source-block != none and _interleaves-source(items, opts, chunk)
+  let items = if interleave { items } else { _without-source-items(items) }
+  // Without interleaving, the echo is one block ahead of the output, which is
+  // where a chunk has always put it.
+  let echoed = if source-block != none and not interleave {
+    let code = if source-code != none { source-code } else { chunk.at("source", default: "") }
+    source-block(code)
+  }
+  let segment-source = if interleave { source-block } else { none }
+
   // A `tbl-` label names the chunk's non-image output as a table. Wrap the
   // whole rendered sequence once, the same way a split figure is wrapped: the
   // inner batches keep their own figure handling for any images the chunk also
   // produced, and the table figure encloses the result.
   if tbl-labels.len() > 0 or tbl-caption != none {
-    let body = _render-figure-sequence(items, label, opts, fig-labels, anchor)
-    return _table-figure(body, tbl-caption, tbl-labels, opts, anchor)
+    let body = _render-figure-sequence(
+      items,
+      label,
+      opts,
+      fig-labels,
+      anchor,
+      source-block: segment-source,
+    )
+    return {
+      echoed
+      _table-figure(body, tbl-caption, tbl-labels, opts, anchor)
+    }
   }
 
-  _render-figure-sequence(items, label, opts, fig-labels, anchor)
+  echoed
+  _render-figure-sequence(items, label, opts, fig-labels, anchor, source-block: segment-source)
 }

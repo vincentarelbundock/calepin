@@ -13,6 +13,16 @@ fn has_command(command: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// A chunk's items with its source segments dropped: engines that split their
+/// source report each segment next to the output it produced, and these
+/// assertions are about what the chunk produced.
+fn output_items(chunk: &serde_json::Value) -> Vec<&serde_json::Value> {
+    chunk["items"]
+        .as_array()
+        .map(|items| items.iter().filter(|item| item["type"] != "source").collect())
+        .unwrap_or_default()
+}
+
 fn has_pdftotext() -> bool {
     Command::new("pdftotext")
         .arg("-v")
@@ -338,8 +348,8 @@ print(x + 1)
     assert_eq!(results["schema"], 2);
     assert_eq!(results["chunks"]["chunk-1"]["engine"], "python");
     assert!(results["chunks"]["chunk-1"].get("cached").is_none());
-    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["type"], "stream");
-    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "42");
+    assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["type"], "stream");
+    assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["text"], "42");
 
     let preview = Command::new("typst")
         .args(["compile", "paper.typ", "preview.pdf", "--root", "."])
@@ -570,7 +580,7 @@ print("cached")
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
     assert_eq!(results["chunks"]["chunk-1"]["options"]["fig-width"], "10%");
-    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "cached");
+    assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["text"], "cached");
     assert_eq!(
         std::fs::read_to_string(dir.path().join("cache-runs.txt")).unwrap(),
         "1"
@@ -906,7 +916,7 @@ plt.plot([1, 2, 3], [1, 4, 9])
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
     assert_eq!(
-        results["chunks"]["fig-line"]["items"][0]["data"]["image/png"]["path"],
+        output_items(&results["chunks"]["fig-line"])[0]["data"]["image/png"]["path"],
         "/.calepin/paper/figures/fig-line.png"
     );
 
@@ -974,7 +984,7 @@ fig
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
     assert_eq!(
-        results["chunks"]["fig-returned"]["items"][0]["data"]["image/svg+xml"]["path"],
+        output_items(&results["chunks"]["fig-returned"])[0]["data"]["image/svg+xml"]["path"],
         "/.calepin/paper/figures/fig-returned.svg"
     );
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
@@ -1377,7 +1387,7 @@ cat(x + 1)
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
     assert!(results["chunks"]["chunk-1"].get("cached").is_none());
     assert!(results["chunks"]["chunk-2"].get("cached").is_none());
-    assert_eq!(results["chunks"]["chunk-2"]["items"][0]["text"], "43");
+    assert_eq!(output_items(&results["chunks"]["chunk-2"])[0]["text"], "43");
 }
 
 #[test]
@@ -1453,7 +1463,7 @@ print(region, min_count)
         &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "NY 25");
+    assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["text"], "NY 25");
     assert_eq!(results["store"]["region"], "NY");
     assert!(!dir.path().join(".calepin/paper/vars.json").exists());
 }
@@ -1537,7 +1547,7 @@ print(region)
         &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(results["chunks"]["chunk-1"]["items"][0]["text"], "CA");
+    assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["text"], "CA");
 }
 
 #[test]
@@ -1599,8 +1609,8 @@ labels = ["A", "B"]
     .unwrap();
     assert_eq!(results["store"]["labels"], serde_json::json!(["A", "B"]));
     assert_eq!(results["chunks"].as_object().unwrap().len(), 3);
-    assert_eq!(results["chunks"]["chunk-2"]["items"][0]["text"], "A");
-    assert_eq!(results["chunks"]["chunk-3"]["items"][0]["text"], "B");
+    assert_eq!(output_items(&results["chunks"]["chunk-2"])[0]["text"], "A");
+    assert_eq!(output_items(&results["chunks"]["chunk-3"])[0]["text"], "B");
     assert_eq!(
         std::fs::read_to_string(dir.path().join("writer-runs.txt")).unwrap(),
         "1"
@@ -1678,7 +1688,7 @@ enable_followup = True
     .unwrap();
     assert_eq!(results["chunks"].as_object().unwrap().len(), 2);
     assert_eq!(
-        results["chunks"]["chunk-2"]["items"][0]["text"],
+        output_items(&results["chunks"]["chunk-2"])[0]["text"],
         "THEME_STORE_OK"
     );
 }

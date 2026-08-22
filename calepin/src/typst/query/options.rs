@@ -3,7 +3,8 @@ use serde_json::Value;
 
 use super::value::{extract_text, parse_metadata_values, value_for};
 use crate::typst::model::{
-    DisplayOptions, ExecOptions, FencedChunks, ResultsMode, ScriptDestination, SetupDefaults,
+    DisplayOptions, ExecOptions, FencedChunks, ResultsLocation, ResultsMode, ScriptDestination,
+    SetupDefaults,
 };
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -117,6 +118,11 @@ fn parse_display_options(
         echo: bool_option(value, "echo", defaults.echo)?,
         output: bool_option(value, "output", defaults.output)?,
         results: results_option(value, "results", defaults.results)?,
+        results_location: results_location_option(
+            value,
+            "results-location",
+            defaults.results_location,
+        )?,
         warning: bool_option(value, "warning", defaults.warning)?,
         message: bool_option(value, "message", defaults.message)?,
         placeholder: bool_option(value, "placeholder", defaults.placeholder)?,
@@ -160,6 +166,11 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         eval: bool_option(value, "eval", base.eval)?,
         output: bool_option(value, "output", base.output)?,
         results: results_option(value, "results", base.results)?,
+        results_location: results_location_option(
+            value,
+            "results-location",
+            base.results_location,
+        )?,
         warning: bool_option(value, "warning", base.warning)?,
         message: bool_option(value, "message", base.message)?,
         error: bool_option(value, "error", base.error)?,
@@ -363,6 +374,20 @@ fn results_option(object: &Value, key: &str, default: ResultsMode) -> Result<Res
         .as_str()
         .ok_or_else(|| anyhow!("`{}` must be a string", key))?;
     ResultsMode::parse(value)
+}
+
+fn results_location_option(
+    object: &Value,
+    key: &str,
+    default: ResultsLocation,
+) -> Result<ResultsLocation> {
+    let Some(value) = value_for(object, key) else {
+        return Ok(default);
+    };
+    let value = value
+        .as_str()
+        .ok_or_else(|| anyhow!("`{}` must be a string", key))?;
+    ResultsLocation::parse(value)
 }
 
 fn option_or<T>(

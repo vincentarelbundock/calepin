@@ -25,6 +25,59 @@ running them, use `calepin compile document.typ --format script`. See
 #link("../compile_watch_serve.html#extract-scripts")[Extract scripts] for output
 templates and extension rules.
 
+= Where results appear
+
+A chunk that prints more than once shows each piece of output below the
+statement that produced it. The source is split at the statements that printed
+something, and the pieces alternate with their results:
+
+````typ
+```r
+x <- 1
+cat("first", x, "\n")
+y <- x + 1
+cat("second", y, "\n")
+```
+````
+
+```r
+x <- 1
+cat("first", x, "\n")
+y <- x + 1
+cat("second", y, "\n")
+```
+
+Set `results-location: "chunk"` to echo the whole source first and collect every
+result after it:
+
+````typ
+```r
+#| results-location: chunk
+a <- 1
+cat("A", a, "\n")
+b <- 2
+cat("B", b, "\n")
+```
+````
+
+```r
+#| results-location: chunk
+a <- 1
+cat("A", a, "\n")
+b <- 2
+cat("B", b, "\n")
+```
+
+Splitting the source needs an engine that reports which statement produced what,
+which R and Python do. Other engines report the chunk as a single piece, so
+their chunks render the same way under either setting. A chunk renders as one
+piece too when splitting it would break an identity it carries: an `lst-` label
+or `lst-caption`, which names the echoed source as one listing; a `tbl-` label
+or `tbl-caption`, whose table figure would otherwise enclose the source; and a
+`fig-` label or `fig-caption` on a chunk whose images arrive in more than one
+batch, which is wrapped in a single figure for the same reason. Output relocated
+with `#calepin.results` is never split, since it is shown away from the source.
+
 = Output elsewhere
 
 Sometimes you want to run a chunk in one place but show its result somewhere else. Set `results: "hide"` so the chunk runs without showing anything where it is written, give it a `label`, then print its output later with `#calepin.results`:
@@ -166,6 +219,7 @@ These options can be set in `#calepin.setup` as document-wide defaults and overr
   [warning], [`true`], [Include warnings emitted by the engine in the output. When `false`, they are suppressed.],
   [message], [`true`], [Include informational messages emitted by the engine (for example R's `message()` output). When `false`, they are suppressed.],
   [results], [`"render"`], [How results are shown: `render` (pretty display of values, images, and tables), `verbatim` (raw output in a code block), `typst` (treat output text as Typst markup and render it), or `hide` (run the code but omit its output).],
+  [results-location], [`"statement"`], [Where results sit relative to the echoed source: `statement` shows each piece of output below the statement that produced it, `chunk` shows the whole source first and every result after it. See #link("#where-results-appear")[Where results appear].],
   [fig-device-format], [`"svg"`], [Format for figure files written by the engine: `svg`, `png`, `jpeg` (alias `jpg`), or `pdf`. Diagram engines always emit `svg` regardless of this setting.],
   [fig-device-dpi], [`150`], [Resolution in dots per inch for raster formats (`png`, `jpeg`). Ignored for vector formats (`svg`, `pdf`).],
   [fig-device-width], [`6`], [Width of the plotting device, in inches.],

@@ -6,6 +6,7 @@
   echo: true,
   eval: true,
   results: "render",
+  "results-location": "statement",
   warning: true,
   message: true,
   error: false,

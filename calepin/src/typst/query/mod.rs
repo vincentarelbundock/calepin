@@ -478,7 +478,7 @@ fn label_names_from_value(value: &Value) -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typst::model::{EngineName, FencedChunks, ResultsMode, SetupDefaults};
+    use crate::typst::model::{EngineName, FencedChunks, ResultsLocation, ResultsMode, SetupDefaults};
 
     fn metadata(value: &str) -> String {
         format!(r#"[{{"func":"metadata","value":{value},"label":"<calepin-chunk>"}}]"#)
@@ -953,6 +953,7 @@ mod tests {
             eval: true,
             output: true,
             results: ResultsMode::Typst,
+            results_location: ResultsLocation::Statement,
             warning: false,
             message: false,
             error: true,
