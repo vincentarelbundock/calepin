@@ -1,0 +1,24 @@
+{% if section.items or section.sections %}
+{% set calepin_section_foldable = section.title and site.sidebar_fold %}
+{% if calepin_section_foldable %}
+<details class="calepin-website-sidebar-section{% if section.depth %} calepin-website-sidebar-subsection{% endif %}" data-calepin-sidebar-depth="{{ section.depth }}"{% if section.active %} open{% endif %}>
+    <summary>{{ section.title }}</summary>
+{% elif section.title %}
+<p{% if section.depth %} class="calepin-website-sidebar-subsection-title"{% endif %}><strong>{{ section.title }}</strong></p>
+{% endif %}
+{% if section.items %}
+<ul>
+    {% for item in section.items %}
+    {% include "partials/site-sidebar-item.html" %}
+    {% endfor %}
+</ul>
+{% endif %}
+{% for subsection in section.sections %}
+{% with section = subsection %}
+{% include "partials/site-sidebar-section.html" %}
+{% endwith %}
+{% endfor %}
+{% if calepin_section_foldable %}
+</details>
+{% endif %}
+{% endif %}

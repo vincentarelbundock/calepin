@@ -855,6 +855,11 @@ fn push_nav_item_bytes(bytes: &mut Vec<u8>, item: &NavItemModel) {
 
 fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
     let mut bytes = Vec::new();
+    push_nav_section_bytes(&mut bytes, sections);
+    xxh3_64(&bytes)
+}
+
+fn push_nav_section_bytes(bytes: &mut Vec<u8>, sections: &[NavSectionModel]) {
     for section in sections {
         if let Some(language) = &section.language {
             bytes.extend_from_slice(language.as_bytes());
@@ -865,11 +870,11 @@ fn navigation_signature(sections: &[NavSectionModel]) -> u64 {
         }
         bytes.push(0);
         for item in &section.items {
-            push_nav_item_bytes(&mut bytes, item);
+            push_nav_item_bytes(bytes, item);
         }
+        push_nav_section_bytes(bytes, &section.sections);
         bytes.push(0xff);
     }
-    xxh3_64(&bytes)
 }
 
 fn menus_signature(menus: &MenusModel) -> u64 {

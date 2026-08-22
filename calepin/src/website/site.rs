@@ -9,7 +9,7 @@ use crate::utils::html::escape as html_escape;
 
 use super::config::{SearchEngine, WebsiteConfig};
 use super::language::LanguageInfo;
-use super::navigation::{MenusModel, NavSectionModel};
+use super::navigation::{MenusModel, NavItemModel, NavSectionModel};
 use super::pagefind::{base_url_path_prefix, PAGEFIND_CSS, PAGEFIND_DIR, PAGEFIND_JS};
 use super::paths::{join_normalized_under_root, normalize_path, slash_path};
 use super::url::{
@@ -161,33 +161,14 @@ impl SiteModel {
             {
                 continue;
             }
-            let mut items = Vec::new();
-            for item in &section.items {
-                if !item.href.is_empty() && item.href == current_href {
-                    page_title = Some(html_escape(&item.label));
-                }
-                let is_current_page = !item.href.is_empty() && item.href == current_href;
-                let item_href = if item.href.is_empty() {
-                    String::new()
-                } else if is_current_page && section.language.is_some() {
-                    item.href.clone()
-                } else {
-                    links.resolve(current_href, &item.href)
-                };
-                let entry = SiteNavEntry {
-                    href: html_escape(&item_href),
-                    label: html_escape(&item.label),
-                    label_html: item.label_html.clone(),
-                    active: is_current_page,
-                };
-                sidebar.push(entry.clone());
-                items.push(entry);
-            }
-            sidebar_sections.push(SiteNavSection {
-                title: section.title.as_ref().map(|title| html_escape(title)),
-                active: items.iter().any(|item| item.active),
-                items,
-            });
+            let mut builder = SidebarBuilder {
+                current_href,
+                links,
+                language_scoped: section.language.is_some(),
+                flat: &mut sidebar,
+                page_title: &mut page_title,
+            };
+            sidebar_sections.push(builder.section(section, 0));
         }
         let language_entries = languages
             .map(|languages| {
@@ -258,6 +239,66 @@ impl SiteModel {
             toc_depth: None,
             toc_floating: None,
         }
+    }
+}
+
+/// Turns a nav section tree into theme-facing sections, resolving hrefs against
+/// the current page. It also accumulates the flat `site.sidebar` list in
+/// reading order (a section's own items, then each subsection's), which drives
+/// previous/next page navigation.
+struct SidebarBuilder<'a> {
+    current_href: &'a str,
+    links: LinkStyle<'a>,
+    /// Section belongs to one language, so the current page's own link stays
+    /// verbatim rather than being resolved relative to itself.
+    language_scoped: bool,
+    flat: &'a mut Vec<SiteNavEntry>,
+    page_title: &'a mut Option<String>,
+}
+
+impl SidebarBuilder<'_> {
+    fn section(&mut self, section: &NavSectionModel, depth: usize) -> SiteNavSection {
+        let items = section
+            .items
+            .iter()
+            .map(|item| self.entry(item))
+            .collect::<Vec<_>>();
+        let sections = section
+            .sections
+            .iter()
+            .map(|nested| self.section(nested, depth + 1))
+            .collect::<Vec<_>>();
+        let active =
+            items.iter().any(|item| item.active) || sections.iter().any(|nested| nested.active);
+        SiteNavSection {
+            title: section.title.as_ref().map(|title| html_escape(title)),
+            active,
+            items,
+            sections,
+            depth,
+        }
+    }
+
+    fn entry(&mut self, item: &NavItemModel) -> SiteNavEntry {
+        let is_current_page = !item.href.is_empty() && item.href == self.current_href;
+        if is_current_page {
+            *self.page_title = Some(html_escape(&item.label));
+        }
+        let item_href = if item.href.is_empty() {
+            String::new()
+        } else if is_current_page && self.language_scoped {
+            item.href.clone()
+        } else {
+            self.links.resolve(self.current_href, &item.href)
+        };
+        let entry = SiteNavEntry {
+            href: html_escape(&item_href),
+            label: html_escape(&item.label),
+            label_html: item.label_html.clone(),
+            active: is_current_page,
+        };
+        self.flat.push(entry.clone());
+        entry
     }
 }
 

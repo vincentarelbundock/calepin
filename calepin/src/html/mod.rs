@@ -1481,6 +1481,8 @@ mod tests {
                 label_html: title.to_string(),
                 active,
             }],
+            sections: Vec::new(),
+            depth: 0,
         }
     }
 
@@ -1541,6 +1543,8 @@ mod tests {
                         active: true,
                     },
                 ],
+                sections: Vec::new(),
+                depth: 0,
             }],
             ..Default::default()
         };
@@ -1560,6 +1564,87 @@ mod tests {
         assert!(themed.contains(r#"<span>Language</span>"#));
         assert!(!themed.contains(r#"<a href="" aria-label="Language""#));
         assert!(themed.contains(r#"<a href="syntax.html" aria-label="Syntax""#));
+    }
+
+    #[test]
+    fn bundled_website_theme_renders_nested_foldable_sidebar_sections() {
+        let mut nested = sidebar_section("Lazyframe", "collect.html", true);
+        nested.depth = 1;
+        let mut sibling = sidebar_section("Dataframe", "select.html", false);
+        sibling.depth = 1;
+        let site_context = SiteContextInput {
+            sidebar_fold: true,
+            sidebar_sections: vec![SiteNavSection {
+                title: Some("r-polars".to_string()),
+                active: true,
+                items: Vec::new(),
+                sections: vec![nested, sibling],
+                depth: 0,
+            }],
+            ..Default::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        // The parent and the subsection holding the current page both open;
+        // the sibling subsection stays folded.
+        assert!(is_details_open(&themed, "r-polars"));
+        assert!(is_details_open(&themed, "Lazyframe"));
+        assert!(!is_details_open(&themed, "Dataframe"));
+        assert!(themed.contains(r#"<a href="collect.html" aria-label="Lazyframe""#));
+        // Subsections render inside their parent, not as siblings of it.
+        let parent = themed
+            .find("r-polars")
+            .expect("parent section title in sidebar");
+        let close = themed[parent..]
+            .find("</details>")
+            .expect("parent section is a <details>");
+        assert!(themed[parent..parent + close].contains("Lazyframe"));
+    }
+
+    #[test]
+    fn bundled_website_theme_keeps_nested_sections_unfolded_when_fold_disabled() {
+        let mut nested = sidebar_section("Lazyframe", "collect.html", false);
+        nested.depth = 1;
+        let site_context = SiteContextInput {
+            sidebar_fold: false,
+            sidebar_sections: vec![SiteNavSection {
+                title: Some("r-polars".to_string()),
+                active: false,
+                items: Vec::new(),
+                sections: vec![nested],
+                depth: 0,
+            }],
+            ..Default::default()
+        };
+        let entry = entry_for(&ThemeSelection::Default, HtmlScope::Site);
+
+        let themed = theme::apply_html_theme(
+            SAMPLE_HTML,
+            Some(&entry),
+            &HtmlSyntaxTheme::builtin(),
+            None,
+            None,
+            Some(&site_context),
+        )
+        .unwrap();
+
+        assert!(!themed.contains("<summary>r-polars</summary>"));
+        assert!(!themed.contains("<summary>Lazyframe</summary>"));
+        assert!(themed.contains("<p><strong>r-polars</strong></p>"));
+        assert!(themed.contains(
+            r#"<p class="calepin-website-sidebar-subsection-title"><strong>Lazyframe</strong></p>"#
+        ));
+        assert!(themed.contains(r#"<a href="collect.html" aria-label="Lazyframe""#));
     }
 
     #[test]

@@ -110,6 +110,10 @@ pub(crate) struct SiteNavSection {
     pub(crate) title: Option<String>,
     pub(crate) active: bool,
     pub(crate) items: Vec<SiteNavEntry>,
+    /// Nested foldable subsections, rendered after `items`.
+    pub(crate) sections: Vec<SiteNavSection>,
+    /// Nesting depth: 0 for a top-level section, 1 for its children, and so on.
+    pub(crate) depth: usize,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -282,6 +286,8 @@ fn default_site_context(
             title: None,
             active: false,
             items: nav.clone(),
+            sections: Vec::new(),
+            depth: 0,
         }]
     };
     SiteContextInput {

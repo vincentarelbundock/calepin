@@ -171,6 +171,8 @@ impl Default for SidebarConfig {
 pub(super) struct SidebarSectionConfig {
     pub(super) title: Option<String>,
     pub(super) item: Vec<SidebarItemConfig>,
+    /// Nested foldable subsections, rendered after this section's own items.
+    pub(super) section: Vec<SidebarSectionConfig>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]

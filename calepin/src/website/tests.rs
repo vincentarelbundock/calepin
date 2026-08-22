@@ -2216,6 +2216,7 @@ fn theme_context_rewrites_brand_urls_relative_to_current_page() {
                 label: "Usage".to_string(),
                 label_html: html_escape("Usage"),
             }],
+            sections: Vec::new(),
         }],
         MenusModel::default(),
         SiteMetadata {
@@ -2262,6 +2263,7 @@ fn theme_context_includes_global_sidebar_sections_with_language_specific_current
                     label: "About".to_string(),
                     label_html: html_escape("About"),
                 }],
+                sections: Vec::new(),
             },
             NavSectionModel {
                 language: Some("en".to_string()),
@@ -2272,6 +2274,7 @@ fn theme_context_includes_global_sidebar_sections_with_language_specific_current
                     label: "Usage".to_string(),
                     label_html: html_escape("Usage"),
                 }],
+                sections: Vec::new(),
             },
             NavSectionModel {
                 language: Some("fr".to_string()),
@@ -2282,6 +2285,7 @@ fn theme_context_includes_global_sidebar_sections_with_language_specific_current
                     label: "Utilisation".to_string(),
                     label_html: html_escape("Utilisation"),
                 }],
+                sections: Vec::new(),
             },
         ],
         MenusModel::default(),
@@ -2348,6 +2352,7 @@ fn theme_context_rewrites_nav_urls_relative_to_current_page() {
                     label_html: html_escape("Welcome"),
                 },
             ],
+            sections: Vec::new(),
         }],
         MenusModel::default(),
         SiteMetadata::default(),
@@ -2402,6 +2407,7 @@ fn theme_context_keeps_sidebar_subheadings_unlinked() {
                     label_html: html_escape("Syntax"),
                 },
             ],
+            sections: Vec::new(),
         }],
         MenusModel::default(),
         SiteMetadata::default(),
@@ -2446,6 +2452,7 @@ fn theme_context_keeps_sidebar_external_links_absolute() {
                     label_html: html_escape("External docs"),
                 },
             ],
+            sections: Vec::new(),
         }],
         MenusModel::default(),
         SiteMetadata::default(),
@@ -2483,6 +2490,7 @@ fn theme_context_marks_section_containing_current_page_active() {
             label: title.to_string(),
             label_html: html_escape(title),
         }],
+        sections: Vec::new(),
     };
     let site = SiteModel::new(
         vec![
@@ -2509,6 +2517,132 @@ fn theme_context_marks_section_containing_current_page_active() {
     assert!(context.sidebar_fold);
     assert!(!context.sidebar_sections[0].active);
     assert!(context.sidebar_sections[1].active);
+}
+
+#[test]
+fn theme_context_marks_ancestors_of_current_page_section_active() {
+    let leaf = |title: &str, href: &str| NavSectionModel {
+        language: None,
+        title: Some(title.to_string()),
+        items: vec![NavItemModel {
+            language: None,
+            href: href.to_string(),
+            label: title.to_string(),
+            label_html: html_escape(title),
+        }],
+        sections: Vec::new(),
+    };
+    let site = SiteModel::new(
+        vec![NavSectionModel {
+            language: None,
+            title: Some("r-polars".to_string()),
+            items: vec![NavItemModel {
+                language: None,
+                href: "polars/index.html".to_string(),
+                label: "Overview".to_string(),
+                label_html: html_escape("Overview"),
+            }],
+            sections: vec![
+                leaf("lazyframe", "polars/lazyframe/collect.html"),
+                leaf("dataframe", "polars/dataframe/select.html"),
+            ],
+        }],
+        MenusModel::default(),
+        SiteMetadata::default(),
+        true,
+    );
+
+    let context = site.theme_context(
+        "polars/lazyframe/collect.html",
+        None,
+        &PageInfoMap::new(),
+        None,
+        None,
+        PageFlags {
+            publish_source: true,
+            fallback: false,
+        },
+    );
+
+    let parent = &context.sidebar_sections[0];
+    assert!(
+        parent.active,
+        "section containing the page's subsection is active"
+    );
+    assert_eq!(parent.depth, 0);
+    assert!(parent.sections[0].active);
+    assert_eq!(parent.sections[0].depth, 1);
+    assert!(!parent.sections[1].active);
+
+    // The flat sidebar drives previous/next navigation, so it lists nested
+    // pages in reading order: a section's own items, then its subsections'.
+    assert_eq!(
+        context
+            .sidebar
+            .iter()
+            .map(|entry| entry.label.clone())
+            .collect::<Vec<_>>(),
+        vec![
+            "Overview".to_string(),
+            "lazyframe".to_string(),
+            "dataframe".to_string(),
+        ]
+    );
+    assert_eq!(context.page_title.as_deref(), Some("lazyframe"));
+}
+
+#[test]
+fn discover_site_pages_resolves_nested_sidebar_sections() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path();
+    fs::create_dir_all(src.join("polars/lazyframe")).unwrap();
+    fs::write(src.join("polars/index.typ"), "= Overview\n").unwrap();
+    fs::write(src.join("polars/lazyframe/collect.typ"), "= Collect\n").unwrap();
+    fs::write(src.join("polars/lazyframe/fetch.typ"), "= Fetch\n").unwrap();
+    let sidebar = SidebarConfig {
+        section: vec![SidebarSectionConfig {
+            title: Some("r-polars".to_string()),
+            item: vec![SidebarItemConfig {
+                target: Some("polars/index.typ".to_string()),
+                ..SidebarItemConfig::default()
+            }],
+            section: vec![SidebarSectionConfig {
+                title: Some("lazyframe".to_string()),
+                item: vec![SidebarItemConfig {
+                    glob: Some("polars/lazyframe/*.typ".to_string()),
+                    ..SidebarItemConfig::default()
+                }],
+                ..SidebarSectionConfig::default()
+            }],
+        }],
+        ..SidebarConfig::default()
+    };
+
+    let (sections, files) =
+        discover_site_pages(src, Some(&sidebar), None, &None, Path::new(".calepin")).unwrap();
+
+    assert_eq!(sections.len(), 1);
+    let parent = &sections[0];
+    assert_eq!(parent.title.as_deref(), Some("r-polars"));
+    assert_eq!(parent.items.len(), 1);
+    assert_eq!(parent.sections.len(), 1);
+    assert_eq!(parent.sections[0].title.as_deref(), Some("lazyframe"));
+    assert_eq!(parent.sections[0].items.len(), 2);
+
+    // Pages listed only in a nested section still get built.
+    let mut rels = files
+        .iter()
+        .map(|path| rel_posix(src, path))
+        .collect::<Vec<_>>();
+    rels.sort();
+    assert_eq!(
+        rels,
+        vec![
+            "polars/index.typ".to_string(),
+            "polars/lazyframe/collect.typ".to_string(),
+            "polars/lazyframe/fetch.typ".to_string(),
+        ]
+    );
 }
 
 #[test]
@@ -2782,6 +2916,7 @@ fn nav_from_plans_uses_metadata_title_then_stem() {
                 weight: None,
             },
         ],
+        sections: Vec::new(),
     }];
     let meta = PageMetaMap::from([(
         titled.clone(),
@@ -2817,6 +2952,7 @@ fn nav_from_plans_uses_configured_labels_for_sidebar_external_targets() {
             configured_aria_label: None,
             weight: None,
         }],
+        sections: Vec::new(),
     }];
     let icon_temp = tempfile::tempdir().unwrap();
     let mut icon_cache = IconCache::new(icon_temp.path(), Path::new(ICON_CACHE_DIR));
@@ -4654,6 +4790,7 @@ fn fallback_site_model(base_url: Option<&str>) -> SiteModel {
                 label: "Usage".to_string(),
                 label_html: html_escape("Usage"),
             }],
+            sections: Vec::new(),
         }],
         MenusModel::default(),
         SiteMetadata {

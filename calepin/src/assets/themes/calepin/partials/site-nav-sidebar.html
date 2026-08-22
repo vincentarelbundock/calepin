@@ -26,27 +26,7 @@
             <nav aria-label="Documentation">
                 {% if site.sidebar_sections %}
                     {% for section in site.sidebar_sections %}
-                    {% if section.items %}
-                    {% if section.title and site.sidebar_fold %}
-                    <details class="calepin-website-sidebar-section"{% if section.active %} open{% endif %}>
-                        <summary>{{ section.title }}</summary>
-                        <ul>
-                            {% for item in section.items %}
-                            {% include "partials/site-sidebar-item.html" %}
-                            {% endfor %}
-                        </ul>
-                    </details>
-                    {% else %}
-                    {% if section.title %}
-                    <p><strong>{{ section.title }}</strong></p>
-                    {% endif %}
-                    <ul>
-                        {% for item in section.items %}
-                        {% include "partials/site-sidebar-item.html" %}
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
-                    {% endif %}
+                    {% include "partials/site-sidebar-section.html" %}
                     {% endfor %}
                 {% elif site.sidebar %}
                     <ul>

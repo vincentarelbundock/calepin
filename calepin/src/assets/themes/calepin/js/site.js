@@ -240,6 +240,9 @@
 
   // ------------------------------------------------------ sidebar sections
 
+  // Only one section is open at a time, but "section" means siblings: opening a
+  // nested subsection must not fold the parent it lives in, and must only fold
+  // its own siblings.
   function initSidebarSections() {
     const sections = Array.from(
       document.querySelectorAll(".calepin-website-sidebar-section"),
@@ -250,7 +253,9 @@
       section.addEventListener("toggle", () => {
         if (!section.open) return;
         sections.forEach((other) => {
-          if (other !== section) other.removeAttribute("open");
+          if (other === section) return;
+          if (other.parentElement !== section.parentElement) return;
+          other.removeAttribute("open");
         });
       });
     });

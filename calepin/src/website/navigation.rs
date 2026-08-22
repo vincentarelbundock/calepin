@@ -10,7 +10,9 @@ use crate::utils::html::escape as html_escape;
 use crate::utils::static_files::{collect_files_by, path_has_common_skip_dir};
 use crate::utils::url::output_href_with_extension;
 
-use super::config::{FooterConfig, MenuItemConfig, PagesConfig, SidebarConfig, StaticConfig};
+use super::config::{
+    FooterConfig, MenuItemConfig, PagesConfig, SidebarConfig, SidebarSectionConfig, StaticConfig,
+};
 use super::icons::{accessible_nav_label, nav_label_html, IconCache};
 use super::language::LanguageInfo;
 use super::metadata::{PageMeta, PageMetaMap};
@@ -27,6 +29,8 @@ pub(super) struct NavSectionModel {
     pub(super) language: Option<String>,
     pub(super) title: Option<String>,
     pub(super) items: Vec<NavItemModel>,
+    /// Nested foldable subsections, rendered after `items`.
+    pub(super) sections: Vec<NavSectionModel>,
 }
 
 #[derive(Debug, Clone)]
@@ -95,6 +99,8 @@ pub(super) struct NavSectionPlan {
     pub(super) language: Option<String>,
     pub(super) title: Option<String>,
     pub(super) items: Vec<NavItemPlan>,
+    /// Nested foldable subsections, rendered after `items`.
+    pub(super) sections: Vec<NavSectionPlan>,
 }
 
 struct NavItemInput<'a> {
@@ -174,11 +180,7 @@ pub(super) fn discover_site_pages(
         )?;
         language_files.retain(|path| !is_nested_language_page(path, language, languages));
         for section in &mut language_sections {
-            section.items.retain(|item| {
-                item.path
-                    .as_ref()
-                    .is_none_or(|path| !is_nested_language_page(path, language, languages))
-            });
+            retain_section_language_items(section, language, languages);
         }
         sections.append(&mut language_sections);
         files.append(&mut language_files);
@@ -256,6 +258,23 @@ fn retain_language_specific_menu_items(plan: &mut MenusPlan) {
     }
 }
 
+/// Drops pages belonging to a nested language from a section and, recursively,
+/// from its subsections.
+fn retain_section_language_items(
+    section: &mut NavSectionPlan,
+    current: &LanguageInfo,
+    languages: &[LanguageInfo],
+) {
+    section.items.retain(|item| {
+        item.path
+            .as_ref()
+            .is_none_or(|path| !is_nested_language_page(path, current, languages))
+    });
+    for nested in &mut section.sections {
+        retain_section_language_items(nested, current, languages);
+    }
+}
+
 fn is_nested_language_page(
     path: &Path,
     current: &LanguageInfo,
@@ -293,6 +312,7 @@ pub(super) fn discover_pages(
                 language,
                 title: None,
                 items,
+                sections: Vec::new(),
             }],
             files,
         ));
@@ -313,34 +333,70 @@ pub(super) fn discover_pages(
     let mut build_files = Vec::new();
 
     for section_config in &sidebar.section {
-        let inputs = section_config
-            .item
-            .iter()
-            .map(|item| NavItemInput {
-                target: item.target.as_deref(),
-                glob: item.glob.as_deref(),
-                label: item.label.as_deref(),
-                aria_label: None,
-                weight: None,
-            })
-            .collect::<Vec<_>>();
-        let mut resolution = NavItemResolution {
-            surface: NavSurface::Sidebar,
+        let mut context = SidebarSectionContext {
             src_dir,
             pages,
             all_typ_files: &all_typ_files,
             used: &mut used,
             build_files: &mut build_files,
         };
-        let items = resolve_nav_item_plans(&mut resolution, &inputs)?;
-        sections.push(NavSectionPlan {
-            language: language.clone(),
-            title: section_config.title.clone(),
-            items,
-        });
+        sections.push(sidebar_section_plan(
+            section_config,
+            language.as_ref(),
+            &mut context,
+        )?);
     }
 
     Ok((sections, build_files))
+}
+
+struct SidebarSectionContext<'a> {
+    src_dir: &'a Path,
+    pages: Option<&'a PagesConfig>,
+    all_typ_files: &'a [PathBuf],
+    used: &'a mut BTreeSet<PathBuf>,
+    build_files: &'a mut Vec<PathBuf>,
+}
+
+/// Resolves one sidebar section and, recursively, its nested subsections. A
+/// section's own items come first; nested sections follow in configured order.
+fn sidebar_section_plan(
+    section_config: &SidebarSectionConfig,
+    language: Option<&String>,
+    context: &mut SidebarSectionContext<'_>,
+) -> Result<NavSectionPlan> {
+    let inputs = section_config
+        .item
+        .iter()
+        .map(|item| NavItemInput {
+            target: item.target.as_deref(),
+            glob: item.glob.as_deref(),
+            label: item.label.as_deref(),
+            aria_label: None,
+            weight: None,
+        })
+        .collect::<Vec<_>>();
+    let items = {
+        let mut resolution = NavItemResolution {
+            surface: NavSurface::Sidebar,
+            src_dir: context.src_dir,
+            pages: context.pages,
+            all_typ_files: context.all_typ_files,
+            used: context.used,
+            build_files: context.build_files,
+        };
+        resolve_nav_item_plans(&mut resolution, &inputs)?
+    };
+    let mut sections = Vec::new();
+    for nested in &section_config.section {
+        sections.push(sidebar_section_plan(nested, language, context)?);
+    }
+    Ok(NavSectionPlan {
+        language: language.cloned(),
+        title: section_config.title.clone(),
+        items,
+        sections,
+    })
 }
 
 pub(super) fn discover_menus(
@@ -940,28 +996,41 @@ pub(super) fn nav_from_plans(
 ) -> Result<Vec<NavSectionModel>> {
     sections
         .iter()
-        .map(|section| {
-            let items = section
-                .items
-                .iter()
-                .map(|item| {
-                    nav_item_model(
-                        item,
-                        section.language.clone(),
-                        page_meta,
-                        page_info,
-                        icon_cache,
-                        NavSurface::Sidebar,
-                    )
-                })
-                .collect::<Result<Vec<_>>>()?;
-            Ok(NavSectionModel {
-                language: section.language.clone(),
-                title: section.title.clone(),
-                items,
-            })
-        })
+        .map(|section| nav_section_model(section, page_meta, page_info, icon_cache))
         .collect()
+}
+
+fn nav_section_model(
+    section: &NavSectionPlan,
+    page_meta: &PageMetaMap,
+    page_info: &PageInfoMap,
+    icon_cache: &mut IconCache,
+) -> Result<NavSectionModel> {
+    let items = section
+        .items
+        .iter()
+        .map(|item| {
+            nav_item_model(
+                item,
+                section.language.clone(),
+                page_meta,
+                page_info,
+                icon_cache,
+                NavSurface::Sidebar,
+            )
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let sections = section
+        .sections
+        .iter()
+        .map(|nested| nav_section_model(nested, page_meta, page_info, icon_cache))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(NavSectionModel {
+        language: section.language.clone(),
+        title: section.title.clone(),
+        items,
+        sections,
+    })
 }
 
 pub(super) fn menus_from_plan(
