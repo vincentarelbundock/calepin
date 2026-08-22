@@ -1,5 +1,5 @@
 [workspace]
-members = ["calepin"]
+members = ["calepin", "calepin-docs"]
 resolver = "2"
 
 [profile.profiling]

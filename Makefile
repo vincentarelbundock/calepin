@@ -1,4 +1,4 @@
-.PHONY: help build build-release release install clean test check version bump editors vscode vsx positron vscode-package vscode-sync-version vscode-stage-binary vscode-package-target vscode-package-universal vscode-publish vscode-compile cli-reference website serve
+.PHONY: help build build-release release install clean test check version bump editors vscode vsx positron vscode-package vscode-sync-version vscode-stage-binary vscode-package-target vscode-package-universal vscode-publish vscode-compile cli-reference api-reference website serve
 
 # Package version, parsed from the CLI crate manifest.
 VERSION := $(shell awk -F'"' '/^version/ { print $$2; exit }' calepin/Cargo.toml)
@@ -82,6 +82,7 @@ clean:  ## Remove build artifacts
 
 test:  ## Run unit tests
 	cargo test --manifest-path calepin/Cargo.toml
+	cargo test -p calepin-docs
 
 check:  ## Run cargo check (fast compile check)
 	cargo check --manifest-path calepin/Cargo.toml
@@ -185,3 +186,10 @@ website: ## Render docs-src/ into docs/ via calepin compile directory mode
 serve:  ## Build and serve the website at http://$(HOST):$(PORT)
 	$(MAKE) website
 	cargo run --manifest-path calepin/Cargo.toml -- serve $(SITE_DIR) --host $(HOST) --port $(PORT)
+
+api-reference:  ## Generate Typst API reference pages from a Python package (PACKAGE=path [OUT=dir])
+	@test -n "$(PACKAGE)" || { \
+		echo "usage: make api-reference PACKAGE=<python package dir or .py file> [OUT=<dir>]"; \
+		exit 1; \
+	}
+	cargo run -q -p calepin-docs -- "$(PACKAGE)" --out "$(if $(OUT),$(OUT),docs-src/reference/api)"

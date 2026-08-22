@@ -1,0 +1,19 @@
+[package]
+name = "calepin-docs"
+version = "0.0.1"
+edition = "2021"
+description = "Generate Typst API reference pages from Python source"
+license = "MIT"
+repository = "https://github.com/vincentarelbundock/calepin"
+publish = false
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.6", features = ["derive"] }
+pydocstring = "0.4.1"
+ruff_python_ast = "=0.0.10"
+ruff_python_parser = "=0.0.10"
+ruff_text_size = "0.0.10"
+
+[dev-dependencies]
+tempfile = "3.27.0"
