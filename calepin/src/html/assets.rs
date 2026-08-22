@@ -1,7 +1,12 @@
 use anyhow::{Context, Result};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
-pub(super) fn inline_html_images(html: &str, root: &Path, base_dir: &Path) -> Result<String> {
+pub(super) fn inline_html_images(
+    html: &str,
+    root: &Path,
+    base_dir: &Path,
+    page_dir: Option<&Path>,
+) -> Result<String> {
     let mut out = String::with_capacity(html.len());
     let mut rest = html;
 
@@ -13,7 +18,12 @@ pub(super) fn inline_html_images(html: &str, root: &Path, base_dir: &Path) -> Re
             return Ok(out);
         };
         let tag_end = tag_end + 1;
-        out.push_str(&inline_img_tag(&tag_and_after[..tag_end], root, base_dir)?);
+        out.push_str(&inline_img_tag(
+            &tag_and_after[..tag_end],
+            root,
+            base_dir,
+            page_dir,
+        )?);
         rest = &tag_and_after[tag_end..];
     }
 
@@ -21,7 +31,12 @@ pub(super) fn inline_html_images(html: &str, root: &Path, base_dir: &Path) -> Re
     Ok(out)
 }
 
-fn inline_img_tag(tag: &str, root: &Path, base_dir: &Path) -> Result<String> {
+fn inline_img_tag(
+    tag: &str,
+    root: &Path,
+    base_dir: &Path,
+    page_dir: Option<&Path>,
+) -> Result<String> {
     let Some((value_start, value_end, src)) = find_src_attr(tag) else {
         return Ok(tag.to_string());
     };
@@ -29,12 +44,12 @@ fn inline_img_tag(tag: &str, root: &Path, base_dir: &Path) -> Result<String> {
         return Ok(tag.to_string());
     }
 
-    let Some(path) = resolve_html_asset_path(src, root, base_dir) else {
+    let Some(path) = resolve_html_asset_path(src, root, base_dir)
+        .filter(|path| path.exists())
+        .or_else(|| page_relative_asset_path(src, root, page_dir?))
+    else {
         return Ok(tag.to_string());
     };
-    if !path.exists() {
-        return Ok(tag.to_string());
-    }
 
     let data =
         std::fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
@@ -122,6 +137,35 @@ fn resolve_html_asset_path(src: &str, root: &Path, base_dir: &Path) -> Option<Pa
     } else {
         base_dir.join(path)
     })
+}
+
+/// Resolve an asset reference the website runtime rewrote from a root-relative
+/// path into a page-relative one. Those URLs are relative to the page's place
+/// in the *output* tree, where generated figures never exist, so they are
+/// re-anchored on the project root before the file is read.
+fn page_relative_asset_path(src: &str, root: &Path, page_dir: &Path) -> Option<PathBuf> {
+    let src = src.split(['?', '#']).next().unwrap_or(src);
+    let path = Path::new(src);
+    if src.is_empty() || src.starts_with('/') || path.is_absolute() {
+        return None;
+    }
+    let mut relative = PathBuf::new();
+    for component in page_dir.join(path).components() {
+        match component {
+            Component::CurDir => {}
+            // A reference that climbs above the site root is not addressable
+            // from the project root either.
+            Component::ParentDir => {
+                if !relative.pop() {
+                    return None;
+                }
+            }
+            Component::Normal(part) => relative.push(part),
+            Component::RootDir | Component::Prefix(_) => return None,
+        }
+    }
+    let resolved = root.join(relative);
+    resolved.is_file().then_some(resolved)
 }
 
 fn html_asset_mime(path: &Path) -> &'static str {

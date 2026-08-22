@@ -381,6 +381,7 @@ pub(crate) fn postprocess_html_output(
     html_entry: Option<&crate::theme::HtmlEntry>,
     syntax_theme: &HtmlSyntaxTheme,
     site_context: Option<&SiteContextInput>,
+    current_href: Option<&str>,
     minify_html: bool,
 ) -> Result<()> {
     if !output.exists() {
@@ -394,7 +395,7 @@ pub(crate) fn postprocess_html_output(
         &layout.root,
         site_context,
     )?;
-    inline_html_images_file(output, &layout.root)?;
+    inline_html_images_file(output, &layout.root, current_href)?;
     if minify_html {
         minify_html_file(output)?;
     }
@@ -408,6 +409,7 @@ pub(crate) fn postprocess_compiled_html_output(
     html_entry: Option<&crate::theme::HtmlEntry>,
     syntax_theme: &HtmlSyntaxTheme,
     site_context: Option<&SiteContextInput>,
+    current_href: Option<&str>,
     minify_html: bool,
 ) -> Result<()> {
     if !output.exists() {
@@ -422,6 +424,7 @@ pub(crate) fn postprocess_compiled_html_output(
         html_entry,
         syntax_theme,
         site_context,
+        current_href,
         minify_html,
     )
 }
@@ -496,6 +499,7 @@ pub fn compile_with_typst(
             html_entry,
             syntax_theme,
             options.site_context,
+            options.current_href_input,
             options.minify_html,
         )?;
     }
@@ -608,11 +612,18 @@ mod tests {
         let missing = dir.path().join("paper.html");
         let syntax_theme = HtmlSyntaxTheme::builtin();
 
-        postprocess_html_output(&missing, &layout, None, &syntax_theme, None, false).unwrap();
-        let err =
-            postprocess_compiled_html_output(&missing, &layout, None, &syntax_theme, None, false)
-                .unwrap_err()
-                .to_string();
+        postprocess_html_output(&missing, &layout, None, &syntax_theme, None, None, false).unwrap();
+        let err = postprocess_compiled_html_output(
+            &missing,
+            &layout,
+            None,
+            &syntax_theme,
+            None,
+            None,
+            false,
+        )
+        .unwrap_err()
+        .to_string();
 
         assert!(err.contains("missing HTML output"), "{err}");
     }

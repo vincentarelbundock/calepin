@@ -19,7 +19,12 @@ fn has_command(command: &str) -> bool {
 fn output_items(chunk: &serde_json::Value) -> Vec<&serde_json::Value> {
     chunk["items"]
         .as_array()
-        .map(|items| items.iter().filter(|item| item["type"] != "source").collect())
+        .map(|items| {
+            items
+                .iter()
+                .filter(|item| item["type"] != "source")
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -78,6 +83,51 @@ fn academic_website_scaffold_builds_blog_with_local_thumbnail() {
         site.join("blog.html").is_file(),
         "website build should produce blog.html"
     );
+}
+
+#[test]
+fn website_pages_inline_generated_figures_at_every_depth() {
+    if !has_command("typst") || !has_command("Rscript") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    let site = dir.path().join("site");
+    std::fs::create_dir_all(site.join("guide")).unwrap();
+    std::fs::write(site.join("calepin.toml"), "title = \"Figures\"\n").unwrap();
+    let page = r##"#import "/.calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: false, eval: true)
+
+#calepin.chunk("r")[```
+plot(1:3)
+```]
+"##;
+    std::fs::write(site.join("index.typ"), page).unwrap();
+    std::fs::write(site.join("guide/writing.typ"), page).unwrap();
+
+    let build = Command::new(calepin_bin())
+        .args(["compile", "site", "out", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to build website");
+    assert!(
+        build.status.success(),
+        "website build failed:\n{}",
+        String::from_utf8_lossy(&build.stderr)
+    );
+
+    for page in ["index.html", "guide/writing.html"] {
+        let html = std::fs::read_to_string(dir.path().join("out").join(page)).unwrap();
+        assert!(
+            html.contains("data:image/svg+xml;base64,"),
+            "{page} should embed its generated figure:\n{html}"
+        );
+        assert!(
+            !html.contains("figures/chunk-"),
+            "{page} should not reference a figure path that the output never contains:\n{html}"
+        );
+    }
 }
 
 fn typst_accessible_tempdir() -> tempfile::TempDir {
@@ -348,7 +398,10 @@ print(x + 1)
     assert_eq!(results["schema"], 2);
     assert_eq!(results["chunks"]["chunk-1"]["engine"], "python");
     assert!(results["chunks"]["chunk-1"].get("cached").is_none());
-    assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["type"], "stream");
+    assert_eq!(
+        output_items(&results["chunks"]["chunk-1"])[0]["type"],
+        "stream"
+    );
     assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["text"], "42");
 
     let preview = Command::new("typst")
@@ -580,7 +633,10 @@ print("cached")
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
     assert_eq!(results["chunks"]["chunk-1"]["options"]["fig-width"], "10%");
-    assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["text"], "cached");
+    assert_eq!(
+        output_items(&results["chunks"]["chunk-1"])[0]["text"],
+        "cached"
+    );
     assert_eq!(
         std::fs::read_to_string(dir.path().join("cache-runs.txt")).unwrap(),
         "1"
@@ -1463,7 +1519,10 @@ print(region, min_count)
         &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(output_items(&results["chunks"]["chunk-1"])[0]["text"], "NY 25");
+    assert_eq!(
+        output_items(&results["chunks"]["chunk-1"])[0]["text"],
+        "NY 25"
+    );
     assert_eq!(results["store"]["region"], "NY");
     assert!(!dir.path().join(".calepin/paper/vars.json").exists());
 }
@@ -2683,11 +2742,7 @@ fn compile_keeps_entry_files_when_asked() {
 #[test]
 fn script_extraction_leaves_no_entry_files_behind() {
     let dir = typst_accessible_tempdir();
-    std::fs::write(
-        dir.path().join("paper.typ"),
-        "```{python}\nprint(1)\n```\n",
-    )
-    .unwrap();
+    std::fs::write(dir.path().join("paper.typ"), "```{python}\nprint(1)\n```\n").unwrap();
 
     let output = Command::new(calepin_bin())
         .args(["compile", "paper.typ", "--format", "script", "--quiet"])

@@ -51,10 +51,22 @@ pub(crate) fn apply_html_theme_file_with_site_context(
     })
 }
 
-pub(crate) fn inline_html_images_file(path: &Path, root: &Path) -> Result<()> {
+pub(crate) fn inline_html_images_file(
+    path: &Path,
+    root: &Path,
+    page_href: Option<&str>,
+) -> Result<()> {
     let base_dir = path.parent().unwrap_or(root);
+    // Website pages address assets relative to their own href, so the page
+    // directory is what those references are anchored on.
+    let page_dir = page_href.map(|href| {
+        Path::new(href)
+            .parent()
+            .unwrap_or(Path::new(""))
+            .to_path_buf()
+    });
     rewrite_file_in_place(path, |source| {
-        assets::inline_html_images(source, root, base_dir)
+        assets::inline_html_images(source, root, base_dir, page_dir.as_deref())
     })
 }
 
@@ -442,7 +454,7 @@ mod tests {
         std::fs::write(&image, "<svg></svg>").unwrap();
         let html = r#"<figure><img src="/.calepin/paper/figures/fig.svg" alt=""></figure>"#;
 
-        let inlined = assets::inline_html_images(html, dir.path(), dir.path()).unwrap();
+        let inlined = assets::inline_html_images(html, dir.path(), dir.path(), None).unwrap();
 
         assert!(inlined.contains(r#"src="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=""#));
     }
@@ -454,9 +466,49 @@ mod tests {
         std::fs::write(&image, [0_u8, 1, 2]).unwrap();
         let html = r#"<img alt="x" src='fig.png'>"#;
 
-        let inlined = assets::inline_html_images(html, dir.path(), dir.path()).unwrap();
+        let inlined = assets::inline_html_images(html, dir.path(), dir.path(), None).unwrap();
 
         assert!(inlined.contains("src='data:image/png;base64,AAEC'"));
+    }
+
+    #[test]
+    fn html_image_inliner_embeds_page_relative_images_from_the_project_root() {
+        // Website pages address assets relative to their own href, which points
+        // into the output tree rather than at the generated figure.
+        let dir = tempfile::tempdir().unwrap();
+        let image = dir
+            .path()
+            .join(".calepin/guide/writing/figures/chunk-1.svg");
+        std::fs::create_dir_all(image.parent().unwrap()).unwrap();
+        std::fs::write(&image, "<svg></svg>").unwrap();
+        let html = r#"<img src="../.calepin/guide/writing/figures/chunk-1.svg">"#;
+
+        let inlined = assets::inline_html_images(
+            html,
+            dir.path(),
+            &dir.path().join("out/guide"),
+            Some(Path::new("guide")),
+        )
+        .unwrap();
+
+        assert!(inlined.contains(r#"src="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=""#));
+    }
+
+    #[test]
+    fn html_image_inliner_leaves_references_above_the_site_root() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("fig.svg"), "<svg></svg>").unwrap();
+        let html = r#"<img src="../../fig.svg">"#;
+
+        let inlined = assets::inline_html_images(
+            html,
+            dir.path(),
+            &dir.path().join("out/guide"),
+            Some(Path::new("guide")),
+        )
+        .unwrap();
+
+        assert_eq!(inlined, html);
     }
 
     #[test]
@@ -467,7 +519,7 @@ mod tests {
             r#"<img src="data:image/png;base64,AA==">"#
         );
 
-        let inlined = assets::inline_html_images(html, dir.path(), dir.path()).unwrap();
+        let inlined = assets::inline_html_images(html, dir.path(), dir.path(), None).unwrap();
 
         assert_eq!(inlined, html);
     }

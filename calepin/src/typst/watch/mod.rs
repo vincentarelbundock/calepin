@@ -95,6 +95,7 @@ fn start_html_output_postprocessor(
                     html_entry.as_ref(),
                     &syntax_theme,
                     current_site_context.as_ref(),
+                    None,
                     false,
                 ) {
                     cwarn!("failed to postprocess watched HTML output: {}", error);
