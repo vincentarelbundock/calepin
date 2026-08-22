@@ -98,6 +98,16 @@ fn entry_dict(
     type_annotation: Option<&str>,
     description: Option<&str>,
 ) -> String {
+    entry_dict_from(name, type_annotation, description, None)
+}
+
+/// As [`entry_dict`], but recording the base class a member was inherited from.
+fn entry_dict_from(
+    name: Option<&str>,
+    type_annotation: Option<&str>,
+    description: Option<&str>,
+    inherited_from: Option<&str>,
+) -> String {
     let mut fields = Vec::new();
     if let Some(name) = name {
         fields.push(format!("name: \"{}\"", escape_string(name)));
@@ -106,7 +116,10 @@ fn entry_dict(
         fields.push(format!("type: \"{}\"", escape_string(ty)));
     }
     let description = description.unwrap_or("").trim();
-    fields.push(format!("desc: [{}]", render_prose(description)));
+    fields.push(format!("desc: [{}]", render_body(description)));
+    if let Some(source) = inherited_from {
+        fields.push(format!("from: \"{}\"", escape_string(source)));
+    }
     format!("(  {}  )", fields.join(", "))
 }
 
@@ -277,6 +290,9 @@ fn render_function_call(function: &Function, call: &str) -> String {
 
     let mut out = format!("#{call}(\n");
     out.push_str(&string_arg("name", &function.name));
+    if let Some(source) = &function.inherited_from {
+        out.push_str(&string_arg("inherited", source));
+    }
     out.push_str(&string_arg("qualname", &function.qualname));
     out.push_str(&string_arg("signature", &function.signature()));
 
@@ -361,10 +377,11 @@ pub fn render_class(class: &Class) -> String {
             .iter()
             .any(|entry| entry.contains(&format!("name: \"{}\"", escape_string(&attribute.name))));
         if !already_documented {
-            attributes.push(entry_dict(
+            attributes.push(entry_dict_from(
                 Some(&attribute.name),
                 attribute.annotation.as_deref(),
-                None,
+                attribute.description.as_deref(),
+                attribute.inherited_from.as_deref(),
             ));
         }
     }

@@ -255,6 +255,9 @@ fn render_block(block: &Block) -> String {
 /// Typst knows languages by their common name; `py` is the one abbreviation
 /// that shows up often enough in docstrings to be worth mapping.
 fn normalize_language(language: &str) -> &str {
+    // Quarto and RMarkdown fences name the engine in braces (```{{python}}),
+    // which survives `str.format` as `{python}`. Typst wants the bare name.
+    let language = language.trim_matches(['{', '}']);
     match language {
         "py" => "python",
         other => other,

@@ -519,3 +519,213 @@ fn prose_without_markdown_constructs_is_left_to_the_plain_escaper() {
     use calepin_docs::markdown::looks_like_markdown;
     assert!(!looks_like_markdown("Just a sentence about *args and _x."));
 }
+
+// --- properties and inheritance -----------------------------------------
+
+fn class_of(item: &ApiItem) -> &calepin_docs::model::Class {
+    match item {
+        ApiItem::Class(c) => c,
+        _ => panic!("expected a class"),
+    }
+}
+
+#[test]
+fn a_property_is_documented_as_an_attribute_not_a_method() {
+    let module = parse_source(
+        "class C:\n    @property\n    def size(self) -> int:\n        \"\"\"How big.\"\"\"\n"
+            .to_string(),
+    )
+    .unwrap();
+    let items = calepin_docs::extract::public_items(&module, "m");
+    let class = class_of(&items[0]);
+
+    assert!(class.methods.is_empty(), "property leaked into methods");
+    assert_eq!(class.attributes.len(), 1);
+    assert_eq!(class.attributes[0].annotation.as_deref(), Some("int"));
+    assert_eq!(class.attributes[0].description.as_deref(), Some("How big."));
+}
+
+#[test]
+fn a_property_setter_does_not_duplicate_its_getter() {
+    let module = parse_source(
+        "class C:\n    @property\n    def x(self) -> int: ...\n    @x.setter\n    def x(self, v: int) -> None: ...\n"
+            .to_string(),
+    )
+    .unwrap();
+    let class_items = calepin_docs::extract::public_items(&module, "m");
+    let class = class_of(&class_items[0]);
+
+    assert_eq!(class.attributes.len(), 1);
+    assert!(class.methods.is_empty());
+}
+
+#[test]
+fn inherited_methods_are_merged_and_attributed_to_their_base() {
+    let fixture = Fixture::new();
+    fixture
+        .write(
+            "pkg/__init__.py",
+            "from .d import Child\n__all__ = [\"Child\"]\n",
+        )
+        .write("pkg/b.py", "class Parent:\n    def shared(self): ...\n")
+        .write(
+            "pkg/d.py",
+            "from .b import Parent\nclass Child(Parent):\n    def own(self): ...\n",
+        );
+
+    let resolution = Package::open(&fixture.package("pkg"))
+        .unwrap()
+        .resolve()
+        .unwrap();
+    let class = class_of(&resolution.items[0]);
+
+    let shared = class.methods.iter().find(|m| m.name == "shared").unwrap();
+    assert_eq!(shared.inherited_from.as_deref(), Some("pkg.b.Parent"));
+    let own = class.methods.iter().find(|m| m.name == "own").unwrap();
+    assert!(own.inherited_from.is_none());
+}
+
+#[test]
+fn an_override_wins_over_the_inherited_definition() {
+    let fixture = Fixture::new();
+    fixture
+        .write("pkg/__init__.py", "from .d import Child\n__all__ = [\"Child\"]\n")
+        .write("pkg/b.py", "class Parent:\n    def m(self):\n        \"\"\"Parent.\"\"\"\n")
+        .write(
+            "pkg/d.py",
+            "from .b import Parent\nclass Child(Parent):\n    def m(self):\n        \"\"\"Child.\"\"\"\n",
+        );
+
+    let resolution = Package::open(&fixture.package("pkg"))
+        .unwrap()
+        .resolve()
+        .unwrap();
+    let class = class_of(&resolution.items[0]);
+
+    let overrides: Vec<_> = class.methods.iter().filter(|m| m.name == "m").collect();
+    assert_eq!(overrides.len(), 1, "override was duplicated");
+    assert_eq!(overrides[0].docstring.as_deref(), Some("Child."));
+    assert!(overrides[0].inherited_from.is_none());
+}
+
+#[test]
+fn a_grandparent_member_keeps_its_own_attribution() {
+    let fixture = Fixture::new();
+    fixture
+        .write("pkg/__init__.py", "from .d import C\n__all__ = [\"C\"]\n")
+        .write(
+            "pkg/b.py",
+            "class A:\n    def old(self): ...\nclass B(A):\n    def mid(self): ...\n",
+        )
+        .write("pkg/d.py", "from .b import B\nclass C(B): ...\n");
+
+    let resolution = Package::open(&fixture.package("pkg"))
+        .unwrap()
+        .resolve()
+        .unwrap();
+    let class = class_of(&resolution.items[0]);
+
+    let old = class.methods.iter().find(|m| m.name == "old").unwrap();
+    assert_eq!(old.inherited_from.as_deref(), Some("pkg.b.A"));
+}
+
+#[test]
+fn a_constructor_is_never_inherited() {
+    // `__init__` describes how to build *this* class; a base's is misleading.
+    let fixture = Fixture::new();
+    fixture
+        .write(
+            "pkg/__init__.py",
+            "from .d import Child\n__all__ = [\"Child\"]\n",
+        )
+        .write(
+            "pkg/b.py",
+            "class Parent:\n    def __init__(self, a): ...\n",
+        )
+        .write(
+            "pkg/d.py",
+            "from .b import Parent\nclass Child(Parent): ...\n",
+        );
+
+    let resolution = Package::open(&fixture.package("pkg"))
+        .unwrap()
+        .resolve()
+        .unwrap();
+    let class = class_of(&resolution.items[0]);
+    assert!(class.methods.iter().all(|m| m.name != "__init__"));
+}
+
+#[test]
+fn a_base_class_outside_the_package_is_skipped_without_failing() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "pkg/__init__.py",
+        "import polars as pl\nclass C(pl.DataFrame):\n    def own(self): ...\n",
+    );
+
+    let resolution = Package::open(&fixture.package("pkg"))
+        .unwrap()
+        .resolve()
+        .unwrap();
+    let class = class_of(&resolution.items[0]);
+    assert_eq!(class.methods.len(), 1);
+    assert_eq!(class.methods[0].name, "own");
+}
+
+#[test]
+fn a_cyclic_base_chain_terminates() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "pkg/__init__.py",
+        "class A(B):\n    def a(self): ...\nclass B(A):\n    def b(self): ...\n",
+    );
+
+    let resolution = Package::open(&fixture.package("pkg"))
+        .unwrap()
+        .resolve()
+        .unwrap();
+    assert_eq!(resolution.items.len(), 2);
+}
+
+// --- format-string details ----------------------------------------------
+
+#[test]
+fn escaped_braces_survive_substitution_the_way_format_treats_them() {
+    let mut substitutions = std::collections::HashMap::new();
+    substitutions.insert("name".to_string(), "value".to_string());
+
+    assert_eq!(
+        calepin_docs::resolve::substitute("{{literal}} and {name}", &substitutions),
+        "{literal} and value"
+    );
+}
+
+#[test]
+fn a_quarto_style_fence_language_is_normalized_for_typst() {
+    use calepin_docs::markdown::render_markdown;
+
+    let rendered = render_markdown("```{python}\nx = 1\n```\n");
+    assert!(rendered.contains("lang: \"python\""), "{rendered}");
+}
+
+#[test]
+fn braces_inside_a_substituted_value_are_not_re_processed() {
+    // `str.format` expands the template's escapes once; braces that arrive
+    // with a substituted value are literal.
+    let mut substitutions = std::collections::HashMap::new();
+    substitutions.insert("code".to_string(), "d = {\"a\": {\"b\": 1}}".to_string());
+
+    assert_eq!(
+        calepin_docs::resolve::substitute("{code}", &substitutions),
+        "d = {\"a\": {\"b\": 1}}"
+    );
+}
+
+#[test]
+fn a_lone_closing_brace_is_left_alone() {
+    let substitutions = std::collections::HashMap::new();
+    assert_eq!(
+        calepin_docs::resolve::substitute("a } b", &substitutions),
+        "a } b"
+    );
+}

@@ -27,7 +27,10 @@
     } else {
       []
     }
-    terms.item(label, entry.desc)
+    let note = if "from" in entry {
+      text(size: 0.85em, [ (inherited from #raw(entry.from))])
+    } else { [] }
+    terms.item(label, [#entry.desc#note])
   }
 }
 
@@ -73,11 +76,17 @@
   seealso: (),
   notes: (),
   examples: none,
+  inherited: none,
 ) = {
   heading(level: level, raw(name))
 
   if kind != none or qualname != "" {
     text(size: 0.85em, [#kind #raw(qualname)])
+    parbreak()
+  }
+
+  if inherited != none {
+    text(size: 0.85em, [Inherited from #raw(inherited).])
     parbreak()
   }
 

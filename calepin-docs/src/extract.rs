@@ -143,6 +143,7 @@ pub fn function_from(source: &str, def: &StmtFunctionDef, scope: &str) -> Functi
         params: params_of(source, &def.parameters),
         returns: def.returns.as_ref().map(|r| slice(source, &**r)),
         docstring: literal_docstring.or(decorator_docstring),
+        inherited_from: None,
     }
 }
 
@@ -160,7 +161,13 @@ pub fn class_from(source: &str, def: &StmtClassDef, scope: &str) -> Class {
             {
                 let mut method = function_from(source, f, &qualname);
                 drop_receiver(&mut method);
-                methods.push(method);
+                if is_property_accessor(&method) {
+                    // The getter already carries the documentation.
+                } else if is_property(&method) {
+                    attributes.push(property_as_attribute(method));
+                } else {
+                    methods.push(method);
+                }
             }
             // `name: type = default` — an annotated class attribute.
             Stmt::AnnAssign(assign) => {
@@ -170,6 +177,8 @@ pub fn class_from(source: &str, def: &StmtClassDef, scope: &str) -> Class {
                             name: target.id.to_string(),
                             annotation: Some(slice(source, &*assign.annotation)),
                             default: assign.value.as_ref().map(|v| slice(source, &**v)),
+                            description: None,
+                            inherited_from: None,
                         });
                     }
                 }
@@ -341,5 +350,38 @@ fn fill_aliased_docstring(module: &ParsedModule, item: &mut ApiItem) {
     };
     if function.docstring.is_none() {
         function.docstring = aliased_docstring(module, &function.name);
+    }
+}
+
+/// Decorator names that turn a method into a read-only attribute.
+const PROPERTY_DECORATORS: &[&str] = &["property", "cached_property", "functools.cached_property"];
+
+/// Whether this method is really a property, and so belongs with the
+/// attributes rather than among the callables.
+fn is_property(function: &Function) -> bool {
+    function
+        .decorators
+        .iter()
+        .any(|d| PROPERTY_DECORATORS.contains(&d.as_str()))
+}
+
+/// A property's setter or deleter, which documents nothing the getter has not
+/// already said.
+fn is_property_accessor(function: &Function) -> bool {
+    function
+        .decorators
+        .iter()
+        .any(|d| d.ends_with(".setter") || d.ends_with(".deleter"))
+}
+
+/// Turn a property getter into an attribute: its return type is the attribute
+/// type, and its docstring summary is the description.
+fn property_as_attribute(function: Function) -> Attribute {
+    Attribute {
+        name: function.name,
+        annotation: function.returns,
+        default: None,
+        description: function.docstring,
+        inherited_from: function.inherited_from,
     }
 }

@@ -32,6 +32,8 @@ pub struct Function {
     pub params: Vec<Param>,
     pub returns: Option<String>,
     pub docstring: Option<String>,
+    /// Set when the member came from a base class rather than this one.
+    pub inherited_from: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +41,9 @@ pub struct Attribute {
     pub name: String,
     pub annotation: Option<String>,
     pub default: Option<String>,
+    pub description: Option<String>,
+    /// Set when the member came from a base class rather than this one.
+    pub inherited_from: Option<String>,
 }
 
 #[derive(Debug, Clone)]

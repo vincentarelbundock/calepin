@@ -52,6 +52,13 @@ Classes carry their public methods plus `__init__`; other dunders and
 underscore-prefixed names are skipped. The implicit `self` / `cls` receiver is
 dropped from method signatures.
 
+`@property` and `@cached_property` methods are documented as attributes, with
+the return type as the attribute type; their setters and deleters are dropped.
+
+Members inherited from base classes **defined inside the package** are merged in
+and labelled with the class that defines them. An override always wins over the
+inherited version, and `__init__` is never inherited.
+
 ## Docstrings that are not literal body strings
 
 Runtime introspection sees `__doc__` after the interpreter has assembled it.
@@ -79,25 +86,26 @@ dropped, since the page already prints its own heading.
 
 Static analysis sees the source, not the runtime object:
 
-- **Inherited members are not resolved.** A method defined on a base class does
-  not appear on the subclass's page.
-- **Dynamically generated attributes are invisible** — anything built by
-  `setattr` or a metaclass, or a docstring assembled by a mechanism other than
-  the three above.
+- **Base classes outside the package are not resolved.** Inheriting from `dict`
+  or a third-party type keeps only the class's own members; the base is still
+  listed under `Bases:`.
+- **Dynamically generated members are invisible** -- anything built by `setattr`
+  or a metaclass, or a docstring assembled by a mechanism other than the three
+  above.
 - **`.pyi` stubs are ignored**; only the `.py` source is read.
 - **Absolute imports leaving the package are not followed.** A name re-exported
-  from a third-party package resolves as unresolved.
+  from a third-party package is reported as unresolved.
 
 These are the cases where runtime introspection (`inspect`) wins. Everything
-else — verbatim annotations, no import side effects, no environment to build —
+else -- verbatim annotations, no import side effects, no environment to build --
 is where static analysis wins.
 
-## Known upstream gap
+## Working around pydocstring
 
 `pydocstring` 0.4 lifts `.. deprecated::` directives out of Google and NumPy
 docstrings, but not out of `Style::Plain` ones, where the directive stays in the
-extended summary. `emit::recover_plain_directive` works around this for
-deprecations; remove it once upstream handles plain documents.
+extended summary. `emit::recover_plain_directive` handles deprecations locally.
+It can be deleted if upstream ever parses directives for plain documents.
 
 [`ruff_python_parser`]: https://crates.io/crates/ruff_python_parser
 [`pydocstring`]: https://crates.io/crates/pydocstring

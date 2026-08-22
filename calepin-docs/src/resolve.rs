@@ -13,7 +13,7 @@ use anyhow::{bail, Context, Result};
 use ruff_python_ast::{Expr, Stmt};
 
 use crate::extract::{find_item, parse_source, public_items, ParsedModule};
-use crate::model::ApiItem;
+use crate::model::{ApiItem, Class};
 
 /// How deep to follow a re-export chain before giving up.
 const MAX_HOPS: usize = 8;
@@ -118,6 +118,8 @@ impl Package {
                 item.map_docstrings(&|text| substitute(text, &substitutions));
             }
         }
+
+        self.inherit(&mut items);
 
         Ok(Resolution { items, unresolved })
     }
@@ -518,12 +520,29 @@ pub fn substitute(text: &str, substitutions: &Substitutions) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
 
-    while let Some(open) = rest.find('{') {
-        out.push_str(&rest[..open]);
-        let after = &rest[open + 1..];
+    while let Some(next) = rest.find(['{', '}']) {
+        out.push_str(&rest[..next]);
+        let after = &rest[next + 1..];
+        let delimiter = rest.as_bytes()[next];
+
+        // `str.format` reads a doubled brace as one literal brace. Doing this
+        // inline rather than as a final pass matters: braces that arrive from a
+        // substituted value are not re-processed by `format` either.
+        if after.starts_with(delimiter as char) {
+            out.push(delimiter as char);
+            rest = &after[1..];
+            continue;
+        }
+
+        // A lone `}` is not a placeholder; keep it as written.
+        if delimiter == b'}' {
+            out.push('}');
+            rest = after;
+            continue;
+        }
 
         let Some(close) = after.find('}') else {
-            out.push_str(&rest[open..]);
+            out.push_str(&rest[next..]);
             return out;
         };
 
@@ -542,3 +561,122 @@ pub fn substitute(text: &str, substitutions: &Substitutions) -> String {
     out.push_str(rest);
     out
 }
+
+/// How far up a base-class chain to walk before giving up.
+const MAX_BASE_DEPTH: usize = 5;
+
+impl Package {
+    /// Merge inherited members into every documented class.
+    ///
+    /// Only base classes defined inside this package can be found — a class
+    /// inheriting from `dict` or a third-party type keeps just its own
+    /// members, which is why inherited members are documented as a
+    /// best-effort addition rather than a guarantee.
+    fn inherit(&self, items: &mut [ApiItem]) {
+        let needs_bases = items
+            .iter()
+            .any(|item| matches!(item, ApiItem::Class(class) if !class.bases.is_empty()));
+        if !needs_bases {
+            return;
+        }
+
+        let index = self.class_index();
+        for item in items.iter_mut() {
+            if let ApiItem::Class(class) = item {
+                let mut seen = vec![class.name.clone()];
+                self.merge_bases(class, &index, &mut seen, 0);
+            }
+        }
+    }
+
+    /// Walk `class`'s bases, appending members it does not already define.
+    fn merge_bases(
+        &self,
+        class: &mut Class,
+        index: &ClassIndex,
+        seen: &mut Vec<String>,
+        depth: usize,
+    ) {
+        if depth >= MAX_BASE_DEPTH {
+            return;
+        }
+
+        for base_name in class.bases.clone() {
+            // `module.Base` and `Base` both resolve by their final segment.
+            let key = base_name
+                .rsplit('.')
+                .next()
+                .unwrap_or(&base_name)
+                .to_string();
+            if seen.contains(&key) {
+                continue;
+            }
+            seen.push(key.clone());
+
+            let Some(path) = index.get(&key) else {
+                continue;
+            };
+            let Ok(module) = load(path) else {
+                continue;
+            };
+            let scope = self.scope_for(path);
+            let Some(ApiItem::Class(mut base)) = find_item(&module, &key, &scope) else {
+                continue;
+            };
+
+            // Resolve the base's own bases first, so a grandparent's members
+            // reach the class that ultimately inherits them.
+            self.merge_bases(&mut base, index, seen, depth + 1);
+
+            for method in base.methods {
+                // `__init__` is part of a class's own identity, not inherited
+                // documentation, and an override always wins.
+                if method.name == "__init__" || class.methods.iter().any(|m| m.name == method.name)
+                {
+                    continue;
+                }
+                let mut method = method;
+                // Keep the original attribution: a member merged in from a
+                // grandparent already names the class that defines it.
+                method
+                    .inherited_from
+                    .get_or_insert_with(|| base.qualname.clone());
+                class.methods.push(method);
+            }
+
+            for attribute in base.attributes {
+                if class.attributes.iter().any(|a| a.name == attribute.name) {
+                    continue;
+                }
+                let mut attribute = attribute;
+                attribute
+                    .inherited_from
+                    .get_or_insert_with(|| base.qualname.clone());
+                class.attributes.push(attribute);
+            }
+        }
+    }
+
+    /// Map every class name in the package to the file that defines it.
+    fn class_index(&self) -> ClassIndex {
+        let mut index = ClassIndex::new();
+        for path in python_files(&self.root) {
+            let Ok(source) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let Ok(module) = parse_source(source) else {
+                continue;
+            };
+            for stmt in &module.body {
+                if let Stmt::ClassDef(class) = stmt {
+                    index
+                        .entry(class.name.as_str().to_string())
+                        .or_insert_with(|| path.clone());
+                }
+            }
+        }
+        index
+    }
+}
+
+type ClassIndex = HashMap<String, PathBuf>;
