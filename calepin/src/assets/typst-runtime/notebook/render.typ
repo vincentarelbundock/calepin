@@ -11,6 +11,65 @@
 #let _input-block = codemod._input-block
 #let _output-block = codemod._output-block
 
+// Typst steps a figure's counter for every figure element it sees, captioned or
+// not, so a Calepin wrapper placed around output that is already a figure (a
+// `tinytable` table, say) costs the kind's counter two steps and numbers the
+// inner caption one ahead of the reference. The two helpers below let a chunk
+// see that case coming: `_trails-in-figure` recognises evaluated markup whose
+// last element is a figure the code produced itself, which the chunk can label
+// directly instead of wrapping it again.
+
+#let _is-blank-element(item) = {
+  let kind = item.func()
+  kind == [ ].func() or kind == parbreak or kind == linebreak
+}
+
+// Only the wrappers Typst puts around an evaluated markup body (`sequence`,
+// `styled`) are traversed. A figure nested deeper belongs to whatever content
+// holds it, not to the chunk.
+#let _trails-in-figure(content) = {
+  if type(content) != type([]) {
+    return false
+  }
+  if content.func() == figure {
+    return true
+  }
+  let fields = content.fields()
+  if "child" in fields {
+    return _trails-in-figure(fields.child)
+  }
+  if "children" in fields {
+    let children = fields.children.filter(child => not _is-blank-element(child))
+    if children.len() == 0 {
+      return false
+    }
+    return _trails-in-figure(children.last())
+  }
+  false
+}
+
+// Evaluate Typst markup a chunk printed.
+//
+// `typst-labels` hands the chunk's cross-reference identity to the figure the
+// markup itself produced: appending the labels to the source attaches them to
+// that figure, where an enclosing Calepin figure would have taken the number
+// the reference resolves to. `typst-demote-figures` covers the case where
+// Calepin still has to wrap (it owns a caption of its own): nested figures keep
+// their caption text but stop consuming counter steps.
+#let _eval-typst(source, opts) = {
+  let labels = opts.at("typst-labels", default: ())
+  if labels.len() > 0 {
+    let suffix = labels.map(name => "<" + name + ">").join(" ")
+    return eval(source + "\n" + suffix, mode: "markup")
+  }
+  if opts.at("typst-demote-figures", default: false) {
+    set figure(numbering: none)
+    eval(source, mode: "markup")
+  } else {
+    eval(source, mode: "markup")
+  }
+}
+
 #let _figure-caption(fig-caption, fig-cap-location) = {
   if fig-caption == none {
     none
@@ -305,6 +364,14 @@
 #let _display-selection(item) = {
   let data = item.at("data", default: (:))
   _select-representation(data)
+}
+
+#let _typst-source-value(value) = {
+  if type(value) == dictionary and value.at("path", default: none) != none {
+    read(_artifact-path(value), encoding: "utf8")
+  } else {
+    value
+  }
 }
 
 #let _is-image-mime(mime) = mime == "image/svg+xml" or mime == "image/png"
@@ -638,11 +705,7 @@
     }
     _finalize-figure-content(img, label, fig-labels, figure-opts, anchor)
   } else if mime == "text/x-typst" {
-    if type(value) == dictionary and value.at("path", default: none) != none {
-      eval(read(_artifact-path(value), encoding: "utf8"), mode: "markup")
-    } else {
-      eval(value, mode: "markup")
-    }
+    _eval-typst(_typst-source-value(value), opts)
   } else if mime == "application/json" {
     _output-block(repr(value), kind: "result")
   } else {
@@ -668,7 +731,7 @@
     if _results-hidden(results-mode) {
       none
     } else if results-mode == "typst" {
-      eval(text, mode: "markup")
+      _eval-typst(text, opts)
     } else if inline-output {
       text
     } else {
@@ -699,6 +762,42 @@
   } else {
     _render-image-grid(items, label, opts, fig-labels, anchor: anchor)
   }
+}
+
+// The Typst markup an item hands to the document, or `none` when the item is
+// not Typst markup: printed output the chunk asked to pass through
+// (`results: "typst"`), or a display item the engine tagged as Typst.
+#let _typst-item-source(item, opts) = {
+  let item-type = item.at("type", default: "")
+  if item-type == "stream" {
+    if opts.at("results", default: "render") == "typst" {
+      item.at("text", default: "")
+    } else {
+      none
+    }
+  } else if item-type == "display" or item-type == "result" {
+    let selected = _display-selection(item)
+    if selected != none and selected.mime == "text/x-typst" {
+      _typst-source-value(selected.value)
+    } else {
+      none
+    }
+  } else {
+    none
+  }
+}
+
+// How many of the chunk's items print Typst markup that ends in a figure of
+// their own.
+#let _own-figure-count(items, opts) = {
+  let count = 0
+  for item in items {
+    let source = _typst-item-source(item, opts)
+    if source != none and _trails-in-figure(eval(source, mode: "markup")) {
+      count += 1
+    }
+  }
+  count
 }
 
 // How many runs of consecutive image items the chunk's output contains. Output
@@ -887,6 +986,40 @@
   let items = chunk.at("items", default: ())
   let tbl-caption = opts.at("tbl-caption", default: none)
 
+  // Output that is already a figure decides how the chunk's identity is
+  // attached. Wrapping it a second time would take a counter step of its own,
+  // numbering the reference and the printed caption one apart, so the chunk
+  // hands its labels to that figure and adds no wrapper. When Calepin owns a
+  // caption too there is no way around a wrapper, and the inner figures are
+  // demoted to unnumbered instead.
+  let own-figures = _own-figure-count(items, opts)
+  let fig-caption = opts.at("fig-caption", default: none)
+  let captioned = tbl-caption != none or fig-caption != none
+  let identity-labels = tbl-labels + fig-labels
+  let self-labels = (
+    own-figures == 1
+      and identity-labels.len() > 0
+      and not captioned
+      and _image-group-count(items) == 0
+  )
+  // A chunk that neither carries a `tbl-` identity nor splits its images across
+  // several batches adds no figure of its own, so whatever the code printed
+  // keeps its own numbering.
+  let wraps-output = (
+    tbl-labels.len() > 0
+      or tbl-caption != none
+      or (
+        (fig-labels.len() > 0 or fig-caption != none) and _image-group-count(items) > 1
+      )
+  )
+  let opts = if self-labels {
+    opts + ("typst-labels": identity-labels)
+  } else if own-figures > 0 and wraps-output {
+    opts + ("typst-demote-figures": true)
+  } else {
+    opts
+  }
+
   let interleave = source-block != none and _interleaves-source(items, opts, chunk)
   let items = if interleave { items } else { _without-source-items(items) }
   // Without interleaving, the echo is one block ahead of the output, which is
@@ -896,6 +1029,15 @@
     source-block(code)
   }
   let segment-source = if interleave { source-block } else { none }
+
+  // The chunk's own figure already carries the labels, so no wrapper is added
+  // and no batch claims them a second time.
+  if self-labels {
+    return {
+      echoed
+      _render-item-sequence(items, label, opts, anchor, source-block: segment-source)
+    }
+  }
 
   // A `tbl-` label names the chunk's non-image output as a table. Wrap the
   // whole rendered sequence once, the same way a split figure is wrapped: the

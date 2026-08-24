@@ -2513,6 +2513,65 @@ x <- 1 + 1
 }
 
 #[test]
+fn chunk_printing_its_own_figure_keeps_the_document_numbering_consecutive() {
+    // Packages such as tinytable print a complete `#figure(kind: table)` of
+    // their own. Wrapping that in a second figure would take a counter step,
+    // numbering the reference and the printed caption one apart, so the chunk
+    // labels the figure its code produced instead.
+    if !has_command("typst") || !has_command("Rscript") || !has_pdftotext() {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r#"#import ".calepin/calepin.typ" as calepin
+
+#calepin.setup(echo: false, eval: true)
+
+#calepin.chunk(label: "tbl-own", results: "typst")[```r
+cat('#figure(table(columns: 1, [a]), caption: [INNERCAPTION], kind: table)\n')
+```]
+
+#figure(table(columns: 1, [b]), caption: [NEXTCAPTION], kind: table) <tbl-next>
+
+We mention @tbl-own and @tbl-next here.
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "a chunk that prints its own figure should still resolve its label:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let text = Command::new("pdftotext")
+        .arg(dir.path().join("paper.pdf"))
+        .arg("-")
+        .output()
+        .unwrap();
+    let extracted = String::from_utf8_lossy(&text.stdout).to_string();
+    assert!(
+        extracted.contains("Table 1: INNERCAPTION"),
+        "the chunk's own figure should carry the first table number: {extracted}"
+    );
+    assert!(
+        extracted.contains("Table 2: NEXTCAPTION"),
+        "the next table should follow it: {extracted}"
+    );
+    assert!(
+        extracted.contains("Table 1 and Table 2"),
+        "both references should resolve to the numbers shown: {extracted}"
+    );
+}
+
+#[test]
 fn chunks_without_tbl_or_lst_labels_render_no_extra_figures() {
     // The listing and table wrappers must not appear unless the chunk asks for
     // them: an ordinary chunk keeps its plain code block and output.
