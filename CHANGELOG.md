@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.55
 
 - A chunk whose code prints a complete Typst figure of its own (`tinytable` does, and so does any package that emits `#figure(..., kind: table)`) no longer numbers one ahead of the reference. Typst steps a figure's counter for every figure element it sees, captioned or not, so the wrapper a `tbl-` label added around output that was already a figure cost the table counter two steps: `@tbl-name` resolved to "Table 1" while the printed caption read "Table 2", and the next table in the document jumped to 4. A chunk that prints its own figure and carries no caption of its own now hands its `tbl-`/`fig-` labels to that figure instead of wrapping it, which also makes a `fig-` label on such a chunk resolve at all rather than failing with `label does not exist in the document`. When the chunk sets `tbl-caption` too, Calepin still owns the figure and the printed one keeps its caption text but no longer takes a number.
 

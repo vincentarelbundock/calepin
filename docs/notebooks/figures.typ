@@ -218,3 +218,10 @@ tt(head(iris), caption = "First rows of iris") |>
 ]
 
 The default `tinytable` Typst output works in both PDF and HTML output.
+
+Output like this is already a figure: `tinytable` prints its own `#figure` with
+the caption passed to `tt(caption = ...)`. Give the chunk a `tbl-` label and
+leave `tbl-caption` unset, and `@tbl-name` refers to that figure directly. Set
+`tbl-caption` instead when the caption should come from the chunk header: the
+chunk's caption is then the numbered one, and any caption the code printed stays
+below the table as plain text.

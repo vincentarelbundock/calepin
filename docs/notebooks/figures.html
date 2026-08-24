@@ -5251,6 +5251,30 @@ html:not([data-theme]) {
   margin-bottom: 0;
 }
 
+/* Nested foldable subsections: indented under their parent, with a rule
+   marking the nesting level. Titles stay sentence-case so they read as page
+   groups rather than as another top-level section. */
+.calepin-website-sidebar-subsection {
+  margin-inline-start: 0.45rem;
+  padding-inline-start: 0.5rem;
+  border-inline-start: 1px solid var(--calepin-color-border);
+}
+
+.calepin-website-sidebar-subsection > summary,
+.calepin-website-sidebar-subsection-title {
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 600;
+}
+
+/* Unfolded subsections have no <details> to indent, so the title carries the
+   nesting instead. */
+.calepin-website-sidebar nav p.calepin-website-sidebar-subsection-title {
+  margin: 0.5rem 0 0.35rem;
+  padding-inline-start: 0.5rem;
+}
+
 .calepin-site-footer {
   width: min(100%, var(--calepin-wide-width));
   margin: 0 auto 3.2rem;
@@ -5823,7 +5847,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#import \"/.calepin/calepin.typ\" as calepin\n#show: calepin.document\n\n#set document(title: [Figures and tables])\n#metadata((tags: (\"notebooks\", \"figures\", \"tables\"))) <website-metadata>\n\n#calepin.setup(\n  echo: true,\n  eval: true,\n  results: \"render\",\n)\n\n#title()\n\nA chunk that draws a plot becomes a figure, and a chunk that prints Typst markup becomes a table. _Calepin_ runs the code, collects the output, and renders it back into the document in place.\n\n= Figures\n\nAny chunk that produces a plot is shown as a figure. Nothing extra is required:\n\n```r\n#| fig-alt-text: Scatter plot of fuel efficiency against horsepower\nplot(mpg ~ hp, data = mtcars)\n```\n\n`ggplot2` works the same way:\n\n```r\n#| fig-alt-text: Scatter plot of fuel efficiency against horsepower\nsuppressPackageStartupMessages(suppressWarnings(library(ggplot2)))\nggplot(mtcars, aes(hp, mpg)) +\n  geom_point()\n```\n\n== Captions and labels\n\nAdd `fig-caption` to wrap the plot in a numbered figure. Add a `fig-` `label` so you can refer to it from the prose with `@fig-mpg` (see #link(\"cross-references.html\")[Cross-references]).\n\n````typ\n#calepin.chunk(\n  label: \"fig-mpg\",\n  fig-caption: [Mileage and horsepower],\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n````\n\n#calepin.chunk(\n  label: \"fig-mpg\",\n  echo: false,\n  fig-caption: [Mileage and horsepower],\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n\n== Size and alignment\n\nSet the rendered size with `fig-width` and `fig-height`, and the placement with `fig-align`. Sizes accept a Typst length or ratio, such as `50%` or `12cm`.\n\n````typ\n#calepin.chunk(\n  fig-width: 50%,\n  fig-align: left,\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n````\n\n#calepin.chunk(\n  echo: false,\n  fig-width: 50%,\n  fig-align: left,\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n\nIn HTML output, `fig-responsive` (on by default) lets a figure shrink to fit a narrow screen.\n\n== Display vs. device\n\nA figure has two sizes that do different jobs. The _device_ is the canvas the engine draws on, set in inches with `fig-device-width`, `fig-device-height`, and `fig-device-aspect`. The _display_ size is how large the finished image appears in the document, set with `fig-width` and `fig-height`.\n\nText, points, and line widths are drawn at fixed sizes on the device, and the whole canvas is then scaled to the display size. A larger device fits more inches into the same displayed width, so these elements end up looking smaller; a smaller device makes them look larger. To enlarge labels and points, shrink the device rather than the display width.\n\nHere is the same plot on a wide device and a narrow one, both shown at the same display width. Only `fig-device-width` differs:\n\n````typ\n#calepin.chunk(\n  fig-device-width: 8,\n  fig-width: 55%,\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars, pch = 19)\n```\n]\n````\n\n#calepin.chunk(\n  echo: false,\n  fig-device-width: 8,\n  fig-width: 55%,\n  fig-caption: [Wide device (8 in): smaller text and points],\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower, drawn on a wide device\",\n)[```r\nplot(mpg ~ hp, data = mtcars, pch = 19)\n```]\n\n#calepin.chunk(\n  echo: false,\n  fig-device-width: 4,\n  fig-width: 55%,\n  fig-caption: [Narrow device (4 in): larger text and points],\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower, drawn on a narrow device\",\n)[```r\nplot(mpg ~ hp, data = mtcars, pch = 19)\n```]\n\nSee #link(\"code_execution.html\")[Code execution] for the full list of device settings.\n\n== Image format\n\nFigures are written as SVG by default. Switch to a raster format with `fig-device-format`, and set its resolution with `fig-device-dpi`:\n\n````typ\n#calepin.chunk(\n  fig-device-format: \"png\",\n  fig-device-dpi: 200,\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n````\n\n== Multiple panels\n\nA chunk that draws several plots can lay them out as one figure. Use `fig-layout-columns` and `fig-layout-rows` for the grid, and `fig-subcaptions` for per-panel captions:\n\n````typ\n#calepin.chunk(\n  label: \"fig-diagnostics\",\n  fig-caption: [Regression diagnostics],\n  fig-alt-text: \"Four regression diagnostic plots for a linear model of fuel efficiency\",\n  fig-subcaptions: (\n    [Residuals vs fitted],\n    [Normal Q-Q],\n    [Scale-location],\n    [Cook's distance],\n  ),\n  fig-layout-columns: (1fr, 1fr),\n)[```r\nmodel <- lm(mpg ~ wt + hp, data = mtcars)\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)\n```]\n````\n\n#calepin.chunk(\n  label: \"fig-diagnostics\",\n  echo: false,\n  fig-caption: [Regression diagnostics],\n  fig-alt-text: \"Four regression diagnostic plots for a linear model of fuel efficiency\",\n  fig-subcaptions: (\n    [Residuals vs fitted],\n    [Normal Q-Q],\n    [Scale-location],\n    [Cook's distance],\n  ),\n  fig-layout-columns: (1fr, 1fr),\n)[```r\nmodel <- lm(mpg ~ wt + hp, data = mtcars)\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)\n```]\n\nWith two columns, the four plots fill a two-by-two grid. The first plot is saved under the chunk label; later plots use numbered names such as `fig-diagnostics-2.svg`.\n\n= Tables\n\nA table is Typst markup produced by your code. Set `results: \"typst\"` so _Calepin_ passes that markup through to the document instead of showing it as plain text.\n\nThe R #link(\"https://vincentarelbundock.github.io/tinytable/\")[tinytable] package can print a styled table as Typst:\n\n````typ\n#calepin.chunk(results: \"typst\")[\n```r\nlibrary(tinytable)\ntt(head(iris), caption = \"First rows of iris\") |>\n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\")\n```\n]\n````\n\n#calepin.chunk(echo: false, results: \"typst\")[\n```r\nlibrary(tinytable)\ntt(head(iris), caption = \"First rows of iris\") |>\n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\") \n```\n]\n\nThe default `tinytable` Typst output works in both PDF and HTML output.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#import \"/.calepin/calepin.typ\" as calepin\n#show: calepin.document\n\n#set document(title: [Figures and tables])\n#metadata((tags: (\"notebooks\", \"figures\", \"tables\"))) <website-metadata>\n\n#calepin.setup(\n  echo: true,\n  eval: true,\n  results: \"render\",\n)\n\n#title()\n\nA chunk that draws a plot becomes a figure, and a chunk that prints Typst markup becomes a table. _Calepin_ runs the code, collects the output, and renders it back into the document in place.\n\n= Figures\n\nAny chunk that produces a plot is shown as a figure. Nothing extra is required:\n\n```r\n#| fig-alt-text: Scatter plot of fuel efficiency against horsepower\nplot(mpg ~ hp, data = mtcars)\n```\n\n`ggplot2` works the same way:\n\n```r\n#| fig-alt-text: Scatter plot of fuel efficiency against horsepower\nsuppressPackageStartupMessages(suppressWarnings(library(ggplot2)))\nggplot(mtcars, aes(hp, mpg)) +\n  geom_point()\n```\n\n== Captions and labels\n\nAdd `fig-caption` to wrap the plot in a numbered figure. Add a `fig-` `label` so you can refer to it from the prose with `@fig-mpg` (see #link(\"cross-references.html\")[Cross-references]).\n\n````typ\n#calepin.chunk(\n  label: \"fig-mpg\",\n  fig-caption: [Mileage and horsepower],\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n````\n\n#calepin.chunk(\n  label: \"fig-mpg\",\n  echo: false,\n  fig-caption: [Mileage and horsepower],\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n\n== Size and alignment\n\nSet the rendered size with `fig-width` and `fig-height`, and the placement with `fig-align`. Sizes accept a Typst length or ratio, such as `50%` or `12cm`.\n\n````typ\n#calepin.chunk(\n  fig-width: 50%,\n  fig-align: left,\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n````\n\n#calepin.chunk(\n  echo: false,\n  fig-width: 50%,\n  fig-align: left,\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n\nIn HTML output, `fig-responsive` (on by default) lets a figure shrink to fit a narrow screen.\n\n== Display vs. device\n\nA figure has two sizes that do different jobs. The _device_ is the canvas the engine draws on, set in inches with `fig-device-width`, `fig-device-height`, and `fig-device-aspect`. The _display_ size is how large the finished image appears in the document, set with `fig-width` and `fig-height`.\n\nText, points, and line widths are drawn at fixed sizes on the device, and the whole canvas is then scaled to the display size. A larger device fits more inches into the same displayed width, so these elements end up looking smaller; a smaller device makes them look larger. To enlarge labels and points, shrink the device rather than the display width.\n\nHere is the same plot on a wide device and a narrow one, both shown at the same display width. Only `fig-device-width` differs:\n\n````typ\n#calepin.chunk(\n  fig-device-width: 8,\n  fig-width: 55%,\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars, pch = 19)\n```\n]\n````\n\n#calepin.chunk(\n  echo: false,\n  fig-device-width: 8,\n  fig-width: 55%,\n  fig-caption: [Wide device (8 in): smaller text and points],\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower, drawn on a wide device\",\n)[```r\nplot(mpg ~ hp, data = mtcars, pch = 19)\n```]\n\n#calepin.chunk(\n  echo: false,\n  fig-device-width: 4,\n  fig-width: 55%,\n  fig-caption: [Narrow device (4 in): larger text and points],\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower, drawn on a narrow device\",\n)[```r\nplot(mpg ~ hp, data = mtcars, pch = 19)\n```]\n\nSee #link(\"code_execution.html\")[Code execution] for the full list of device settings.\n\n== Image format\n\nFigures are written as SVG by default. Switch to a raster format with `fig-device-format`, and set its resolution with `fig-device-dpi`:\n\n````typ\n#calepin.chunk(\n  fig-device-format: \"png\",\n  fig-device-dpi: 200,\n  fig-alt-text: \"Scatter plot of fuel efficiency against horsepower\",\n)[\n```r\nplot(mpg ~ hp, data = mtcars)\n```\n]\n````\n\n== Multiple panels\n\nA chunk that draws several plots can lay them out as one figure. Use `fig-layout-columns` and `fig-layout-rows` for the grid, and `fig-subcaptions` for per-panel captions:\n\n````typ\n#calepin.chunk(\n  label: \"fig-diagnostics\",\n  fig-caption: [Regression diagnostics],\n  fig-alt-text: \"Four regression diagnostic plots for a linear model of fuel efficiency\",\n  fig-subcaptions: (\n    [Residuals vs fitted],\n    [Normal Q-Q],\n    [Scale-location],\n    [Cook's distance],\n  ),\n  fig-layout-columns: (1fr, 1fr),\n)[```r\nmodel <- lm(mpg ~ wt + hp, data = mtcars)\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)\n```]\n````\n\n#calepin.chunk(\n  label: \"fig-diagnostics\",\n  echo: false,\n  fig-caption: [Regression diagnostics],\n  fig-alt-text: \"Four regression diagnostic plots for a linear model of fuel efficiency\",\n  fig-subcaptions: (\n    [Residuals vs fitted],\n    [Normal Q-Q],\n    [Scale-location],\n    [Cook's distance],\n  ),\n  fig-layout-columns: (1fr, 1fr),\n)[```r\nmodel <- lm(mpg ~ wt + hp, data = mtcars)\nplot(model, which = 1)\nplot(model, which = 2)\nplot(model, which = 3)\nplot(model, which = 4)\n```]\n\nWith two columns, the four plots fill a two-by-two grid. The first plot is saved under the chunk label; later plots use numbered names such as `fig-diagnostics-2.svg`.\n\n= Tables\n\nA table is Typst markup produced by your code. Set `results: \"typst\"` so _Calepin_ passes that markup through to the document instead of showing it as plain text.\n\nThe R #link(\"https://vincentarelbundock.github.io/tinytable/\")[tinytable] package can print a styled table as Typst:\n\n````typ\n#calepin.chunk(results: \"typst\")[\n```r\nlibrary(tinytable)\ntt(head(iris), caption = \"First rows of iris\") |>\n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\")\n```\n]\n````\n\n#calepin.chunk(echo: false, results: \"typst\")[\n```r\nlibrary(tinytable)\ntt(head(iris), caption = \"First rows of iris\") |>\n  style_tt(i = 1:2, j = 2:3, background = \"teal\", color = \"white\") \n```\n]\n\nThe default `tinytable` Typst output works in both PDF and HTML output.\n\nOutput like this is already a figure: `tinytable` prints its own `#figure` with\nthe caption passed to `tt(caption = ...)`. Give the chunk a `tbl-` label and\nleave `tbl-caption` unset, and `@tbl-name` refers to that figure directly. Set\n`tbl-caption` instead when the caption should come from the chunk header: the\nchunk's caption is then the numbered one, and any caption the code printed stays\nbelow the table as plain text.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -5909,201 +5933,243 @@ html:not([data-theme]) {
                 
                     
                     
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Getting started</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>Getting started</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../getting-started/install.html" aria-label="Install">Install</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../getting-started/basics.html" aria-label="Basics">Basics</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../getting-started/config.html" aria-label="Configuration">Configuration</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../compile_watch_serve.html" aria-label="Compile, watch, serve">Compile, watch, serve</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../editors.html" aria-label="Editor integration">Editor integration</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section" open>
-                        <summary>Code execution</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0" open>
+    <summary>Code execution</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="code_execution.html" aria-label="Code execution">Code execution</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="figures.html" aria-label="Figures and tables" class="active" aria-current="page">Figures and tables</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="cross-references.html" aria-label="Cross-references">Cross-references</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="data_store.html" aria-label="Data transport">Data transport</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>HTML</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>HTML</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Websites</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>Websites</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/configuration.html" aria-label="Configuration">Configuration</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/navigation.html" aria-label="Navigation">Navigation</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/pages.html" aria-label="Pages">Pages</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/tags.html" aria-label="Tags">Tags</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/multilingual.html" aria-label="Multilingual">Multilingual</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Slides</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>Slides</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../slides/slides.html" aria-label="Slides">Slides</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Themes</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>Themes</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/themes.html" aria-label="Themes">Themes</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/templating.html" aria-label="Templating">Templating</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/pdf_templates.html" aria-label="PDF">PDF</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/styling.html" aria-label="Styling chunks">Styling chunks</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/case_studies.html" aria-label="Case studies">Case studies</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>More</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>More</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../tips.html" aria-label="Tips &amp; tricks">Tips &amp; tricks</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../accessibility.html" aria-label="Accessibility">Accessibility</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
 
-                            
-                        </ul>
-                    </details>
-                    
-                    
+    
+</ul>
+
+
+
+</details>
+
+
                     
                 
             </nav>
@@ -6168,7 +6234,7 @@ library(tinytable)
 tt(head(iris), caption = "First rows of iris") |>
   style_tt(i = 1:2, j = 2:3, background = "teal", color = "white")
 ```
-<span class="calepin-syntax-scope-5">]</span></code></pre></div><figure><table><thead><tr><th>Sepal.Length</th><th>Sepal.Width</th><th>Petal.Length</th><th>Petal.Width</th><th>Species</th></tr></thead><tbody><tr><td>5.1</td><td>3.5</td><td>1.4</td><td>0.2</td><td>setosa</td></tr><tr><td>4.9</td><td>3.0</td><td>1.4</td><td>0.2</td><td>setosa</td></tr><tr><td>4.7</td><td>3.2</td><td>1.3</td><td>0.2</td><td>setosa</td></tr><tr><td>4.6</td><td>3.1</td><td>1.5</td><td>0.2</td><td>setosa</td></tr><tr><td>5.0</td><td>3.6</td><td>1.4</td><td>0.2</td><td>setosa</td></tr><tr><td>5.4</td><td>3.9</td><td>1.7</td><td>0.4</td><td>setosa</td></tr></tbody></table><figcaption>Table 1: First rows of iris</figcaption></figure><p>The default <code>tinytable</code> Typst output works in both PDF and HTML output.</p>
+<span class="calepin-syntax-scope-5">]</span></code></pre></div><figure><table><thead><tr><th>Sepal.Length</th><th>Sepal.Width</th><th>Petal.Length</th><th>Petal.Width</th><th>Species</th></tr></thead><tbody><tr><td>5.1</td><td>3.5</td><td>1.4</td><td>0.2</td><td>setosa</td></tr><tr><td>4.9</td><td>3.0</td><td>1.4</td><td>0.2</td><td>setosa</td></tr><tr><td>4.7</td><td>3.2</td><td>1.3</td><td>0.2</td><td>setosa</td></tr><tr><td>4.6</td><td>3.1</td><td>1.5</td><td>0.2</td><td>setosa</td></tr><tr><td>5.0</td><td>3.6</td><td>1.4</td><td>0.2</td><td>setosa</td></tr><tr><td>5.4</td><td>3.9</td><td>1.7</td><td>0.4</td><td>setosa</td></tr></tbody></table><figcaption>Table 1: First rows of iris</figcaption></figure><p>The default <code>tinytable</code> Typst output works in both PDF and HTML output.</p><p>Output like this is already a figure: <code>tinytable</code> prints its own <code>#figure</code> with the caption passed to <code>tt(caption = ...)</code>. Give the chunk a <code>tbl-</code> label and leave <code>tbl-caption</code> unset, and <code>@tbl-name</code> refers to that figure directly. Set <code>tbl-caption</code> instead when the caption should come from the chunk header: the chunk’s caption is then the numbered one, and any caption the code printed stays below the table as plain text.</p>
         </main>
                 
         <aside class="calepin-website-toc is-floating">
@@ -7441,6 +7507,9 @@ tt(head(iris), caption = "First rows of iris") |>
 
   // ------------------------------------------------------ sidebar sections
 
+  // Only one section is open at a time, but "section" means siblings: opening a
+  // nested subsection must not fold the parent it lives in, and must only fold
+  // its own siblings.
   function initSidebarSections() {
     const sections = Array.from(
       document.querySelectorAll(".calepin-website-sidebar-section"),
@@ -7451,7 +7520,9 @@ tt(head(iris), caption = "First rows of iris") |>
       section.addEventListener("toggle", () => {
         if (!section.open) return;
         sections.forEach((other) => {
-          if (other !== section) other.removeAttribute("open");
+          if (other === section) return;
+          if (other.parentElement !== section.parentElement) return;
+          other.removeAttribute("open");
         });
       });
     });

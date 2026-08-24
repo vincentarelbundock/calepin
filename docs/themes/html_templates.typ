@@ -48,7 +48,7 @@ Templates can access a variety of "contexts" and "variables" to build a document
 Nested entries expose these fields:
 
 - Navigation entries in `site.sidebar`, `site.menus.<name>`, and section `items`: `href`, `label`, `label_html`, `active`.
-- Sidebar sections: `title`, `active`, `items`.
+- Sidebar sections: `title`, `active`, `items`, `sections` (nested subsections), `depth` (0 at the top level).
 - TOC entries: `level`, `href`, `label`.
 - Language and translation entries: `c de`, `label`, `href`, `active`.
 - Pagefind: `css`, `js`, `bundle`.
@@ -109,6 +109,7 @@ Shared partials:
 - `partials/site-nav-prev-next.html`
 - `partials/site-search.html` — the Pagefind modal container, not the full search UI.
 - `partials/site-sidebar-item.html`
+- `partials/site-sidebar-section.html`: renders one sidebar section and includes itself for each nested subsection.
 - `partials/theme-init-script.html`
 - `partials/theme-scripts.html`
 - `partials/theme-styles.html`

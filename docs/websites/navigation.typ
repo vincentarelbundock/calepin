@@ -92,6 +92,45 @@ Titled sections are foldable: each page loads with the section that contains it 
 fold = false
 ```
 
+== Nested sections
+
+A section can hold its own subsections, each foldable in turn. Nest them with `[[sidebar.section.section]]`, and nest again as deep as the site needs:
+
+```toml
+[[sidebar.section]]
+title = "r-polars"
+
+  [[sidebar.section.section]]
+  title = "lazyframe"
+
+    [[sidebar.section.section.item]]
+    glob = "polars/lazyframe/*.typ"
+
+  [[sidebar.section.section]]
+  title = "dataframe"
+
+    [[sidebar.section.section.item]]
+    glob = "polars/dataframe/*.typ"
+```
+
+which renders as:
+
+```
+r-polars
+  lazyframe
+      collect
+      fetch
+  dataframe
+      select
+      filter
+```
+
+A section's own `[[...item]]` entries come first, then its subsections in configured order. TOML has no way to interleave the two, so put items that should appear above every subsection in the parent and everything else in a subsection.
+
+Subsections follow the same rules as top-level sections: pages come from `target` or `glob`, labels come from page metadata, and a subsection without a title renders as a plain unheaded list. Folding applies at every level. Only one section folds open at a time among its own siblings, so opening a subsection never folds the section it lives in.
+
+Use a subsection when the group itself should collapse, and a `label`-only item (see above) when you only want a heading inside an already-open list.
+
 = Table of contents
 
 Pages can show an "On this page" table of contents built from their own headings (levels 1-3 by default). The `calepin` theme shows one by default; other themes, including `academic`, are opt-in.

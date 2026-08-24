@@ -5251,6 +5251,30 @@ html:not([data-theme]) {
   margin-bottom: 0;
 }
 
+/* Nested foldable subsections: indented under their parent, with a rule
+   marking the nesting level. Titles stay sentence-case so they read as page
+   groups rather than as another top-level section. */
+.calepin-website-sidebar-subsection {
+  margin-inline-start: 0.45rem;
+  padding-inline-start: 0.5rem;
+  border-inline-start: 1px solid var(--calepin-color-border);
+}
+
+.calepin-website-sidebar-subsection > summary,
+.calepin-website-sidebar-subsection-title {
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 600;
+}
+
+/* Unfolded subsections have no <details> to indent, so the title carries the
+   nesting instead. */
+.calepin-website-sidebar nav p.calepin-website-sidebar-subsection-title {
+  margin: 0.5rem 0 0.35rem;
+  padding-inline-start: 0.5rem;
+}
+
 .calepin-site-footer {
   width: min(100%, var(--calepin-wide-width));
   margin: 0 auto 3.2rem;
@@ -5909,201 +5933,243 @@ html:not([data-theme]) {
                 
                     
                     
-                    
-                    <details class="calepin-website-sidebar-section" open>
-                        <summary>Getting started</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0" open>
+    <summary>Getting started</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="install.html" aria-label="Install">Install</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="basics.html" aria-label="Basics">Basics</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="config.html" aria-label="Configuration" class="active" aria-current="page">Configuration</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../compile_watch_serve.html" aria-label="Compile, watch, serve">Compile, watch, serve</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../editors.html" aria-label="Editor integration">Editor integration</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Code execution</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>Code execution</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../notebooks/code_execution.html" aria-label="Code execution">Code execution</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../notebooks/figures.html" aria-label="Figures and tables">Figures and tables</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../notebooks/cross-references.html" aria-label="Cross-references">Cross-references</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../notebooks/data_store.html" aria-label="Data transport">Data transport</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../notebooks/diagrams.html" aria-label="Diagrams">Diagrams</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>HTML</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>HTML</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/elements.html" aria-label="Elements">Elements</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/custom-elements.html" aria-label="Custom elements">Custom elements</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/html_templates.html" aria-label="HTML">HTML</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/css.html" aria-label="CSS">CSS</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Websites</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>Websites</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/websites.html" aria-label="Overview">Overview</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/configuration.html" aria-label="Configuration">Configuration</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/navigation.html" aria-label="Navigation">Navigation</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/pages.html" aria-label="Pages">Pages</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/tags.html" aria-label="Tags">Tags</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/multilingual.html" aria-label="Multilingual">Multilingual</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../websites/health.html" aria-label="Health">Health</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Slides</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>Slides</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../slides/slides.html" aria-label="Slides">Slides</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>Themes</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>Themes</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/themes.html" aria-label="Themes">Themes</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/templating.html" aria-label="Templating">Templating</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/pdf_templates.html" aria-label="PDF">PDF</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/styling.html" aria-label="Styling chunks">Styling chunks</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../themes/case_studies.html" aria-label="Case studies">Case studies</a></li>
 
-                            
-                        </ul>
-                    </details>
+    
+</ul>
+
+
+
+</details>
+
+
                     
                     
-                    
-                    
-                    
-                    <details class="calepin-website-sidebar-section">
-                        <summary>More</summary>
-                        <ul>
-                            
-                            
+
+
+<details class="calepin-website-sidebar-section" data-calepin-sidebar-depth="0">
+    <summary>More</summary>
+
+
+<ul>
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../tips.html" aria-label="Tips &amp; tricks">Tips &amp; tricks</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../accessibility.html" aria-label="Accessibility">Accessibility</a></li>
 
-                            
-                            
+    
+    
 <li class="calepin-website-sidebar-link"><a href="../reference/cli.html" aria-label="CLI reference">CLI reference</a></li>
 
-                            
-                        </ul>
-                    </details>
-                    
-                    
+    
+</ul>
+
+
+
+</details>
+
+
                     
                 
             </nav>
@@ -7387,6 +7453,9 @@ html:not([data-theme]) {
 
   // ------------------------------------------------------ sidebar sections
 
+  // Only one section is open at a time, but "section" means siblings: opening a
+  // nested subsection must not fold the parent it lives in, and must only fold
+  // its own siblings.
   function initSidebarSections() {
     const sections = Array.from(
       document.querySelectorAll(".calepin-website-sidebar-section"),
@@ -7397,7 +7466,9 @@ html:not([data-theme]) {
       section.addEventListener("toggle", () => {
         if (!section.open) return;
         sections.forEach((other) => {
-          if (other !== section) other.removeAttribute("open");
+          if (other === section) return;
+          if (other.parentElement !== section.parentElement) return;
+          other.removeAttribute("open");
         });
       });
     });
