@@ -1,4 +1,4 @@
-.PHONY: help build build-release release install clean test check version bump editors vscode vsx positron vscode-package vscode-sync-version vscode-stage-binary vscode-package-target vscode-package-universal vscode-publish vscode-compile cli-reference api-reference website serve
+.PHONY: help build build-release release install linux-packages clean test check version bump editors vscode vsx positron vscode-package vscode-sync-version vscode-stage-binary vscode-package-target vscode-package-universal vscode-publish vscode-compile cli-reference api-reference website serve
 
 # Package version, parsed from the CLI crate manifest.
 VERSION := $(shell awk -F'"' '/^version/ { print $$2; exit }' calepin/Cargo.toml)
@@ -64,6 +64,7 @@ bump: ## Bump package version (usage: make bump VERSION=x.y.z)
 # Tag the current commit and push the tag. This triggers:
 #   - .github/workflows/release.yml        cargo-dist binaries and installers
 #   - .github/workflows/publish-crates.yml cargo publish to crates.io
+#   - .github/workflows/linux-packages.yml .deb, .rpm and Arch packages
 # Refuses to run on a dirty tree so the tag reflects committed code.
 release: ## Tag and push v$(VERSION); fires cargo-dist + crates.io workflows
 	@test -z "$$(git status --porcelain)" || { echo "working tree is dirty; commit or stash first"; exit 1; }
@@ -71,9 +72,15 @@ release: ## Tag and push v$(VERSION); fires cargo-dist + crates.io workflows
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin v$(VERSION)
 
+# The .deb, .rpm and Arch package, all rendered from packaging/linux/nfpm.yaml.
+# Requires nfpm on PATH. The release workflow runs the same script against the
+# binaries cargo-dist published, for both architectures.
+linux-packages: build-release  ## Build dist/ .deb, .rpm and .pkg.tar.zst (Linux only)
+	./scripts/make-linux-packages.sh
+
 clean:  ## Remove build artifacts
 	cargo clean --manifest-path calepin/Cargo.toml
-	rm -rf .calepin $(SITE_DIR)/.calepin
+	rm -rf .calepin $(SITE_DIR)/.calepin dist
 	find $(DOCS_SRC) -type d -name .calepin -prune -exec rm -rf {} +
 
 # ==============================================================================

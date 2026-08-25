@@ -1,0 +1,83 @@
+# One description, three packages: the `.deb`, the `.rpm` and the Arch
+# `.pkg.tar.zst` are all rendered from this file by
+# scripts/make-linux-packages.sh, rather than maintained three times.
+#
+# Calepin is a single statically-laid-out binary whose only hard dependency is
+# libc. Everything it actually drives — `typst`, `python3`, `Rscript`,
+# `julia`, `mmdc`, `dot`, `d2` — is looked up on PATH at run time and is
+# overridable in `.calepin/config.toml`, so none of them can be a hard
+# dependency without making the package refuse to install on a machine where
+# the user only wants one engine. They are stated as recommendations and
+# suggestions instead, which is what those fields are for.
+#
+# Nothing here resolves a version at build time; the script supplies
+# CALEPIN_VERSION and CALEPIN_ARCH.
+
+name: calepin
+version: ${CALEPIN_VERSION}
+arch: ${CALEPIN_ARCH}
+platform: linux
+maintainer: Vincent Arel-Bundock <vincent@arelbundock.com>
+description: |
+  Typst-native computational notebooks.
+  Calepin turns a .typ file into a notebook: executable R, Python, Julia and
+  shell chunks live directly in the Typst document, and the real typst binary
+  renders their output in place. Diagram chunks (mermaid, tikz, dot, d2) are
+  supported alongside them.
+vendor: Vincent Arel-Bundock
+homepage: https://github.com/vincentarelbundock/calepin
+license: MIT
+section: text
+priority: optional
+
+depends:
+  - libc6
+
+recommends:
+  # Calepin never renders Typst itself: it wraps the user's typst binary and
+  # drives it twice over the same source. Without typst the CLI installs and
+  # runs, and `calepin health` says exactly what is missing, but nothing
+  # renders. Debian carries typst from trixie onward.
+  - typst
+
+suggests:
+  # One per engine. A given user wants some subset of these and no more, so
+  # requiring any of them would be wrong.
+  - python3
+  - r-base-core
+  - graphviz
+  - pdf2svg
+
+overrides:
+  rpm:
+    depends:
+      - glibc
+    recommends:
+      - typst
+    suggests:
+      - python3
+      - R-core
+      - graphviz
+      - pdf2svg
+
+  archlinux:
+    depends:
+      - glibc
+    # nfpm's archlinux packager writes no `optdepend` field, so `recommends`
+    # and `suggests` above would be silently dropped rather than translated.
+    # The Arch package therefore states only the hard dependency; the optional
+    # tools are listed in the description and by `calepin health`.
+
+contents:
+  - src: ./dist/linux-staging/calepin
+    dst: /usr/bin/calepin
+
+  # Deliberately not shipped: the cargo-dist `calepin-update` helper. A
+  # package manager owns the installed copy, so a self-updater beside it would
+  # fight with apt or dnf over the same file. `calepin update` already fails
+  # with a readable message when the helper is absent.
+
+  - src: ./README.md
+    dst: /usr/share/doc/calepin/README.md
+  - src: ./LICENSE
+    dst: /usr/share/doc/calepin/LICENSE

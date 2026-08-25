@@ -20,6 +20,7 @@ The binary crate is nested at `calepin/`, so direct cargo invocations need `--ma
 - `make cli-reference` regenerates `docs-src/cli.md` from clap `--help` output
 - `make website` / `make serve` build the docs site via `calepin compile docs-src docs` into `docs/` (website config auto-discovered at `docs-src/calepin.toml`)
 - `make bump VERSION=x.y.z` then `make release` cuts a release (tags + pushes, which fires the cargo-dist and crates.io workflows). `make release` refuses a dirty tree.
+- `make linux-packages` builds the `.deb`, `.rpm` and Arch `.pkg.tar.zst` into `dist/` from `packaging/linux/nfpm.yaml` (needs `nfpm` on `PATH`, Linux only)
 - `make editors` builds the extension from `editors/vscode/`, installs it in VS Code, and installs it in Positron when the Positron CLI is available
 
 Integration tests in `tests/typst_preprocess.rs` shell out to the built binary plus real `typst`/`python3`/`pdftotext`. They return early (skip, not fail) when a required tool is absent, so a green run on a machine without `typst` may have skipped the meaningful tests.
