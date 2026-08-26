@@ -35,5 +35,5 @@ notify-debouncer-full = "0.7"
 ctrlc = "3"
 tiny_http = "0.12"
 mime_guess = "2"
-ureq = "2"
+ureq = { version = "3", features = ["platform-verifier"] }
 quick-xml = "0.39.4"

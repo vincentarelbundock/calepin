@@ -226,9 +226,9 @@ fn validate_external_link(
 
 fn external_link_error(client: &ureq::Agent, url: &str) -> Option<String> {
     match client.head(url).call() {
-        Ok(response) if response.status() < 400 => None,
+        Ok(response) if response.status().as_u16() < 400 => None,
         Ok(response) => {
-            fallback_get_error(client, url, Some(format!("HTTP {}", response.status())))
+            fallback_get_error(client, url, Some(format!("HTTP {}", response.status().as_u16())))
         }
         Err(error) => fallback_get_error(client, url, Some(error.to_string())),
     }
@@ -240,8 +240,8 @@ fn fallback_get_error(
     head_error: Option<String>,
 ) -> Option<String> {
     match client.get(url).call() {
-        Ok(response) if response.status() < 400 => None,
-        Ok(response) => Some(format!("HTTP {}", response.status())),
+        Ok(response) if response.status().as_u16() < 400 => None,
+        Ok(response) => Some(format!("HTTP {}", response.status().as_u16())),
         Err(error) => match head_error {
             Some(head_error) => Some(format!("{head_error}; fallback GET failed: {error}")),
             None => Some(error.to_string()),

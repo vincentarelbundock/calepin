@@ -62,7 +62,7 @@ impl IconCache {
             icon.prefix, icon.name
         );
         let svg = match self.agent.get(&url).call() {
-            Ok(response) => match response.into_string() {
+            Ok(mut response) => match response.body_mut().read_to_string() {
                 Ok(svg) => svg,
                 Err(error) => {
                     self.warn_unavailable(
