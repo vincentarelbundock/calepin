@@ -324,6 +324,7 @@ dependencies = [
  "plist",
  "quick-xml",
  "rustls-native-certs",
+ "self-replace",
  "serde",
  "serde_json",
  "tempfile",
@@ -3175,6 +3176,17 @@ dependencies = [
  "rustc-hash",
  "servo_arc",
  "smallvec",
+]
+
+[[package]]
+name = "self-replace"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03ec815b5eab420ab893f63393878d89c90fdd94c0bcc44c07abb8ad95552fb7"
+dependencies = [
+ "fastrand",
+ "tempfile",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

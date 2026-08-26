@@ -43,3 +43,8 @@ quick-xml = "0.39.4"
 # file-based store; see utils/http.rs.
 [target.'cfg(all(unix, not(target_os = "android"), not(target_vendor = "apple")))'.dependencies]
 rustls-native-certs = "0.8"
+
+# Deletes the renamed-aside calepin.exe after a successful `calepin update`;
+# Windows will not delete a running image through std::fs. See update.rs.
+[target.'cfg(windows)'.dependencies]
+self-replace = "1"
