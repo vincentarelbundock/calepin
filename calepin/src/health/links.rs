@@ -224,28 +224,21 @@ fn validate_external_link(
     })
 }
 
+// The agent treats 4xx/5xx responses as errors, so a reachable link is
+// always the Ok arm and a status failure always Error::StatusCode.
 fn external_link_error(client: &ureq::Agent, url: &str) -> Option<String> {
     match client.head(url).call() {
-        Ok(response) if response.status().as_u16() < 400 => None,
-        Ok(response) => {
-            fallback_get_error(client, url, Some(format!("HTTP {}", response.status().as_u16())))
-        }
-        Err(error) => fallback_get_error(client, url, Some(error.to_string())),
+        Ok(_) => None,
+        Err(ureq::Error::StatusCode(code)) => fallback_get_error(client, url, format!("HTTP {code}")),
+        Err(error) => fallback_get_error(client, url, error.to_string()),
     }
 }
 
-fn fallback_get_error(
-    client: &ureq::Agent,
-    url: &str,
-    head_error: Option<String>,
-) -> Option<String> {
+fn fallback_get_error(client: &ureq::Agent, url: &str, head_error: String) -> Option<String> {
     match client.get(url).call() {
-        Ok(response) if response.status().as_u16() < 400 => None,
-        Ok(response) => Some(format!("HTTP {}", response.status().as_u16())),
-        Err(error) => match head_error {
-            Some(head_error) => Some(format!("{head_error}; fallback GET failed: {error}")),
-            None => Some(error.to_string()),
-        },
+        Ok(_) => None,
+        Err(ureq::Error::StatusCode(code)) => Some(format!("HTTP {code}")),
+        Err(error) => Some(format!("{head_error}; fallback GET failed: {error}")),
     }
 }
 
@@ -393,6 +386,48 @@ mod tests {
         assert!(summary.broken.is_empty());
         assert_eq!(summary.broken_local, 0);
         assert_eq!(summary.broken_external, 0);
+    }
+
+    #[test]
+    fn link_check_reports_status_of_dead_external_links() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::thread;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let handle = thread::spawn(move || {
+            // One connection for the HEAD, one for the fallback GET.
+            for _ in 0..2 {
+                if let Ok((mut stream, _)) = listener.accept() {
+                    let mut buf = [0u8; 512];
+                    let _ = stream.read(&mut buf);
+                    let response =
+                        b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                    let _ = stream.write_all(response);
+                }
+            }
+        });
+
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(
+            root.join("index.typ"),
+            format!(r#"#link("http://{}/missing")[Dead]"#, addr),
+        )
+        .unwrap();
+
+        let summary = check_links(root, None, true).unwrap();
+        let _ = handle.join();
+
+        assert_eq!(summary.links, 1);
+        assert_eq!(summary.broken_external, 1);
+        assert_eq!(summary.broken.len(), 1);
+        assert!(
+            summary.broken[0].contains("HTTP 404"),
+            "expected HTTP 404 in: {}",
+            summary.broken[0]
+        );
     }
 
     #[test]
