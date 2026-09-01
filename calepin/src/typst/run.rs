@@ -44,15 +44,81 @@ pub fn run_typst_capture(
     String::from_utf8(output.stdout).context(utf8_context)
 }
 
-pub fn run_typst_status(
+/// Runs typst and returns the diagnostics it wrote to stderr on success.
+///
+/// Typst reports warnings (unsupported elements during HTML export, for
+/// example) on stderr even when it exits successfully. Because the process is
+/// spawned with captured pipes those warnings are invisible unless a caller
+/// relays them, so they are handed back here instead of being discarded.
+pub fn run_typst_diagnostics(
     typst: &Path,
     action: &str,
     args: &[OsString],
     cwd: &Path,
     failure: impl FnOnce(&str) -> String,
-) -> Result<()> {
-    run_typst_output(typst, action, args, cwd, failure)?;
-    Ok(())
+) -> Result<String> {
+    let output = run_typst_output(typst, action, args, cwd, failure)?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Ok(filter_typst_diagnostics(&stderr))
+}
+
+/// Typst repeats this warning on every HTML compile; it says nothing about the
+/// document, so relaying it once per rendered page would only be noise.
+const HTML_PREVIEW_WARNING: &str = "html export is under active development";
+
+/// Drops the boilerplate HTML preview warning (and its hint lines) from typst
+/// diagnostics, keeping every document-specific message untouched.
+fn filter_typst_diagnostics(stderr: &str) -> String {
+    let mut kept: Vec<&str> = Vec::new();
+    let mut skipping = false;
+
+    for line in stderr.lines() {
+        let plain = strip_ansi_codes(line);
+        let plain = plain.trim_end();
+        if plain.trim_start().starts_with("warning:") && plain.contains(HTML_PREVIEW_WARNING) {
+            skipping = true;
+            continue;
+        }
+        if skipping {
+            // Hints, source spans and blank separators belonging to the skipped
+            // warning are indented or empty; the next diagnostic starts at
+            // column zero.
+            if plain.trim().is_empty() || plain.starts_with(char::is_whitespace) {
+                continue;
+            }
+            skipping = false;
+        }
+        kept.push(line);
+    }
+
+    while kept.first().is_some_and(|line| line.trim().is_empty()) {
+        kept.remove(0);
+    }
+    while kept.last().is_some_and(|line| line.trim().is_empty()) {
+        kept.pop();
+    }
+
+    kept.join("\n")
+}
+
+pub(super) fn strip_ansi_codes(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' && matches!(chars.peek(), Some('[')) {
+            chars.next();
+            for next in chars.by_ref() {
+                if next == 'm' {
+                    break;
+                }
+            }
+            continue;
+        }
+        out.push(ch);
+    }
+
+    out
 }
 
 fn run_typst_output(
@@ -158,7 +224,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn run_typst_status_failure_includes_status_and_stderr() {
+    fn run_typst_diagnostics_failure_includes_status_and_stderr() {
         let dir = tempfile::tempdir().unwrap();
         let typst = dir.path().join("typst");
         write_executable(
@@ -166,7 +232,7 @@ mod tests {
             "#!/bin/sh\nprintf 'simulated failure\\n' >&2\nexit 23\n",
         );
 
-        let err = run_typst_status(&typst, "run typst", &[], dir.path(), |stderr| {
+        let err = run_typst_diagnostics(&typst, "run typst", &[], dir.path(), |stderr| {
             format!("typst failed:\n{stderr}")
         })
         .unwrap_err()
@@ -176,6 +242,47 @@ mod tests {
         assert!(err.contains("simulated failure"));
         assert!(err.contains("exit status"));
         assert!(err.contains("23"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn run_typst_diagnostics_returns_warnings_from_successful_runs() {
+        let dir = tempfile::tempdir().unwrap();
+        let typst = dir.path().join("typst");
+        write_executable(
+            &typst,
+            "#!/bin/sh\nprintf 'warning: align was ignored during HTML export\\n' >&2\nexit 0\n",
+        );
+
+        let diagnostics = run_typst_diagnostics(&typst, "run typst", &[], dir.path(), |stderr| {
+            format!("typst failed:\n{stderr}")
+        })
+        .unwrap();
+
+        assert!(diagnostics.contains("align was ignored during HTML export"));
+    }
+
+    #[test]
+    fn filter_typst_diagnostics_drops_the_html_preview_banner() {
+        let stderr = "warning: html export is under active development and incomplete\n \
+= hint: its behaviour may change at any time\n = hint: see \
+https://github.com/typst/typst/issues/5512 for more information\n\nwarning: align was \
+ignored during HTML export\n   \u{250c}\u{2500} paper.typ:2:2\n";
+
+        let filtered = filter_typst_diagnostics(stderr);
+
+        assert!(!filtered.contains("under active development"));
+        assert!(!filtered.contains("hint:"));
+        assert!(filtered.contains("align was ignored during HTML export"));
+        assert!(filtered.contains("paper.typ:2:2"));
+    }
+
+    #[test]
+    fn filter_typst_diagnostics_is_empty_when_only_the_banner_is_reported() {
+        let stderr = "warning: html export is under active development and incomplete\n \
+= hint: do not rely on this feature for production use cases\n";
+
+        assert!(filter_typst_diagnostics(stderr).is_empty());
     }
 
     #[test]

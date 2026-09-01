@@ -122,6 +122,15 @@ impl Progress {
         }
     }
 
+    /// Runs `body` with the spinner cleared, so anything it prints to stderr is
+    /// not overwritten by the next redraw.
+    pub fn suspend<T>(&self, body: impl FnOnce() -> T) -> T {
+        match &self.bar {
+            Some(bar) => bar.suspend(body),
+            None => body(),
+        }
+    }
+
     pub fn inc(&self, delta: u64) {
         if let Some(bar) = &self.bar {
             bar.inc(delta);
