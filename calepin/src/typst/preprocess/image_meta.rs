@@ -1,9 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use anyhow::{Context, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use xxhash_rust::xxh3::xxh3_64;
 
 use crate::typst::io::write_if_changed;
@@ -12,19 +13,29 @@ use crate::typst::paths::slash_path;
 
 const IMAGE_META_FILE: &str = "image-meta.json";
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct ImageMetaDocument {
     schema: u8,
     images: BTreeMap<String, ImageMetaEntry>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ImageMetaEntry {
     path: String,
     xxh3: String,
     bytes: u64,
     width: u32,
     height: u32,
+    /// Modification time of the source file when this entry was computed, as
+    /// seconds and nanoseconds since the Unix epoch. Not consumed by the
+    /// Typst runtime (extra fields are ignored there); used only to decide
+    /// whether a later preprocess run can skip re-reading and re-hashing the
+    /// file. `None` when the platform could not report a modification time,
+    /// in which case the entry is always recomputed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    mtime_secs: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    mtime_nanos: Option<u32>,
 }
 
 impl ImageMetaDocument {
@@ -39,33 +50,76 @@ pub(crate) fn image_meta_relative_path(layout: &LayoutPaths) -> PathBuf {
 }
 
 pub(super) fn write_image_meta(layout: &LayoutPaths) -> Result<ImageMetaDocument> {
-    let document = collect_image_meta(layout)?;
+    let previous = read_previous_image_meta(layout);
+    let document = collect_image_meta(layout, previous.as_ref())?;
     let path = layout.artifact_path(IMAGE_META_FILE);
     write_if_changed(&path, serde_json::to_string_pretty(&document)?)?;
     Ok(document)
 }
 
-fn collect_image_meta(layout: &LayoutPaths) -> Result<ImageMetaDocument> {
+fn read_previous_image_meta(layout: &LayoutPaths) -> Option<ImageMetaDocument> {
+    let path = layout.artifact_path(IMAGE_META_FILE);
+    let bytes = fs::read(path).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+/// Every referenced image is stat'd on every preprocess so renames, deletes,
+/// and edits are always picked up, but the (potentially large) file contents
+/// are only read and re-hashed when the previous run's cached `(mtime, len)`
+/// no longer matches, or there is no cache entry for that path yet.
+fn cached_entry_by_path(previous: Option<&ImageMetaDocument>) -> BTreeMap<&str, &ImageMetaEntry> {
+    let Some(previous) = previous else {
+        return BTreeMap::new();
+    };
+    previous
+        .images
+        .values()
+        .map(|entry| (entry.path.as_str(), entry))
+        .collect()
+}
+
+fn collect_image_meta(
+    layout: &LayoutPaths,
+    previous: Option<&ImageMetaDocument>,
+) -> Result<ImageMetaDocument> {
     let mut keys_by_path = collect_project_image_keys(layout)?;
     collect_literal_image_keys(layout, &mut keys_by_path)?;
+    let cached_by_path = cached_entry_by_path(previous);
 
     let mut images = BTreeMap::new();
     for (path, keys) in keys_by_path {
-        let bytes =
-            fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
-        let Some((width, height)) = dimensions(&path, &bytes) else {
-            continue;
-        };
         let rel = path
             .strip_prefix(&layout.root)
             .map(slash_path)
             .unwrap_or_else(|_| path.display().to_string());
-        let entry = ImageMetaEntry {
-            path: rel,
-            xxh3: format!("{:016x}", xxh3_64(&bytes)),
-            bytes: bytes.len() as u64,
-            width,
-            height,
+        let metadata = fs::metadata(&path)
+            .with_context(|| format!("failed to stat {}", path.display()))?;
+        let (mtime_secs, mtime_nanos) = file_mtime(&metadata);
+        let cached = cached_by_path.get(rel.as_str()).copied();
+        let reusable = cached.filter(|cached| {
+            cached.bytes == metadata.len()
+                && cached.mtime_secs == mtime_secs
+                && cached.mtime_nanos == mtime_nanos
+                && mtime_secs.is_some()
+        });
+
+        let entry = if let Some(cached) = reusable {
+            cached.clone()
+        } else {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let Some((width, height)) = dimensions(&path, &bytes) else {
+                continue;
+            };
+            ImageMetaEntry {
+                path: rel,
+                xxh3: format!("{:016x}", xxh3_64(&bytes)),
+                bytes: bytes.len() as u64,
+                width,
+                height,
+                mtime_secs,
+                mtime_nanos,
+            }
         };
         for key in keys {
             images.insert(key, entry.clone());
@@ -73,6 +127,16 @@ fn collect_image_meta(layout: &LayoutPaths) -> Result<ImageMetaDocument> {
     }
 
     Ok(ImageMetaDocument { schema: 1, images })
+}
+
+fn file_mtime(metadata: &fs::Metadata) -> (Option<u64>, Option<u32>) {
+    match metadata.modified() {
+        Ok(time) => match time.duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(duration) => (Some(duration.as_secs()), Some(duration.subsec_nanos())),
+            Err(_) => (None, None),
+        },
+        Err(_) => (None, None),
+    }
 }
 
 fn collect_project_image_keys(layout: &LayoutPaths) -> Result<BTreeMap<PathBuf, BTreeSet<String>>> {
@@ -450,5 +514,38 @@ mod tests {
     fn svg_dimensions_reject_negative_viewbox_sizes() {
         let svg = br#"<svg viewBox="0 0 -120 80"></svg>"#;
         assert_eq!(svg_dimensions(svg), None);
+    }
+
+    #[test]
+    fn write_image_meta_reuses_cached_hash_for_unchanged_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = testfixtures::layout(dir.path());
+        std::fs::create_dir_all(&layout.root).unwrap();
+        std::fs::write(&layout.input, "").unwrap();
+        let svg = br#"<svg width="10" height="10"></svg>"#;
+        std::fs::write(layout.root.join("fig.svg"), svg).unwrap();
+
+        let first = write_image_meta(&layout).unwrap();
+        let first_entry = first.images.get("fig.svg").expect("entry recorded").clone();
+
+        // Re-running without touching the file must reuse the cached hash
+        // (observable indirectly: same content stays keyed to the same hash
+        // and dimensions across runs, and the underlying file is untouched).
+        let second = write_image_meta(&layout).unwrap();
+        let second_entry = second.images.get("fig.svg").expect("entry recorded");
+        assert_eq!(first_entry.xxh3, second_entry.xxh3);
+        assert_eq!(first_entry.width, second_entry.width);
+        assert_eq!(first_entry.height, second_entry.height);
+
+        // Changing the file's content changes the recorded hash on the next run.
+        std::fs::write(
+            layout.root.join("fig.svg"),
+            br#"<svg width="20" height="20"></svg>"#,
+        )
+        .unwrap();
+        let third = write_image_meta(&layout).unwrap();
+        let third_entry = third.images.get("fig.svg").expect("entry recorded");
+        assert_ne!(third_entry.xxh3, second_entry.xxh3);
+        assert_eq!(third_entry.width, 20);
     }
 }

@@ -1,12 +1,24 @@
+use std::collections::HashMap;
 use std::ffi::OsString;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use anyhow::{anyhow, Context, Result};
+use std::sync::OnceLock;
 
 use crate::typst::run::run_typst_capture;
 
 pub const REQUIRED_TYPST_VERSION: &str = "0.15.0";
 const REQUIRED_TYPST_VERSION_PARTS: (u64, u64, u64) = (0, 15, 0);
+
+/// A single `calepin compile`/`watch` invocation calls `assert_supported_typst`
+/// once from the preprocess pass and once from the render pass, over the same
+/// `typst` binary. Memoize by binary path so the second call reuses the first
+/// `typst --version` spawn instead of shelling out again.
+fn version_cache() -> &'static Mutex<HashMap<PathBuf, String>> {
+    static CACHE: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 pub fn assert_supported_typst(typst: &Path) -> Result<()> {
     let version = typst_version(typst)?;
@@ -22,6 +34,13 @@ pub fn assert_supported_typst(typst: &Path) -> Result<()> {
 }
 
 pub fn typst_version(typst: &Path) -> Result<String> {
+    if let Some(cached) = version_cache()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .get(typst)
+    {
+        return Ok(cached.clone());
+    }
     let args = vec![OsString::from("--version")];
     let cwd = std::env::current_dir().context("failed to resolve current directory")?;
     let stdout = run_typst_capture(
@@ -32,7 +51,12 @@ pub fn typst_version(typst: &Path) -> Result<String> {
         |stderr| format!("failed to check typst version:\n{stderr}"),
         "typst --version output was not UTF-8",
     )?;
-    parse_typst_version(&stdout)
+    let version = parse_typst_version(&stdout)?;
+    version_cache()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .insert(typst.to_path_buf(), version.clone());
+    Ok(version)
 }
 
 fn parse_typst_version(output: &str) -> Result<String> {

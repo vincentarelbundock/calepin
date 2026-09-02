@@ -87,6 +87,14 @@ pub fn parse_chunks_with_warnings(
         }
 
         if is_calepin_fence_label_metadata(value) {
+            // Reached directly rather than through the raw-block lookahead
+            // above: a fence label with no raw block immediately in front of
+            // it in the query array (or one whose raw block already carried
+            // matching chunk metadata, so the lookahead branch skipped past
+            // it without consuming this value). Still validate it, so a
+            // malformed trailing label is reported the same way whether or
+            // not its chunk goes on to run.
+            parse_fence_label_metadata(value)?;
             index += 1;
             continue;
         }
@@ -713,6 +721,21 @@ mod tests {
         assert_eq!(chunk.crossref_labels[0].kind, "fig");
         assert_eq!(chunk.crossref_labels[0].name, "fig-trailing");
         assert_eq!(chunk.code, "plot(1)");
+    }
+
+    #[test]
+    fn rejects_malformed_fence_label_metadata_not_paired_with_a_raw_block() {
+        // No raw block precedes this fence-label metadata, so it is reached
+        // directly by the main loop rather than through the raw-block
+        // lookahead. It must still be validated: a malformed label should be
+        // rejected the same way whether or not its chunk goes on to run.
+        let json = serde_json::json!([
+          {"func":"metadata","value":{}, "label":"<calepin-fence-label>"}
+        ])
+        .to_string();
+
+        let err = parse_chunks(&json, None).unwrap_err().to_string();
+        assert!(err.contains("missing `label`"), "{err}");
     }
 
     #[test]

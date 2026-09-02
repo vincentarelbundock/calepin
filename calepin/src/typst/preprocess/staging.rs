@@ -10,6 +10,12 @@ use crate::typst::source_rewrite::rewrite_runtime_imports;
 
 const BUILTIN_RAW_CHUNK_LANGS: &[&str] = &["python", "r", "mermaid", "dot", "tikz", "d2"];
 
+/// Namespace the wrapper's own generated show rules import the runtime
+/// under. Kept distinct from `source_rewrite::RUNTIME_ALIAS` ("calepin_runtime"),
+/// which a staged document body may itself bind when inlined into this same
+/// wrapper file scope by a notebook theme.
+const RUNTIME_NS: &str = "_calepin_wrapper_runtime";
+
 pub(super) fn notebook_template_context(
     layout: &LayoutPaths,
     staged_input: &Path,
@@ -100,12 +106,29 @@ fn write_wrapper(
     let wrapper_relative = layout.entry_relative_path(entry_name);
     let wrapper = layout.root.join(&wrapper_relative);
 
-    // The runtime exports `document` for authored `#show: calepin.document`
-    // calls. Preserve Typst's element under the bare name used by inlined
-    // sources and themes before the managed wrapper imports the runtime API.
+    // Import the runtime under a private namespace rather than `: *`. A
+    // wildcard import would bind every facade export (`target`, `chunks`,
+    // `code`, `render`, `options`, `store`, `results`, `pages`, `url`,
+    // `setup`, `chunk`, `inline`, `elements`, ...) as bare names in this
+    // file's scope, and the document body is inlined into that same scope
+    // (not `#include`d into its own), so those names would shadow Typst
+    // globals and any identifier a user document happens to choose for
+    // itself. User documents and themes already import the runtime
+    // qualified (`#import "/.calepin/calepin.typ" as calepin`), so nothing
+    // outside this generated wrapper needs the bare names; only the show
+    // rules generated below do, and they reach the runtime through
+    // `RUNTIME_NS`.
     let mut lines = format!(
-        "#let _calepin-document-element = document\n#import \"{runtime_import}\": *\n#let document = _calepin-document-element\n\n"
+        "#let _calepin-document-element = document\n#import \"{runtime_import}\" as {RUNTIME_NS}\n#let document = _calepin-document-element\n\n"
     );
+    // The one bare convenience worth keeping: `target()` reports "html" or
+    // "paged" for a document body that branches on output format without
+    // importing the runtime itself. A plain function, so it can never raise
+    // "expected function, found module" the way importing the runtime's own
+    // internal `target` module in bare scope used to.
+    lines.push_str(&format!(
+        "#let target() = if {RUNTIME_NS}._is-html() {{ \"html\" }} else {{ \"paged\" }}\n\n"
+    ));
     if let Some(generation) = expected_generation {
         lines.push_str(&format!(
             "#let _calepin-expected-generation = {}\n\
@@ -128,9 +151,18 @@ fn write_wrapper(
 
     for lang in ["typ", "typst"] {
         lines.push_str(&format!(
-            "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => _without-raw-chunk-transforms(() => _html-themed-raw-block(it))\n"
+            "#show raw.where(block: true, lang: \"{lang}\", theme: auto): it => {RUNTIME_NS}._without-raw-chunk-transforms(() => {RUNTIME_NS}._html-themed-raw-block(it))\n"
         ));
     }
+
+    // The langs a bare (untagged) raw block is recognized as a chunk for. A
+    // literal array local to this wrapper, rather than a name looked up on
+    // the runtime import: it differs per document (jupyter kernels vary), so
+    // there is nothing fixed to export from the facade for it.
+    lines.push_str(&format!(
+        "#let _raw-chunk-langs = {}\n",
+        typst_string_array(&raw_chunk_langs(jupyter_kernels))
+    ));
 
     for lang in BUILTIN_RAW_CHUNK_LANGS {
         lines.push_str(&raw_show_rule(lang));
@@ -141,10 +173,10 @@ fn write_wrapper(
     }
 
     lines.push('\n');
-    lines.push_str(html_raw_show_rule());
+    lines.push_str(&html_raw_show_rule());
 
     lines.push('\n');
-    lines.push_str(heading_anchor_show_rule());
+    lines.push_str(&heading_anchor_show_rule());
 
     // Default chunk styling. Installed here, and only alongside a notebook
     // theme, so that `theme = "typst"` leaves the labeled carriers bare while
@@ -153,7 +185,7 @@ fn write_wrapper(
     // document body so both can displace it with their own label rules.
     if notebook_theme.is_some() {
         lines.push('\n');
-        lines.push_str("#show: _default-chunk-chrome\n");
+        lines.push_str(&format!("#show: {RUNTIME_NS}._default-chunk-chrome\n"));
     }
 
     if let Some(notebook_theme) = notebook_theme {
@@ -191,10 +223,19 @@ fn typst_string(value: &str) -> String {
     format!("\"{escaped}\"")
 }
 
+fn typst_string_array(values: &[String]) -> String {
+    let items = values
+        .iter()
+        .map(|value| typst_string(value))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("({items},)")
+}
+
 fn raw_show_rule(lang: &str) -> String {
     let lang = typst_string(lang);
     format!(
-        "#show raw.where(block: true, lang: {lang}, theme: auto): it => if _disable-raw-chunk-transforms.get() {{ _html-themed-raw-block(it) }} else {{ _fenced-chunk({lang}, it) }}\n"
+        "#show raw.where(block: true, lang: {lang}, theme: auto): it => if {RUNTIME_NS}._disable-raw-chunk-transforms.get() {{ {RUNTIME_NS}._html-themed-raw-block(it) }} else {{ {RUNTIME_NS}._fenced-chunk({lang}, it) }}\n"
     )
 }
 
@@ -203,32 +244,36 @@ fn raw_show_rule(lang: &str) -> String {
 /// carrying the label immediately before each labeled heading; the HTML
 /// post-processor reads it to set the heading `id` and then strips it. Only the
 /// HTML target is affected; paged/query passes re-emit the heading untouched.
-fn heading_anchor_show_rule() -> &'static str {
-    r#"#show heading: it => {
-  if _is-html() and "label" in it.fields() {
+fn heading_anchor_show_rule() -> String {
+    format!(
+        r#"#show heading: it => {{
+  if {RUNTIME_NS}._is-html() and "label" in it.fields() {{
     std.html.elem("calepin-heading-anchor", attrs: (data-id: str(it.label)))
-  }
+  }}
   it
-}
+}}
 "#
+    )
 }
 
-fn html_raw_show_rule() -> &'static str {
-    r#"#show raw.where(block: true, theme: auto): it => {
-  if _is-query() {
+fn html_raw_show_rule() -> String {
+    format!(
+        r#"#show raw.where(block: true, theme: auto): it => {{
+  if {RUNTIME_NS}._is-query() {{
     it
-  } else if _disable-raw-chunk-transforms.get() {
-    _html-themed-raw-block(it)
-  } else if it.has("lang") and it.lang != none and _raw-chunk-langs.contains(it.lang) and _fenced-chunks-runs(
+  }} else if {RUNTIME_NS}._disable-raw-chunk-transforms.get() {{
+    {RUNTIME_NS}._html-themed-raw-block(it)
+  }} else if it.has("lang") and it.lang != none and _raw-chunk-langs.contains(it.lang) and {RUNTIME_NS}._fenced-chunks-runs(
     it.lang,
-    _resolve-options(it.lang, _call-defaults).at("fenced-chunks"),
-  ) {
-    _fenced-chunk(it.lang, it)
-  } else {
-    _html-themed-raw-block(it)
-  }
-}
+    {RUNTIME_NS}._resolve-options(it.lang, {RUNTIME_NS}._call-defaults).at("fenced-chunks"),
+  ) {{
+    {RUNTIME_NS}._fenced-chunk(it.lang, it)
+  }} else {{
+    {RUNTIME_NS}._html-themed-raw-block(it)
+  }}
+}}
 "#
+    )
 }
 
 #[cfg(test)]
