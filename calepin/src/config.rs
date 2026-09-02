@@ -994,6 +994,19 @@ credits = 3
         assert!(err.contains("unknown field `revealjs`"), "{err}");
     }
 
+
+    /// The website `calepin.toml` is parsed by both this module and
+    /// `website::config`. Both deny unknown keys, so every website key has a
+    /// placeholder here; the real docs site config is the drift check.
+    #[test]
+    fn config_accepts_every_key_used_by_the_docs_website() {
+        let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let path = manifest.join("../docs-src/calepin.toml");
+        let root = path.parent().unwrap();
+        CalepinConfig::load(root, Some(&path))
+            .unwrap_or_else(|err| panic!("docs-src/calepin.toml must load: {err:#}"));
+    }
+
     #[test]
     fn config_rejects_unknown_top_level_key_and_lists_valid_ones() {
         let dir = tempfile::tempdir().unwrap();
