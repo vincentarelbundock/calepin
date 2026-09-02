@@ -5,26 +5,26 @@
 // A single Rscript process runs for the lifetime of the document render. On init,
 // a bootstrap script is written to a temp file and executed with --no-save
 // --no-restore. The bootstrap sets up a read-eval loop over stdin/stdout using a
-// sentinel-delimited protocol (see subprocess.rs). All chunks execute in the
-// global environment, so variables persist across chunks — notebook semantics.
+// sentinel-delimited protocol (see subprocess.rs and PROTOCOL.md). All chunks
+// execute in the global environment, so variables persist across chunks,
+// notebook semantics.
 //
-// Two execution modes:
-// - **Block** (`capture`): each expression is eval'd individually via
-//   capture.output(), with warnings and messages intercepted by
-//   withCallingHandlers(). A graphics device is opened before execution and
-//   closed after, so any plots are saved to the requested path.
-// - **Inline** (`evaluate_inline`): eval() a single expression. Numeric scalars
-//   are formatted with `format(digits=3, big.mark=",")` for readable output.
+// Each expression in a chunk is eval'd individually via capture.output(), with
+// warnings and messages intercepted by withCallingHandlers(). A graphics device
+// is opened before execution and closed after, so any plots are saved to the
+// requested path; a chunk with no figure path (a `tbl-*` chunk) still gets a
+// throwaway device so a stray plot() call lands there instead of leaking into
+// R's default device (which would otherwise open `Rplots.pdf` in the project
+// directory and never close it).
 //
 // The graphics device type (png, svg, cairo_pdf, etc.) is configurable per chunk
 // via the `dev` option. Raster devices get `units="in"` and the requested DPI.
 //
 // ## Functions
 //
-// - RSession::init(format)      — Spawn Rscript with the bootstrap read-eval loop.
-// - RSession::evaluate_inline() — Evaluate a single R expression and return the formatted result.
-// - RSession::capture()         — Execute an R code chunk with output/warning/message/plot capture
-//                                 using the sentinel protocol.
+// - RSession::init_with_program(): Spawn Rscript with the bootstrap read-eval loop.
+// - RSession::capture():           Execute an R code chunk with output/warning/message/plot
+//                                   capture using the sentinel protocol.
 
 use anyhow::Result;
 use std::path::Path;
@@ -33,8 +33,24 @@ use super::make_sentinel;
 use super::subprocess::{spawn_script, SubprocessSession};
 use crate::utils::tools;
 
-/// Format placeholder replaced at init time with the actual output format.
-const FORMAT_PLACEHOLDER: &str = "__CALEPIN_FORMAT__";
+/// Percent-encode the delimiter characters used by the `META:` line so a
+/// figure path containing `;` or `=` (both fair game on disk) round-trips
+/// intact instead of truncating the parsed value. Decoded on the R side with
+/// `utils::URLdecode()`, which understands arbitrary `%XX` escapes.
+fn percent_encode_meta_value(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '%' => out.push_str("%25"),
+            ';' => out.push_str("%3B"),
+            '=' => out.push_str("%3D"),
+            '\n' => out.push_str("%0A"),
+            '\r' => out.push_str("%0D"),
+            other => out.push(other),
+        }
+    }
+    out
+}
 
 /// Bootstrap R script sent once at startup.
 /// Sets up a read-eval loop that reads sentinel-delimited code blocks from stdin,
@@ -43,15 +59,6 @@ const FORMAT_PLACEHOLDER: &str = "__CALEPIN_FORMAT__";
 const R_BOOTSTRAP: &str = r#"
 # Signal to user code and packages that we are running inside calepin.
 options(calepin = TRUE)
-
-# Preamble buffer: R code can call calepin.preamble() to inject content
-# into the document preamble (e.g. \usepackage lines, HTML <head> elements).
-.calepin_preamble_buf <- character(0)
-
-calepin.preamble <- function(text) {
-  .calepin_preamble_buf <<- c(.calepin_preamble_buf, text)
-  invisible(NULL)
-}
 
 .calepin_loop <- function() {
   con <- file("stdin", "r")
@@ -71,37 +78,20 @@ calepin.preamble <- function(text) {
     }
     lines <- unlist(lines)
 
-    # First line is metadata: MODE:..., rest is code
+    # First line is metadata: META:..., rest is code
     meta_line <- lines[1]
     code <- paste(lines[-1], collapse = "\n")
 
-    if (startsWith(meta_line, "INLINE:")) {
-      # Inline eval mode
-      expr_text <- sub("^INLINE:", "", meta_line)
-      result <- tryCatch({
-        .val <- eval(parse(text = expr_text), envir = globalenv())
-        if (is.numeric(.val) && length(.val) == 1) {
-          format(.val, digits = 3, big.mark = ",")
-        } else {
-          paste(as.character(.val), collapse = ", ")
-        }
-      }, error = function(e) {
-        paste0(sentinel, "_ERROR:", conditionMessage(e))
-      })
-      cat(result, "\n", sep = "")
-      cat(sentinel, "_DONE\n", sep = "")
-      flush(stdout())
-      next
-    }
-
-    # Parse metadata: fig_path, dev, width, height, dpi
+    # Parse metadata: fig_path, dev, width, height, dpi. Values are
+    # percent-encoded on the Rust side so a path containing ';' or '='
+    # round-trips instead of truncating.
     meta <- list()
-    for (item in strsplit(sub("^META:", "", meta_line), ";")[[1]]) {
+    for (item in strsplit(sub("^META:", "", meta_line), ";", fixed = TRUE)[[1]]) {
       eq <- regexpr("=", item, fixed = TRUE)
       if (eq > 0) {
         key <- substr(item, 1L, eq - 1L)
         value <- substr(item, eq + 1L, nchar(item))
-        meta[[key]] <- value
+        meta[[key]] <- utils::URLdecode(value)
       }
     }
     fig_path <- meta[["fig_path"]]
@@ -123,7 +113,16 @@ calepin.preamble <- function(text) {
     plot_pending <- FALSE
     pending_plot_state <- NULL
     plot_index <- 1L
-    device_path <- if (isTRUE(nzchar(fig_path))) paste0(fig_path, ".device") else ""
+    # A chunk with no figure path (a `tbl-*` chunk) still gets a real device,
+    # targeting a throwaway file, so a stray plot() call is captured and
+    # discarded instead of leaking into R's default device.
+    is_table_chunk <- !isTRUE(nzchar(fig_path))
+    device_target <- if (is_table_chunk) {
+      file.path(tempdir(), paste0(sentinel, ".discard"))
+    } else {
+      fig_path
+    }
+    device_path <- if (isTRUE(nzchar(dev_name))) paste0(device_target, ".device") else ""
 
     .calepin_plot_threshold <- function(dev_name) {
       if (dev_name %in% c("pdf", "cairo_pdf")) {
@@ -246,18 +245,22 @@ calepin.preamble <- function(text) {
       })
     }
 
+    # Declared up front (rather than inside the tryCatch below) so that if a
+    # statement throws mid-chunk, the source lines gathered so far -- crucially
+    # including the failing statement's own source -- are still visible for the
+    # unconditional flush after the tryCatch. Pre-splitting on the raw code
+    # means even a parse() failure still has something to flush.
+    code_lines <- strsplit(code, "\n", fixed = TRUE)[[1]]
+    prev_end <- 0L
+    src_buf <- character(0)
+
     if (is.null(err_out)) {
       tryCatch(
         withCallingHandlers(
           {
             exprs <- parse(text = code, keep.source = TRUE)
             srcs <- attr(exprs, "srcref")
-            code_lines <- strsplit(code, "\n", fixed = TRUE)[[1]]
-            prev_end <- 0L
-            src_buf <- character(0)
             for (i in seq_along(exprs)) {
-              if (plot_pending) .calepin_emit_plot_pending()
-
               # Determine source line range (include gap lines: comments, blanks)
               if (!is.null(srcs) && i <= length(srcs)) {
                 last_line <- srcs[[i]][3L]
@@ -268,7 +271,6 @@ calepin.preamble <- function(text) {
               prev_end <- last_line
 
               # Capture stdout and direct stderr during eval
-              plot_pending_before <- plot_pending
               .err_out <- capture.output(
                 .cat_out <- capture.output(
                   .val <- withVisible(eval(exprs[[i]], envir = globalenv()))
@@ -281,7 +283,6 @@ calepin.preamble <- function(text) {
 
               # Emit cat() output first
               if (length(.cat_out) > 0) {
-                if (plot_pending_before) .calepin_emit_plot_pending()
                 parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
                 src_buf <- character(0)
                 has_output <- TRUE
@@ -289,7 +290,6 @@ calepin.preamble <- function(text) {
               }
 
               if (length(.err_out) > 0) {
-                if (plot_pending_before) .calepin_emit_plot_pending()
                 if (!has_output) {
                   parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
                   src_buf <- character(0)
@@ -303,23 +303,24 @@ calepin.preamble <- function(text) {
                 r <- capture.output(print(.val$value))
                 .calepin_note_plot_change()
                 if (length(r) > 0) {
-                  if (plot_pending_before) .calepin_emit_plot_pending()
                   if (!has_output) {
                     parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
                     src_buf <- character(0)
+                    has_output <- TRUE
                   }
                   parts <- c(parts, paste0(sentinel, "_OUTPUT:", paste(r, collapse = "\n")))
                 }
               }
-            }
-            # Flush remaining source (trailing expressions + comments)
-            remaining <- if (prev_end < length(code_lines)) {
-              c(src_buf, code_lines[(prev_end + 1L):length(code_lines)])
-            } else {
-              src_buf
-            }
-            if (length(remaining) > 0 && nzchar(trimws(paste(remaining, collapse = "\n")))) {
-              parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(remaining, collapse = "\n")))
+
+              # Flush the source before the figure it produced, then emit the
+              # figure -- never the other way around.
+              if (plot_pending) {
+                if (!has_output) {
+                  parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(src_buf, collapse = "\n")))
+                  src_buf <- character(0)
+                }
+                .calepin_emit_plot_pending()
+              }
             }
           },
           warning = function(w) {
@@ -337,6 +338,19 @@ calepin.preamble <- function(text) {
       )
     }
 
+    # Flush whatever source never got attached to an OUTPUT/MESSAGE/PLOT part,
+    # unconditionally -- including on error, so the statement that raised is
+    # still echoed. Also covers trailing expressions and comments after the
+    # last one actually evaluated.
+    remaining <- if (prev_end < length(code_lines)) {
+      c(src_buf, code_lines[(prev_end + 1L):length(code_lines)])
+    } else {
+      src_buf
+    }
+    if (length(remaining) > 0 && nzchar(trimws(paste(remaining, collapse = "\n")))) {
+      parts <- c(parts, paste0(sentinel, "_SOURCE:", paste(remaining, collapse = "\n")))
+    }
+
     open_devices <- dev.list()
     if (!is.na(device_id) && !is.null(open_devices) && device_id %in% open_devices) {
       dev.off(device_id)
@@ -350,23 +364,14 @@ calepin.preamble <- function(text) {
       suppressWarnings(file.remove(device_path))
     }
 
-    if (has_plot) {
-      if (plot_pending) {
-        .calepin_emit_plot_pending()
-      }
+    if (has_plot && plot_pending) {
+      .calepin_emit_plot_pending()
     }
     if (!is.null(err_out)) {
       parts <- c(parts, paste0(sentinel, "_ERROR:", err_out))
     }
     if (length(warns) > 0) parts <- c(parts, paste0(sentinel, "_WARNING:", paste(warns, collapse = "\n")))
     if (length(msgs) > 0) parts <- c(parts, paste0(sentinel, "_MESSAGE:", paste(msgs, collapse = "\n")))
-
-    if (length(.calepin_preamble_buf) > 0) {
-      for (p in .calepin_preamble_buf) {
-        parts <- c(parts, paste0(sentinel, "_PREAMBLE:", p))
-      }
-      .calepin_preamble_buf <<- character(0)
-    }
 
     result <- paste(parts, collapse = paste0("\n", sep, "\n"))
     cat(result, "\n", sep = "")
@@ -386,15 +391,13 @@ pub struct RSession {
 impl RSession {
     pub fn init_with_program(
         program: &Path,
-        format: &str,
         cwd: Option<&Path>,
         timeout: Option<std::time::Duration>,
     ) -> Result<Self> {
-        let bootstrap = R_BOOTSTRAP.replace(FORMAT_PLACEHOLDER, format);
         let (proc, bootstrap_file) = spawn_script(
             program,
             &["--no-save", "--no-restore"],
-            &bootstrap,
+            R_BOOTSTRAP,
             "R",
             cwd,
             timeout,
@@ -404,6 +407,12 @@ impl RSession {
             proc,
             _bootstrap_file: bootstrap_file,
         })
+    }
+
+    /// True once the underlying subprocess is known dead (e.g. killed after a
+    /// chunk timeout). The pool must respawn rather than reuse it.
+    pub fn is_dead(&self) -> bool {
+        self.proc.is_dead()
     }
 
     /// Capture R code output using the sentinel protocol.
@@ -419,7 +428,11 @@ impl RSession {
         let sentinel = make_sentinel();
         let meta = format!(
             "META:fig_path={};dev={};width={};height={};dpi={}",
-            fig_path, dev, width, height, dpi
+            percent_encode_meta_value(fig_path),
+            percent_encode_meta_value(dev),
+            width,
+            height,
+            dpi
         );
         let payload = format!("{}\n{}", meta, code);
         self.proc.execute(&sentinel, &payload)
@@ -443,13 +456,8 @@ mod tests {
     }
 
     fn session() -> RSession {
-        RSession::init_with_program(
-            Path::new("Rscript"),
-            "typst",
-            None,
-            Some(Duration::from_secs(10)),
-        )
-        .unwrap()
+        RSession::init_with_program(Path::new("Rscript"), None, Some(Duration::from_secs(10)))
+            .unwrap()
     }
 
     #[test]
@@ -560,6 +568,27 @@ summary(m)"#,
     }
 
     #[test]
+    fn r_session_emits_the_plot_after_the_source_that_drew_it() {
+        if !command_available("Rscript") {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("ordering.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture("plot(1:3)\ncat(\"hi\")", &fig_path, "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        let source = raw.find("_SOURCE:").expect(&raw);
+        let plot = raw.find("_PLOT:").expect(&raw);
+        let output = raw.find("_OUTPUT:hi").expect(&raw);
+        assert!(source < plot, "{raw}");
+        assert!(plot < output, "{raw}");
+    }
+
+    #[test]
     fn r_session_captures_direct_stderr_as_message() {
         if !command_available("Rscript") {
             return;
@@ -601,6 +630,67 @@ summary(m)"#,
         assert!(std::path::Path::new(&fig_path).exists());
         assert!(raw.contains("_PLOT:"), "{raw}");
         assert!(raw.contains(&fig_path), "{raw}");
+    }
+
+    #[test]
+    fn r_session_accepts_semicolon_in_figure_path() {
+        if !command_available("Rscript") {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("plot;semicolon.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+        let raw = session
+            .capture("plot(1:3)", &fig_path, "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(std::path::Path::new(&fig_path).exists());
+        assert!(raw.contains("_PLOT:"), "{raw}");
+        assert!(raw.contains(&fig_path), "{raw}");
+    }
+
+    #[test]
+    fn r_session_echoes_the_failing_statement_source_on_error() {
+        if !command_available("Rscript") {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture("print(1)\nstop('boom')", "", "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_ERROR:"), "{raw}");
+        assert!(raw.contains("boom"), "{raw}");
+        assert!(raw.contains("_SOURCE:"), "{raw}");
+        assert!(raw.contains("stop('boom')"), "{raw}");
+    }
+
+    #[test]
+    fn r_session_does_not_leak_a_plot_from_a_table_chunk_into_the_cwd() {
+        if !command_available("Rscript") {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let mut session = RSession::init_with_program(
+            Path::new("Rscript"),
+            Some(dir.path()),
+            Some(Duration::from_secs(10)),
+        )
+        .unwrap();
+
+        // A table chunk has no figure path; a stray plot() call must not open
+        // R's default device and leave `Rplots.pdf` behind in the cwd.
+        let raw = session
+            .capture("plot(1:3)\ncat('ok')", "", "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_OUTPUT:ok"), "{raw}");
+        assert!(!raw.contains("_PLOT:"), "{raw}");
+        assert!(!dir.path().join("Rplots.pdf").exists(), "{raw}");
     }
 
     #[test]
