@@ -1,18 +1,13 @@
 use std::collections::BTreeMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
-
+use super::source::{
+    display_rel, find_matching_delimiter, is_identifier_char, is_left_identifier_boundary,
+    line_number, parse_string_literal, resolve_local_reference_target, skip_ws,
+};
+use super::{HealthCheck, HealthStatus, QualitySource};
 use crate::utils::path::slash_path;
 use crate::utils::url::output_href_with_extension;
-
-use super::source::{
-    collect_typst_files, display_rel, find_matching_delimiter, is_identifier_char,
-    is_left_identifier_boundary, line_number, mask_raw_spans, parse_string_literal,
-    resolve_local_reference_target, skip_ws,
-};
-use super::{HealthCheck, HealthStatus};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ImageOccurrence {
@@ -29,44 +24,40 @@ enum AltState {
     Missing,
 }
 
-pub(super) fn image_check(root: &Path, depth: Option<usize>) -> HealthCheck {
-    match check_images(root, depth) {
-        Ok(ImageSummary {
-            files,
-            images,
-            missing,
-            alt_warnings,
-            details,
-        }) => {
-            let status = if missing > 0 {
-                HealthStatus::Error
-            } else if alt_warnings > 0 {
-                HealthStatus::Warning
-            } else {
-                HealthStatus::Ok
-            };
-            let message = if missing == 0 && alt_warnings == 0 {
-                format!("checked {images} literal image(s) in {files} Typst file(s)")
-            } else {
-                format!(
-                    "{missing} missing image target(s), {alt_warnings} alt text warning(s) among {images} literal image(s)"
-                )
-            };
-            let hint = if missing > 0 {
-                Some("fix missing image files or paths".to_string())
-            } else if alt_warnings > 0 {
-                Some("add non-empty `alt:` text to content images".to_string())
-            } else {
-                None
-            };
-            HealthCheck::new("images", status, message)
-                .with_path(root.display().to_string())
-                .with_optional_hint(hint)
-                .with_details(details)
-        }
-        Err(error) => HealthCheck::warn("images", format!("failed to check images: {error}"))
-            .with_path(root.display().to_string()),
-    }
+pub(super) fn image_check(root: &Path, sources: &[QualitySource]) -> HealthCheck {
+    let ImageSummary {
+        files,
+        images,
+        missing,
+        alt_warnings,
+        details,
+    } = check_images(root, sources);
+
+    let status = if missing > 0 {
+        HealthStatus::Error
+    } else if alt_warnings > 0 {
+        HealthStatus::Warning
+    } else {
+        HealthStatus::Ok
+    };
+    let message = if missing == 0 && alt_warnings == 0 {
+        format!("checked {images} literal image(s) in {files} Typst file(s)")
+    } else {
+        format!(
+            "{missing} missing image target(s), {alt_warnings} alt text warning(s) among {images} literal image(s)"
+        )
+    };
+    let hint = if missing > 0 {
+        Some("fix missing image files or paths".to_string())
+    } else if alt_warnings > 0 {
+        Some("add non-empty `alt:` text to content images".to_string())
+    } else {
+        None
+    };
+    HealthCheck::new("images", status, message)
+        .with_path(root.display().to_string())
+        .with_optional_hint(hint)
+        .with_details(details)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,18 +69,14 @@ struct ImageSummary {
     details: Vec<String>,
 }
 
-fn check_images(root: &Path, depth: Option<usize>) -> Result<ImageSummary> {
-    let typ_files = collect_typst_files(root, depth)?;
+fn check_images(root: &Path, sources: &[QualitySource]) -> ImageSummary {
     let mut images = 0usize;
     let mut missing = 0usize;
     let mut alt_warnings = 0usize;
     let mut details = Vec::new();
 
-    for file in &typ_files {
-        let source = fs::read_to_string(file)
-            .with_context(|| format!("failed to read {}", file.display()))?;
-        let source = mask_raw_spans(&source);
-        for image in extract_literal_images(file, &source) {
+    for source in sources {
+        for image in extract_literal_images(&source.path, &source.masked) {
             images += 1;
             if let Some(message) = validate_local_image(root, &image) {
                 missing += 1;
@@ -119,13 +106,13 @@ fn check_images(root: &Path, depth: Option<usize>) -> Result<ImageSummary> {
         }
     }
 
-    Ok(ImageSummary {
-        files: typ_files.len(),
+    ImageSummary {
+        files: sources.len(),
         images,
         missing,
         alt_warnings,
         details,
-    })
+    }
 }
 
 fn extract_literal_images(source_path: &Path, source: &str) -> Vec<ImageOccurrence> {
@@ -219,38 +206,33 @@ struct PageRoute {
     href: String,
 }
 
-pub(super) fn slug_check(root: &Path, depth: Option<usize>) -> HealthCheck {
-    match check_page_routes(root, depth) {
-        Ok(RouteSummary {
-            files,
-            routes,
-            problems,
-        }) => {
-            let status = if problems.is_empty() {
-                HealthStatus::Ok
-            } else {
-                HealthStatus::Error
-            };
-            let message = if problems.is_empty() {
-                format!("checked {routes} explicit page route(s) in {files} Typst file(s)")
-            } else {
-                format!(
-                    "{} duplicate or invalid page route(s) among {routes} explicit page route(s)",
-                    problems.len()
-                )
-            };
-            HealthCheck::new("slugs", status, message)
-                .with_path(root.display().to_string())
-                .with_optional_hint(
-                    (!problems.is_empty()).then(|| {
-                        "give each page a unique `slug` or `url` output route".to_string()
-                    }),
-                )
-                .with_details(problems)
-        }
-        Err(error) => HealthCheck::warn("slugs", format!("failed to check slugs: {error}"))
-            .with_path(root.display().to_string()),
-    }
+pub(super) fn slug_check(root: &Path, sources: &[QualitySource]) -> HealthCheck {
+    let RouteSummary {
+        files,
+        routes,
+        problems,
+    } = check_page_routes(root, sources);
+
+    let status = if problems.is_empty() {
+        HealthStatus::Ok
+    } else {
+        HealthStatus::Error
+    };
+    let message = if problems.is_empty() {
+        format!("checked {routes} explicit page route(s) in {files} Typst file(s)")
+    } else {
+        format!(
+            "{} duplicate or invalid page route(s) among {routes} explicit page route(s)",
+            problems.len()
+        )
+    };
+    HealthCheck::new("slugs", status, message)
+        .with_path(root.display().to_string())
+        .with_optional_hint(
+            (!problems.is_empty())
+                .then(|| "give each page a unique `slug` or `url` output route".to_string()),
+        )
+        .with_details(problems)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -260,17 +242,13 @@ struct RouteSummary {
     problems: Vec<String>,
 }
 
-fn check_page_routes(root: &Path, depth: Option<usize>) -> Result<RouteSummary> {
-    let typ_files = collect_typst_files(root, depth)?;
+fn check_page_routes(root: &Path, sources: &[QualitySource]) -> RouteSummary {
     let mut routes_by_href: BTreeMap<String, Vec<PageRoute>> = BTreeMap::new();
     let mut problems = Vec::new();
     let mut routes = 0usize;
 
-    for file in &typ_files {
-        let source = fs::read_to_string(file)
-            .with_context(|| format!("failed to read {}", file.display()))?;
-        let source = mask_raw_spans(&source);
-        for route in extract_page_routes(root, file, &source) {
+    for source in sources {
+        for route in extract_page_routes(root, &source.path, &source.masked) {
             routes += 1;
             if !is_safe_output_route(route_value_for_safety(&route)) {
                 problems.push(format!(
@@ -309,11 +287,11 @@ fn check_page_routes(root: &Path, depth: Option<usize>) -> Result<RouteSummary> 
         problems.push(format!("duplicate page route `{href}` from {sources}"));
     }
 
-    Ok(RouteSummary {
-        files: typ_files.len(),
+    RouteSummary {
+        files: sources.len(),
         routes,
         problems,
-    })
+    }
 }
 
 fn extract_page_routes(root: &Path, source_path: &Path, source: &str) -> Vec<PageRoute> {
@@ -430,6 +408,7 @@ fn is_safe_output_route(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn image_check_reports_missing_targets_and_alt_text() {
@@ -445,7 +424,8 @@ mod tests {
         .unwrap();
         fs::write(root.join("present.png"), "").unwrap();
 
-        let summary = check_images(root, None).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_images(root, &sources);
 
         assert_eq!(summary.images, 2);
         assert_eq!(summary.missing, 1);
@@ -471,7 +451,8 @@ mod tests {
         )
         .unwrap();
 
-        let summary = check_page_routes(root, None).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_page_routes(root, &sources);
 
         assert_eq!(summary.routes, 2);
         assert_eq!(summary.problems.len(), 1);
@@ -494,7 +475,8 @@ mod tests {
         )
         .unwrap();
 
-        let summary = check_page_routes(root, None).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_page_routes(root, &sources);
 
         assert_eq!(summary.routes, 2);
         assert!(summary.problems.is_empty());

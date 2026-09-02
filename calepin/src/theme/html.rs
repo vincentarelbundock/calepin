@@ -1,12 +1,14 @@
 use std::path::Path;
 
-use super::bundle::{require_builtin, shared_file, BundleDef};
+use super::bundle::{
+    bundle_manifest, require_builtin, shared_file, validate_shared_import, BundleDef,
+    SharedImports,
+};
 use super::{
     dir_theme_name, read_local_theme_manifest, read_theme_files, resolve_theme_chain, ThemeLayer,
     ThemeSelection,
 };
 use anyhow::{anyhow, Context, Result};
-use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HtmlScope {
@@ -35,22 +37,6 @@ pub struct HtmlEntry {
     pub styles: Vec<(String, String)>,
     /// (file name, js), shared imports first, then theme-local files.
     pub scripts: Vec<(String, String)>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub(crate) struct ThemeManifest {
-    #[allow(dead_code)]
-    extends: Option<String>,
-    shared: SharedImports,
-}
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-struct SharedImports {
-    partials: Vec<String>,
-    css: Vec<String>,
-    js: Vec<String>,
 }
 
 /// Resolve the layout for `scope`. `None` means raw Typst output.
@@ -237,14 +223,6 @@ fn layer_scripts(layer: &ThemeLayer) -> Result<Vec<(String, String)>> {
     }
 }
 
-fn bundle_manifest(bundle: &BundleDef) -> Result<ThemeManifest> {
-    let Some(source) = bundle.file("theme.toml") else {
-        return Ok(ThemeManifest::default());
-    };
-    toml::from_str(source)
-        .with_context(|| format!("failed to parse builtin theme `{}` theme.toml", bundle.name))
-}
-
 fn collect_shared_assets(
     local_files: Vec<(String, String)>,
     imports: &[String],
@@ -345,29 +323,4 @@ fn dir_shared_file(dir: &Path, relative: &str) -> Result<Option<String>> {
     std::fs::read_to_string(&path)
         .map(Some)
         .with_context(|| format!("failed to read {}", path.display()))
-}
-
-fn validate_shared_import(name: &str, ext: Option<&str>) -> Result<()> {
-    if name.trim() != name || name.is_empty() {
-        return Err(anyhow!("shared import names must be non-empty filenames"));
-    }
-    if name.contains('/') || name.contains('\\') || name.contains('\0') {
-        return Err(anyhow!(
-            "shared import `{name}` must be a filename, not a path"
-        ));
-    }
-    let path = Path::new(name);
-    if path.components().count() != 1
-        || path.file_name().and_then(|file| file.to_str()) != Some(name)
-    {
-        return Err(anyhow!(
-            "shared import `{name}` must be a filename, not a path"
-        ));
-    }
-    if let Some(ext) = ext {
-        if path.extension().and_then(|extension| extension.to_str()) != Some(ext) {
-            return Err(anyhow!("shared import `{name}` must be a .{ext} file"));
-        }
-    }
-    Ok(())
 }

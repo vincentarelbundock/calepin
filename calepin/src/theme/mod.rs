@@ -5,13 +5,12 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
-use serde::Deserialize;
 
 mod bundle;
 mod html;
 mod notebook;
 
-pub(crate) use bundle::{builtin_names, eject_builtin_to};
+pub(crate) use bundle::{builtin_names, eject_builtin_to, ThemeManifest};
 pub use html::{resolve_explicit_site_html_entry, resolve_html_entry, HtmlEntry, HtmlScope};
 pub use notebook::{notebook_source, NotebookSource, NotebookTemplateContext};
 
@@ -226,21 +225,6 @@ pub(crate) struct ThemeChain {
     pub(crate) terminal_typst: bool,
 }
 
-#[derive(Debug, Default, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub(crate) struct LocalThemeManifest {
-    pub(crate) extends: Option<String>,
-    pub(crate) shared: LocalThemeSharedImports,
-}
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub(crate) struct LocalThemeSharedImports {
-    pub(crate) partials: Vec<String>,
-    pub(crate) css: Vec<String>,
-    pub(crate) js: Vec<String>,
-}
-
 pub(crate) fn resolve_theme_chain(selection: &ThemeSelection) -> Result<ThemeChain> {
     match selection {
         ThemeSelection::Typst => Ok(ThemeChain {
@@ -293,10 +277,10 @@ fn resolve_dir_theme_chain(dir: &Path) -> Result<ThemeChain> {
     Ok(chain)
 }
 
-pub(crate) fn read_local_theme_manifest(dir: &Path) -> Result<LocalThemeManifest> {
+pub(crate) fn read_local_theme_manifest(dir: &Path) -> Result<ThemeManifest> {
     let path = dir.join("theme.toml");
     if !path.is_file() {
-        return Ok(LocalThemeManifest::default());
+        return Ok(ThemeManifest::default());
     }
     let source = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read {}", path.display()))?;

@@ -8,5 +8,6 @@ pub mod template;
 #[cfg(test)]
 pub mod testutil;
 pub mod tools;
+pub mod typst_lex;
 pub mod url;
 pub mod watch;

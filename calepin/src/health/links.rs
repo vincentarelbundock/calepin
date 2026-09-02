@@ -1,16 +1,13 @@
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-
-use anyhow::{Context, Result};
 
 use crate::utils::http::timeout_agent;
 
 use super::source::{
-    collect_typst_files, display_rel, is_identifier_char, line_number, mask_raw_spans,
-    parse_string_literal, resolve_local_reference_target, skip_ws,
+    display_rel, is_identifier_char, line_number, parse_string_literal,
+    resolve_local_reference_target, skip_ws,
 };
-use super::{HealthCheck, HealthStatus};
+use super::{HealthCheck, HealthStatus, QualitySource};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct LinkOccurrence {
@@ -21,54 +18,50 @@ struct LinkOccurrence {
 
 pub(super) fn link_check(
     root: &Path,
-    check_links_depth: Option<usize>,
+    sources: &[QualitySource],
     check_external_links: bool,
 ) -> HealthCheck {
-    match check_links(root, check_links_depth, check_external_links) {
-        Ok(LinkSummary {
-            files,
-            links,
-            broken,
-            broken_local,
-            broken_external,
-        }) => {
-            let status = if broken_local > 0 {
-                HealthStatus::Error
-            } else if broken_external > 0 {
-                HealthStatus::Warning
-            } else {
-                HealthStatus::Ok
-            };
-            let message = if broken_local == 0 && broken_external == 0 {
-                format!("checked {links} literal link(s) in {files} Typst file(s)")
-            } else {
-                let mut suffix = Vec::new();
-                if broken_local > 0 {
-                    suffix.push(format!("{broken_local} local"));
-                }
-                if broken_external > 0 {
-                    suffix.push(format!("{broken_external} external"));
-                }
-                format!(
-                    "{} broken link(s) among {links} literal link(s) in {files} Typst file(s)",
-                    suffix.join(" and "),
-                )
-            };
-            let hint = (!broken.is_empty()).then(|| {
-                if broken_local > 0 {
-                    "fix missing local link targets or rebuild generated linked outputs".to_string()
-                } else {
-                    "fix missing external link targets".to_string()
-                }
-            });
-            HealthCheck::new("links", status, message)
-                .with_path(root.display().to_string())
-                .with_optional_hint(hint)
-                .with_details(broken)
+    let LinkSummary {
+        files,
+        links,
+        broken,
+        broken_local,
+        broken_external,
+    } = check_links(root, sources, check_external_links);
+
+    let status = if broken_local > 0 {
+        HealthStatus::Error
+    } else if broken_external > 0 {
+        HealthStatus::Warning
+    } else {
+        HealthStatus::Ok
+    };
+    let message = if broken_local == 0 && broken_external == 0 {
+        format!("checked {links} literal link(s) in {files} Typst file(s)")
+    } else {
+        let mut suffix = Vec::new();
+        if broken_local > 0 {
+            suffix.push(format!("{broken_local} local"));
         }
-        Err(error) => HealthCheck::warn("links", format!("failed to check links: {error}"))
-            .with_path(root.display().to_string()),
-    }
+        if broken_external > 0 {
+            suffix.push(format!("{broken_external} external"));
+        }
+        format!(
+            "{} broken link(s) among {links} literal link(s) in {files} Typst file(s)",
+            suffix.join(" and "),
+        )
+    };
+    let hint = (!broken.is_empty()).then(|| {
+        if broken_local > 0 {
+            "fix missing local link targets or rebuild generated linked outputs".to_string()
+        } else {
+            "fix missing external link targets".to_string()
+        }
+    });
+    HealthCheck::new("links", status, message)
+        .with_path(root.display().to_string())
+        .with_optional_hint(hint)
+        .with_details(broken)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,21 +75,17 @@ struct LinkSummary {
 
 fn check_links(
     root: &Path,
-    check_links_depth: Option<usize>,
+    sources: &[QualitySource],
     check_external_links: bool,
-) -> Result<LinkSummary> {
-    let typ_files = collect_typst_files(root, check_links_depth)?;
+) -> LinkSummary {
     let mut links = 0usize;
     let mut broken = Vec::new();
     let mut broken_local = 0usize;
     let mut broken_external = 0usize;
     let external_agent = check_external_links.then(external_link_agent);
 
-    for file in &typ_files {
-        let source = fs::read_to_string(file)
-            .with_context(|| format!("failed to read {}", file.display()))?;
-        let source = mask_raw_spans(&source);
-        for link in extract_literal_links(file, &source) {
+    for source in sources {
+        for link in extract_literal_links(&source.path, &source.masked) {
             links += 1;
             if is_external_http_link(&link.target) {
                 if let Some(client) = external_agent.as_ref() {
@@ -112,13 +101,13 @@ fn check_links(
         }
     }
 
-    Ok(LinkSummary {
-        files: typ_files.len(),
+    LinkSummary {
+        files: sources.len(),
         links,
         broken,
         broken_local,
         broken_external,
-    })
+    }
 }
 
 fn extract_literal_links(source_path: &Path, source: &str) -> Vec<LinkOccurrence> {
@@ -264,6 +253,7 @@ fn link_target_exists(candidate: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn extracts_literal_typst_links() {
@@ -294,7 +284,8 @@ mod tests {
         fs::write(root.join("index.typ"), r#"#link("guide.html")[Guide]"#).unwrap();
         fs::write(root.join("guide.typ"), "= Guide\n").unwrap();
 
-        let summary = check_links(root, None, false).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_links(root, &sources, false);
 
         assert_eq!(summary.links, 1);
         assert!(summary.broken.is_empty());
@@ -306,7 +297,8 @@ mod tests {
         let root = dir.path();
         fs::write(root.join("index.typ"), r#"#link("missing.html")[Missing]"#).unwrap();
 
-        let summary = check_links(root, None, false).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_links(root, &sources, false);
 
         assert_eq!(summary.links, 1);
         assert_eq!(summary.broken.len(), 1);
@@ -324,7 +316,8 @@ mod tests {
         )
         .unwrap();
 
-        let summary = check_links(root, None, false).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_links(root, &sources, false);
 
         assert_eq!(summary.links, 1);
         assert!(summary.broken.is_empty());
@@ -347,7 +340,8 @@ mod tests {
         )
         .unwrap();
 
-        let summary = check_links(root, None, false).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_links(root, &sources, false);
 
         assert_eq!(summary.links, 0);
         assert!(summary.broken.is_empty());
@@ -379,7 +373,8 @@ mod tests {
         )
         .unwrap();
 
-        let summary = check_links(root, None, true).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_links(root, &sources, true);
         let _ = handle.join();
 
         assert_eq!(summary.links, 1);
@@ -417,7 +412,8 @@ mod tests {
         )
         .unwrap();
 
-        let summary = check_links(root, None, true).unwrap();
+        let sources = super::super::collect_quality_sources(root, None).unwrap();
+        let summary = check_links(root, &sources, true);
         let _ = handle.join();
 
         assert_eq!(summary.links, 1);
@@ -439,12 +435,14 @@ mod tests {
         fs::create_dir_all(&nested).unwrap();
         fs::write(nested.join("sub.typ"), r#"#link("missing.typ")[Missing]"#).unwrap();
 
-        let summary = check_links(root, Some(0), false).unwrap();
+        let sources = super::super::collect_quality_sources(root, Some(0)).unwrap();
+        let summary = check_links(root, &sources, false);
         assert_eq!(summary.files, 1);
         assert_eq!(summary.links, 0);
         assert!(summary.broken.is_empty());
 
-        let summary = check_links(root, Some(1), false).unwrap();
+        let sources = super::super::collect_quality_sources(root, Some(1)).unwrap();
+        let summary = check_links(root, &sources, false);
         assert_eq!(summary.files, 2);
         assert_eq!(summary.links, 1);
         assert_eq!(summary.broken_local, 1);

@@ -48,3 +48,9 @@ rustls-native-certs = "0.8"
 # Windows will not delete a running image through std::fs. See update.rs.
 [target.'cfg(windows)'.dependencies]
 self-replace = "1"
+
+# Reads the process umask so atomically-written artifacts (results.json,
+# published figures) get normal file permissions instead of the 0600 that
+# `tempfile::NamedTempFile` persists with. See typst/io.rs.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

@@ -208,16 +208,24 @@ pub fn handle_clean(args: CleanArgs) -> Result<()> {
     // Generated entry files live beside their documents rather than inside
     // `.calepin`, so they need their own sweep. A build removes its own on
     // success; strays are left behind by interrupted or failed runs.
-    let entry_files = crate::typst::paths::find_entry_files(&root)?;
+    let entry_files = find_entry_files_within_depth(&root, args.depth)?;
 
-    if calepin_dirs.is_empty() && entry_files.is_empty() {
+    // A `.calepin/config.toml` is a user-authored file, not a regenerable
+    // artifact, even though it lives inside the otherwise-disposable
+    // `.calepin` directory; never delete it.
+    let removals: Vec<CalepinDirRemoval> = calepin_dirs
+        .iter()
+        .map(|dir| CalepinDirRemoval::plan(dir))
+        .collect::<Result<Vec<_>>>()?;
+
+    if removals.iter().all(CalepinDirRemoval::is_empty) && entry_files.is_empty() {
         eprintln!("No Calepin artifacts found under {}", root.display());
         return Ok(());
     }
 
     eprintln!("The following will be removed:");
-    for path in &calepin_dirs {
-        eprintln!("  {}", path.display());
+    for removal in &removals {
+        removal.describe();
     }
     for path in &entry_files {
         eprintln!("  {}", path.display());
@@ -227,15 +235,102 @@ pub fn handle_clean(args: CleanArgs) -> Result<()> {
         return Ok(());
     }
 
-    for path in calepin_dirs {
-        fs::remove_dir_all(&path)
-            .with_context(|| format!("failed to remove {}", path.display()))?;
+    for removal in removals {
+        removal.apply()?;
     }
     for path in entry_files {
         fs::remove_file(&path).with_context(|| format!("failed to remove {}", path.display()))?;
     }
 
     Ok(())
+}
+
+const PRESERVED_CALEPIN_DIR_ENTRY: &str = "config.toml";
+
+/// What to do with one discovered `.calepin` directory: remove it outright,
+/// or remove everything inside it except `config.toml`.
+struct CalepinDirRemoval {
+    dir: PathBuf,
+    /// Entries to delete. Empty means there is nothing to remove (the
+    /// directory holds only `config.toml`, or nothing at all).
+    entries: Vec<PathBuf>,
+    preserves_config: bool,
+}
+
+impl CalepinDirRemoval {
+    fn plan(dir: &Path) -> Result<Self> {
+        let mut entries = Vec::new();
+        let mut preserves_config = false;
+        for entry in
+            fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))?
+        {
+            let entry = entry?;
+            if entry.file_name() == PRESERVED_CALEPIN_DIR_ENTRY {
+                preserves_config = true;
+                continue;
+            }
+            entries.push(entry.path());
+        }
+        entries.sort();
+        Ok(Self {
+            dir: dir.to_path_buf(),
+            entries,
+            preserves_config,
+        })
+    }
+
+    fn is_empty(&self) -> bool {
+        self.entries.is_empty() && !self.removes_whole_dir()
+    }
+
+    fn removes_whole_dir(&self) -> bool {
+        !self.preserves_config
+    }
+
+    fn describe(&self) {
+        if self.removes_whole_dir() {
+            eprintln!("  {}", self.dir.display());
+        } else {
+            for entry in &self.entries {
+                eprintln!("  {}", entry.display());
+            }
+        }
+    }
+
+    fn apply(self) -> Result<()> {
+        if self.removes_whole_dir() {
+            return fs::remove_dir_all(&self.dir)
+                .with_context(|| format!("failed to remove {}", self.dir.display()));
+        }
+        for entry in self.entries {
+            if entry.is_dir() {
+                fs::remove_dir_all(&entry)
+                    .with_context(|| format!("failed to remove {}", entry.display()))?;
+            } else {
+                fs::remove_file(&entry)
+                    .with_context(|| format!("failed to remove {}", entry.display()))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// `find_entry_files` walks the whole tree; filter to files whose containing
+/// directory is within `max_depth` of `root`, using the same depth
+/// convention as `find_calepin_dirs` (root itself is depth 0).
+fn find_entry_files_within_depth(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBuf>> {
+    let mut entry_files = crate::typst::paths::find_entry_files(root)?;
+    if let Some(max_depth) = max_depth {
+        entry_files.retain(|path| {
+            let depth = path
+                .parent()
+                .and_then(|parent| parent.strip_prefix(root).ok())
+                .map(|rel| rel.components().count())
+                .unwrap_or(0);
+            depth <= max_depth
+        });
+    }
+    Ok(entry_files)
 }
 
 pub fn handle_compile(args: CompileArgs) -> Result<()> {
@@ -392,6 +487,62 @@ mod tests {
 
         assert!(!inside.join(".calepin").exists());
         assert!(outside.join(".calepin").exists());
+    }
+
+    #[test]
+    fn clean_preserves_config_toml_inside_calepin_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join(".calepin/paper")).unwrap();
+        fs::write(dir.path().join(".calepin/paper/results.json"), "{}").unwrap();
+        fs::write(dir.path().join(".calepin/config.toml"), "[executables]\n").unwrap();
+
+        handle_clean(CleanArgs {
+            dir: Some(dir.path().to_path_buf()),
+            depth: None,
+            yes: true,
+        })
+        .unwrap();
+
+        assert!(dir.path().join(".calepin/config.toml").exists());
+        assert!(!dir.path().join(".calepin/paper").exists());
+    }
+
+    #[test]
+    fn clean_removes_whole_dir_without_config_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join(".calepin/paper")).unwrap();
+
+        handle_clean(CleanArgs {
+            dir: Some(dir.path().to_path_buf()),
+            depth: None,
+            yes: true,
+        })
+        .unwrap();
+
+        assert!(!dir.path().join(".calepin").exists());
+    }
+
+    #[test]
+    fn clean_honors_depth_for_entry_files() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join(".calepin-entry.paper.source.typ"),
+            "// entry",
+        )
+        .unwrap();
+        let nested = dir.path().join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(nested.join(".calepin-entry.paper.source.typ"), "// entry").unwrap();
+
+        handle_clean(CleanArgs {
+            dir: Some(dir.path().to_path_buf()),
+            depth: Some(0),
+            yes: true,
+        })
+        .unwrap();
+
+        assert!(!dir.path().join(".calepin-entry.paper.source.typ").exists());
+        assert!(nested.join(".calepin-entry.paper.source.typ").exists());
     }
 
     #[test]

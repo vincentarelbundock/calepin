@@ -314,6 +314,7 @@ dependencies = [
  "ctrlc",
  "indexmap 2.14.0",
  "indicatif",
+ "libc",
  "mimalloc",
  "mime_guess",
  "minify-html",

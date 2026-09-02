@@ -4,6 +4,10 @@ use std::path::{Path, PathBuf};
 
 use crate::config::TocConfig;
 use crate::typst::preprocess::read_page_meta_in_dir;
+use crate::utils::typst_lex::{
+    find_matching_delimiter, find_string_end, is_identifier_char, is_left_identifier_boundary,
+    skip_ws,
+};
 
 use super::util::clean_optional_string;
 
@@ -184,14 +188,6 @@ fn title_argument(args: &str) -> Option<&str> {
         index += ch.len_utf8();
     }
     None
-}
-
-fn is_left_identifier_boundary(value: &str, index: usize) -> bool {
-    index == 0
-        || !value[..index]
-            .chars()
-            .next_back()
-            .is_some_and(is_identifier_char)
 }
 
 fn title_value_to_text(value: &str) -> Option<String> {
@@ -442,67 +438,6 @@ fn typst_content_to_plain_text(value: &str) -> String {
         }
     }
     out.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
-fn find_matching_delimiter(
-    value: &str,
-    open_index: usize,
-    open: char,
-    close: char,
-) -> Option<usize> {
-    let mut depth = 0usize;
-    let mut index = open_index;
-    while index < value.len() {
-        let ch = value[index..].chars().next()?;
-        if ch == '"' {
-            index = find_string_end(value, index)? + 1;
-            continue;
-        }
-        if ch == open {
-            depth += 1;
-        } else if ch == close {
-            depth = depth.saturating_sub(1);
-            if depth == 0 {
-                return Some(index);
-            }
-        }
-        index += ch.len_utf8();
-    }
-    None
-}
-
-fn find_string_end(value: &str, quote_index: usize) -> Option<usize> {
-    let mut escaped = false;
-    let mut index = quote_index + 1;
-    while index < value.len() {
-        let ch = value[index..].chars().next()?;
-        if escaped {
-            escaped = false;
-        } else if ch == '\\' {
-            escaped = true;
-        } else if ch == '"' {
-            return Some(index);
-        }
-        index += ch.len_utf8();
-    }
-    None
-}
-
-fn skip_ws(value: &str, mut index: usize) -> usize {
-    while index < value.len() {
-        let Some(ch) = value[index..].chars().next() else {
-            break;
-        };
-        if !ch.is_whitespace() {
-            break;
-        }
-        index += ch.len_utf8();
-    }
-    index
-}
-
-fn is_identifier_char(ch: char) -> bool {
-    ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'
 }
 
 pub(super) fn page_meta_from_value(value: &serde_json::Value) -> PageMeta {

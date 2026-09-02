@@ -90,18 +90,22 @@ pub fn eject_builtin_to(name: &str, dest: &Path, force: bool) -> Result<PathBuf>
     Ok(dest.to_path_buf())
 }
 
+/// A parsed `theme.toml`, shared by builtin bundles and local theme
+/// directories. `extends` is only meaningful for local theme directories;
+/// builtin bundles ignore it.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-struct ThemeManifest {
-    shared: SharedImports,
+pub(crate) struct ThemeManifest {
+    pub(crate) extends: Option<String>,
+    pub(crate) shared: SharedImports,
 }
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-struct SharedImports {
-    partials: Vec<String>,
-    css: Vec<String>,
-    js: Vec<String>,
+pub(crate) struct SharedImports {
+    pub(crate) partials: Vec<String>,
+    pub(crate) css: Vec<String>,
+    pub(crate) js: Vec<String>,
 }
 
 fn write_resolved_shared_files(bundle: &BundleDef, dest: &Path) -> Result<()> {
@@ -118,7 +122,7 @@ fn write_resolved_shared_files(bundle: &BundleDef, dest: &Path) -> Result<()> {
     Ok(())
 }
 
-fn bundle_manifest(bundle: &BundleDef) -> Result<ThemeManifest> {
+pub(crate) fn bundle_manifest(bundle: &BundleDef) -> Result<ThemeManifest> {
     let Some(source) = bundle.file("theme.toml") else {
         return Ok(ThemeManifest::default());
     };
@@ -143,7 +147,7 @@ fn write_resolved_shared_file(
     write_theme_file(dest, &relative, source)
 }
 
-fn validate_shared_import(name: &str, ext: Option<&str>) -> Result<()> {
+pub(crate) fn validate_shared_import(name: &str, ext: Option<&str>) -> Result<()> {
     if name.trim() != name || name.is_empty() {
         return Err(anyhow!("shared import names must be non-empty filenames"));
     }
