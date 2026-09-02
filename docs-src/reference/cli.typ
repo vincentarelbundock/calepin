@@ -120,6 +120,9 @@ Options:
           
           Calepin renders a generated entry file that carries the document body. It is normally removed once the render succeeds; keep it to inspect the exact source Typst saw.
 
+      --strict
+          Fail instead of warning when a chunk cannot run (missing engine or kernel). Also honored via `CALEPIN_STRICT=1`
+
   -h, --help
           Print help (see a summary with '-h')
 ```
@@ -183,6 +186,9 @@ Options:
           Keep the generated Typst files staged beside each document.
           
           Calepin renders a generated entry file that carries the document body. It is normally removed once the render succeeds; keep it to inspect the exact source Typst saw.
+
+      --strict
+          Fail instead of warning when a chunk cannot run (missing engine or kernel). Also honored via `CALEPIN_STRICT=1`
 
   -h, --help
           Print help (see a summary with '-h')
