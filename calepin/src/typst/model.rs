@@ -325,15 +325,26 @@ pub struct FigureSpec {
 
 /// Encodes a semantic chunk label as one collision-resistant filename stem.
 /// Labels remain unchanged in results and cross-reference metadata.
+///
+/// Escaped bytes are hex-encoded behind a `=` marker rather than the more
+/// usual `%XX` percent-encoding: R's figure devices (`png()`, `svg()`,
+/// `cairo_pdf()`, ...) pass `filename` through a C `sprintf`-style format
+/// check that treats a `%` as the start of a page-numbering directive (e.g.
+/// `plot%03d.png`) and rejects anything else, so a label like `café`
+/// percent-encoded to `caf%C3%A9` made R refuse to open the device. `=` is
+/// not given that treatment by any of the supported engines, and — like
+/// `%` before it — is excluded from the passthrough set below, so a literal
+/// `=` in a label is itself escaped and can never be confused with the
+/// marker.
 pub(crate) fn artifact_label_stem(label: &str) -> String {
-    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+    const HEX: &[u8; 16] = b"0123456789abcdef";
 
     let mut stem = String::with_capacity(label.len());
     for byte in label.bytes() {
         if byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_') {
             stem.push(char::from(byte));
         } else {
-            stem.push('%');
+            stem.push('=');
             stem.push(char::from(HEX[(byte >> 4) as usize]));
             stem.push(char::from(HEX[(byte & 0x0f) as usize]));
         }
@@ -705,10 +716,22 @@ mod tests {
     #[test]
     fn artifact_label_stems_are_safe_and_collision_resistant() {
         assert_eq!(artifact_label_stem("fig-demo_1.2"), "fig-demo_1.2");
-        assert_eq!(artifact_label_stem("../fig/demo"), "..%2Ffig%2Fdemo");
-        assert_eq!(artifact_label_stem(r"fig\demo"), "fig%5Cdemo");
-        assert_eq!(artifact_label_stem("fig%2Fdemo"), "fig%252Fdemo");
-        assert_eq!(artifact_label_stem("café"), "caf%C3%A9");
+        assert_eq!(artifact_label_stem("../fig/demo"), "..=2ffig=2fdemo");
+        assert_eq!(artifact_label_stem(r"fig\demo"), "fig=5cdemo");
+        assert_eq!(artifact_label_stem("fig%2Fdemo"), "fig=252Fdemo");
+        assert_eq!(artifact_label_stem("café"), "caf=c3=a9");
+    }
+
+    #[test]
+    fn artifact_label_stem_never_contains_a_percent() {
+        // R's figure devices (png()/svg()/cairo_pdf()) pass `filename`
+        // through a C `sprintf`-style format check that treats `%` as a
+        // page-numbering directive and rejects anything else it introduces,
+        // so the escaped form must never reintroduce `%` for any input.
+        for label in ["café", "../fig/demo", r"fig\demo", "100%", "a%03d.png"] {
+            let stem = artifact_label_stem(label);
+            assert!(!stem.contains('%'), "{label} -> {stem}");
+        }
     }
 
     #[test]

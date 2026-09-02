@@ -9,18 +9,20 @@ pub const COMMON_SKIP_DIRS: &[&str] = &[".calepin", ".git", "target", "node_modu
 pub const TEXT_PLAIN_UTF8: &str = "text/plain; charset=utf-8";
 pub const APPLICATION_JSON_UTF8: &str = "application/json; charset=utf-8";
 pub const CACHE_CONTROL_NO_STORE: &str = "no-store";
-pub const ACCESS_CONTROL_ANY_ORIGIN: &str = "*";
 
+/// Build a raw HTTP/1.1 response head. `allowed_origin`, when set, echoes
+/// back a specific `Access-Control-Allow-Origin`; pass `None` to omit CORS
+/// entirely. Never pass a wildcard `*` here: any page open in the browser
+/// could then read the response cross-origin.
 pub fn raw_http_response_head(
     status: &str,
     content_type: &str,
     content_len: usize,
-    access_control: bool,
+    allowed_origin: Option<&str>,
 ) -> String {
-    let cors = if access_control {
-        format!("Access-Control-Allow-Origin: {ACCESS_CONTROL_ANY_ORIGIN}\r\n")
-    } else {
-        String::new()
+    let cors = match allowed_origin {
+        Some(origin) => format!("Access-Control-Allow-Origin: {origin}\r\n"),
+        None => String::new(),
     };
     format!(
         "HTTP/1.1 {status}\r\n\
@@ -31,6 +33,25 @@ pub fn raw_http_response_head(
          Connection: close\r\n\
          \r\n"
     )
+}
+
+/// Project files that must never be handed out by a local dev/watch server,
+/// even under an otherwise-servable root: version control internals, secret
+/// files, and Calepin's own executable-path config (which can point at
+/// arbitrary local binaries). `.calepin/` itself stays servable, since the
+/// HTML asset server relies on it for generated figures.
+pub fn is_sensitive_served_path(root: &Path, path: &Path) -> bool {
+    let Ok(rel) = path.strip_prefix(root) else {
+        return true;
+    };
+    if rel == Path::new(".calepin").join("config.toml") {
+        return true;
+    }
+    rel.components().any(|component| {
+        component.as_os_str().to_str().is_some_and(|name| {
+            name == ".git" || name == ".env" || (name.starts_with('.') && name != ".calepin")
+        })
+    })
 }
 
 pub fn request_relative_path(
@@ -91,21 +112,23 @@ pub fn path_stays_under_root(root: &Path, path: &Path) -> bool {
     path::is_within_root(root, path)
 }
 
-pub fn content_type(path: &Path) -> &'static str {
-    match path.extension().and_then(|extension| extension.to_str()) {
-        Some("css") => "text/css; charset=utf-8",
-        Some("gif") => "image/gif",
-        Some("html") => "text/html; charset=utf-8",
-        Some("ico") => "image/x-icon",
-        Some("jpeg" | "jpg") => "image/jpeg",
-        Some("js") => "text/javascript; charset=utf-8",
-        Some("json") => "application/json; charset=utf-8",
-        Some("mp4") => "video/mp4",
-        Some("pdf") => "application/pdf",
-        Some("png") => "image/png",
-        Some("svg") => "image/svg+xml",
-        Some("webp") => "image/webp",
-        _ => "application/octet-stream",
+/// Guess a file's `Content-Type` from its extension via `mime_guess`, rather
+/// than a small hand-maintained table (which used to fall back to
+/// `application/octet-stream` for common web assets like `.xml`, `.txt`,
+/// `.woff2`, `.wasm`, `.mjs`, and `.webmanifest`). Text-ish types get an
+/// explicit `charset=utf-8`, matching the previous table's behavior.
+pub fn content_type(path: &Path) -> String {
+    let essence = mime_guess::from_path(path)
+        .first_or_octet_stream()
+        .essence_str()
+        .to_string();
+    if essence.starts_with("text/")
+        || essence == "application/json"
+        || essence == "application/javascript"
+    {
+        format!("{essence}; charset=utf-8")
+    } else {
+        essence
     }
 }
 
@@ -302,6 +325,51 @@ mod tests {
                 .unwrap(),
             root.join("other").join("notebooks").join("guide.html")
         );
+    }
+
+    #[test]
+    fn content_type_covers_extensions_the_old_hand_written_table_missed() {
+        for (extension, expected_essence) in [
+            ("xml", "text/xml"),
+            ("txt", "text/plain"),
+            ("woff2", "font/woff2"),
+            ("wasm", "application/wasm"),
+            ("mjs", "application/javascript"),
+            ("webmanifest", "application/manifest+json"),
+        ] {
+            let guessed = content_type(Path::new(&format!("asset.{extension}")));
+            assert!(
+                guessed.starts_with(expected_essence),
+                "extension {extension}: got {guessed}"
+            );
+            assert_ne!(guessed, "application/octet-stream", "extension {extension}");
+        }
+    }
+
+    #[test]
+    fn is_sensitive_served_path_blocks_dotfiles_git_env_and_executable_config() {
+        let root = Path::new("/project");
+        assert!(is_sensitive_served_path(
+            root,
+            &root.join(".calepin/config.toml")
+        ));
+        assert!(is_sensitive_served_path(root, &root.join(".git/config")));
+        assert!(is_sensitive_served_path(root, &root.join(".env")));
+        assert!(is_sensitive_served_path(root, &root.join(".hidden")));
+        assert!(is_sensitive_served_path(
+            root,
+            &root.join("sub/.secret/file")
+        ));
+    }
+
+    #[test]
+    fn is_sensitive_served_path_allows_calepin_generated_figures() {
+        let root = Path::new("/project");
+        assert!(!is_sensitive_served_path(
+            root,
+            &root.join(".calepin/paper/figures/fig.svg")
+        ));
+        assert!(!is_sensitive_served_path(root, &root.join("index.html")));
     }
 
     #[test]

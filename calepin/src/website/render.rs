@@ -84,32 +84,25 @@ fn apply_toc_context(
     site_context.toc_floating = Some(crate::theme::resolve_toc_floating(page, config));
 }
 
+/// Escape a JSON-encoded payload for safe embedding inside an inline
+/// `<script type="application/json">` element. `serde_json::to_string` does
+/// not escape `<`, so a source string containing `<!-- <script> -->` could
+/// otherwise enter the HTML tokenizer's script double-escaped state, in which
+/// the real closing `</script>` no longer terminates the element. Escaping
+/// `<`, `>`, and `&` as `\uXXXX` (mirroring `_js-string-literal` in
+/// `core/assets.typ`) rules that out entirely rather than special-casing
+/// `</script`.
 fn escape_script_payload(payload: &str) -> String {
-    let mut payload = payload;
     let mut escaped = String::with_capacity(payload.len());
-    while let Some(offset) = find_script_tag(payload) {
-        escaped.push_str(&payload[..offset]);
-        escaped.push_str("<\\/");
-        payload = &payload[offset + 2..];
-    }
-    escaped.push_str(payload);
-    escaped
-}
-
-fn find_script_tag(source: &str) -> Option<usize> {
-    let source = source.as_bytes();
-    if source.len() < 8 {
-        return None;
-    }
-    for i in 0..=source.len() - 8 {
-        if source[i] == b'<'
-            && source[i + 1] == b'/'
-            && bytes_is_ascii_equal_ignore_case(&source[i + 2..i + 8], b"script")
-        {
-            return Some(i);
+    for ch in payload.chars() {
+        match ch {
+            '<' => escaped.push_str("\\u003c"),
+            '>' => escaped.push_str("\\u003e"),
+            '&' => escaped.push_str("\\u0026"),
+            other => escaped.push(other),
         }
     }
-    None
+    escaped
 }
 
 fn find_case_insensitive(source: &str, needle: &str) -> Option<usize> {
@@ -316,6 +309,37 @@ mod tests {
         let head_pos = find_case_insensitive(&output, "</head>").unwrap();
 
         assert!(script_pos < head_pos);
-        assert!(output.contains("<\\/SCRIPT>"));
+        assert!(!output.contains("</SCRIPT>"));
+        assert!(output.contains("\\u003c/SCRIPT\\u003e"));
+    }
+
+    #[test]
+    fn embed_source_blob_escapes_a_comment_that_would_otherwise_reopen_the_script_tokenizer(
+    ) {
+        // `<!--` followed by `<script` inside a script element's text content
+        // enters the HTML tokenizer's script double-escaped state, in which a
+        // literal `</script>` no longer closes the element. Escaping every
+        // `<` rules this out regardless of what follows it.
+        let dir = tempdir().unwrap();
+        let source_path = dir.path().join("page.typ");
+        let html_output = dir.path().join("page.html");
+        std::fs::write(&source_path, "<!-- <script> -->").unwrap();
+        std::fs::write(&html_output, "<html><head></head><body>x</body></html>").unwrap();
+
+        embed_source_blob(&html_output, &source_path).unwrap();
+        let output = std::fs::read_to_string(&html_output).unwrap();
+
+        let script_open = output
+            .find(&format!(
+                "<script id=\"{SOURCE_DATA_ID}\" type=\"application/json\">"
+            ))
+            .unwrap();
+        let payload_start = script_open
+            + format!("<script id=\"{SOURCE_DATA_ID}\" type=\"application/json\">").len();
+        let payload_end = output[payload_start..].find("</script>").unwrap() + payload_start;
+        let payload = &output[payload_start..payload_end];
+
+        assert!(!payload.contains('<'), "{payload}");
+        assert!(payload.contains("\\u003c!-- \\u003cscript\\u003e --\\u003e"));
     }
 }

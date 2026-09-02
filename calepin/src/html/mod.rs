@@ -434,6 +434,19 @@ mod tests {
     }
 
     #[test]
+    fn pass_through_theme_still_rewrites_syntax_sentinel_colors() {
+        // `theme = "typst"` (or any theme with no HTML entry) must still get
+        // its code blocks rewritten from the runtime's sentinel colors to
+        // syntax classes; otherwise every token renders near-black with no
+        // way to theme it.
+        let html = r#"<pre><code><span style="color: #000001">let</span></code></pre>"#;
+
+        let themed = apply_html_theme(html, None).unwrap();
+
+        assert!(!themed.contains("#000001"), "{themed}");
+    }
+
+    #[test]
     fn default_document_theme_applies_to_bare_html_fragment() {
         // Typst emits a fragment (no <html>/<head>/<body>) for normal document
         // content. The theme must still apply.
@@ -509,6 +522,53 @@ mod tests {
         .unwrap();
 
         assert_eq!(inlined, html);
+    }
+
+    #[test]
+    fn html_image_inliner_handles_non_ascii_text_before_src() {
+        // A multi-byte character (in `alt`, here) sitting before `src` used to
+        // land the byte-index scanner mid-character and panic on the slice.
+        let dir = tempfile::tempdir().unwrap();
+        let image = dir.path().join("fig.png");
+        std::fs::write(&image, [0_u8, 1, 2]).unwrap();
+        let html = r#"<img alt="Café" src="fig.png">"#;
+
+        let inlined = assets::inline_html_images(html, dir.path(), dir.path(), None).unwrap();
+
+        assert!(inlined.contains("src=\"data:image/png;base64,AAEC\""));
+        assert!(inlined.contains(r#"alt="Café""#));
+    }
+
+    #[test]
+    fn html_image_inliner_rejects_root_relative_paths_that_escape_the_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("secret.png"), [0_u8, 1, 2]).unwrap();
+        // Relative to `dir`, this climbs out to `outside/secret.png`.
+        let escape = format!(
+            "../{}/secret.png",
+            outside.path().file_name().unwrap().to_string_lossy()
+        );
+        let html = format!(r#"<img src="/{escape}">"#);
+
+        let inlined = assets::inline_html_images(&html, dir.path(), dir.path(), None).unwrap();
+
+        assert_eq!(inlined, html);
+    }
+
+    #[test]
+    fn inline_html_images_file_survives_non_ascii_alt_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let image = dir.path().join("fig.png");
+        std::fs::write(&image, [0_u8, 1, 2]).unwrap();
+        let page = dir.path().join("page.html");
+        std::fs::write(&page, r#"<img alt="Résumé" src="fig.png">"#).unwrap();
+
+        inline_html_images_file(&page, dir.path(), None).unwrap();
+
+        let output = std::fs::read_to_string(&page).unwrap();
+        assert!(output.contains("src=\"data:image/png;base64,AAEC\""));
+        assert!(output.contains(r#"alt="Résumé""#));
     }
 
     #[test]

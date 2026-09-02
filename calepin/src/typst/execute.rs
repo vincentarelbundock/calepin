@@ -922,7 +922,7 @@ mod tests {
         )
         .unwrap();
 
-        let filename = "..%2Foutside%2F%252F.typ";
+        let filename = "..=2foutside=2f=252F.typ";
         assert_eq!(
             items[0].data.as_ref().unwrap()["text/x-typst"]["path"],
             filename
@@ -1016,7 +1016,7 @@ mod tests {
         )
         .unwrap();
 
-        let filename = "..%2Foutside%2F%252F.svg";
+        let filename = "..=2foutside=2f=252F.svg";
         assert_eq!(
             items[0].data.as_ref().unwrap()["image/svg+xml"]["path"],
             filename

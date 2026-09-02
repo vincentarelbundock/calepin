@@ -104,6 +104,7 @@ const ICON_CACHE_SUBDIR: &str = "icons";
 const PAGES_INDEX_FILE: &str = "website-pages.json";
 const ROBOTS_FILE: &str = "robots.txt";
 const LLMS_FILE: &str = "llms.txt";
+const SITEMAP_FILE: &str = "sitemap.xml";
 const ROBOTS_TEMPLATE_DIR: &str = "templates";
 const ROBOTS_TEMPLATE_FILE: &str = "robots.txt";
 const DEFAULT_ROBOTS_TEMPLATE: &str =
@@ -449,7 +450,7 @@ fn build_site(args: WebsiteBuildOptions) -> Result<WebsiteBuildResult> {
     let sitemap_path = metadata
         .base_url
         .as_ref()
-        .map(|_| out_dir.join("sitemap.xml"));
+        .map(|_| out_dir.join(SITEMAP_FILE));
     let robots_path = config.robots_enabled().then(|| out_dir.join(ROBOTS_FILE));
     let llms_path = config.llms_enabled().then(|| out_dir.join(LLMS_FILE));
     let feed_targets = feed_targets(&config)?;
@@ -774,6 +775,21 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     // A distinct output directory only ever receives generated copies; reacting
     // to them would re-trigger the build that produced them.
     if initial.out_dir != initial.src_dir && path.starts_with(&initial.out_dir) {
+        return false;
+    }
+    // `robots.txt`, `llms.txt`, and `sitemap.xml` are generated non-page
+    // outputs written straight into `out_dir`; when `out_dir == src_dir`
+    // (the default), they otherwise look like a source change and re-trigger
+    // the very build that just wrote them. `write_if_changed` already skips
+    // the write when the content is unchanged, but the watcher still sees a
+    // Modify event on the *first* successful build if the file did not exist
+    // before, so this exclusion is still needed on top of that.
+    if path.parent() == Some(initial.out_dir.as_path())
+        && matches!(
+            path.file_name().and_then(|name| name.to_str()),
+            Some(ROBOTS_FILE | LLMS_FILE | SITEMAP_FILE)
+        )
+    {
         return false;
     }
     if !path.starts_with(&initial.src_dir) {

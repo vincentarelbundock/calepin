@@ -1,6 +1,8 @@
 use anyhow::{Context, Result};
 use std::path::{Component, Path, PathBuf};
 
+use crate::utils::static_files::path_stays_under_root;
+
 pub(super) fn inline_html_images(
     html: &str,
     root: &Path,
@@ -46,6 +48,10 @@ fn inline_img_tag(
 
     let Some(path) = resolve_html_asset_path(src, root, base_dir)
         .filter(|path| path.exists())
+        // Guard against a root-relative or relative reference that climbs
+        // outside the project root (e.g. `src="/../../etc/passwd"`), the same
+        // containment check every other path in the site builder goes through.
+        .filter(|path| path_stays_under_root(root, path))
         .or_else(|| page_relative_asset_path(src, root, page_dir?))
     else {
         return Ok(tag.to_string());
@@ -63,54 +69,51 @@ fn inline_img_tag(
     Ok(rewritten)
 }
 
+/// Byte offset of the first character in `s` matching `predicate`, or `s.len()`
+/// if none matches. Always a valid `str` char boundary, unlike advancing a
+/// byte index one byte at a time and slicing at it: a multi-byte UTF-8
+/// continuation byte is never itself a char boundary, so that pattern panics
+/// the moment such a byte is scanned past. Every scan in this module goes
+/// through this helper (or `str::find`, which has the same guarantee) instead.
+fn find_char_boundary(s: &str, predicate: impl Fn(char) -> bool) -> usize {
+    s.find(predicate).unwrap_or(s.len())
+}
+
 fn find_src_attr(tag: &str) -> Option<(usize, usize, &str)> {
-    let bytes = tag.as_bytes();
-    let mut i = 0;
-    while i + 3 <= bytes.len() {
-        if !tag[i..].starts_with("src") {
-            i += 1;
+    // `str::match_indices` only ever yields byte offsets that fall on char
+    // boundaries (it walks `tag` character by character internally), so `i`
+    // below is always safe to slice at, even when `tag` holds non-ASCII text
+    // before, inside, or after the `src` attribute.
+    for (i, _) in tag.match_indices("src") {
+        let before = tag[..i].chars().next_back().unwrap_or(' ');
+        if before.is_alphanumeric() || before == '-' || before == '_' {
             continue;
         }
-        let before = if i == 0 { b' ' } else { bytes[i - 1] };
-        if before.is_ascii_alphanumeric() || before == b'-' || before == b'_' {
-            i += 3;
+
+        let after_name = &tag[i + 3..];
+        let after_ws = after_name.trim_start();
+        let Some(after_eq) = after_ws.strip_prefix('=') else {
             continue;
-        }
-        let mut j = i + 3;
-        while j < bytes.len() && bytes[j].is_ascii_whitespace() {
-            j += 1;
-        }
-        if j >= bytes.len() || bytes[j] != b'=' {
-            i += 3;
-            continue;
-        }
-        j += 1;
-        while j < bytes.len() && bytes[j].is_ascii_whitespace() {
-            j += 1;
-        }
-        if j >= bytes.len() {
+        };
+        let value_region = after_eq.trim_start();
+        if value_region.is_empty() {
             return None;
         }
-        let quote = bytes[j];
-        if quote == b'"' || quote == b'\'' {
-            let value_start = j + 1;
-            let mut value_end = value_start;
-            while value_end < bytes.len() && bytes[value_end] != quote {
-                value_end += 1;
-            }
-            if value_end >= bytes.len() {
-                return None;
-            }
+        let value_offset = tag.len() - value_region.len();
+
+        let first = value_region.chars().next().expect("checked non-empty");
+        if first == '"' || first == '\'' {
+            let quote = first;
+            let rest = &value_region[quote.len_utf8()..];
+            let end_in_rest = rest.find(quote)?;
+            let value_start = value_offset + quote.len_utf8();
+            let value_end = value_start + end_in_rest;
             return Some((value_start, value_end, &tag[value_start..value_end]));
         }
-        let value_start = j;
-        let mut value_end = value_start;
-        while value_end < bytes.len()
-            && !bytes[value_end].is_ascii_whitespace()
-            && bytes[value_end] != b'>'
-        {
-            value_end += 1;
-        }
+
+        let value_start = value_offset;
+        let end_in_value = find_char_boundary(value_region, |ch| ch.is_whitespace() || ch == '>');
+        let value_end = value_start + end_in_value;
         return Some((value_start, value_end, &tag[value_start..value_end]));
     }
     None

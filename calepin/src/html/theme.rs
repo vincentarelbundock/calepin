@@ -155,12 +155,15 @@ pub(super) fn apply_html_theme(
     project_root: Option<&Path>,
     site_context: Option<&SiteContextInput>,
 ) -> Result<String> {
-    let Some(entry) = entry else {
-        return Ok(html.to_string());
-    };
     // Rewrite Typst's inline `style="color: ..."` spans to syntax classes so
-    // the theme's highlight CSS (placeholders or `highlight_css`) can drive colors.
+    // the theme's highlight CSS (placeholders or `highlight_css`) can drive
+    // colors. This must run even for themes with no HTML entry (for example
+    // `theme = "typst"`), otherwise the HTML output keeps the runtime's raw
+    // sentinel colors with no way to theme them.
     let rewritten = syntax_theme.rewrite_classes(html);
+    let Some(entry) = entry else {
+        return Ok(rewritten);
+    };
     // Typst emits a bare HTML fragment (no <html>/<head>/<body> wrapper) when
     // the document has no explicit html.elem("html") root element. Wrap those
     // fragments in a minimal well-formed document so split_html_document can
@@ -797,6 +800,18 @@ mod tests {
         assert_eq!(toc.len(), 1);
         assert_eq!(toc[0].href, "#sec:intro");
         assert_eq!(toc[0].label, "Intro");
+    }
+
+    #[test]
+    fn toc_label_escapes_apostrophes() {
+        // The TOC label is embedded in generated HTML; an unescaped `'` would
+        // not itself break anything here, but the theme templates place TOC
+        // labels next to single-quoted attributes, so the label text must be
+        // fully HTML-escaped, apostrophes included.
+        let body = "<h2>O'Brien's Notes</h2>";
+        let (_, toc) = annotate_body_headings(body, None, 3);
+        assert_eq!(toc.len(), 1);
+        assert_eq!(toc[0].label, "O&#39;Brien&#39;s Notes");
     }
 
     #[test]
