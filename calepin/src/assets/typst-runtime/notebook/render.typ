@@ -70,7 +70,32 @@
   }
 }
 
+// `fig-cap-location` round-trips through `results.json` as a plain string
+// (Typst's query pass serializes an alignment the same way it serializes
+// `fig-align`), so a value that reached here through `_merge-result-options`
+// needs converting back to a real alignment before `figure.caption` sees it.
+#let _normalize-cap-location(fig-cap-location) = {
+  if fig-cap-location == "top" {
+    top
+  } else if fig-cap-location == "bottom" {
+    bottom
+  } else if fig-cap-location == "start" {
+    start
+  } else if fig-cap-location == "end" {
+    end
+  } else if fig-cap-location == "left" {
+    left
+  } else if fig-cap-location == "right" {
+    right
+  } else if fig-cap-location == "center" {
+    center
+  } else {
+    fig-cap-location
+  }
+}
+
 #let _figure-caption(fig-caption, fig-cap-location) = {
+  let fig-cap-location = _normalize-cap-location(fig-cap-location)
   if fig-caption == none {
     none
   } else if fig-cap-location == auto or fig-cap-location == none {
@@ -293,20 +318,44 @@
   }
 }
 
+// Rust flattens a content-valued option (`fig-caption`, `fig-alt-text`,
+// `fig-subcaptions`, `tbl-caption`, `lst-caption`) to plain text before
+// storing it, since `results.json` is JSON and cannot carry a Typst content
+// tree. That flattened form is only correct for an option that was never
+// visible to Typst in the first place: one set in a `#|` fenced-block header,
+// which Typst does not parse beyond `label`. A call-site value
+// (`calepin.chunk(..., fig-caption: [_rich_ content])`) already sits in
+// `opts` with its formatting intact, so it must win over the flattened
+// stored copy rather than be overwritten by it.
+#let _content-valued-options = (
+  "fig-caption",
+  "fig-alt-text",
+  "fig-subcaptions",
+  "tbl-caption",
+  "lst-caption",
+)
+
 // Display options declared in a fenced `#|` chunk header exist only in the
 // serialized result options: Typst reads nothing but `label` out of the
 // header, so a caption, alt text, or layout written there never reaches the
 // call options this render started from. Restore every stored option that was
 // actually set (unset ones serialize as `none` and must not clobber call-site
 // values); paged output needs size strings converted to lengths, HTML
-// consumes them directly.
+// consumes them directly. Content-valued options only take the stored,
+// flattened form when the call site left them unset, so rich content passed
+// directly to `calepin.chunk()` is never replaced by its flattened copy.
 #let _merge-result-options(opts, chunk) = {
   let out = opts
   for (key, value) in chunk.at("options", default: (:)) {
     if value == none {
       continue
     }
-    if not _is-html() and key in ("fig-width", "fig-height") {
+    if key in _content-valued-options and out.at(key, default: none) != none {
+      continue
+    }
+    if key == "fig-cap-location" {
+      value = _normalize-cap-location(value)
+    } else if not _is-html() and key in ("fig-width", "fig-height") {
       value = _paged-layout-size(value)
     } else if not _is-html() and key in ("fig-layout-columns", "fig-layout-rows") {
       value = _paged-layout-tracks(value)
@@ -341,7 +390,7 @@
   responsive: opts.at("fig-responsive"),
   link: opts.at("fig-link"),
   caption: opts.at("fig-caption"),
-  "caption-location": opts.at("fig-cap-location"),
+  "caption-location": _normalize-cap-location(opts.at("fig-cap-location")),
   alt: opts.at("fig-alt-text"),
   subcaptions: opts.at("fig-subcaptions"),
   columns: opts.at("fig-layout-columns"),

@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::typst::paths::ENTRY_FILE_NAMES;
 
-pub const RESULT_SCHEMA_VERSION: u8 = 2;
+pub const RESULT_SCHEMA_VERSION: u8 = 3;
 pub const DEFAULT_FIG_DEVICE_FORMAT: &str = "svg";
 pub const DEFAULT_FIG_DEVICE_DPI: u32 = 150;
 pub const DEFAULT_FIG_DEVICE_WIDTH: f64 = 6.0;
@@ -162,14 +162,12 @@ pub struct SetupDefaults {
     pub script: ScriptDestination,
     pub echo: bool,
     pub eval: bool,
-    pub output: bool,
     pub results: ResultsMode,
     #[serde(default = "default_results_location", rename = "results-location")]
     pub results_location: ResultsLocation,
     pub warning: bool,
     pub message: bool,
     pub error: bool,
-    pub placeholder: bool,
     pub fig_device_format: String,
     pub fig_device_dpi: u32,
     pub fig_device_width: f64,
@@ -213,13 +211,11 @@ impl Default for SetupDefaults {
             script: ScriptDestination::default(),
             echo: true,
             eval: true,
-            output: true,
             results: ResultsMode::Render,
             results_location: ResultsLocation::Statement,
             warning: true,
             message: true,
             error: false,
-            placeholder: true,
             fig_device_format: DEFAULT_FIG_DEVICE_FORMAT.to_string(),
             fig_device_dpi: DEFAULT_FIG_DEVICE_DPI,
             fig_device_width: DEFAULT_FIG_DEVICE_WIDTH,
@@ -276,13 +272,11 @@ pub struct ExecOptions {
 #[serde(rename_all = "kebab-case")]
 pub struct DisplayOptions {
     pub echo: bool,
-    pub output: bool,
     pub results: ResultsMode,
     #[serde(default = "default_results_location")]
     pub results_location: ResultsLocation,
     pub warning: bool,
     pub message: bool,
-    pub placeholder: bool,
     pub fig_width: Option<Value>,
     pub fig_height: Option<Value>,
     pub fig_align: Option<Value>,
@@ -683,8 +677,8 @@ mod tests {
             source: "plot(x)".to_string(),
             status: ChunkStatus::Ok,
             display_options: serde_json::from_str(
-                r#"{"echo":true,"output":true,"results":"render","warning":true,
-                    "message":true,"placeholder":true,"fig-width":null,"fig-height":null,
+                r#"{"echo":true,"results":"render","warning":true,
+                    "message":true,"fig-width":null,"fig-height":null,
                     "fig-align":null,"fig-responsive":null,"fig-link":null,"fig-caption":null,
                     "fig-cap-location":null,"fig-alt-text":null,"fig-subcaptions":null,
                     "fig-layout-columns":null,"fig-layout-rows":null,"kind":null}"#,
@@ -718,8 +712,8 @@ mod tests {
           "engine":"python",
           "status":"ok",
           "options":{
-            "echo":true,"output":true,"results":"render","warning":true,
-            "message":true,"placeholder":true,"fig-width":null,"fig-height":null,
+            "echo":true,"results":"render","warning":true,
+            "message":true,"fig-width":null,"fig-height":null,
             "fig-align":null,"fig-responsive":null,"fig-link":null,"fig-caption":null,
             "fig-cap-location":null,"fig-alt-text":null,"fig-subcaptions":null,
             "fig-layout-columns":null,"fig-layout-rows":null,"kind":null

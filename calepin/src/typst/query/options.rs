@@ -116,7 +116,6 @@ fn parse_display_options(
 ) -> Result<DisplayOptions> {
     Ok(DisplayOptions {
         echo: bool_option(value, "echo", defaults.echo)?,
-        output: bool_option(value, "output", defaults.output)?,
         results: results_option(value, "results", defaults.results)?,
         results_location: results_location_option(
             value,
@@ -125,7 +124,6 @@ fn parse_display_options(
         )?,
         warning: bool_option(value, "warning", defaults.warning)?,
         message: bool_option(value, "message", defaults.message)?,
-        placeholder: bool_option(value, "placeholder", defaults.placeholder)?,
         fig_width,
         fig_height: raw_option_with_default(value, "fig-height", &defaults.fig_height)?,
         fig_align,
@@ -164,7 +162,6 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         script: parse_script_destination(value, &base.script)?,
         echo: bool_option(value, "echo", base.echo)?,
         eval: bool_option(value, "eval", base.eval)?,
-        output: bool_option(value, "output", base.output)?,
         results: results_option(value, "results", base.results)?,
         results_location: results_location_option(
             value,
@@ -174,7 +171,6 @@ fn parse_setup_defaults(value: &Value, base: &SetupDefaults) -> Result<SetupDefa
         warning: bool_option(value, "warning", base.warning)?,
         message: bool_option(value, "message", base.message)?,
         error: bool_option(value, "error", base.error)?,
-        placeholder: bool_option(value, "placeholder", base.placeholder)?,
         fig_device_format: string_option(value, "fig-device-format", &base.fig_device_format)?,
         fig_device_dpi: u32_option(value, "fig-device-dpi", base.fig_device_dpi)?,
         fig_device_width: f64_option(value, "fig-device-width", base.fig_device_width)?,

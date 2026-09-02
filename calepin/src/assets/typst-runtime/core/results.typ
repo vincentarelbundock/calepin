@@ -9,8 +9,8 @@
   } else {
     let document = json(results-path)
     let schema = document.at("schema", default: 1)
-    if schema not in (1, 2) {
-      panic("unsupported Calepin results schema " + str(schema) + "; this runtime supports schemas 1 and 2")
+    if schema not in (1, 2, 3) {
+      panic("unsupported Calepin results schema " + str(schema) + "; this runtime supports schemas 1 through 3")
     }
     document
   }
