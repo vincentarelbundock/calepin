@@ -1,7 +1,6 @@
 tinymist/
 target/
 calepin/target
-Cargo.lock
 pagefind/
 # Linux packages built by scripts/make-linux-packages.sh
 dist/

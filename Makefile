@@ -68,6 +68,7 @@ bump: ## Bump package version (usage: make bump VERSION=x.y.z)
 # Refuses to run on a dirty tree so the tag reflects committed code.
 release: ## Tag and push v$(VERSION); fires cargo-dist + crates.io workflows
 	@test -z "$$(git status --porcelain)" || { echo "working tree is dirty; commit or stash first"; exit 1; }
+	@grep -q '^## $(VERSION)$$' CHANGELOG.md || { echo "CHANGELOG.md has no '## $(VERSION)' heading; add one first"; exit 1; }
 	@echo "Tagging v$(VERSION) at $$(git rev-parse --short HEAD) and pushing..."
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin v$(VERSION)

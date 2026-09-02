@@ -72,22 +72,6 @@ for packager in deb rpm archlinux; do
   nfpm package --packager "$packager" \
     --config packaging/linux/nfpm.yaml --target dist/
 done
-# A binary built on NixOS names its ELF interpreter in /nix/store, so the
-# package installs cleanly on Debian and then fails with "cannot execute:
-# required file not found". The release workflow is unaffected because it
-# packages cargo-dist's binaries, but a local `make linux-packages` on NixOS
-# would otherwise produce a package that looks fine and does not run.
-if command -v readelf >/dev/null 2>&1; then
-  interp="$(readelf -p .interp "$target" 2>/dev/null | grep -o '"'"'/[^ ]*ld-linux[^ ]*'"'"' || true)"
-  case "$interp" in
-    /nix/store/*)
-      echo "refusing to package: $target has a Nix ELF interpreter ($interp)" >&2
-      echo "pass a binary from a cargo-dist release tarball instead:" >&2
-      echo "  ./scripts/make-linux-packages.sh /path/to/unpacked/calepin amd64" >&2
-      exit 1
-      ;;
-  esac
-fi
 
 rm -rf "$staging"
 
