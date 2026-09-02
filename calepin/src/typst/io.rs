@@ -45,7 +45,41 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     temp.persist(path)
         .map(|_| ())
         .map_err(|err| err.error)
-        .with_context(|| format!("failed to write {}", path.display()))
+        .with_context(|| format!("failed to write {}", path.display()))?;
+    apply_default_file_mode(path)
+}
+
+/// `NamedTempFile` creates its backing file with mode 0600 so it persists
+/// with the same restrictive permissions, which leaves artifacts like
+/// `results.json` and published figures readable only by their owner.
+/// Restore the mode a plain `File::create` would have gotten: `0o666` minus
+/// the process umask.
+#[cfg(unix)]
+fn apply_default_file_mode(path: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mode = 0o666 & !process_umask();
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+        .with_context(|| format!("failed to set permissions on {}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn apply_default_file_mode(_path: &Path) -> Result<()> {
+    Ok(())
+}
+
+/// The process umask, read by setting it and immediately restoring it.
+/// `umask` has no read-only query form; this is the standard trick, and it
+/// is a plain process-wide value, not a per-thread one, so the brief window
+/// where it is 0 only matters if another thread creates a file at the exact
+/// same instant.
+#[cfg(unix)]
+fn process_umask() -> u32 {
+    unsafe {
+        let mask = libc::umask(0);
+        libc::umask(mask);
+        mask as u32
+    }
 }
 
 #[cfg(test)]
@@ -89,6 +123,21 @@ mod tests {
         write_if_changed(&path, "new").unwrap();
 
         assert_eq!(std::fs::read_to_string(path).unwrap(), "new");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_if_changed_leaves_files_readable_by_others() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("results.json");
+
+        write_if_changed(&path, br#"{"ok":true}"#).unwrap();
+
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        let expected = 0o666 & !process_umask();
+        assert_eq!(mode, expected);
     }
 
     #[test]

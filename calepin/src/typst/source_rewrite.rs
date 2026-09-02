@@ -624,7 +624,7 @@ fn rewrite_raw_block(mut block: RawBlock) -> RewrittenRawBlock {
     let should_rewrite_as_raw = block.in_calepin_chunk && dotted_lang;
     if !should_rewrite_as_chunk
         && !should_rewrite_as_raw
-        && !is_executable_label_candidate_lang(block.lang.as_deref())
+        && !is_source_rewritten_chunk_lang(block.lang.as_deref())
     {
         return RewrittenRawBlock {
             source: block.original_source(),
@@ -772,10 +772,6 @@ fn qmd_string_literal(value: &str) -> String {
 fn line_suffix_after_trimmed_end(line: &str) -> &str {
     let trimmed_len = line.trim_end().len();
     &line[trimmed_len..]
-}
-
-fn is_executable_label_candidate_lang(raw_lang: Option<&str>) -> bool {
-    !matches!(raw_lang, None | Some("typ" | "typst"))
 }
 
 fn typst_string_escape(value: &str) -> String {

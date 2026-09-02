@@ -9,7 +9,7 @@ use crate::html::{
 use crate::typst::model::LayoutPaths;
 use crate::typst::paths::artifact_reference;
 use crate::typst::run::{
-    push_calepin_inputs, push_input, run_typst_status, source_dir_input, CalepinMode,
+    push_calepin_inputs, push_input, run_typst_diagnostics, source_dir_input, CalepinMode,
     CalepinTarget, INPUT_ASSETS, INPUT_CURRENT_HREF, INPUT_IMAGE_META, INPUT_PAGES,
     INPUT_SITE_ROOT, INPUT_SOURCE_DIR, RESERVED_INPUT_KEYS,
 };
@@ -475,9 +475,13 @@ pub fn compile_with_typst(
         ),
         crate::cli::is_quiet() || !options.progress,
     );
-    run_typst_status(typst, "run typst compile", &args, &layout.root, |stderr| {
-        format!("typst compile failed:\n{stderr}")
-    })?;
+    let diagnostics =
+        run_typst_diagnostics(typst, "run typst compile", &args, &layout.root, |stderr| {
+            format!("typst compile failed:\n{stderr}")
+        })?;
+    if !diagnostics.is_empty() {
+        progress.suspend(|| eprintln!("{diagnostics}"));
+    }
     if output.is_html() {
         progress.set_message(format!(
             "[html] {}",

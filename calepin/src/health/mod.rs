@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::cli::HealthArgs;
@@ -17,6 +17,26 @@ mod source;
 
 use links::link_check;
 use quality::{image_check, slug_check};
+use source::{collect_typst_files, mask_raw_spans};
+
+/// One Typst source file, read and raw-span-masked once so the quality
+/// checks (links, images, slugs) do not each re-walk and re-read it.
+pub(crate) struct QualitySource {
+    pub(crate) path: PathBuf,
+    pub(crate) masked: String,
+}
+
+fn collect_quality_sources(root: &Path, depth: Option<usize>) -> Result<Vec<QualitySource>> {
+    collect_typst_files(root, depth)?
+        .into_iter()
+        .map(|path| {
+            let source = std::fs::read_to_string(&path)
+                .with_context(|| format!("failed to read {}", path.display()))?;
+            let masked = mask_raw_spans(&source);
+            Ok(QualitySource { path, masked })
+        })
+        .collect()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -219,9 +239,22 @@ pub fn build_report(
         python_available,
     ));
     checks.push(jupyter_kernels_check());
-    checks.push(link_check(&root, check_links_depth, check_external_links));
-    checks.push(image_check(&root, check_links_depth));
-    checks.push(slug_check(&root, check_links_depth));
+    match collect_quality_sources(&root, check_links_depth) {
+        Ok(sources) => {
+            checks.push(link_check(&root, &sources, check_external_links));
+            checks.push(image_check(&root, &sources));
+            checks.push(slug_check(&root, &sources));
+        }
+        Err(error) => {
+            let message = format!("failed to collect Typst files: {error}");
+            for name in ["links", "images", "slugs"] {
+                checks.push(
+                    HealthCheck::warn(name, message.clone())
+                        .with_path(root.display().to_string()),
+                );
+            }
+        }
+    }
 
     Ok(HealthReport {
         root: root.display().to_string(),
@@ -237,20 +270,7 @@ fn tool_check(
     required: bool,
     action: &str,
 ) -> HealthCheck {
-    match validate_executable(path, action, tool) {
-        Ok(()) => HealthCheck::ok(name, "found").with_path(path.display().to_string()),
-        Err(error) => HealthCheck::new(
-            name,
-            if required {
-                HealthStatus::Error
-            } else {
-                HealthStatus::Warning
-            },
-            error.to_string(),
-        )
-        .with_path(path.display().to_string())
-        .with_optional_hint(tool.map(|tool| tool.install_hint.to_string())),
-    }
+    checked_tool(name, path, tool, required, action, validate_executable)
 }
 
 fn python_check(
@@ -260,7 +280,25 @@ fn python_check(
     required: bool,
     action: &str,
 ) -> HealthCheck {
-    match validate_python_interpreter(path, action, tool) {
+    checked_tool(
+        name,
+        path,
+        tool,
+        required,
+        action,
+        validate_python_interpreter,
+    )
+}
+
+fn checked_tool(
+    name: &str,
+    path: &Path,
+    tool: Option<&Tool>,
+    required: bool,
+    action: &str,
+    validate: fn(&Path, &str, Option<&Tool>) -> Result<()>,
+) -> HealthCheck {
+    match validate(path, action, tool) {
         Ok(()) => HealthCheck::ok(name, "found").with_path(path.display().to_string()),
         Err(error) => HealthCheck::new(
             name,
@@ -486,7 +524,7 @@ fn print_text_report(report: &HealthReport) {
         let path = check.path.as_deref().unwrap_or("");
         eprintln!(
             "{status:<5} {:<16} {:<28} {}",
-            &check.name, path, &check.message
+            check.name, path, check.message
         );
         if let Some(hint) = &check.hint {
             eprintln!("      {:<16} hint: {hint}", "");

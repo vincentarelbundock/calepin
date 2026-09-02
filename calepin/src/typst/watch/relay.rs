@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::thread;
 
+use crate::typst::run::strip_ansi_codes;
+
 pub(super) fn relay_typst_watch_output<R, W>(reader: R, writer: W) -> io::Result<()>
 where
     R: Read,
@@ -73,26 +75,6 @@ pub(super) enum TypstWatchLine {
     Writing,
     Status,
     Other,
-}
-
-fn strip_ansi_codes(line: &str) -> String {
-    let mut out = String::with_capacity(line.len());
-    let mut chars = line.chars().peekable();
-
-    while let Some(ch) = chars.next() {
-        if ch == '\x1b' && matches!(chars.peek(), Some('[')) {
-            chars.next();
-            for next in chars.by_ref() {
-                if next == 'm' {
-                    break;
-                }
-            }
-            continue;
-        }
-        out.push(ch);
-    }
-
-    out
 }
 
 pub(super) fn typst_watch_line(line: &str) -> TypstWatchLine {

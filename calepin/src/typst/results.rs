@@ -236,6 +236,25 @@ mod tests {
     }
 
     #[test]
+    fn refresh_cached_results_metadata_accepts_schema_one_with_options_present() {
+        // `options` has been a required field on `ChunkResultDocument` since
+        // before the schema-1 to schema-2 bump (which only added `store` and
+        // `generation`, both `#[serde(default)]`), so a genuine schema-1
+        // results.json carrying `options` still deserializes today and this
+        // branch is reachable: it is not dead code.
+        let doc = build_results_document(Path::new("paper.typ"), vec![result("setup")]).unwrap();
+        let mut json: serde_json::Value = serde_json::to_value(&doc).unwrap();
+        json["schema"] = serde_json::json!(1);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".calepin/paper/results.json");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, serde_json::to_string(&json).unwrap()).unwrap();
+        let current = chunk("setup", "print(1)", ResultsMode::Render);
+
+        refresh_cached_results_metadata(&path, &[current]).unwrap();
+    }
+
+    #[test]
     fn refresh_cached_results_metadata_names_malformed_results_path() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(".calepin/paper/results.json");
