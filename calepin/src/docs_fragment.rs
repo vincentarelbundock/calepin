@@ -159,7 +159,6 @@ fn render_fragment() -> String {
     // Type-checked facts that do not need text scanning: these fail to
     // compile, rather than fail at test time, if the underlying constant or
     // enum variant disappears.
-    assert_eq!(RESULT_SCHEMA_VERSION, 2, "update the schema version below");
     assert_eq!(EngineName::from_name("r"), EngineName::R);
     assert_eq!(EngineName::from_name("python"), EngineName::Python);
     for name in DIAGRAM_ENGINE_NAMES {

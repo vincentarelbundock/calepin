@@ -4,7 +4,7 @@
 
 ## Results schema version
 
-`2`
+`3`
 
 ## Reserved `--input` keys
 
