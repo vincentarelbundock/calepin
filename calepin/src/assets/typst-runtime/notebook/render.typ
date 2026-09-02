@@ -423,7 +423,17 @@
   }
 }
 
-#let _is-image-mime(mime) = mime == "image/svg+xml" or mime == "image/png"
+// PDF figures render fine on the paged target (Typst's own `image()` embeds
+// them directly), but the HTML target writes a plain `<img src=...>` tag,
+// which browsers cannot rasterize a PDF through. Excluding `application/pdf`
+// here on HTML routes it to `_render-display-item`'s explicit error instead
+// of silently rendering nothing.
+#let _is-image-mime(mime) = (
+  mime == "image/svg+xml"
+    or mime == "image/png"
+    or mime == "image/jpeg"
+    or (mime == "application/pdf" and not _is-html())
+)
 
 #let _is-image-display-item(item) = {
   let item-type = item.at("type", default: "")
@@ -696,6 +706,13 @@
   }
   let mime = selected.mime
   let value = selected.value
+  if mime == "application/pdf" and _is-html() {
+    panic(
+      "chunk `"
+        + label
+        + "`: PDF figures are not supported on the HTML target. Set `fig-device-format` to \"svg\", \"png\", or \"jpeg\" for HTML output, or compile to a paged target for PDF figures.",
+    )
+  }
   if _is-image-mime(mime) {
     let artifact-path = _artifact-path(value)
     let html-path = _resolve-asset-href(artifact-path)

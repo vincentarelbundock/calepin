@@ -347,8 +347,14 @@ impl ExecutablePaths {
     }
 }
 
+/// `calepin.toml` is shared with `website::config::WebsiteConfig`, which is
+/// parsed from the same file independently and also denies unknown fields.
+/// Every website-only key therefore needs a placeholder field here (and vice
+/// versa) so a key valid for one purpose does not get rejected as unknown
+/// while being parsed for the other. Keep this list in sync with
+/// `website/config.rs`.
 #[derive(Debug, Default, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 struct RawCalepinConfig {
     #[serde(default)]
     executables: RawExecutablePaths,
@@ -362,10 +368,62 @@ struct RawCalepinConfig {
     highlight_light: Option<PathBuf>,
     #[serde(rename = "highlight-dark")]
     highlight_dark: Option<PathBuf>,
+
+    // Website-only keys, resolved by `WebsiteConfig` (website/config.rs), not
+    // here. Kept only so `deny_unknown_fields` accepts them in a website
+    // `calepin.toml`.
+    #[serde(rename(deserialize = "default-language"), alias = "default_language")]
+    _default_language: Option<toml::Value>,
+    #[serde(rename = "languages")]
+    _languages: Option<toml::Value>,
+    #[serde(rename = "title")]
+    _title: Option<toml::Value>,
+    #[serde(rename = "description")]
+    _description: Option<toml::Value>,
+    #[serde(rename(deserialize = "base-url"), alias = "base_url")]
+    _base_url: Option<toml::Value>,
+    #[serde(rename = "logo")]
+    _logo: Option<toml::Value>,
+    #[serde(rename(deserialize = "logo-alt"), alias = "logo_alt")]
+    _logo_alt: Option<toml::Value>,
+    #[serde(rename = "favicon")]
+    _favicon: Option<toml::Value>,
+    #[serde(rename = "image")]
+    _image: Option<toml::Value>,
+    #[serde(rename(deserialize = "theme-color"), alias = "theme_color")]
+    _theme_color: Option<toml::Value>,
+    #[serde(rename(deserialize = "output-dir"), alias = "output")]
+    _output_dir: Option<toml::Value>,
+    #[serde(rename = "pdf")]
+    _pdf: Option<toml::Value>,
+    #[serde(rename = "typ")]
+    _typ: Option<toml::Value>,
+    #[serde(rename = "minify")]
+    _minify: Option<toml::Value>,
+    #[serde(rename = "search")]
+    _search: Option<toml::Value>,
+    #[serde(rename(deserialize = "generate-feeds"), alias = "generate_feeds")]
+    _generate_feeds: Option<toml::Value>,
+    #[serde(rename = "feeds")]
+    _feeds: Option<toml::Value>,
+    #[serde(rename = "robots")]
+    _robots: Option<toml::Value>,
+    #[serde(rename = "llms")]
+    _llms: Option<toml::Value>,
+    #[serde(rename = "pages")]
+    _pages: Option<toml::Value>,
+    #[serde(rename = "static")]
+    _static_files: Option<toml::Value>,
+    #[serde(rename = "menus")]
+    _menus: Option<toml::Value>,
+    #[serde(rename = "footer")]
+    _footer: Option<toml::Value>,
+    #[serde(rename = "sidebar")]
+    _sidebar: Option<toml::Value>,
 }
 
 #[derive(Debug, Default, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 struct RawExecutablePaths {
     typst: Option<PathBuf>,
     rscript: Option<PathBuf>,
@@ -934,5 +992,37 @@ credits = 3
             .to_string();
 
         assert!(err.contains("unknown field `revealjs`"), "{err}");
+    }
+
+    #[test]
+    fn config_rejects_unknown_top_level_key_and_lists_valid_ones() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("calepin.toml"), "nonsense-key = true\n").unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err();
+        let err = format!("{err:#}");
+
+        assert!(err.contains("nonsense-key"), "{err}");
+        assert!(err.contains("executables"), "{err}");
+        assert!(err.contains("theme"), "{err}");
+    }
+
+    #[test]
+    fn config_rejects_unknown_executable_key_and_lists_valid_ones() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("calepin.toml"),
+            "[executables]\nnonsense = \"/bin/nonsense\"\n",
+        )
+        .unwrap();
+
+        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
+            .unwrap_err();
+        let err = format!("{err:#}");
+
+        assert!(err.contains("nonsense"), "{err}");
+        assert!(err.contains("typst"), "{err}");
+        assert!(err.contains("rscript"), "{err}");
     }
 }

@@ -1,5 +1,13 @@
 #let _select-representation(data) = {
-  for mime in ("image/svg+xml", "image/png", "text/x-typst", "text/plain", "application/json") {
+  for mime in (
+    "image/svg+xml",
+    "image/png",
+    "image/jpeg",
+    "application/pdf",
+    "text/x-typst",
+    "text/plain",
+    "application/json",
+  ) {
     let value = data.at(mime, default: none)
     if value != none {
       return (mime: mime, value: value)

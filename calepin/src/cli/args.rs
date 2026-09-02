@@ -13,6 +13,19 @@ pub fn is_quiet() -> bool {
     QUIET.load(Ordering::Relaxed)
 }
 
+/// Global strict flag, set once from CLI args (or `CALEPIN_STRICT=1`) and
+/// readable anywhere. When set, degraded-execution paths that would
+/// otherwise only print a warning turn into hard errors.
+pub static STRICT: AtomicBool = AtomicBool::new(false);
+
+pub fn set_strict(s: bool) {
+    STRICT.store(s, Ordering::Relaxed);
+}
+
+pub fn is_strict() -> bool {
+    STRICT.load(Ordering::Relaxed) || std::env::var("CALEPIN_STRICT").as_deref() == Ok("1")
+}
+
 #[derive(Parser, Debug)]
 #[command(
     name = "calepin",
@@ -278,6 +291,11 @@ pub struct CommonArgs {
     /// exact source Typst saw.
     #[arg(long)]
     pub keep_intermediates: bool,
+
+    /// Fail instead of warning when a chunk cannot run (missing engine or
+    /// kernel). Also honored via `CALEPIN_STRICT=1`.
+    #[arg(long)]
+    pub strict: bool,
 }
 
 /// Print a yellow warning to stderr.

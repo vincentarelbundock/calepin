@@ -113,8 +113,20 @@ pub fn execute_diagram(
         executables,
     };
     let rendered = (spec.render)(&run, &mut results)?;
-    if rendered && fig_path.exists() {
-        results.push(EngineResult::Plot(fig_path.to_path_buf()));
+    if rendered {
+        if fig_path.exists() {
+            results.push(EngineResult::Plot(fig_path.to_path_buf()));
+        } else {
+            // The tool exited 0 but left nothing at the expected output path.
+            // Treating that as a quietly empty chunk would hide a real failure
+            // (a version mismatch, an unsupported flag, or a diagram tool that
+            // writes its output elsewhere), so report it instead.
+            results.push(EngineResult::Error(format!(
+                "{} exited successfully but did not write the expected output file {}",
+                spec.name,
+                fig_path.display()
+            )));
+        }
     }
 
     Ok(results)
@@ -208,5 +220,51 @@ pub(super) mod test_support {
         assert!(!results
             .iter()
             .any(|result| matches!(result, EngineResult::Error(_))));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_support::{env_lock, write_executable, EnvVarGuard};
+    use super::execute_diagram;
+    use crate::config::ExecutablePaths;
+    use crate::engines::EngineResult;
+    use crate::typst::model::EngineName;
+
+    #[test]
+    fn a_tool_that_exits_ok_without_writing_output_reports_an_error_naming_the_tool() {
+        let _guard = env_lock();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bin_dir = temp_dir.path().join("bin");
+        std::fs::create_dir(&bin_dir).unwrap();
+        // Exits 0 but never writes the `-o` target: a version mismatch or an
+        // unsupported flag can produce exactly this, silently.
+        write_executable(&bin_dir.join("dot"), "#!/bin/sh\nexit 0\n");
+        let _path = EnvVarGuard::prepend_path(bin_dir);
+
+        let fig_path = temp_dir.path().join("figure.svg");
+        let source = vec!["digraph { a -> b }".to_string()];
+        let results = execute_diagram(
+            "digraph { a -> b }",
+            EngineName::from_name("dot"),
+            &fig_path,
+            &source,
+            &ExecutablePaths::defaults(),
+        )
+        .unwrap();
+
+        assert!(!fig_path.exists());
+        let error = results.iter().find_map(|result| match result {
+            EngineResult::Error(message) => Some(message.clone()),
+            _ => None,
+        });
+        let error = error.expect("expected an EngineResult::Error");
+        assert!(error.contains("dot"), "{error}");
+        assert!(
+            !results
+                .iter()
+                .any(|result| matches!(result, EngineResult::Plot(_))),
+            "must not report a plot when no file was written"
+        );
     }
 }

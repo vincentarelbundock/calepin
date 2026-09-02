@@ -242,7 +242,26 @@
 // because no engine was available to run it. Callers that are themselves `raw`
 // show rules must not hand the element straight back — that would re-enter the
 // same rule — so the default re-renders it through Calepin's code styling.
+// A caller can misspell a named argument (`ehco: false` instead of `echo:
+// false`). `_call-defaults + args.named()` would silently drop it: dict
+// addition only overwrites keys that already exist in `_call-defaults`, so an
+// unknown key merges in unused and the chunk renders as if the argument had
+// never been given. Reject it here instead, before it can vanish.
+#let _reject-unknown-chunk-arguments(named) = {
+  for key in named.keys() {
+    if key not in _call-defaults {
+      panic(
+        "calepin.chunk: unsupported argument `"
+          + key
+          + "`. Supported arguments: "
+          + _call-defaults.keys().sorted().join(", "),
+      )
+    }
+  }
+}
+
 #let _emit-chunk(config, engine, body, fallback: _html-themed-raw-block, ..args) = context {
+  _reject-unknown-chunk-arguments(args.named())
   let options = _call-defaults + args.named()
   let label-opt = options.at("label")
   let qmd-label-opt = _qmd-label-from-body(body)
