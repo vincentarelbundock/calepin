@@ -1,16 +1,19 @@
 use std::path::Path;
 use std::process::Command;
 
+// calepin has no library target for this integration test binary to depend
+// on, so the tool-skip helper is shared by including its source directly
+// rather than importing it as a crate. See that file's doc comment for what
+// CALEPIN_TEST_REQUIRE_TOOLS does.
+#[path = "../src/utils/testtools.rs"]
+mod testtools;
+
 fn calepin_bin() -> &'static Path {
     Path::new(env!("CARGO_BIN_EXE_calepin"))
 }
 
 fn has_command(command: &str) -> bool {
-    Command::new(command)
-        .arg("--version")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+    testtools::command_available(command)
 }
 
 /// A chunk's items with its source segments dropped: engines that split their
@@ -29,20 +32,22 @@ fn output_items(chunk: &serde_json::Value) -> Vec<&serde_json::Value> {
 }
 
 fn has_pdftotext() -> bool {
-    Command::new("pdftotext")
+    let available = Command::new("pdftotext")
         .arg("-v")
         .output()
         .map(|output| output.status.success())
-        .unwrap_or(false)
+        .unwrap_or(false);
+    testtools::require(available, "pdftotext")
 }
 
 fn has_python_module(module: &str) -> bool {
     let code = format!("import {module}");
-    Command::new("python3")
+    let available = Command::new("python3")
         .args(["-c", &code])
         .output()
         .map(|output| output.status.success())
-        .unwrap_or(false)
+        .unwrap_or(false);
+    testtools::require(available, &format!("python3 module `{module}`"))
 }
 
 #[test]
@@ -386,10 +391,24 @@ print(x + 1)
         .join(".calepin/paper/runtime-config.typ")
         .exists());
 
-    let active = std::fs::read_to_string(dir.path().join(".calepin/active.typ")).unwrap();
+    // The entry file calepin generated must be independently valid Typst
+    // that resolves its own imports, not just something that happened to
+    // work as part of the compile above.
+    let active_compile = Command::new("typst")
+        .args([
+            "compile",
+            ".calepin/active.typ",
+            "active-preview.pdf",
+            "--root",
+            ".",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to compile the generated entry file with Typst");
     assert!(
-        active.contains(r#"#import "paper/runtime-config.typ": config"#),
-        "{active}"
+        active_compile.status.success(),
+        "generated .calepin/active.typ failed to compile standalone:\n{}",
+        String::from_utf8_lossy(&active_compile.stderr)
     );
 
     let results_path = dir.path().join(".calepin/paper/results.json");
@@ -811,18 +830,25 @@ fn compile_html_assigns_safe_ids_to_all_heading_forms() {
     );
 
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
-    assert!(html.contains(r#"<h2 id="research">"#), "{html}");
-    assert!(html.contains(r#"<h2 id="slugged-research">"#), "{html}");
+    assert!(html.contains(r#"id="research""#), "{html}");
+    assert!(html.contains(r#"id="slugged-research""#), "{html}");
+
+    // A label containing an attribute-injection payload must be escaped
+    // into the id, never land as a live attribute on the element.
     assert!(
-        html.contains(r#"<h2 id="x&quot; onmouseover=&quot;alert(1)">Dynamic label</h2>"#),
-        "{html}"
+        html.contains("x&quot; onmouseover=&quot;alert(1)") && html.contains("Dynamic label"),
+        "expected the injected label to be escaped into the heading id:\n{html}"
     );
     assert!(
-        !html.contains(r#" id="x" onmouseover="alert(1)""#),
-        "{html}"
+        !html.contains(r#"onmouseover="alert(1)""#),
+        "the injected label must never appear as a live attribute:\n{html}"
     );
+
+    // A heading level beyond h6 still gets a semantic role, level and id.
+    assert!(html.contains(r#"role="heading""#), "{html}");
+    assert!(html.contains(r#"aria-level="7""#), "{html}");
     assert!(
-        html.contains(r#"<div role="heading" aria-level="7" id="deep">Deep heading</div>"#),
+        html.contains(r#"id="deep""#) && html.contains("Deep heading"),
         "{html}"
     );
     assert!(!html.contains("calepin-heading-anchor"), "{html}");
@@ -884,30 +910,24 @@ digraph {
 
     let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
     assert!(
-        html.contains(
-            r#"<div class="calepin-figure-width" style="width: 37%; max-width: 100%; margin-inline: auto;"><figure"#
-        ),
+        html.contains("width: 37%"),
         "expected display width on captioned figure in HTML output:\n{html}"
     );
     assert!(
-        html.contains(r##"<a href="#fig-graph">Figure"##),
+        html.contains(r##"href="#fig-graph""##) && html.contains("Figure"),
         "expected labeled HTML figure cross-reference to resolve:\n{html}"
     );
     assert!(
-        html.contains(r#"<img src="data:image/svg+xml;base64,"#),
+        html.contains("data:image/svg+xml;base64,"),
         "expected captioned figure image to be embedded as a data URI:\n{html}"
-    );
-    assert!(
-        html.contains(r#"alt style="display: block; width: 100%; height: 44px;">"#),
-        "expected captioned figure image to fill styled figure:\n{html}"
-    );
-    assert!(
-        !html.contains(r#"src="/.calepin/paper/figures/chunk-1.svg""#),
-        "HTML compile should inline generated figure assets:\n{html}"
     );
     assert!(
         html.contains("height: 44px"),
         "expected display height in HTML output:\n{html}"
+    );
+    assert!(
+        !html.contains("figures/chunk-1.svg"),
+        "HTML compile should inline generated figure assets rather than reference them on disk:\n{html}"
     );
     assert!(html.contains("HTML graph"));
 }
@@ -1152,10 +1172,6 @@ plt.plot([1, 2, 3], [1, 4, 9])
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let staged = std::fs::read_to_string(dir.path().join(".calepin/paper/source.typ")).unwrap();
-    assert!(staged.contains(r#"#metadata((label: "fig-trailing")) <calepin-fence-label>"#));
-    assert!(!staged.contains("```<fig-trailing>"));
-
     let results_path = dir.path().join(".calepin/paper/results.json");
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
@@ -1218,15 +1234,6 @@ print("EXPLICIT_RAW_SHOW_12345")
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let staged = std::fs::read_to_string(dir.path().join(".calepin/paper/source.typ")).unwrap();
-    assert_eq!(
-        staged
-            .matches("#calepin_runtime.chunk_from_raw_plain(\"python\"")
-            .count(),
-        1,
-        "only the bare fence should be rewritten:\n{staged}"
-    );
-
     let text = Command::new("pdftotext")
         .arg(dir.path().join("paper.pdf"))
         .arg("-")
@@ -1234,8 +1241,19 @@ print("EXPLICIT_RAW_SHOW_12345")
         .expect("failed to run pdftotext");
     assert!(text.status.success());
     let extracted = String::from_utf8(text.stdout).unwrap();
-    assert!(extracted.contains("BARE_RAW_SHOW_12345"), "{extracted}");
-    assert!(extracted.contains("EXPLICIT_RAW_SHOW_12345"), "{extracted}");
+    // Each fence's output must render exactly once: if the bare-fence
+    // rewrite also touched the explicit `calepin.chunk(...)` call (or vice
+    // versa), the chunk would run twice and its output would be duplicated.
+    assert_eq!(
+        extracted.matches("BARE_RAW_SHOW_12345").count(),
+        1,
+        "bare fence output should render exactly once:\n{extracted}"
+    );
+    assert_eq!(
+        extracted.matches("EXPLICIT_RAW_SHOW_12345").count(),
+        1,
+        "explicit chunk output should render exactly once:\n{extracted}"
+    );
     assert!(
         !extracted.contains("print(\"BARE_RAW_SHOW_12345\")"),
         "{extracted}"

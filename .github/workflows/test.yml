@@ -1,0 +1,94 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  # Pinned so a new typst release cannot change what CI exercises without a
+  # deliberate bump here.
+  TYPST_VERSION: 0.15.1
+
+jobs:
+  # Full suite: every engine calepin supports is installed, and
+  # CALEPIN_TEST_REQUIRE_TOOLS turns a silent "tool missing, skip" into a
+  # failure naming the tool, so a broken installer step (or a test that
+  # forgot to check the right tool) fails loudly instead of passing green
+  # having asserted nothing.
+  test-full:
+    runs-on: ubuntu-latest
+    env:
+      CALEPIN_TEST_REQUIRE_TOOLS: "1"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install typst
+        run: |
+          set -eu
+          triple="x86_64-unknown-linux-musl"
+          asset="typst-${triple}"
+          url="https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/${asset}.tar.xz"
+          curl -fsSL -o /tmp/typst.tar.xz "$url"
+          tar -xJf /tmp/typst.tar.xz -C /tmp
+          sudo install -m755 "/tmp/${asset}/typst" /usr/local/bin/typst
+          typst --version
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Python engine dependencies
+        run: pip install --upgrade matplotlib jupyter_client
+
+      - name: Install R
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends r-base
+          Rscript --version
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1"
+
+      - name: Install IJulia
+        run: julia -e 'using Pkg; Pkg.add("IJulia"); using IJulia'
+
+      - name: Install pdftotext (poppler-utils)
+        run: sudo apt-get install -y --no-install-recommends poppler-utils
+
+      - name: cargo fmt --check
+        run: cargo fmt --manifest-path calepin/Cargo.toml -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --manifest-path calepin/Cargo.toml -- -D warnings
+
+      - name: make test
+        run: make test
+
+  # Lightweight cross-platform check: builds and runs the unit/integration
+  # suite without any external engine installed, so every test that needs
+  # typst/python/R/julia skips (CALEPIN_TEST_REQUIRE_TOOLS is deliberately
+  # unset here). This still catches compile errors and pure-Rust logic
+  # regressions on macOS and Windows.
+  test-lite:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo test
+        run: cargo test --manifest-path calepin/Cargo.toml

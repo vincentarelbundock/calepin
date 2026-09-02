@@ -29,8 +29,12 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
+      # Check out the released tag (or the workflow_run commit it came
+      # from), not whatever is on the default branch right now. main can
+      # move between the tag push and this job running.
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.inputs.tag || github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - id: resolve

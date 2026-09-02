@@ -6,6 +6,8 @@ pub mod progress;
 pub mod static_files;
 pub mod template;
 #[cfg(test)]
+pub mod testtools;
+#[cfg(test)]
 pub mod testutil;
 pub mod tools;
 pub mod url;

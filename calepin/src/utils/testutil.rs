@@ -1,7 +1,8 @@
 use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
-use std::process::Command;
 use std::sync::{Mutex, MutexGuard, OnceLock};
+
+use crate::utils::testtools;
 
 static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
@@ -13,11 +14,7 @@ pub fn env_lock() -> MutexGuard<'static, ()> {
 }
 
 pub fn command_available(command: &str) -> bool {
-    Command::new(command)
-        .arg("--version")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+    testtools::command_available(command)
 }
 
 pub fn tempdir_in_manifest(prefix: &str) -> tempfile::TempDir {
