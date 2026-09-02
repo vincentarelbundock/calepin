@@ -40,6 +40,33 @@
 - `toc`
 - `highlight-light`
 - `highlight-dark`
+- `// Website-only keys, resolved by `WebsiteConfig` (website/config.rs), not`
+- `// here. Kept only so `deny-unknown-fields` accepts them in a website`
+- `// `calepin.toml`.`
+- `-default-language`
+- `languages`
+- `title`
+- `description`
+- `-base-url`
+- `logo`
+- `-logo-alt`
+- `favicon`
+- `image`
+- `-theme-color`
+- `-output-dir`
+- `pdf`
+- `typ`
+- `minify`
+- `search`
+- `-generate-feeds`
+- `feeds`
+- `robots`
+- `llms`
+- `pages`
+- `static`
+- `menus`
+- `footer`
+- `sidebar`
 
 ## Supported engine names
 
