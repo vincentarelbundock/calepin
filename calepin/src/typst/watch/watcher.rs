@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use notify::RecursiveMode;
 
 use crate::typst::paths::is_generated_entry_file;
+use crate::utils::path::absolutize_from;
 use crate::utils::static_files::path_has_common_skip_dir;
 use crate::utils::watch::run_debounced_watch;
 
@@ -39,15 +40,6 @@ pub(crate) fn is_watch_candidate(
     if rel.components().next().is_none()
         || path_has_common_skip_dir(rel)
         || is_generated_entry_file(rel)
-    {
-        return false;
-    }
-
-    if rel.starts_with("editors/vscode/bin")
-        || rel.starts_with("editors/vscode/dist")
-        || rel.starts_with("editors/vscode/media")
-        || rel.starts_with("editors/vscode/node_modules")
-        || rel.starts_with("editors/vscode/out")
     {
         return false;
     }
@@ -85,12 +77,11 @@ pub(crate) fn watch_root(
         .canonicalize()
         .with_context(|| format!("watch root not found: {}", root.display()))?;
     let preview_output = preview_output.to_path_buf();
+    // Resolve a relative `--config` the same way the CLI does: against the
+    // current directory, not the project root (see `config::resolve_config_path`).
     let config_path = config_path.map(|path| {
-        let path = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            root.join(path)
-        };
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let path = absolutize_from(&cwd, path);
         path.canonicalize().unwrap_or(path)
     });
 
@@ -100,8 +91,19 @@ pub(crate) fn watch_root(
     let artifact_root = artifact_root
         .canonicalize()
         .unwrap_or_else(|_| artifact_root.to_path_buf());
+
+    let mut watches = vec![(root.clone(), RecursiveMode::Recursive)];
+    // A `--config` file outside the project root would otherwise never be
+    // watched at all: `notify` only reports events under the paths it was
+    // told to watch.
+    if let Some(config_path) = &config_path {
+        if !config_path.starts_with(&root) {
+            watches.push((config_path.clone(), RecursiveMode::NonRecursive));
+        }
+    }
+
     run_debounced_watch(
-        &[(root.clone(), RecursiveMode::Recursive)],
+        &watches,
         Duration::from_millis(300),
         Duration::from_millis(200),
         stop,
@@ -140,13 +142,28 @@ mod tests {
         assert!(!candidate(&root.join("target/debug/x")));
         assert!(!candidate(&root.join("node_modules/pkg/index.js")));
         assert!(!candidate(&root.join(".venv/bin/python")));
-        assert!(!candidate(&root.join("editors/vscode/out/extension.js")));
-        assert!(!candidate(
-            &root.join("editors/vscode/media/pdfjs/build/pdf.min.mjs")
-        ));
-        assert!(!candidate(&root.join("editors/vscode/dist/calepin.vsix")));
         assert!(candidate(&root.join("paper.typ")));
         assert!(candidate(&root.join("data/input.csv")));
+        // Not hard-coded to any particular project layout: an ordinary
+        // directory under the root is a candidate, unlike the generated
+        // and vendored paths above.
+        assert!(candidate(&root.join("editors/vscode/out/extension.js")));
+    }
+
+    #[test]
+    fn config_path_outside_root_is_watched() {
+        let root = Path::new("/tmp/project");
+        let output = root.join("paper.pdf");
+        let artifact_root = root.join("_calepin");
+        let outside_config = Path::new("/tmp/shared/config.toml");
+
+        assert!(is_watch_candidate(
+            root,
+            &output,
+            &artifact_root,
+            Some(outside_config),
+            outside_config,
+        ));
     }
 
     #[test]

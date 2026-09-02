@@ -3,11 +3,12 @@ mod relay;
 mod watcher;
 
 use std::io;
+use std::panic::{self, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
@@ -128,13 +129,47 @@ fn preprocess_options(args: &WatchArgs, sync_pages: bool) -> PreprocessOptions {
     }
 }
 
-fn install_ctrl_c_handler() -> Result<Arc<AtomicBool>> {
+/// Cell for the `typst watch` child so the signal handler can reach it. Only
+/// `run_watch` (not `--eval-only`) ever puts a child in here.
+type WatchedChild = Arc<Mutex<Option<Child>>>;
+
+/// Installs one handler for Ctrl+C, SIGTERM, and SIGHUP (the `termination`
+/// feature makes `ctrlc` treat all three the same on Unix). The first signal
+/// just sets the stop flag so the normal shutdown path runs: the caller's
+/// poll loop notices `stop`, kills the `typst watch` child, joins the
+/// relay/watcher threads (which is where in-flight engine sessions close,
+/// since `EnginePool` is dropped when the current preprocess call returns),
+/// and removes the generated entry files.
+///
+/// A second signal means that normal path is stuck (most likely a long
+/// chunk blocking the watcher thread), so it skips straight to killing the
+/// `typst watch` child and exiting the process immediately rather than
+/// waiting on it.
+fn install_signal_handler(
+    child: WatchedChild,
+    layout: crate::typst::model::LayoutPaths,
+    keep_intermediates: bool,
+) -> Result<Arc<AtomicBool>> {
     let stop = Arc::new(AtomicBool::new(false));
     let stop_for_handler = Arc::clone(&stop);
+    let signal_count = Arc::new(AtomicUsize::new(0));
     ctrlc::set_handler(move || {
         stop_for_handler.store(true, Ordering::Relaxed);
+        if signal_count.fetch_add(1, Ordering::SeqCst) > 0 {
+            eprintln!("received a second interrupt, stopping immediately...");
+            if let Ok(mut guard) = child.lock() {
+                if let Some(mut child) = guard.take() {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                }
+            }
+            if !keep_intermediates {
+                crate::typst::paths::remove_entry_files(&layout);
+            }
+            std::process::exit(130);
+        }
     })
-    .context("failed to set Ctrl+C handler")?;
+    .context("failed to set signal handler")?;
     Ok(stop)
 }
 
@@ -142,6 +177,16 @@ struct WatchPreprocessPaths<'a> {
     root: &'a Path,
     excluded_output: &'a Path,
     artifact_root: &'a Path,
+}
+
+fn describe_panic(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "unknown panic".to_string()
+    }
 }
 
 fn watch_preprocess_changes(
@@ -154,6 +199,13 @@ fn watch_preprocess_changes(
 ) -> Result<()> {
     let options = preprocess_options(args, sync_pages);
     let quiet = args.common.quiet;
+    // A panic inside `on_change` (for example a store shape `expect()`
+    // failing) must not silently end the watcher thread while `typst watch`
+    // keeps running with no one re-evaluating chunks. Catch it, record it,
+    // and stop the debounced loop so the caller can surface it as an error.
+    let stop_on_panic = Arc::clone(&stop);
+    let panic_message: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let panic_message_for_closure = Arc::clone(&panic_message);
     watcher::watch_root(
         paths.root,
         paths.excluded_output,
@@ -161,50 +213,70 @@ fn watch_preprocess_changes(
         args.common.config.as_deref(),
         stop,
         move |changed| {
-            // Block HTML postprocessing across the rebuild so the newly
-            // published wrapper and its completed store become visible
-            // together.
-            let mut site_context_guard = site_context
-                .as_ref()
-                .and_then(|context| context.write().ok());
-            match prepare_preprocess_plan(options.clone()) {
-                Ok(plan) => {
-                    if !quiet {
-                        let names = changed
-                            .iter()
-                            .filter_map(|path| path.file_name())
-                            .map(|name| name.to_string_lossy().to_string())
-                            .collect::<Vec<_>>()
-                            .join(", ");
-                        eprintln!("{action} {names}...");
-                    }
-                    match preprocess_cached_plan(plan) {
-                        Ok(output) => {
-                            if let Some(context) = site_context_guard.as_deref_mut() {
-                                context.store = output.store.clone();
+            let outcome = panic::catch_unwind(AssertUnwindSafe(|| {
+                // Block HTML postprocessing across the rebuild so the newly
+                // published wrapper and its completed store become visible
+                // together.
+                let mut site_context_guard = site_context
+                    .as_ref()
+                    .and_then(|context| context.write().ok());
+                match prepare_preprocess_plan(options.clone()) {
+                    Ok(plan) => {
+                        if !quiet {
+                            let names = changed
+                                .iter()
+                                .filter_map(|path| path.file_name())
+                                .map(|name| name.to_string_lossy().to_string())
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            eprintln!("{action} {names}...");
+                        }
+                        match preprocess_cached_plan(plan) {
+                            Ok(output) => {
+                                if let Some(context) = site_context_guard.as_deref_mut() {
+                                    context.store = output.store.clone();
+                                }
+                                drop(site_context_guard);
+                                if let Err(error) = publish_active_binding(&output.layout) {
+                                    cwarn!("failed to publish active notebook: {}", error);
+                                }
                             }
-                            drop(site_context_guard);
-                            if let Err(error) = publish_active_binding(&output.layout) {
-                                cwarn!("failed to publish active notebook: {}", error);
+                            Err(error) => {
+                                cwarn!("rebuild failed: {}", error);
                             }
                         }
-                        Err(error) => {
-                            cwarn!("rebuild failed: {}", error);
-                        }
+                    }
+                    Err(error) => {
+                        cwarn!("rebuild failed: {}", error);
                     }
                 }
-                Err(error) => {
-                    cwarn!("rebuild failed: {}", error);
+            }));
+            if let Err(payload) = outcome {
+                let message = describe_panic(payload.as_ref());
+                cwarn!("rebuild panicked: {}", message);
+                if let Ok(mut slot) = panic_message_for_closure.lock() {
+                    *slot = Some(message);
                 }
+                stop_on_panic.store(true, Ordering::Relaxed);
             }
         },
-    )
+    )?;
+    if let Some(message) = panic_message.lock().ok().and_then(|mut slot| slot.take()) {
+        return Err(anyhow::anyhow!("watch rebuild panicked: {message}"));
+    }
+    Ok(())
 }
 
 fn run_eval_only_watch(args: WatchArgs) -> Result<()> {
     let initial = preprocess_cached(preprocess_options(&args, false))?;
     publish_active_binding(&initial.layout)?;
-    let stop = install_ctrl_c_handler()?;
+    // `--eval-only` never spawns a `typst watch` child, so the signal
+    // handler has nothing to kill on a second signal beyond the entry files.
+    let stop = install_signal_handler(
+        Arc::new(Mutex::new(None)),
+        initial.layout.clone(),
+        args.common.keep_intermediates,
+    )?;
 
     if !args.common.quiet {
         eprintln!(
@@ -245,7 +317,15 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let initial = preprocess_cached(preprocess_options(&args, sync_pages))?;
     publish_active_binding(&initial.layout)?;
 
-    let stop = install_ctrl_c_handler()?;
+    // Installed before the child spawns so a signal during setup is still
+    // caught; the cell starts empty and is filled in once `typst watch` is
+    // running.
+    let child_cell: WatchedChild = Arc::new(Mutex::new(None));
+    let stop = install_signal_handler(
+        Arc::clone(&child_cell),
+        initial.layout.clone(),
+        args.common.keep_intermediates,
+    )?;
 
     let resolved_output = resolve_output_path(&initial.layout, args.output.as_deref(), format);
     let root = initial.layout.root.clone();
@@ -335,6 +415,10 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
         .stderr
         .take()
         .context("failed to capture typst watch stderr")?;
+    // From here on the signal handler can also reach this child: a second
+    // signal kills it directly and exits the process without waiting for
+    // the poll loop below.
+    *child_cell.lock().unwrap() = Some(child);
     let stdout_relay = if let Some(sender) = write_events.clone() {
         thread::spawn(move || relay_typst_watch_output_with_events(stdout, io::stdout(), sender))
     } else {
@@ -351,7 +435,7 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     let watcher_root = root.clone();
     let watcher_output = resolved_output.clone();
     let watcher_artifact_root = initial.layout.artifact_root();
-    let watcher = thread::spawn(move || {
+    let watcher = thread::spawn(move || -> Result<()> {
         let result = watch_preprocess_changes(
             &watcher_args,
             WatchPreprocessPaths {
@@ -364,16 +448,30 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
             "rebuilding",
             html_site_context,
         );
-        if let Err(error) = result {
+        if let Err(error) = &result {
             cwarn!("watch error: {}", error);
+            // A dead watcher thread means edits stop re-evaluating even
+            // though `typst watch` keeps running; treat that as a stop
+            // rather than leaving the process hung with no visible signal.
+            watcher_stop.store(true, Ordering::Relaxed);
         }
+        result
     });
 
     let child_outcome = loop {
         if stop.load(Ordering::Relaxed) {
             break WatchChildOutcome::StopRequested;
         }
-        match child.try_wait() {
+        let poll = {
+            let mut guard = child_cell.lock().unwrap();
+            match guard.as_mut() {
+                Some(child) => child.try_wait(),
+                // Taken by the signal handler's forced-shutdown path; the
+                // process is exiting regardless of what we do here.
+                None => break WatchChildOutcome::StopRequested,
+            }
+        };
+        match poll {
             Ok(Some(status)) => break WatchChildOutcome::Exited(status),
             Ok(None) => thread::sleep(Duration::from_millis(200)),
             Err(error) => break WatchChildOutcome::PollFailed(error),
@@ -382,12 +480,16 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
 
     stop.store(true, Ordering::Relaxed);
     if !matches!(&child_outcome, WatchChildOutcome::Exited(_)) {
-        let _ = child.kill();
-        let _ = child.wait();
+        if let Ok(mut guard) = child_cell.lock() {
+            if let Some(mut child) = guard.take() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        }
     }
     join_relay("stdout", stdout_relay);
     join_relay("stderr", stderr_relay);
-    let _ = watcher.join();
+    let watcher_result = watcher.join();
     if let Some(postprocessor) = html_postprocessor.take() {
         let _ = postprocessor.join();
     }
@@ -398,7 +500,12 @@ pub fn run_watch(args: WatchArgs) -> Result<()> {
     if !args.common.keep_intermediates {
         crate::typst::paths::remove_entry_files(&initial.layout);
     }
-    child_outcome.into_result()
+
+    match watcher_result {
+        Ok(Ok(())) => child_outcome.into_result(),
+        Ok(Err(error)) => Err(error),
+        Err(_) => Err(anyhow::anyhow!("watch thread panicked")),
+    }
 }
 
 enum WatchChildOutcome {

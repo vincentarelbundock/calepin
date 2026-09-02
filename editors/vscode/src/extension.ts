@@ -138,11 +138,26 @@ function startCalepin(
   }
 }
 
+/** How long to wait for a graceful SIGINT exit before escalating to SIGTERM. */
+const STOP_GRACE_PERIOD_MS = 2000;
+
 function stopWatch(): void {
   if (watchProcess) {
     const process = watchProcess;
     watchProcess = null;
-    process.kill();
+    // SIGINT lets calepin's own signal handler run the normal shutdown path
+    // (kill the child `typst watch`, close engine sessions, remove entry
+    // files). SIGTERM is now handled the same way on Unix, but send SIGINT
+    // first so an interrupted chunk is reported the same way a terminal
+    // Ctrl+C would report it; fall back to SIGTERM only if the process is
+    // still around after a short grace period.
+    process.kill("SIGINT");
+    const fallback = setTimeout(() => {
+      if (process.exitCode === null && process.signalCode === null) {
+        process.kill("SIGTERM");
+      }
+    }, STOP_GRACE_PERIOD_MS);
+    process.once("exit", () => clearTimeout(fallback));
   }
   watchInput = null;
   watchConfig = null;
