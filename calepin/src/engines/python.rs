@@ -3,36 +3,36 @@
 // ## Design
 //
 // A single python3 process runs for the lifetime of the document render. On init,
-// the bootstrap script is piped directly to stdin (`python3 -S -s -u -`). It sets up
+// the bootstrap script is piped directly to stdin (`python3 -s -u -c ...`). It sets up
 // a read-eval loop over stdin/stdout using a sentinel-delimited protocol (see
-// subprocess.rs). All chunks execute in a shared `_globals` dict, so variables
-// persist across chunks — notebook semantics by design.
+// subprocess.rs and PROTOCOL.md). All chunks execute in a shared `_globals` dict, so
+// variables persist across chunks, notebook semantics by design.
 //
-// Two execution modes:
-// - **Block** (`capture`): exec() the code, capturing stdout, warnings, errors,
-//   and matplotlib figures. The bootstrap redirects stdout to a StringIO buffer,
-//   records warnings via the warnings module, and checks for open matplotlib
-//   figures after each chunk.
-// - **Inline** (`evaluate_inline`): eval() a single expression and return its
-//   string representation. Used for `{python} expr` in body text.
+// `capture()` exec()s the code one top-level statement at a time, capturing
+// stdout, warnings, errors, and matplotlib figures per statement. Two capture
+// layers run together: `sys.stdout` is swapped for a StringIO buffer (catches
+// ordinary `print()`), and fd 1 is `os.dup2`'d to a temp file for the duration
+// of the statement (catches anything that bypasses the Python-level stream,
+// such as `subprocess.run([...])`, `os.system()`, or a C extension writing to
+// the real file descriptor). Both are merged into one OUTPUT part.
 //
 // Matplotlib is set to the non-interactive Agg backend at startup. After each
-// block execution, any open figures are saved to the requested path and closed.
-// Only the current figure (`gcf()`) is saved — multiple figures per chunk are
-// not yet supported.
+// chunk, every open figure is saved (multiple figures per chunk are supported)
+// and `plt.close("all")` always runs, even for a chunk with no figure path (a
+// `tbl-*` chunk) -- otherwise a stray plot left open there would be picked up
+// and saved by the next chunk that does have one.
 //
 // ## Functions
 //
-// - PythonSession::init()            — Spawn python3 with the bootstrap read-eval loop.
-// - PythonSession::evaluate_inline() — Evaluate a single Python expression and return the result.
-// - PythonSession::capture()         — Execute a Python code chunk with output/warning/error/plot
-//                                      capture using the sentinel protocol.
+// - PythonSession::init_with_program(): Spawn python3 with the bootstrap read-eval loop.
+// - PythonSession::capture():           Execute a Python code chunk with output/warning/error/plot
+//                                        capture using the sentinel protocol.
 
 use anyhow::{Context, Result};
 use std::path::Path;
 
 use super::subprocess::SubprocessSession;
-use super::{build_payload, make_sentinel};
+use super::{build_payload, make_sentinel, PLOT_PATH_HELPER_MARKER, PY_PLOT_INDEX_HELPER};
 use crate::utils::process;
 use crate::utils::tools;
 
@@ -40,8 +40,8 @@ use crate::utils::tools;
 /// Sets up a read-eval loop that reads sentinel-delimited code blocks from stdin,
 /// executes them with output/warning/error/plot capture, and writes
 /// sentinel-delimited results to stdout.
-const PYTHON_BOOTSTRAP: &str = r#"
-import sys, io, os, json
+const PYTHON_BOOTSTRAP_TEMPLATE: &str = r#"
+import sys, io, os, json, tempfile, traceback
 
 # Force non-interactive matplotlib backend before any user code can import it.
 # The env var is checked by matplotlib on first import -- no import needed here,
@@ -51,7 +51,20 @@ os.environ["MPLBACKEND"] = "Agg"
 # Shared globals dict gives notebook-style variable persistence across chunks.
 # Note: objects accumulate here for the lifetime of the subprocess (by design).
 # Requires Python 3.9+ for str.removesuffix().
-_globals = {"__builtins__": __import__("builtins")}
+# __name__ is set so chunk code can use `if __name__ == "__main__":` guards
+# the way a real script or notebook cell would.
+_globals = {"__builtins__": __import__("builtins"), "__name__": "__main__"}
+
+__CALEPIN_PLOT_PATH_HELPER__
+
+def _calepin_format_exc():
+    # Strip the bootstrap's own frame (compiled with filename "<string>" since
+    # this script is passed via `python3 -c`) so a chunk's traceback shows
+    # only the user's code, not calepin's read-eval loop.
+    exc_type, exc_value, tb = sys.exc_info()
+    while tb is not None and tb.tb_frame.f_code.co_filename == "<string>":
+        tb = tb.tb_next
+    return "".join(traceback.format_exception(exc_type, exc_value, tb))
 
 while True:
     header = sys.stdin.readline()
@@ -70,16 +83,6 @@ while True:
     # First line is metadata, rest is code
     meta_line = lines[0].strip() if lines else ""
     code = "".join(lines[1:])
-
-    if meta_line.startswith("INLINE:"):
-        expr = meta_line[len("INLINE:"):]
-        try:
-            result = eval(compile(expr, "<inline>", "eval"), _globals)
-            print(str(result), flush=True)
-        except Exception as e:
-            print(f"{sentinel}_ERROR:{e}", flush=True)
-        print(f"{sentinel}_DONE", flush=True)
-        continue
 
     # Parse metadata: JSON preferred, semicolon format as fallback for legacy callers.
     meta = {}
@@ -107,6 +110,11 @@ while True:
     warn_records = []
     old_stdout = sys.stdout
     old_stderr = sys.stderr
+    # Declared up front (rather than after a successful parse) so that even a
+    # syntax error still has the raw source available to flush below.
+    code_lines = code.split("\n")
+    prev_end = 0
+    src_buf = []
 
     try:
         import warnings, ast as _ast
@@ -148,9 +156,6 @@ while True:
                 sys.modules["matplotlib.pyplot"].show = lambda *a, **k: None
 
             tree = _ast.parse(code, "<chunk>")
-            code_lines = code.split("\n")
-            prev_end = 0
-            src_buf = []
 
             for node in tree.body:
                 # Accumulate source lines (include gap: comments, blanks)
@@ -158,11 +163,20 @@ while True:
                 src_buf.extend(code_lines[prev_end:end_line])
                 prev_end = end_line
 
-                # Capture stdout per-statement
+                # Capture stdout per-statement, at two levels: sys.stdout for
+                # ordinary print()s, and fd 1 itself (via a real dup2) for
+                # anything that bypasses the Python-level stream -- a
+                # subprocess.run([...]) call, os.system(), or a C extension
+                # writing straight to the file descriptor. Without the fd
+                # redirect that text goes straight to calepin's pipe ahead of
+                # the tagged protocol frame and gets lost.
                 out_buf = io.StringIO()
                 err_buf = io.StringIO()
                 sys.stdout = out_buf
                 sys.stderr = err_buf
+                fd_capture = tempfile.TemporaryFile()
+                saved_fd1 = os.dup(1)
+                os.dup2(fd_capture.fileno(), 1)
                 try:
                     if isinstance(node, _ast.Expr):
                         expr_code = compile(_ast.Expression(body=node.value), "<chunk>", "eval")
@@ -176,13 +190,20 @@ while True:
                         stmt_code = compile(mod, "<chunk>", "exec")
                         exec(stmt_code, _globals)
                 except Exception:
-                    import traceback
-                    err = traceback.format_exc()
+                    err = _calepin_format_exc()
                 finally:
+                    sys.stdout.flush()
+                    os.dup2(saved_fd1, 1)
+                    os.close(saved_fd1)
                     sys.stdout = old_stdout
                     sys.stderr = old_stderr
+                    fd_capture.seek(0)
+                    fd_output = fd_capture.read().decode("utf-8", errors="replace").rstrip("\n")
+                    fd_capture.close()
 
                 output = out_buf.getvalue().rstrip("\n")
+                if fd_output:
+                    output = f"{output}\n{fd_output}" if output else fd_output
                 if output:
                     # Flush accumulated source before output
                     parts.append(f"{sentinel}_SOURCE:" + "\n".join(src_buf))
@@ -196,36 +217,34 @@ while True:
                 if err:
                     break
 
-            # Flush remaining source (trailing statements + comments)
+            # Flush remaining source (trailing statements + comments),
+            # unconditionally -- including on error, so the statement that
+            # raised is still echoed instead of silently dropped.
             remaining = src_buf + code_lines[prev_end:] if prev_end < len(code_lines) else src_buf
-            if not err and remaining and "\n".join(remaining).strip():
+            if remaining and "\n".join(remaining).strip():
                 parts.append(f"{sentinel}_SOURCE:" + "\n".join(remaining))
     except Exception:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
-        import traceback
-        err = traceback.format_exc()
+        err = _calepin_format_exc()
+        remaining = src_buf + code_lines[prev_end:] if prev_end < len(code_lines) else src_buf
+        if remaining and "\n".join(remaining).strip():
+            parts.append(f"{sentinel}_SOURCE:" + "\n".join(remaining))
 
     warns_list = [str(x.message) for x in warn_records]
 
     # Check for matplotlib figures. The import is a no-op if matplotlib is
     # already loaded (cached in sys.modules), and a cheap ImportError if not
-    # installed. Only runs when fig_path is set (i.e., not a table chunk).
+    # installed. Figures are only saved when fig_path is set (i.e. not a
+    # table chunk), but every open figure is always closed below -- a plot
+    # left open in a `tbl-*` chunk must not leak into the next chunk that
+    # does have a figure path.
     # bbox_inches="tight" recomputes layout, so set_size_inches after user
     # code is fine even if user called tight_layout().
-    #
-    def _calepin_plot_path(base, index):
-        if index <= 1:
-            return base
-        root, ext = os.path.splitext(base)
-        if root.endswith("-1"):
-            root = root[:-2]
-        return f"{root}-{index}{ext}"
-
     has_plot = False
-    if fig_path:
-        try:
-            import matplotlib.pyplot as plt
+    try:
+        import matplotlib.pyplot as plt
+        if fig_path:
             figs = []
             seen_figs = set()
             if _calepin_is_matplotlib_figure(last_expr_result):
@@ -248,11 +267,11 @@ while True:
                 if saved_plot and os.path.exists(path) and os.path.getsize(path) > 0:
                     has_plot = True
                     parts.append(f"{sentinel}_PLOT:{path}")
-            plt.close("all")
-        except ImportError:
-            pass
-        except Exception as plot_err:
-            parts.append(f"{sentinel}_WARNING:Failed to capture figure: {plot_err}")
+        plt.close("all")
+    except ImportError:
+        pass
+    except Exception as plot_err:
+        parts.append(f"{sentinel}_WARNING:Failed to capture figure: {plot_err}")
 
     if err:
         parts.append(f"{sentinel}_ERROR:{err}")
@@ -264,6 +283,12 @@ while True:
     print(result, flush=True)
     print(f"{sentinel}_DONE", flush=True)
 "#;
+
+/// The bootstrap script actually sent to the subprocess: the template with
+/// the shared plot-path helper spliced in.
+pub(crate) fn python_bootstrap_script() -> String {
+    PYTHON_BOOTSTRAP_TEMPLATE.replace(PLOT_PATH_HELPER_MARKER, PY_PLOT_INDEX_HELPER)
+}
 
 /// RAII guard for the Python subprocess.
 pub struct PythonSession {
@@ -278,9 +303,10 @@ impl PythonSession {
     ) -> Result<Self> {
         process::validate_python_interpreter(program, "start Python", Some(&tools::PYTHON))
             .context("Failed to start Python")?;
+        let bootstrap = python_bootstrap_script();
         let proc = SubprocessSession::spawn(
             program,
-            &["-s", "-u", "-c", PYTHON_BOOTSTRAP],
+            &["-s", "-u", "-c", &bootstrap],
             &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
             cwd,
             timeout,
@@ -288,6 +314,12 @@ impl PythonSession {
         )
         .context("Failed to start Python")?;
         Ok(PythonSession { proc })
+    }
+
+    /// True once the underlying subprocess is known dead (e.g. killed after a
+    /// chunk timeout). The pool must respawn rather than reuse it.
+    pub fn is_dead(&self) -> bool {
+        self.proc.is_dead()
     }
 
     /// Capture Python code output using the sentinel protocol.
@@ -324,6 +356,101 @@ mod tests {
     fn session() -> PythonSession {
         PythonSession::init_with_program(Path::new("python3"), None, Some(Duration::from_secs(10)))
             .unwrap()
+    }
+
+    #[test]
+    fn python_bootstrap_is_valid_python() {
+        let bootstrap = python_bootstrap_script();
+        let status = std::process::Command::new("python3")
+            .args([
+                "-c",
+                &format!("compile({:?}, '<bootstrap>', 'exec')", bootstrap),
+            ])
+            .status();
+        match status {
+            Ok(s) => assert!(s.success(), "PYTHON_BOOTSTRAP has a Python syntax error"),
+            Err(_) => eprintln!("python3 not found -- skipping bootstrap syntax check"),
+        }
+    }
+
+    #[test]
+    fn python_session_defines_dunder_name() {
+        if !command_available("python3") {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture("print(__name__)", "", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_OUTPUT:__main__"), "{raw}");
+    }
+
+    #[test]
+    fn python_session_captures_fd_level_stdout() {
+        if !command_available("python3") {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture(
+                "import subprocess\nsubprocess.run(['echo', 'hi'])",
+                "",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_OUTPUT:hi"), "{raw}");
+    }
+
+    #[test]
+    fn python_session_echoes_the_failing_statement_source_on_error() {
+        if !command_available("python3") {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture("print(1)\nraise ValueError('boom')", "", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_ERROR:"), "{raw}");
+        assert!(raw.contains("boom"), "{raw}");
+        assert!(raw.contains("_SOURCE:"), "{raw}");
+        assert!(raw.contains("raise ValueError('boom')"), "{raw}");
+        // The bootstrap's own frame (compiled with filename "<string>") must
+        // not leak into the traceback shown to the user.
+        assert!(!raw.contains("<string>"), "{raw}");
+    }
+
+    #[test]
+    fn python_session_closes_figures_left_open_in_a_table_chunk() {
+        if !command_available("python3") {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("fig.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = session();
+
+        // A table chunk has no figure path; a stray plot must not survive
+        // into the next chunk that does have one.
+        let _ = session
+            .capture("import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])", "", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        let raw = session
+            .capture("print('table chunk done')", &fig_path, 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_OUTPUT:table chunk done"), "{raw}");
+        assert!(!raw.contains("_PLOT:"), "{raw}");
+        assert!(!std::path::Path::new(&fig_path).exists());
     }
 
     #[test]

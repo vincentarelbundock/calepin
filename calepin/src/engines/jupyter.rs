@@ -2,19 +2,26 @@
 //
 // A single Python process manages one jupyter_client.KernelManager per
 // named kernel (e.g. "octave", "ruby"). Code is sent via the sentinel
-// protocol (see subprocess.rs); the bridge translates Jupyter message
-// types to sentinel tags and writes them back.
+// protocol (see subprocess.rs and PROTOCOL.md); the bridge translates
+// Jupyter message types to sentinel tags and writes them back.
+//
+// Timeout follows the same rule as every other engine: whatever duration
+// SubprocessSession was given (unbounded by default) is what `wait_for_ready`
+// and `get_iopub_msg` block on -- there is no separate hard-coded fallback
+// here. On a Rust-side chunk timeout, subprocess.rs sends SIGTERM before
+// SIGKILL; the bridge installs a SIGTERM handler that shuts down every
+// kernel it started, so a slow-starting kernel does not get orphaned.
 
 use anyhow::{Context, Result};
 use std::path::Path;
 
 use super::subprocess::SubprocessSession;
-use super::{build_payload, make_sentinel};
+use super::{build_payload, make_sentinel, PLOT_PATH_HELPER_MARKER, PY_PLOT_INDEX_HELPER};
 use crate::utils::process;
 use crate::utils::tools;
 
-pub(crate) const JUPYTER_BRIDGE: &str = r#"
-import sys, base64, os, traceback, re, json
+const JUPYTER_BRIDGE_TEMPLATE: &str = r#"
+import sys, base64, os, traceback, re, json, signal
 
 try:
     from jupyter_client import KernelManager
@@ -30,13 +37,27 @@ _managers = {}  # kernel_name -> (km, kc)
 _resolved = {}  # requested name -> actual installed kernel name
 
 def _shutdown_all():
+    # Each step is independently guarded: a failure stopping channels must
+    # not skip shutting down the kernel process itself, or vice versa.
     for km, kc in list(_managers.values()):
         try:
             kc.stop_channels()
+        except Exception:
+            pass
+        try:
             km.shutdown_kernel(now=True)
         except Exception:
             pass
     _managers.clear()
+
+def _handle_sigterm(signum, frame):
+    # Give a graceful Rust-side timeout (subprocess.rs sends SIGTERM before
+    # SIGKILL) a chance to shut every kernel this bridge started down cleanly,
+    # instead of leaving them orphaned when the process is killed outright.
+    _shutdown_all()
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, _handle_sigterm)
 
 def _resolve_kernel_name(name):
     """Return the best matching installed kernel name for `name`.
@@ -70,8 +91,23 @@ def _get_kernel(kernel_name, timeout):
         km.start_kernel()
         kc = km.client()
         kc.start_channels()
-        kc.wait_for_ready(timeout=timeout)
+        # Store before wait_for_ready: if it raises (e.g. a slow-starting
+        # kernel exceeding the timeout), the kernel is already running and
+        # must still be reachable for cleanup instead of leaking silently.
         _managers[actual] = (km, kc)
+        try:
+            kc.wait_for_ready(timeout=timeout)
+        except Exception:
+            del _managers[actual]
+            try:
+                kc.stop_channels()
+            except Exception:
+                pass
+            try:
+                km.shutdown_kernel(now=True)
+            except Exception:
+                pass
+            raise
     return _managers[actual]
 
 def _strip_ansi(text):
@@ -85,13 +121,7 @@ def _image_mime_for_format(fig_format):
         "jpg": "image/jpeg",
     }.get(fig_format)
 
-def _plot_path(base, index):
-    if index <= 1:
-        return base
-    root, ext = os.path.splitext(base)
-    if root.endswith("-1"):
-        root = root[:-2]
-    return f"{root}-{index}{ext}"
+__CALEPIN_PLOT_PATH_HELPER__
 
 def _save_image_bundle(data, fig_path, fig_format, plot_index):
     if not fig_path:
@@ -105,7 +135,7 @@ def _save_image_bundle(data, fig_path, fig_format, plot_index):
         return None, None
 
     raw = data[requested_mime]
-    path = _plot_path(fig_path, plot_index)
+    path = _calepin_plot_path(fig_path, plot_index)
     try:
         if requested_mime in ("image/png", "image/jpeg"):
             payload = base64.b64decode(raw) if isinstance(raw, str) else raw
@@ -176,69 +206,83 @@ def _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeo
 
     return ("\n" + sep + "\n").join(parts)
 
-while True:
-    header = sys.stdin.readline()
-    if not header:
-        break
-    _h = header.strip()
-    sentinel = _h[:-len("_BEGIN")] if _h.endswith("_BEGIN") else _h
-    end_marker = sentinel + "_END"
-
-    lines = []
+try:
     while True:
-        line = sys.stdin.readline()
-        if not line or line.strip() == end_marker:
+        header = sys.stdin.readline()
+        if not header:
             break
-        lines.append(line)
+        _h = header.strip()
+        sentinel = _h[:-len("_BEGIN")] if _h.endswith("_BEGIN") else _h
+        end_marker = sentinel + "_END"
 
-    if not lines:
+        lines = []
+        while True:
+            line = sys.stdin.readline()
+            if not line or line.strip() == end_marker:
+                break
+            lines.append(line)
+
+        if not lines:
+            print(sentinel + "_DONE", flush=True)
+            continue
+
+        meta_line = lines[0].strip()
+        code = "".join(lines[1:])
+
+        # META:{"kernel":"python3","fig_path":"/tmp/ch1.svg","fig_format":"svg",...}
+        # JSON avoids corrupting paths that contain ';' or '='.
+        meta = {}
+        if meta_line.startswith("META:"):
+            meta = json.loads(meta_line[5:])
+
+        command = meta.get("command", "execute")
+        if command == "ping":
+            print(sentinel + "_DONE", flush=True)
+            continue
+        if command == "shutdown":
+            print(sentinel + "_DONE", flush=True)
+            break
+
+        kernel_name = meta.get("kernel", "python3")
+        fig_path = meta.get("fig_path", "")
+        fig_format = meta.get("fig_format", "svg")
+        width = float(meta.get("width", "6"))
+        height = float(meta.get("height", "4"))
+        dpi = float(meta.get("dpi", "150"))
+        # Same timeout rule as every other engine: unbounded (None -> block
+        # indefinitely) unless the caller configured one. No engine-specific
+        # fallback here.
+        timeout = meta.get("timeout")
+        if timeout is not None:
+            timeout = float(timeout)
+
+        try:
+            km, kc = _get_kernel(kernel_name, timeout)
+            result = _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeout)
+        except NoSuchKernel:
+            sep = sentinel + "_SEP"
+            result = (sentinel + "_SOURCE:" + code + "\n" + sep + "\n"
+                      + sentinel + "_UNAVAILABLE:"
+                      + f"Jupyter kernel `{kernel_name}` is not installed")
+        except Exception:
+            tb = traceback.format_exc()
+            sep = sentinel + "_SEP"
+            result = (sentinel + "_SOURCE:" + code + "\n" + sep + "\n"
+                      + sentinel + "_ERROR:" + tb)
+
+        print(result, flush=True)
         print(sentinel + "_DONE", flush=True)
-        continue
-
-    meta_line = lines[0].strip()
-    code = "".join(lines[1:])
-
-    # META:{"kernel":"python3","fig_path":"/tmp/ch1.svg","fig_format":"svg",...}
-    # JSON avoids corrupting paths that contain ';' or '='.
-    meta = {}
-    if meta_line.startswith("META:"):
-        meta = json.loads(meta_line[5:])
-
-    command = meta.get("command", "execute")
-    if command == "ping":
-        print(sentinel + "_DONE", flush=True)
-        continue
-    if command == "shutdown":
-        print(sentinel + "_DONE", flush=True)
-        break
-
-    kernel_name = meta.get("kernel", "python3")
-    fig_path = meta.get("fig_path", "")
-    fig_format = meta.get("fig_format", "svg")
-    width = float(meta.get("width", "6"))
-    height = float(meta.get("height", "4"))
-    dpi = float(meta.get("dpi", "150"))
-    timeout = float(meta.get("timeout", "30"))
-
-    try:
-        km, kc = _get_kernel(kernel_name, timeout)
-        result = _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeout)
-    except NoSuchKernel:
-        sep = sentinel + "_SEP"
-        result = (sentinel + "_SOURCE:" + code + "\n" + sep + "\n"
-                  + sentinel + "_UNAVAILABLE:"
-                  + f"Jupyter kernel `{kernel_name}` is not installed")
-    except Exception:
-        tb = traceback.format_exc()
-        sep = sentinel + "_SEP"
-        result = (sentinel + "_SOURCE:" + code + "\n" + sep + "\n"
-                  + sentinel + "_ERROR:" + tb)
-
-    print(result, flush=True)
-    print(sentinel + "_DONE", flush=True)
-
-_shutdown_all()
+finally:
+    # Guaranteed even if the loop above exits through an unexpected path, not
+    # just the normal "shutdown" command or stdin EOF.
+    _shutdown_all()
 "#;
+
+/// The bootstrap script actually sent to the subprocess: the template with
+/// the shared plot-path helper spliced in.
+fn jupyter_bridge_script() -> String {
+    JUPYTER_BRIDGE_TEMPLATE.replace(PLOT_PATH_HELPER_MARKER, PY_PLOT_INDEX_HELPER)
+}
 
 pub struct JupyterBridgeSession {
     proc: SubprocessSession,
@@ -264,9 +308,10 @@ impl JupyterBridgeSession {
             .context("failed to start Jupyter bridge")?;
         let env: Vec<(&str, &str)> =
             vec![("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")];
+        let bootstrap = jupyter_bridge_script();
         let mut proc = SubprocessSession::spawn(
             program,
-            &["-s", "-u", "-c", JUPYTER_BRIDGE],
+            &["-s", "-u", "-c", &bootstrap],
             &env,
             cwd,
             timeout,
@@ -284,14 +329,24 @@ impl JupyterBridgeSession {
             )?,
         )
         .context(
-            "jupyter_client Python package not found — install with: pip install jupyter_client",
+            "jupyter_client Python package not found: install with pip install jupyter_client",
         )?;
         Ok(Self { proc })
     }
 
+    /// True once the underlying subprocess is known dead (e.g. killed after a
+    /// chunk timeout). The pool must respawn rather than reuse it: a fresh
+    /// bridge process means every kernel it manages is respawned too.
+    pub fn is_dead(&self) -> bool {
+        self.proc.is_dead()
+    }
+
     pub fn capture(&mut self, request: JupyterCapture<'_>) -> Result<String> {
         let sentinel = make_sentinel();
-        let timeout_secs = self.proc.timeout().map(|d| d.as_secs_f64()).unwrap_or(30.0);
+        // Same timeout as every other engine: unbounded (JSON null, which
+        // the bridge treats as "block indefinitely") unless the caller
+        // configured one. No Jupyter-specific fallback.
+        let timeout_secs = self.proc.timeout().map(|d| d.as_secs_f64());
         let payload = build_payload(
             serde_json::json!({
                 "kernel": request.kernel,
@@ -337,15 +392,16 @@ mod tests {
 
     #[test]
     fn jupyter_bridge_bootstrap_is_valid_python() {
+        let bootstrap = jupyter_bridge_script();
         let status = Command::new("python3")
             .args([
                 "-c",
-                &format!("compile({:?}, '<bootstrap>', 'exec')", JUPYTER_BRIDGE),
+                &format!("compile({:?}, '<bootstrap>', 'exec')", bootstrap),
             ])
             .status();
         match status {
             Ok(s) => assert!(s.success(), "JUPYTER_BRIDGE has a Python syntax error"),
-            Err(_) => eprintln!("python3 not found — skipping bootstrap syntax check"),
+            Err(_) => eprintln!("python3 not found, skipping bootstrap syntax check"),
         }
     }
 

@@ -166,10 +166,12 @@ impl EnginePool {
     }
 
     fn ensure_r_session(&mut self) -> Result<()> {
+        if self.r.as_ref().is_some_and(|session| session.is_dead()) {
+            self.r = None;
+        }
         if self.r.is_none() {
             let session = RSession::init_with_program(
                 &self.config.executables.rscript,
-                "typst",
                 Some(&self.config.cwd),
                 self.config.timeout,
             )?;
@@ -179,6 +181,9 @@ impl EnginePool {
     }
 
     fn ensure_python_session(&mut self) -> Result<()> {
+        if self.python.as_ref().is_some_and(|session| session.is_dead()) {
+            self.python = None;
+        }
         if self.python.is_none() {
             let session = PythonSession::init_with_program(
                 &self.config.executables.python,
@@ -191,6 +196,13 @@ impl EnginePool {
     }
 
     fn ensure_jupyter_session(&mut self) -> Result<()> {
+        if self
+            .jupyter
+            .as_ref()
+            .is_some_and(|session| session.is_dead())
+        {
+            self.jupyter = None;
+        }
         if self.jupyter.is_none() {
             self.jupyter = Some(JupyterBridgeSession::init_with_program(
                 &self.config.executables.python,
@@ -600,7 +612,7 @@ where
         for result in engine_results {
             match result {
                 EngineResult::Source(lines) => self.push_source(lines),
-                EngineResult::Unavailable(_) | EngineResult::Preamble(_) => {}
+                EngineResult::Unavailable(_) => {}
                 EngineResult::Output(text) => self.push_output(text)?,
                 EngineResult::Warning(text) => {
                     self.items

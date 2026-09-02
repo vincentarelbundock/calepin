@@ -14,6 +14,27 @@ use crate::typst::model::{EngineName, FigureSpec};
 
 pub(crate) const META_PREFIX: &str = "META:";
 
+/// The `-N` suffix rule for naming the Nth figure a single chunk emits: the
+/// first plot keeps the base path, later ones get `-N` inserted before the
+/// extension (stripping any existing `-1` on the base first, so it isn't
+/// doubled). Both the Python engine bootstrap and the Jupyter bridge
+/// bootstrap are Python scripts, so this one definition is spliced into both
+/// (via the `__CALEPIN_PLOT_PATH_HELPER__` marker) instead of being
+/// hand-copied twice. R needs its own R-language implementation (see
+/// `.calepin_plot_path` in r.rs) since it cannot share Python source.
+pub(crate) const PY_PLOT_INDEX_HELPER: &str = r#"def _calepin_plot_path(base, index):
+    if index <= 1:
+        return base
+    root, ext = os.path.splitext(base)
+    if root.endswith("-1"):
+        root = root[:-2]
+    return f"{root}-{index}{ext}""#;
+
+/// Marker substituted for [`PY_PLOT_INDEX_HELPER`] inside a bootstrap script
+/// template. Must sit at column 0 (module scope) in the template, since the
+/// helper it's replaced with is not indented.
+pub(crate) const PLOT_PATH_HELPER_MARKER: &str = "__CALEPIN_PLOT_PATH_HELPER__";
+
 pub(crate) fn build_payload(meta: Value, code: &str) -> Result<String> {
     Ok(format!("{}\n{}", format_meta_payload(meta)?, code))
 }
@@ -32,7 +53,6 @@ pub enum EngineResult {
     Error(String),
     Unavailable(String),
     Plot(PathBuf),
-    Preamble(String),
 }
 
 /// Holds mutable references to active engine sessions.
@@ -149,10 +169,41 @@ pub(crate) fn process_results(
     let message_prefix = format!("{}_MESSAGE:", sentinel);
     let unavailable_prefix = format!("{}_UNAVAILABLE:", sentinel);
     let plot_prefix = format!("{}_PLOT:", sentinel);
-    let preamble_prefix = format!("{}_PREAMBLE:", sentinel);
+
+    let prefixes = [
+        source_prefix.as_str(),
+        error_prefix.as_str(),
+        output_prefix.as_str(),
+        warning_prefix.as_str(),
+        message_prefix.as_str(),
+        unavailable_prefix.as_str(),
+        plot_prefix.as_str(),
+    ];
 
     for part in split_result_parts(rest, &sep_marker) {
         let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        // A well-formed part starts with one of the tagged prefixes above. If
+        // it doesn't, text was written directly to the subprocess's stdout
+        // file descriptor (e.g. `subprocess.run(...)`, `system()`, a C
+        // extension's `printf`) and landed ahead of the tagged frame instead
+        // of going through the language-level capture. Report that stray
+        // text as engine output rather than silently dropping the whole
+        // part, then keep parsing from the first recognized prefix onward.
+        let tag_start = prefixes
+            .iter()
+            .filter_map(|prefix| part.find(prefix))
+            .min();
+        let (stray, part) = match tag_start {
+            Some(0) => ("", part),
+            Some(index) => (part[..index].trim(), &part[index..]),
+            None => (part, ""),
+        };
+        if !stray.is_empty() {
+            results.push(EngineResult::Output(stray.to_string()));
+        }
         if part.is_empty() {
             continue;
         }
@@ -191,10 +242,6 @@ pub(crate) fn process_results(
                 PathBuf::from(text)
             };
             results.push(EngineResult::Plot(path));
-        } else if let Some(text) = part.strip_prefix(&preamble_prefix) {
-            if !text.is_empty() {
-                results.push(EngineResult::Preamble(text.to_string()));
-            }
         }
     }
 
@@ -262,6 +309,39 @@ mod tests {
             EngineResult::Source(lines) if lines == &vec!["x = 1".to_string(), "print(x)".to_string()]
         ));
         assert!(matches!(&results[1], EngineResult::Output(text) if text == "1"));
+    }
+
+    #[test]
+    fn process_results_reports_stray_fd_level_text_as_output() {
+        // Text written straight to fd 1 (e.g. `subprocess.run([...])`,
+        // `system()`, a C extension's `printf`) bypasses the language-level
+        // capture and lands ahead of the first tagged part instead of behind
+        // a `_SEP` marker. It must surface as output, not be dropped.
+        let raw = "__TEST__\nhi\n__TEST___SOURCE:x = 1";
+        let mut results = Vec::new();
+
+        process_results(raw, Path::new("unused.svg"), &mut results).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert!(matches!(&results[0], EngineResult::Output(text) if text == "hi"));
+        assert!(matches!(
+            &results[1],
+            EngineResult::Source(lines) if lines == &vec!["x = 1".to_string()]
+        ));
+    }
+
+    #[test]
+    fn process_results_reports_untagged_part_entirely_as_output() {
+        let raw = "__TEST__\njust some stray text with no tag at all";
+        let mut results = Vec::new();
+
+        process_results(raw, Path::new("unused.svg"), &mut results).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert!(matches!(
+            &results[0],
+            EngineResult::Output(text) if text == "just some stray text with no tag at all"
+        ));
     }
 
     #[test]
