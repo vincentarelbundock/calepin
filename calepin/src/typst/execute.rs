@@ -90,7 +90,15 @@ impl EnginePool {
             .map_err(|err| anyhow!("{}: {err}", execution_context(chunk)))?;
         let engine_results =
             self.run_engine_results(chunk, figures_dir, engine, &source, &figure)?;
-        if engine_results_unavailable(&engine_results) {
+        if let Some(reason) = unavailable_reason(&engine_results) {
+            let message = format!(
+                "chunk `{}` using engine `{}` did not run: {}",
+                chunk.label, chunk.engine, reason
+            );
+            if crate::cli::is_strict() {
+                return Err(anyhow!("{message}"));
+            }
+            cwarn!("{message}");
             return Ok(unavailable_chunk_result_document(chunk));
         }
         let items =
@@ -335,10 +343,14 @@ fn execution_context(chunk: &ChunkSpec) -> String {
     )
 }
 
-fn engine_results_unavailable(results: &[EngineResult]) -> bool {
-    results
-        .iter()
-        .any(|result| matches!(result, EngineResult::Unavailable(_)))
+/// The reason text from the first `Unavailable` result, if any chunk result
+/// carries one. Used both to decide whether the chunk was skipped and to
+/// report why.
+fn unavailable_reason(results: &[EngineResult]) -> Option<&str> {
+    results.iter().find_map(|result| match result {
+        EngineResult::Unavailable(reason) => Some(reason.as_str()),
+        _ => None,
+    })
 }
 
 /// The engines Calepin documents as supported, whatever carries them. `julia`
@@ -1219,6 +1231,36 @@ mod tests {
         assert_eq!(result.status, ChunkStatus::Unavailable);
         assert!(result.display_options.echo);
         assert!(result.items.is_empty());
+    }
+
+    /// `--strict` (or `CALEPIN_STRICT=1`) turns a chunk that could not run into
+    /// a hard error instead of a silently skipped/unavailable chunk.
+    #[test]
+    fn strict_mode_turns_unavailable_engine_into_an_error() {
+        let _env_lock = crate::utils::testutil::env_lock();
+        let dir = tempfile::tempdir().unwrap();
+        let missing_python = dir.path().join("missing-python3");
+        let mut executables = ExecutablePaths::defaults();
+        executables.python = missing_python;
+        let config = ExecutionConfig {
+            cwd: dir.path().to_path_buf(),
+            executables,
+            timeout: Some(std::time::Duration::from_secs(5)),
+            store: serde_json::Map::new(),
+        };
+        let mut pool = EnginePool::new(config);
+        let mut python_chunk = chunk(ResultsMode::Verbatim);
+        python_chunk.engine = EngineName::Python;
+        python_chunk.label = "python-test".to_string();
+        python_chunk.code = "print(42)".to_string();
+
+        crate::cli::set_strict(true);
+        let result = pool.execute_chunk(&python_chunk, dir.path(), unused_artifact_path);
+        crate::cli::set_strict(false);
+
+        let error = result.unwrap_err().to_string();
+        assert!(error.contains("python-test"), "{error}");
+        assert!(error.contains("python"), "{error}");
     }
 
     /// A missing engine keeps the block a chunk when the document plainly meant

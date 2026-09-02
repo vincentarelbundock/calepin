@@ -2706,6 +2706,64 @@ fn write_figure_results(dir: &Path, label: &str) {
     write_figure_results_with_options(dir, label, "");
 }
 
+/// Writes a `results.json` figure item whose sole representation is `mime`,
+/// with the figure file at `figures/<label>.<ext>` holding `bytes`. Used to
+/// exercise figure formats besides SVG (the default `write_figure_results`
+/// fixture), such as JPEG or PDF.
+fn write_figure_results_with_mime(dir: &Path, label: &str, mime: &str, ext: &str, bytes: &[u8]) {
+    let figures = dir.join(".calepin/paper/figures");
+    std::fs::create_dir_all(&figures).unwrap();
+    std::fs::write(figures.join(format!("{label}.{ext}")), bytes).unwrap();
+    std::fs::create_dir_all(dir.join(".calepin/paper")).unwrap();
+    std::fs::write(
+        dir.join(".calepin/paper/results.json"),
+        format!(
+            r#"{{
+  "schema": 1,
+  "calepin_version": "test",
+  "input": "paper.typ",
+  "chunks": {{
+    "{label}": {{
+      "label": "{label}",
+      "engine": "python",
+      "status": "ok",
+      "crossref-labels": [{{ "kind": "fig", "name": "{label}" }}],
+      "items": [
+        {{ "type": "display", "data": {{ "{mime}": {{ "path": "/.calepin/paper/figures/{label}.{ext}" }} }} }}
+      ]
+    }}
+  }}
+}}"#
+        ),
+    )
+    .unwrap();
+}
+
+/// A minimal but valid single-page PDF, small enough to embed inline in a
+/// test. Typst's `image()` must be able to decode this for the paged-target
+/// PDF figure test to mean anything.
+const MINIMAL_PDF_BYTES: &[u8] = b"%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] >>
+endobj
+xref
+0 4
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+trailer
+<< /Size 4 /Root 1 0 R >>
+startxref
+190
+%%EOF";
+
 fn write_figure_results_with_options(dir: &Path, label: &str, options: &str) {
     let figures = dir.join(".calepin/paper/figures");
     std::fs::create_dir_all(&figures).unwrap();
@@ -3432,6 +3490,38 @@ fn typst_compile_relocation_unknown_label_errors() {
 }
 
 #[test]
+fn typst_compile_chunk_rejects_unknown_named_argument() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    // A misspelled option (`ehco` for `echo`) must not be silently dropped: it
+    // has to fail loudly rather than rendering as if the option had never been
+    // given.
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", ehco: false)[`
+pass
+`]
+"##,
+    )
+    .unwrap();
+
+    let result = typst_compile_output(dir.path(), &input, &output, &[]);
+    assert!(
+        !result.status.success(),
+        "expected an unsupported-argument error"
+    );
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(stderr.contains("ehco"), "expected the bad key named in the error: {stderr}");
+}
+
+#[test]
 fn typst_compile_html_relocates_hidden_chunk_with_stored_options() {
     skip_if_no_typst!();
 
@@ -3498,6 +3588,142 @@ pass
     let html = std::fs::read_to_string(output).unwrap();
     let count = html.matches("HTMLRELOCATE_12345").count();
     assert_eq!(count, 1, "expected relocated output once in HTML:\n{html}");
+}
+
+#[test]
+fn typst_compile_html_jpeg_figure_renders_img_tag() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    // The HTML target writes a plain `<img src=...>` tag rather than decoding
+    // the bytes itself, so a placeholder JPEG payload is enough here.
+    write_figure_results_with_mime(dir.path(), "fig-photo", "image/jpeg", "jpg", b"not-a-real-jpeg");
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", label: "fig-photo", echo: false)[`
+pass
+`]
+
+@fig-photo
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &[
+            "--features",
+            "html",
+            "--input",
+            "calepin-target=html",
+            "--input",
+            RELOCATE_RESULTS_INPUT,
+        ],
+    );
+    let html = std::fs::read_to_string(output).unwrap();
+    assert!(
+        html.contains("fig-photo.jpg"),
+        "expected an <img> tag referencing the jpeg figure: {html}"
+    );
+}
+
+#[test]
+fn typst_compile_html_pdf_figure_errors_with_clear_message() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_figure_results_with_mime(
+        dir.path(),
+        "fig-report",
+        "application/pdf",
+        "pdf",
+        MINIMAL_PDF_BYTES,
+    );
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.html");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", label: "fig-report", echo: false)[`
+pass
+`]
+
+@fig-report
+"##,
+    )
+    .unwrap();
+
+    let result = typst_compile_output(
+        dir.path(),
+        &input,
+        &output,
+        &[
+            "--features",
+            "html",
+            "--input",
+            "calepin-target=html",
+            "--input",
+            RELOCATE_RESULTS_INPUT,
+        ],
+    );
+    assert!(
+        !result.status.success(),
+        "expected a clear error instead of silently dropping the PDF figure"
+    );
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(stderr.contains("fig-report"), "{stderr}");
+    assert!(
+        stderr.to_lowercase().contains("pdf"),
+        "expected the error to name the PDF format: {stderr}"
+    );
+    assert!(
+        stderr.to_lowercase().contains("html"),
+        "expected the error to name the HTML target: {stderr}"
+    );
+}
+
+#[test]
+fn typst_compile_paged_pdf_figure_renders() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_figure_results_with_mime(
+        dir.path(),
+        "fig-report",
+        "application/pdf",
+        "pdf",
+        MINIMAL_PDF_BYTES,
+    );
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", label: "fig-report", echo: false)[`
+pass
+`]
+
+@fig-report
+"##,
+    )
+    .unwrap();
+
+    typst_compile(dir.path(), &input, &output, &["--input", RELOCATE_RESULTS_INPUT]);
+    assert!(output.is_file());
 }
 
 #[test]

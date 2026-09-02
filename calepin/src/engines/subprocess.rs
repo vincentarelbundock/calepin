@@ -18,7 +18,8 @@
 //
 // execute() uses a reader thread + channel with recv_timeout. If a chunk doesn't
 // produce a DONE marker within the timeout, the subprocess is killed and an error
-// is returned. Default timeout is 30 seconds; set CALEPIN_TIMEOUT=N to override.
+// is returned. There is no default timeout (chunks wait indefinitely); pass
+// `--timeout <seconds>` on `calepin compile`/`watch` to set one.
 //
 // ## Functions
 //
@@ -168,7 +169,7 @@ impl SubprocessSession {
                     // Kill the hung subprocess
                     let _ = self.child.kill();
                     anyhow::bail!(
-                        "Code chunk timed out after {}s (set timeout in sidecar config.toml or CALEPIN_TIMEOUT env var)",
+                        "Code chunk timed out after {}s (use --timeout to change it)",
                         timeout.unwrap().as_secs()
                     );
                 }

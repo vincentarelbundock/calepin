@@ -5,7 +5,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use crate::cli::{is_quiet, set_quiet, CleanArgs, CompileArgs, NewArgs, NewTheme, WatchArgs};
+use crate::cli::{
+    is_quiet, set_quiet, set_strict, CleanArgs, CompileArgs, NewArgs, NewTheme, WatchArgs,
+};
 use crate::html::SiteContextInput;
 use crate::typst::compile::{
     compile_with_typst, resolve_output_format, CompileOptions, OutputFormat,
@@ -98,6 +100,7 @@ fn write_notebook_scaffold(path: &Path, force: bool) -> Result<()> {
 
 pub fn handle_watch(mut args: WatchArgs) -> Result<()> {
     set_quiet(args.common.quiet);
+    set_strict(args.common.strict);
     validate_eval_only_watch_flags(&args)?;
     if args.input.is_dir() {
         return crate::website::watch_from_watch_args(args);
@@ -240,6 +243,7 @@ pub fn handle_clean(args: CleanArgs) -> Result<()> {
 
 pub fn handle_compile(args: CompileArgs) -> Result<()> {
     set_quiet(args.common.quiet);
+    set_strict(args.common.strict);
     if args.format == Some(crate::cli::CompileFormat::Script) {
         if args.input.is_dir() {
             return Err(anyhow::anyhow!(
@@ -734,6 +738,7 @@ mod tests {
                 timeout: None,
                 sets: Vec::new(),
                 keep_intermediates: false,
+                strict: false,
             },
             typst_args: Vec::new(),
         }
