@@ -2052,6 +2052,81 @@ echo CHUNK_RAN
     );
 }
 
+#[test]
+fn document_body_target_helper_compiles_under_notebook_theme() {
+    if !has_command("typst") {
+        return;
+    }
+
+    // The wrapper used to import the whole runtime facade with `#import ...:
+    // *` into the same scope the document body is inlined into by a notebook
+    // theme. That bound `target` to an internal module, so a document body
+    // calling the bare `target()` convenience (the same pattern
+    // `docs-src/assets/design.typ` had to hand-roll around this bug) failed
+    // to compile with "expected function, found module". The wrapper now
+    // provides `target()` itself as a plain function.
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        "#if target() == \"html\" [HTML_TARGET_MARKER] else [PAGED_TARGET_MARKER]\n",
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.html", "--format", "html", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let html = std::fs::read_to_string(dir.path().join("paper.html")).unwrap();
+    assert!(html.contains("HTML_TARGET_MARKER"), "{html}");
+}
+
+#[test]
+fn typst_theme_themes_generic_raw_blocks_with_a_recognized_lang() {
+    if !has_command("typst") {
+        return;
+    }
+
+    // `_raw-chunk-langs` used to be referenced by the generic raw show rule
+    // (`html_raw_show_rule` in `preprocess/staging.rs`) without anything
+    // defining it, so the first raw block that reached that branch with a
+    // `lang` set failed with "unknown variable". The wrapper now binds it
+    // locally to the langs this document actually recognizes.
+    let dir = typst_accessible_tempdir();
+    std::fs::write(dir.path().join("paper.toml"), "theme = \"typst\"\n").unwrap();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        "#raw(\"x\", block: true, lang: \"python\")\n",
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.svg",
+            "--format",
+            "svg",
+            "--config",
+            "paper.toml",
+            "--quiet",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 /// A `.tmTheme` that paints numeric literals a color no built-in palette uses,
 /// so its presence in rendered output is unambiguous. Only scope rules show up:
 /// Typst leaves unscoped tokens on the surrounding text fill rather than the

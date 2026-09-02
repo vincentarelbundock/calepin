@@ -97,10 +97,14 @@ struct PreprocessFingerprint {
     image_meta: String,
 }
 
+/// The cache key for a chunk's own execution: label, engine, code, and exec
+/// options. Deliberately excludes the query-array `ordinal` (which shifts
+/// whenever prose or an untagged fence is inserted or removed elsewhere in
+/// the document) because chunk order is already captured by this struct's
+/// position in the enclosing `chunks` vector.
 #[derive(Serialize)]
 struct ChunkFingerprint {
     label: String,
-    ordinal: usize,
     engine: EngineName,
     code: String,
     exec_options: ExecOptions,
@@ -110,7 +114,6 @@ impl From<&ChunkSpec> for ChunkFingerprint {
     fn from(chunk: &ChunkSpec) -> Self {
         Self {
             label: chunk.label.clone(),
-            ordinal: chunk.ordinal,
             engine: chunk.engine.clone(),
             code: chunk.code.clone(),
             exec_options: chunk.exec_options.clone(),
@@ -229,6 +232,63 @@ fn collect_theme_files(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ExecutablePaths;
+    use crate::typst::testfixtures::{chunk, layout};
+
+    /// Inserting a prose paragraph or an untagged fence above a chunk shifts
+    /// that chunk's `ordinal` (its index in the typst query array), but must
+    /// not change the preprocess fingerprint, otherwise every chunk in the
+    /// document would re-run for a change that touched no chunk. Chunk order
+    /// is already captured by the chunk's position in the `chunks` vector, so
+    /// `ordinal` itself must be excluded from the cache key.
+    #[test]
+    fn preprocess_fingerprint_ignores_chunk_ordinal_shifts() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = layout(dir.path());
+        let executables = ExecutablePaths::defaults();
+        let theme = crate::theme::ThemeSelection::Default;
+        let store = serde_json::json!({});
+        let execution = ExecutionFingerprintInputs {
+            cwd: dir.path(),
+            timeout: None,
+            store: &store,
+        };
+
+        let mut before_chunk = chunk("fig-1", "print(1)", crate::typst::model::ResultsMode::Render);
+        before_chunk.ordinal = 0;
+        let before = preprocess_fingerprint(
+            &layout,
+            &executables,
+            &[before_chunk],
+            execution,
+            &theme,
+            Path::new(".calepin"),
+            0,
+        )
+        .unwrap();
+
+        let execution = ExecutionFingerprintInputs {
+            cwd: dir.path(),
+            timeout: None,
+            store: &store,
+        };
+        // Same chunk, but shifted as if a prose paragraph or untagged fence
+        // was inserted above it in the document.
+        let mut after_chunk = chunk("fig-1", "print(1)", crate::typst::model::ResultsMode::Render);
+        after_chunk.ordinal = 3;
+        let after = preprocess_fingerprint(
+            &layout,
+            &executables,
+            &[after_chunk],
+            execution,
+            &theme,
+            Path::new(".calepin"),
+            0,
+        )
+        .unwrap();
+
+        assert_eq!(before, after);
+    }
 
     #[test]
     fn theme_fingerprint_tracks_all_local_theme_files() {

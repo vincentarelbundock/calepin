@@ -445,46 +445,72 @@ fn apply_expansion_cache(plan: &mut PreprocessPlan) -> Result<bool> {
         return Ok(false);
     }
 
-    write_if_changed(
-        &plan.query_store_path,
-        serde_json::to_vec(&manifest.completed_store)?,
-    )?;
-    plan.query_input = write_store_aware_query_wrapper(
-        &plan.layout,
-        &plan.runtime_import,
-        &plan.staged_input,
-        &plan.query_theme,
-        &Value::Object(manifest.completed_store.clone()),
-    )?;
-    let metadata = preprocess_metadata(
-        &plan.executables.typst,
-        &plan.layout,
-        &plan.query_input,
-        &plan.results_input,
-        &plan.store_input,
-    )?;
-    let repeated = parse_typst_initializers(&metadata.store_initializer_queries)?;
-    if repeated != plan.initializers {
-        restore_initial_query_state(plan)?;
-        return Ok(false);
-    }
-    let setup_config = parse_setup_config(&metadata.setup_json)?.unwrap_or_default();
-    let parsed = merge_chunk_parse_results(
-        metadata
-            .chunk_queries
-            .iter()
-            .map(|json| parse_chunks_with_warnings(json, Some(setup_config.clone())))
-            .collect::<Result<Vec<_>>>()?,
-    )?;
+    // Dynamic store expansion (`calepin.store.set()` declarations plus chunks
+    // that read or write the store) lets the document's own chunk list depend
+    // on values only known after chunks have run once. When a document uses
+    // none of that, `execute_preprocess_plan` never re-derives `plan.chunks`
+    // from the store (see the `store_set.is_empty()` guard there), so the
+    // `stabilized_chunks` recorded in the manifest are, by construction,
+    // exactly the chunks this plan already carries from the initial query
+    // that the fingerprint above already matched. Re-running a full `typst
+    // query` to reconfirm that is pure overhead paid on every cache hit, so
+    // skip it and reuse the in-memory chunk list instead. Any document that
+    // does use store expansion still falls through to the real re-query
+    // below, which stays the source of truth for that case.
+    let uses_dynamic_store = !plan.initializers.is_empty()
+        || plan.chunks.iter().any(|chunk| {
+            !chunk.exec_options.store_get.is_empty() || !chunk.exec_options.store_set.is_empty()
+        });
+
+    let (parsed_chunks, setup_config, page_meta) = if uses_dynamic_store {
+        write_if_changed(
+            &plan.query_store_path,
+            serde_json::to_vec(&manifest.completed_store)?,
+        )?;
+        plan.query_input = write_store_aware_query_wrapper(
+            &plan.layout,
+            &plan.runtime_import,
+            &plan.staged_input,
+            &plan.query_theme,
+            &Value::Object(manifest.completed_store.clone()),
+        )?;
+        let metadata = preprocess_metadata(
+            &plan.executables.typst,
+            &plan.layout,
+            &plan.query_input,
+            &plan.results_input,
+            &plan.store_input,
+        )?;
+        let repeated = parse_typst_initializers(&metadata.store_initializer_queries)?;
+        if repeated != plan.initializers {
+            restore_initial_query_state(plan)?;
+            return Ok(false);
+        }
+        let setup_config = parse_setup_config(&metadata.setup_json)?.unwrap_or_default();
+        let parsed = merge_chunk_parse_results(
+            metadata
+                .chunk_queries
+                .iter()
+                .map(|json| parse_chunks_with_warnings(json, Some(setup_config.clone())))
+                .collect::<Result<Vec<_>>>()?,
+        )?;
+        (parsed.chunks, setup_config, metadata.page_meta)
+    } else {
+        (
+            plan.chunks.clone(),
+            plan.setup_config.clone(),
+            plan.page_meta.clone(),
+        )
+    };
+
     validate_store_plan(
-        &parsed.chunks,
+        &parsed_chunks,
         plan.store
             .as_object()
             .expect("resolved initial store is an object"),
     )?;
-    if parsed.chunks.len() != manifest.stabilized_chunks.len()
-        || parsed
-            .chunks
+    if parsed_chunks.len() != manifest.stabilized_chunks.len()
+        || parsed_chunks
             .iter()
             .zip(&manifest.stabilized_chunks)
             .any(|(current, cached)| !same_executed_chunk(current, cached))
@@ -492,7 +518,7 @@ fn apply_expansion_cache(plan: &mut PreprocessPlan) -> Result<bool> {
         restore_initial_query_state(plan)?;
         return Ok(false);
     }
-    if writer_provenance(&parsed.chunks) != manifest.writers {
+    if writer_provenance(&parsed_chunks) != manifest.writers {
         restore_initial_query_state(plan)?;
         return Ok(false);
     }
@@ -507,9 +533,8 @@ fn apply_expansion_cache(plan: &mut PreprocessPlan) -> Result<bool> {
     if results.schema != RESULT_SCHEMA_VERSION
         || results.generation != manifest.generation
         || results.store != manifest.completed_store
-        || results.chunks.len() != parsed.chunks.len()
-        || parsed
-            .chunks
+        || results.chunks.len() != parsed_chunks.len()
+        || parsed_chunks
             .iter()
             .any(|chunk| !results.chunks.contains_key(&chunk.label))
     {
@@ -517,10 +542,10 @@ fn apply_expansion_cache(plan: &mut PreprocessPlan) -> Result<bool> {
         return Ok(false);
     }
 
-    plan.chunks = parsed.chunks;
+    plan.chunks = parsed_chunks;
     plan.store = Value::Object(manifest.completed_store);
     plan.setup_config = setup_config;
-    plan.page_meta = metadata.page_meta;
+    plan.page_meta = page_meta;
     plan.raw_languages = raw_languages_for_chunks(&plan.chunks);
     write_final_render_wrapper(plan, &manifest.generation)?;
     let _ = fs::remove_file(&plan.query_store_path);
@@ -663,9 +688,13 @@ fn same_chunk_definition(left: &ChunkSpec, right: &ChunkSpec) -> bool {
         && left.crossref_labels == right.crossref_labels
 }
 
+/// Cache key for a dynamic store-expansion chunk: label, engine, code, script,
+/// and exec options. Excludes the query-array `ordinal`, which shifts when
+/// prose or an untagged fence is inserted above the chunk elsewhere in the
+/// document; the chunks being compared here are already paired by position
+/// (`.zip`), so order is captured structurally, not through `ordinal`.
 fn same_executed_chunk(left: &ChunkSpec, right: &ChunkSpec) -> bool {
     left.label == right.label
-        && left.ordinal == right.ordinal
         && left.engine == right.engine
         && left.code == right.code
         && left.script == right.script
@@ -1095,14 +1124,39 @@ fn resolve_store(
     overrides: &serde_json::Map<String, serde_json::Value>,
 ) -> Result<serde_json::Value> {
     let mut map = serde_json::Map::new();
-    if let Ok(serde_json::Value::Object(config_map)) = serde_json::to_value(config_store) {
-        map.extend(config_map);
+    for (key, value) in config_store {
+        map.insert(key.clone(), toml_value_to_json(value));
     }
     for (key, value) in overrides {
         map.insert(key.clone(), value.clone());
     }
     crate::typst::store::validate_store(&map)?;
     Ok(serde_json::Value::Object(map))
+}
+
+/// Convert a parsed TOML value to JSON for the store. `serde_json::to_value`
+/// on a `toml::Value` directly would serialize a `[store]` datetime as its
+/// internal `{"$__toml_private_datetime": "..."}` wire representation rather
+/// than a plain string, because that representation is designed to round-trip
+/// back through `toml`'s own deserializer, not to be read as JSON by Typst.
+fn toml_value_to_json(value: &toml::Value) -> Value {
+    match value {
+        toml::Value::String(text) => Value::String(text.clone()),
+        toml::Value::Integer(number) => Value::Number((*number).into()),
+        toml::Value::Float(number) => {
+            serde_json::Number::from_f64(*number).map_or(Value::Null, Value::Number)
+        }
+        toml::Value::Boolean(flag) => Value::Bool(*flag),
+        // RFC 3339, matching `Datetime`'s `Display` impl.
+        toml::Value::Datetime(datetime) => Value::String(datetime.to_string()),
+        toml::Value::Array(items) => Value::Array(items.iter().map(toml_value_to_json).collect()),
+        toml::Value::Table(table) => Value::Object(
+            table
+                .iter()
+                .map(|(key, value)| (key.clone(), toml_value_to_json(value)))
+                .collect(),
+        ),
+    }
 }
 
 fn parse_typst_initializers(
@@ -1280,6 +1334,27 @@ mod tests {
         assert_eq!(
             resolved,
             serde_json::json!({"region":"cli","source":"config","doc":"setup"})
+        );
+    }
+
+    #[test]
+    fn config_store_datetime_resolves_to_a_plain_rfc3339_string() {
+        // `toml::Value`'s generic `Serialize` impl encodes a datetime as its
+        // internal `{"$__toml_private_datetime": "..."}` wire representation,
+        // meant to round-trip through `toml`'s own deserializer rather than
+        // to be read as plain JSON by the Typst runtime. `[store]` values
+        // must reach the document as ordinary strings.
+        let datetime: toml::value::Datetime = "2026-09-02T10:00:00Z".parse().unwrap();
+        let config = std::collections::BTreeMap::from([(
+            "published".to_string(),
+            toml::Value::Datetime(datetime),
+        )]);
+
+        let resolved = resolve_store(&config, &serde_json::Map::new()).unwrap();
+
+        assert_eq!(
+            resolved,
+            serde_json::json!({"published": "2026-09-02T10:00:00Z"})
         );
     }
 
@@ -1769,10 +1844,26 @@ mod tests {
         assert!(!preprocess_plan_cache_hit(&mut plan).unwrap());
     }
 
+    /// Target paths of every `#import "<path>" ...` statement in a generated
+    /// wrapper, in source order. Used to assert on which locations the
+    /// wrapper actually imports from, rather than pinning the exact
+    /// generated import syntax around them.
+    fn import_targets(source: &str) -> Vec<&str> {
+        source
+            .match_indices("#import \"")
+            .filter_map(|(start, matched)| {
+                let rest = &source[start + matched.len()..];
+                rest.find('"').map(|end| &rest[..end])
+            })
+            .collect()
+    }
+
     #[test]
     fn render_wrapper_rewrites_notebook_theme_runtime_import() {
         let dir = tempfile::tempdir().unwrap();
         let layout = test_layout(dir.path());
+        // The theme's own template authors it against the well-known default
+        // runtime path; this document uses a custom asset directory instead.
         let notebook_theme = crate::theme::NotebookSource {
             source: "#import \"/.calepin/calepin.typ\": _html-themed-raw-block\n".to_string(),
         };
@@ -1788,8 +1879,15 @@ mod tests {
         .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
-        assert!(contents.contains("#import \"/_runtime/calepin.typ\": _html-themed-raw-block"));
-        assert!(!contents.contains("#import \"/.calepin/calepin.typ\": _html-themed-raw-block"));
+        // Every import in the wrapper, including the one rewritten out of the
+        // theme's own source, must resolve to this document's actual runtime
+        // location: importing from the theme-authored default path would
+        // fail to find the runtime here.
+        let targets = import_targets(&contents);
+        assert!(
+            !targets.is_empty() && targets.iter().all(|target| *target == "/_runtime/calepin.typ"),
+            "every import must target the document's actual runtime path, none the theme's default: {targets:?}"
+        );
     }
 
     #[test]
@@ -1811,8 +1909,17 @@ mod tests {
         .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
+        // The theme source is spliced in verbatim (not paraphrased or
+        // dropped): a binding it defines is still present, textually intact.
         assert!(contents.contains("#let notebook-theme-marker = true"));
-        assert!(!contents.contains("#include \"/.calepin/paper/source.typ\""));
+        // With no `include_input`, the wrapper must not include anything of
+        // its own: the theme template alone is responsible for pulling in
+        // the document body (typically through its own `{{ doc.body }}`
+        // seam, already inlined into `notebook_theme.source` upstream).
+        assert!(
+            !contents.contains("#include"),
+            "wrapper must not add its own include when include_input is None:\n{contents}"
+        );
     }
 
     #[test]
@@ -1860,22 +1967,24 @@ mod tests {
         .unwrap();
         let contents = std::fs::read_to_string(dir.path().join(wrapper)).unwrap();
 
-        assert!(
-            !contents.contains("else if not _is-html() {\n    it\n  }"),
-            "generic raw fallback must not leave paged raw blocks unthemed:\n{contents}"
-        );
-        assert!(
-            contents.contains("_raw-chunk-langs.contains(it.lang)"),
-            "generic raw fallback should only defer to known executable chunk languages:\n{contents}"
-        );
-        assert!(
-            contents.contains("\"bash\""),
-            "jupyter kernels should be included among known executable chunk languages:\n{contents}"
-        );
-        assert!(
-            contents.contains("_html-themed-raw-block(it)"),
-            "generic raw fallback should route non-running fences through Calepin code styling:\n{contents}"
-        );
+        // The generic fallback rule's `_raw-chunk-langs` list (task 3.6: it
+        // used to be referenced without anything defining it) must actually
+        // be bound in the wrapper, and bound to the exact langs this
+        // document recognizes as executable chunks: the builtins plus every
+        // Jupyter kernel passed in, deduplicated. This is what
+        // `raw_chunk_langs` computes, so check the wrapper's binding against
+        // that function's own output rather than a hand-pinned string list.
+        let expected_langs = raw_chunk_langs(&["bash"]);
+        let binding = contents
+            .lines()
+            .find(|line| line.trim_start().starts_with("#let _raw-chunk-langs ="))
+            .unwrap_or_else(|| panic!("wrapper must bind _raw-chunk-langs:\n{contents}"));
+        for lang in &expected_langs {
+            assert!(
+                binding.contains(&format!("\"{lang}\"")),
+                "_raw-chunk-langs binding is missing `{lang}`: {binding}"
+            );
+        }
     }
 
     #[test]
