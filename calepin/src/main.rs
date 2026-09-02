@@ -4,6 +4,8 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[macro_use]
 mod cli;
 mod config;
+#[cfg(test)]
+mod docs_fragment;
 mod engines;
 mod health;
 mod html;

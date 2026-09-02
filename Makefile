@@ -1,4 +1,4 @@
-.PHONY: help build build-release release install linux-packages clean test check version bump editors vscode vsx positron vscode-package vscode-sync-version vscode-stage-binary vscode-package-target vscode-package-universal vscode-publish vscode-compile cli-reference api-reference website serve
+.PHONY: help build build-release release install linux-packages clean test check docs-check version bump editors vscode vsx positron vscode-package vscode-sync-version vscode-stage-binary vscode-package-target vscode-package-universal vscode-publish vscode-compile cli-reference api-reference website serve
 
 # Package version, parsed from the CLI crate manifest.
 VERSION := $(shell awk -F'"' '/^version/ { print $$2; exit }' calepin/Cargo.toml)
@@ -93,6 +93,9 @@ test:  ## Run unit tests
 
 check:  ## Run cargo check (fast compile check)
 	cargo check --manifest-path calepin/Cargo.toml
+
+docs-check:  ## Check docs-src/reference/generated.md against source (CALEPIN_UPDATE_DOCS=1 to regenerate)
+	cargo test --manifest-path calepin/Cargo.toml generated_docs_fragment_matches_source
 
 # ==============================================================================
 # Editor extension targets

@@ -369,8 +369,6 @@ fn validate_theme_dir(dir: &Path) -> Result<()> {
     let has_entry = dir.join("theme.toml").is_file()
         || [
             "layouts/pdf.typ",
-            "notebook.typ.jinja",
-            "paged.typ.jinja",
             "layouts/document.html",
             "layouts/site.html",
         ]

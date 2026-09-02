@@ -220,7 +220,7 @@ These options can be set in `#calepin.setup` as document-wide defaults and overr
   [message], [`true`], [Include informational messages emitted by the engine (for example R's `message()` output). When `false`, they are suppressed.],
   [results], [`"render"`], [How results are shown: `render` (pretty display of values, images, and tables), `verbatim` (raw output in a code block), `typst` (treat output text as Typst markup and render it), or `hide` (run the code but omit its output).],
   [results-location], [`"statement"`], [Where results sit relative to the echoed source: `statement` shows each piece of output below the statement that produced it, `chunk` shows the whole source first and every result after it. See #link("#where-results-appear")[Where results appear].],
-  [fig-device-format], [`"svg"`], [Format for figure files written by the engine: `svg`, `png`, `jpeg` (alias `jpg`), or `pdf`. Diagram engines always emit `svg` regardless of this setting.],
+  [fig-device-format], [`"svg"`], [Format for figure files written by the engine. Use `svg` or `png`: these are the formats the document renders today. `jpeg`/`jpg` and `pdf` are written to disk by the engine but are not currently shown in the rendered document, with no warning, so avoid them until that is fixed. Diagram engines always emit `svg` regardless of this setting.],
   [fig-device-dpi], [`150`], [Resolution in dots per inch for raster formats (`png`, `jpeg`). Ignored for vector formats (`svg`, `pdf`).],
   [fig-device-width], [`6`], [Width of the plotting device, in inches.],
   [fig-device-height], [`"auto"`], [Height of the plotting device, in inches. `auto` derives it from the width and `fig-device-aspect`.],
