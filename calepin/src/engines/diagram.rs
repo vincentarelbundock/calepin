@@ -225,8 +225,8 @@ pub(super) mod test_support {
 
 #[cfg(test)]
 mod tests {
-    use super::test_support::{env_lock, write_executable, EnvVarGuard};
     use super::execute_diagram;
+    use super::test_support::{env_lock, write_executable, EnvVarGuard};
     use crate::config::ExecutablePaths;
     use crate::engines::EngineResult;
     use crate::typst::model::EngineName;

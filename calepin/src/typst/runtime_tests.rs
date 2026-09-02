@@ -3689,7 +3689,10 @@ pass
         "expected an unsupported-argument error"
     );
     let stderr = String::from_utf8_lossy(&result.stderr);
-    assert!(stderr.contains("ehco"), "expected the bad key named in the error: {stderr}");
+    assert!(
+        stderr.contains("ehco"),
+        "expected the bad key named in the error: {stderr}"
+    );
 }
 
 #[test]
@@ -3769,7 +3772,13 @@ fn typst_compile_html_jpeg_figure_renders_img_tag() {
     write_runtime(dir.path()).unwrap();
     // The HTML target writes a plain `<img src=...>` tag rather than decoding
     // the bytes itself, so a placeholder JPEG payload is enough here.
-    write_figure_results_with_mime(dir.path(), "fig-photo", "image/jpeg", "jpg", b"not-a-real-jpeg");
+    write_figure_results_with_mime(
+        dir.path(),
+        "fig-photo",
+        "image/jpeg",
+        "jpg",
+        b"not-a-real-jpeg",
+    );
 
     let input = dir.path().join("paper.typ");
     let output = dir.path().join("paper.html");
@@ -3893,7 +3902,12 @@ pass
     )
     .unwrap();
 
-    typst_compile(dir.path(), &input, &output, &["--input", RELOCATE_RESULTS_INPUT]);
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
     assert!(output.is_file());
 }
 
@@ -4259,7 +4273,11 @@ fn typst_compile_relocated_output_carries_no_source_segments() {
 
     let dir = tempdir_in_manifest("calepin-runtime-test-");
     write_runtime(dir.path()).unwrap();
-    write_segmented_results(dir.path(), "segments", r#""echo": false, "results": "hide""#);
+    write_segmented_results(
+        dir.path(),
+        "segments",
+        r#""echo": false, "results": "hide""#,
+    );
 
     let input = dir.path().join("paper.typ");
     let output = dir.path().join("paper.pdf");

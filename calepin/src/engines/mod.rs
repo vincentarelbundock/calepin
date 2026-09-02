@@ -192,10 +192,7 @@ pub(crate) fn process_results(
         // of going through the language-level capture. Report that stray
         // text as engine output rather than silently dropping the whole
         // part, then keep parsing from the first recognized prefix onward.
-        let tag_start = prefixes
-            .iter()
-            .filter_map(|prefix| part.find(prefix))
-            .min();
+        let tag_start = prefixes.iter().filter_map(|prefix| part.find(prefix)).min();
         let (stray, part) = match tag_start {
             Some(0) => ("", part),
             Some(index) => (part[..index].trim(), &part[index..]),

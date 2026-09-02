@@ -92,8 +92,8 @@ fn collect_image_meta(
             .strip_prefix(&layout.root)
             .map(slash_path)
             .unwrap_or_else(|_| path.display().to_string());
-        let metadata = fs::metadata(&path)
-            .with_context(|| format!("failed to stat {}", path.display()))?;
+        let metadata =
+            fs::metadata(&path).with_context(|| format!("failed to stat {}", path.display()))?;
         let (mtime_secs, mtime_nanos) = file_mtime(&metadata);
         let cached = cached_by_path.get(rel.as_str()).copied();
         let reusable = cached.filter(|cached| {

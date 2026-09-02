@@ -994,7 +994,6 @@ credits = 3
         assert!(err.contains("unknown field `revealjs`"), "{err}");
     }
 
-
     /// The website `calepin.toml` is parsed by both this module and
     /// `website::config`. Both deny unknown keys, so every website key has a
     /// placeholder here; the real docs site config is the drift check.
@@ -1012,8 +1011,8 @@ credits = 3
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("calepin.toml"), "nonsense-key = true\n").unwrap();
 
-        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
-            .unwrap_err();
+        let err =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap_err();
         let err = format!("{err:#}");
 
         assert!(err.contains("nonsense-key"), "{err}");
@@ -1030,8 +1029,8 @@ credits = 3
         )
         .unwrap();
 
-        let err = CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml")))
-            .unwrap_err();
+        let err =
+            CalepinConfig::load(dir.path(), Some(&dir.path().join("calepin.toml"))).unwrap_err();
         let err = format!("{err:#}");
 
         assert!(err.contains("nonsense"), "{err}");

@@ -118,7 +118,11 @@ mod tests {
     fn spawn_watch(
         dir: &Path,
         debounce: Duration,
-    ) -> (Arc<AtomicBool>, RecordedChanges, thread::JoinHandle<Result<()>>) {
+    ) -> (
+        Arc<AtomicBool>,
+        RecordedChanges,
+        thread::JoinHandle<Result<()>>,
+    ) {
         let stop = Arc::new(AtomicBool::new(false));
         let calls: Arc<Mutex<Vec<Vec<PathBuf>>>> = Arc::new(Mutex::new(Vec::new()));
         let calls_for_thread = Arc::clone(&calls);
@@ -252,9 +256,12 @@ mod tests {
         }
         assert_eq!(
             seen,
-            [first.canonicalize().unwrap(), second.canonicalize().unwrap()]
-                .into_iter()
-                .collect::<std::collections::HashSet<_>>(),
+            [
+                first.canonicalize().unwrap(),
+                second.canonicalize().unwrap()
+            ]
+            .into_iter()
+            .collect::<std::collections::HashSet<_>>(),
         );
     }
 }

@@ -2091,7 +2091,14 @@ fn document_body_target_helper_compiles_under_notebook_theme() {
     .unwrap();
 
     let output = Command::new(calepin_bin())
-        .args(["compile", "paper.typ", "paper.html", "--format", "html", "--quiet"])
+        .args([
+            "compile",
+            "paper.typ",
+            "paper.html",
+            "--format",
+            "html",
+            "--quiet",
+        ])
         .current_dir(dir.path())
         .output()
         .expect("failed to run calepin compile");

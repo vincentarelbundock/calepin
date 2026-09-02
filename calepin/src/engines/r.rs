@@ -578,7 +578,14 @@ summary(m)"#,
         let fig_path = fig_path.to_string_lossy().replace('\\', "/");
         let mut session = session();
         let raw = session
-            .capture("plot(1:3)\ncat(\"hi\")", &fig_path, "svg", 6.0, 3.708, 150.0)
+            .capture(
+                "plot(1:3)\ncat(\"hi\")",
+                &fig_path,
+                "svg",
+                6.0,
+                3.708,
+                150.0,
+            )
             .unwrap();
 
         let source = raw.find("_SOURCE:").expect(&raw);

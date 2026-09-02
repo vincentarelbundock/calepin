@@ -46,10 +46,7 @@ fn str_const_table(source: &str) -> std::collections::HashMap<&str, &str> {
         let name = rest[..colon].trim();
         let Some(eq) = rest.find('=') else { continue };
         let after_eq = rest[eq + 1..].trim().trim_end_matches(';');
-        if let Some(value) = after_eq
-            .strip_prefix('"')
-            .and_then(|v| v.strip_suffix('"'))
-        {
+        if let Some(value) = after_eq.strip_prefix('"').and_then(|v| v.strip_suffix('"')) {
             table.insert(name, value);
         }
     }
@@ -138,7 +135,11 @@ fn other_config_keys() -> Vec<String> {
         if line.starts_with('#') {
             continue;
         }
-        let field = line.split(':').next().expect("field line has no name").trim();
+        let field = line
+            .split(':')
+            .next()
+            .expect("field line has no name")
+            .trim();
         let key = pending_rename
             .take()
             .unwrap_or_else(|| field.replace('_', "-"));

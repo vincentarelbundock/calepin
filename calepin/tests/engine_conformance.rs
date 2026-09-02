@@ -101,7 +101,10 @@ fn chunk_items<'a>(results: &'a serde_json::Value, label: &str) -> Vec<&'a serde
         .unwrap_or_default()
 }
 
-fn items_of_type<'a>(items: &[&'a serde_json::Value], item_type: &str) -> Vec<&'a serde_json::Value> {
+fn items_of_type<'a>(
+    items: &[&'a serde_json::Value],
+    item_type: &str,
+) -> Vec<&'a serde_json::Value> {
     items
         .iter()
         .copied()
@@ -161,7 +164,8 @@ fn engines() -> Vec<Engine> {
             lang: "python",
             available: || has_command("python3") && has_python_module("matplotlib"),
             print_only: r#"print("hello")"#,
-            plot_then_print: "import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])\nprint(\"done\")",
+            plot_then_print:
+                "import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])\nprint(\"done\")",
             error_mid_chunk: "print(1)\nraise ValueError(\"boom\")",
             error_needle: "boom",
             failing_statement_needle: "raise ValueError(\"boom\")",
@@ -212,9 +216,7 @@ fn engines() -> Vec<Engine> {
 }
 
 fn chunk_doc(lang: &str, label: &str, code: &str, extra_options: &str) -> String {
-    format!(
-        "#calepin.chunk(\"{lang}\", label: \"{label}\"{extra_options})[```\n{code}\n```]\n"
-    )
+    format!("#calepin.chunk(\"{lang}\", label: \"{label}\"{extra_options})[```\n{code}\n```]\n")
 }
 
 #[test]
@@ -322,9 +324,10 @@ fn a_statement_that_errors_still_has_its_source_echoed() {
         let errors = items_of_type(&items, "error");
         assert!(
             any_text_contains(&errors, engine.error_needle)
-                || errors
-                    .iter()
-                    .any(|item| item["message"].as_str().unwrap_or("").contains(engine.error_needle)),
+                || errors.iter().any(|item| item["message"]
+                    .as_str()
+                    .unwrap_or("")
+                    .contains(engine.error_needle)),
             "[{}] expected an error item mentioning `{}`, got {items:#?}",
             engine.name,
             engine.error_needle

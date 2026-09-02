@@ -2,9 +2,9 @@ use anyhow::{anyhow, Result};
 use serde_json::Value;
 
 use crate::typst::fence_label::{metadata_node_label, raw_node_label};
-use crate::typst::option_table::OPTION_TABLE;
 #[cfg(test)]
 use crate::typst::option_table::OptionSide;
+use crate::typst::option_table::OPTION_TABLE;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedChunkSource {
@@ -607,8 +607,12 @@ mod tests {
 
         let json = serde_json::to_value(display_options(crate::typst::model::ResultsMode::Render))
             .unwrap();
-        let serialized_keys: std::collections::BTreeSet<&str> =
-            json.as_object().unwrap().keys().map(String::as_str).collect();
+        let serialized_keys: std::collections::BTreeSet<&str> = json
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
 
         for name in display_chunk_option_names() {
             if name == "fenced-chunks" {
@@ -631,7 +635,9 @@ mod tests {
         // unknown argument.
         for name in ["output", "placeholder"] {
             let value = json!({ "label": "x", name: true });
-            let err = validate_chunk_arguments(&value, "x").unwrap_err().to_string();
+            let err = validate_chunk_arguments(&value, "x")
+                .unwrap_err()
+                .to_string();
             assert!(err.contains(name), "{err}");
             assert!(err.contains("unsupported argument"), "{err}");
         }

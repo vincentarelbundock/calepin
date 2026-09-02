@@ -441,7 +441,13 @@ mod tests {
         // A table chunk has no figure path; a stray plot must not survive
         // into the next chunk that does have one.
         let _ = session
-            .capture("import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])", "", 6.0, 3.708, 150.0)
+            .capture(
+                "import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])",
+                "",
+                6.0,
+                3.708,
+                150.0,
+            )
             .unwrap();
 
         let raw = session

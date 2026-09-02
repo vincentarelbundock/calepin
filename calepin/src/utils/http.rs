@@ -1,11 +1,9 @@
 use std::time::Duration;
 
 pub fn timeout_agent(timeout: Duration) -> ureq::Agent {
-    use ureq::{Agent, tls::TlsConfig};
+    use ureq::{tls::TlsConfig, Agent};
     Agent::config_builder()
-        .tls_config(TlsConfig::builder()
-            .root_certs(root_certs())
-            .build())
+        .tls_config(TlsConfig::builder().root_certs(root_certs()).build())
         .timeout_global(Some(timeout))
         .build()
         .new_agent()

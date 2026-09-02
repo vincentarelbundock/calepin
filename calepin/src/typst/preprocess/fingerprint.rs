@@ -254,7 +254,11 @@ mod tests {
             store: &store,
         };
 
-        let mut before_chunk = chunk("fig-1", "print(1)", crate::typst::model::ResultsMode::Render);
+        let mut before_chunk = chunk(
+            "fig-1",
+            "print(1)",
+            crate::typst::model::ResultsMode::Render,
+        );
         before_chunk.ordinal = 0;
         let before = preprocess_fingerprint(
             &layout,
@@ -274,7 +278,11 @@ mod tests {
         };
         // Same chunk, but shifted as if a prose paragraph or untagged fence
         // was inserted above it in the document.
-        let mut after_chunk = chunk("fig-1", "print(1)", crate::typst::model::ResultsMode::Render);
+        let mut after_chunk = chunk(
+            "fig-1",
+            "print(1)",
+            crate::typst::model::ResultsMode::Render,
+        );
         after_chunk.ordinal = 3;
         let after = preprocess_fingerprint(
             &layout,

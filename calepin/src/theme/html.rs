@@ -1,8 +1,7 @@
 use std::path::Path;
 
 use super::bundle::{
-    bundle_manifest, require_builtin, shared_file, validate_shared_import, BundleDef,
-    SharedImports,
+    bundle_manifest, require_builtin, shared_file, validate_shared_import, BundleDef, SharedImports,
 };
 use super::{
     dir_theme_name, read_local_theme_manifest, read_theme_files, resolve_theme_chain, ThemeLayer,

@@ -305,10 +305,7 @@ mod tests {
                 .unwrap();
             let mut response = String::new();
             stream.read_to_string(&mut response).unwrap();
-            assert!(
-                response.starts_with("HTTP/1.1 404"),
-                "{target}: {response}"
-            );
+            assert!(response.starts_with("HTTP/1.1 404"), "{target}: {response}");
         }
 
         stop.store(true, Ordering::Relaxed);

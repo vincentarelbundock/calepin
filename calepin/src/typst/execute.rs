@@ -189,7 +189,11 @@ impl EnginePool {
     }
 
     fn ensure_python_session(&mut self) -> Result<()> {
-        if self.python.as_ref().is_some_and(|session| session.is_dead()) {
+        if self
+            .python
+            .as_ref()
+            .is_some_and(|session| session.is_dead())
+        {
             self.python = None;
         }
         if self.python.is_none() {

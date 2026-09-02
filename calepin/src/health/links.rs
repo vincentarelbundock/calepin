@@ -73,11 +73,7 @@ struct LinkSummary {
     broken_external: usize,
 }
 
-fn check_links(
-    root: &Path,
-    sources: &[QualitySource],
-    check_external_links: bool,
-) -> LinkSummary {
+fn check_links(root: &Path, sources: &[QualitySource], check_external_links: bool) -> LinkSummary {
     let mut links = 0usize;
     let mut broken = Vec::new();
     let mut broken_local = 0usize;
@@ -218,7 +214,9 @@ fn validate_external_link(
 fn external_link_error(client: &ureq::Agent, url: &str) -> Option<String> {
     match client.head(url).call() {
         Ok(_) => None,
-        Err(ureq::Error::StatusCode(code)) => fallback_get_error(client, url, format!("HTTP {code}")),
+        Err(ureq::Error::StatusCode(code)) => {
+            fallback_get_error(client, url, format!("HTTP {code}"))
+        }
         Err(error) => fallback_get_error(client, url, error.to_string()),
     }
 }

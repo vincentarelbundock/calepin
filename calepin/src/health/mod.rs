@@ -249,8 +249,7 @@ pub fn build_report(
             let message = format!("failed to collect Typst files: {error}");
             for name in ["links", "images", "slugs"] {
                 checks.push(
-                    HealthCheck::warn(name, message.clone())
-                        .with_path(root.display().to_string()),
+                    HealthCheck::warn(name, message.clone()).with_path(root.display().to_string()),
                 );
             }
         }

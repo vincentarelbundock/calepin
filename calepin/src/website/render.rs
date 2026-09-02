@@ -314,8 +314,7 @@ mod tests {
     }
 
     #[test]
-    fn embed_source_blob_escapes_a_comment_that_would_otherwise_reopen_the_script_tokenizer(
-    ) {
+    fn embed_source_blob_escapes_a_comment_that_would_otherwise_reopen_the_script_tokenizer() {
         // `<!--` followed by `<script` inside a script element's text content
         // enters the HTML tokenizer's script double-escaped state, in which a
         // literal `</script>` no longer closes the element. Escaping every
