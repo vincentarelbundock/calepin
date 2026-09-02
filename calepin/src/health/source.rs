@@ -1,42 +1,33 @@
-use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use crate::typst::paths::is_generated_entry_file;
 use crate::utils::path::normalize_path;
-use crate::utils::static_files::path_has_common_skip_dir;
+use crate::utils::static_files::{collect_files_by, path_has_common_skip_dir};
 
+/// Walk `root` for `.typ` files, reusing `static_files::collect_files_by` so
+/// this shares its symlink-cycle guard (symlinked directories are never
+/// descended into, unlike a plain `path.is_dir()` check, which follows them).
 pub(super) fn collect_typst_files(root: &Path, max_depth: Option<usize>) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
-    collect_typst_files_in(root, root, 0, max_depth, &mut out)?;
+    collect_files_by(
+        root,
+        root,
+        &mut out,
+        |rel, _path| {
+            !path_has_common_skip_dir(rel)
+                && !is_generated_entry_file(rel)
+                && max_depth.is_none_or(|limit| rel.components().count() <= limit)
+        },
+        |rel, path| {
+            !path_has_common_skip_dir(rel)
+                && !is_generated_entry_file(rel)
+                && path.extension().and_then(|extension| extension.to_str()) == Some("typ")
+        },
+    )?;
     out.sort();
     Ok(out)
-}
-
-fn collect_typst_files_in(
-    root: &Path,
-    dir: &Path,
-    depth: usize,
-    max_depth: Option<usize>,
-    out: &mut Vec<PathBuf>,
-) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
-        let entry = entry?;
-        let path = entry.path();
-        let rel = path.strip_prefix(root).unwrap_or(&path);
-        if path_has_common_skip_dir(rel) || is_generated_entry_file(rel) {
-            continue;
-        }
-        if path.is_dir() {
-            if max_depth.is_none_or(|limit| depth < limit) {
-                collect_typst_files_in(root, &path, depth + 1, max_depth, out)?;
-            }
-        } else if path.extension().and_then(|extension| extension.to_str()) == Some("typ") {
-            out.push(path);
-        }
-    }
-    Ok(())
 }
 
 pub(super) fn parse_string_literal(source: &str, quote: usize) -> Option<(String, usize)> {
@@ -263,6 +254,22 @@ mod tests {
                 .unwrap()
                 .is_err()
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collect_typst_files_does_not_follow_a_directory_symlink_cycle() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("paper.typ"), "").unwrap();
+        // A symlink back to the project root would send a naive `path.is_dir()`
+        // walk into an infinite loop.
+        symlink(dir.path(), dir.path().join("loop")).unwrap();
+
+        let files = collect_typst_files(dir.path(), None).unwrap();
+
+        assert_eq!(files, vec![dir.path().join("paper.typ")]);
     }
 
     #[test]

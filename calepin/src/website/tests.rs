@@ -1564,6 +1564,21 @@ fn sanitize_icon_svg_accepts_plain_icons_and_rejects_scripting_vectors() {
 }
 
 #[test]
+fn sanitize_icon_svg_strips_xml_declaration_and_doctype() {
+    // Inkscape and Illustrator always emit an XML declaration and DOCTYPE for
+    // a standalone SVG file; a local icon exported from either must not be
+    // rejected just for carrying them.
+    let inner = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/></svg>"#;
+    let with_prolog = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+         <!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\
+         {inner}"
+    );
+
+    assert_eq!(sanitize_icon_svg(&with_prolog, "home").unwrap(), inner);
+}
+
+#[test]
 fn translation_entries_are_relative_to_current_page() {
     let en = PathBuf::from("/site/docs/about.typ");
     let fr = PathBuf::from("/site/docs/fr/about.typ");
@@ -4341,6 +4356,28 @@ fn should_rebuild_for_path_ignores_generated_calepin_directory() {
     for wrapper in wrappers {
         assert!(!should_rebuild_for_path(&current, &wrapper));
     }
+}
+
+#[test]
+fn should_rebuild_for_path_ignores_generated_robots_llms_and_sitemap_files() {
+    // With the default `out_dir == src_dir`, robots.txt/llms.txt/sitemap.xml
+    // are written straight into the watched source directory; reacting to
+    // them would re-trigger the build that just produced them.
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("docs");
+    let current = test_build_result(&src, &[]);
+
+    for name in ["robots.txt", "llms.txt", "sitemap.xml"] {
+        assert!(
+            !should_rebuild_for_path(&current, &src.join(name)),
+            "{name}"
+        );
+    }
+    // A same-named file nested under the source tree is still a real change.
+    assert!(should_rebuild_for_path(
+        &current,
+        &src.join("notes").join("robots.txt")
+    ));
 }
 
 #[test]

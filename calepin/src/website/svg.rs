@@ -5,12 +5,37 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
 pub(super) fn sanitize_icon_svg(svg: &str, spec: &str) -> Result<String> {
-    let svg = svg.trim();
+    let svg = strip_xml_prolog(svg.trim());
     if !svg.to_ascii_lowercase().starts_with("<svg") {
         return Err(unsafe_icon_error(spec));
     }
     validate_svg_markup(svg, spec)?;
     Ok(svg.to_string())
+}
+
+/// Strip a leading `<?xml ... ?>` declaration and/or `<!DOCTYPE ...>`, which
+/// Inkscape and Illustrator always emit for a standalone SVG file, before
+/// looking for the `<svg` root element.
+fn strip_xml_prolog(svg: &str) -> &str {
+    let mut rest = svg.trim_start();
+    loop {
+        if let Some(after) = rest.strip_prefix("<?xml") {
+            let Some(end) = after.find("?>") else {
+                break;
+            };
+            rest = after[end + 2..].trim_start();
+            continue;
+        }
+        if rest.len() >= 9 && rest.as_bytes()[..9].eq_ignore_ascii_case(b"<!doctype") {
+            let Some(end) = rest.find('>') else {
+                break;
+            };
+            rest = rest[end + 1..].trim_start();
+            continue;
+        }
+        break;
+    }
+    rest
 }
 
 fn validate_svg_markup(svg: &str, spec: &str) -> Result<()> {

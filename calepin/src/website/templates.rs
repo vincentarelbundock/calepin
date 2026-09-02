@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 use serde::Serialize;
 
+use crate::typst::io::write_if_changed;
 use crate::utils::static_files::collect_files_by;
 use crate::utils::template::no_autoescape_env;
 
@@ -44,7 +45,11 @@ pub(super) fn write_sitemap(
     }
     xml.push_str("</urlset>\n");
 
-    fs::write(&path, xml).with_context(|| format!("failed to write {}", path.display()))
+    // Writing only on an actual content change (rather than unconditionally)
+    // matters when `out_dir == src_dir`: an unconditional write would leave a
+    // watcher for `src_dir` no room to tell "the build just regenerated this"
+    // from "a person edited a page", and re-trigger itself on every build.
+    write_if_changed(&path, xml)
 }
 
 /// Writes `llms.txt`: a Markdown index of the site — title, description, and
@@ -87,7 +92,7 @@ pub(super) fn write_llms_txt(
         out.push_str(line);
     }
 
-    fs::write(&path, out).with_context(|| format!("failed to write {}", path.display()))
+    write_if_changed(&path, out)
 }
 
 /// Returns the sort key and rendered list line for one page.
@@ -154,7 +159,7 @@ pub(super) fn write_robots(
             sitemap_url: base_url.map(|url| absolute_site_url(url, "sitemap.xml")),
         })
         .map_err(|error| anyhow!("robots template: {error}"))?;
-    fs::write(&path, contents).with_context(|| format!("failed to write {}", path.display()))
+    write_if_changed(&path, contents)
 }
 
 pub(super) fn read_template_files(dir: &Path) -> Result<Vec<(String, String)>> {

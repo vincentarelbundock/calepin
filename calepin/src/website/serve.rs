@@ -11,8 +11,8 @@ use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 use crate::cli::ServeArgs;
 use crate::utils::static_files::{
-    content_type, path_stays_under_root, resolve_request_path, APPLICATION_JSON_UTF8,
-    CACHE_CONTROL_NO_STORE, TEXT_PLAIN_UTF8,
+    content_type, is_sensitive_served_path, path_stays_under_root, resolve_request_path,
+    APPLICATION_JSON_UTF8, CACHE_CONTROL_NO_STORE, TEXT_PLAIN_UTF8,
 };
 
 const DEFAULT_PORT: u16 = 8000;
@@ -270,6 +270,24 @@ fn respond(
     let Some(path) = resolve_request_path(root, request.url(), base_path_prefix, true) else {
         return send_text(request, 403, TEXT_PLAIN_UTF8, "Forbidden");
     };
+    if is_sensitive_served_path(root, &path) {
+        return send_text(request, 404, TEXT_PLAIN_UTF8, "Not Found");
+    }
+    if path.is_dir() {
+        // Serving `/dir` as `dir/index.html` directly (rather than redirecting
+        // to `/dir/`) leaves the page's relative links resolving one level too
+        // high, since the browser has no trailing slash to anchor them on.
+        let url = request.url();
+        let (path_part, query) = url.split_once('?').unwrap_or((url, ""));
+        if !path_part.ends_with('/') {
+            let location = if query.is_empty() {
+                format!("{path_part}/")
+            } else {
+                format!("{path_part}/?{query}")
+            };
+            return send_redirect(request, &location);
+        }
+    }
     let path = if path.is_dir() {
         path.join("index.html")
     } else {
@@ -299,14 +317,14 @@ fn send_file(request: Request, path: &Path, status: u16, live: Option<&LiveReloa
 
     if request.method() == &Method::Head {
         let response = Response::empty(StatusCode(status))
-            .with_header(content_type_header(mime)?)
+            .with_header(content_type_header(&mime)?)
             .with_header(content_length_header(body.len())?)
             .with_header(no_store_header()?);
         request.respond(response)?;
     } else {
         let response = Response::from_data(body)
             .with_status_code(StatusCode(status))
-            .with_header(content_type_header(mime)?)
+            .with_header(content_type_header(&mime)?)
             .with_header(no_store_header()?);
         request.respond(response)?;
     }
@@ -320,6 +338,19 @@ fn send_text(request: Request, status: u16, content_type: &str, body: &str) -> R
         .with_header(no_store_header()?);
     request.respond(response)?;
     Ok(())
+}
+
+fn send_redirect(request: Request, location: &str) -> Result<()> {
+    let response = Response::from_string("")
+        .with_status_code(StatusCode(308))
+        .with_header(location_header(location)?)
+        .with_header(no_store_header()?);
+    request.respond(response)?;
+    Ok(())
+}
+
+fn location_header(value: &str) -> Result<Header> {
+    Header::from_bytes("Location", value).map_err(|_| anyhow!("failed to create location header"))
 }
 
 fn send_method_not_allowed(request: Request) -> Result<()> {
@@ -567,6 +598,59 @@ mod tests {
         assert!(response.starts_with("HTTP/1.1 200"));
         assert!(response.contains("Content-Length: 5"));
         assert!(!response.ends_with("hello"));
+    }
+
+    #[test]
+    fn directory_request_without_trailing_slash_redirects() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("guide")).unwrap();
+        fs::write(dir.path().join("guide/index.html"), "hi").unwrap();
+        let root = dir.path().to_path_buf();
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let addr = server.server_addr().to_string();
+
+        let handle = thread::spawn(move || {
+            let request = server.recv().unwrap();
+            respond(request, &root, None, None).unwrap();
+        });
+
+        let mut stream = TcpStream::connect(addr).unwrap();
+        stream
+            .write_all(b"GET /guide HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+            .unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        handle.join().unwrap();
+
+        assert!(response.starts_with("HTTP/1.1 308"), "{response}");
+        assert!(response.contains("Location: /guide/"), "{response}");
+    }
+
+    #[test]
+    fn sensitive_project_files_are_not_served() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join(".calepin")).unwrap();
+        fs::write(dir.path().join(".calepin/config.toml"), "secret").unwrap();
+        let root = dir.path().to_path_buf();
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let addr = server.server_addr().to_string();
+
+        let handle = thread::spawn(move || {
+            let request = server.recv().unwrap();
+            respond(request, &root, None, None).unwrap();
+        });
+
+        let mut stream = TcpStream::connect(addr).unwrap();
+        stream
+            .write_all(
+                b"GET /.calepin/config.toml HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+            )
+            .unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        handle.join().unwrap();
+
+        assert!(response.starts_with("HTTP/1.1 404"), "{response}");
     }
 
     #[cfg(unix)]
