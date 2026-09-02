@@ -75,11 +75,13 @@ fn apply_default_file_mode(_path: &Path) -> Result<()> {
 /// same instant.
 #[cfg(unix)]
 fn process_umask() -> u32 {
-    unsafe {
+    use std::sync::OnceLock;
+    static UMASK: OnceLock<u32> = OnceLock::new();
+    *UMASK.get_or_init(|| unsafe {
         let mask = libc::umask(0);
         libc::umask(mask);
         mask as u32
-    }
+    })
 }
 
 #[cfg(test)]
