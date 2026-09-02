@@ -3,6 +3,13 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
+// The chunk/setup option vocabulary lives once, in Rust, as `OPTION_TABLE`.
+// `option_table.rs` has no dependencies outside `std`, so it can be included
+// here, before the crate itself is compiled, and used to generate the Typst
+// `_base-options` dictionary that `notebook/defaults.typ` used to hand-list.
+#[path = "src/typst/option_table.rs"]
+mod option_table;
+
 fn main() {
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
@@ -140,6 +147,11 @@ fn write_typst_runtime_files(
         let absolute_source_path = manifest_dir.join(source_path);
         println!("cargo:rerun-if-changed={}", absolute_source_path.display());
         let content = fs::read_to_string(&absolute_source_path).unwrap();
+        let content = if path == "notebook/defaults.typ" {
+            generate_base_options(&content, &absolute_source_path)
+        } else {
+            content
+        };
         let content_hash = {
             let mut hasher = DefaultHasher::new();
             content.hash(&mut hasher);
@@ -152,6 +164,34 @@ fn write_typst_runtime_files(
         source.push_str("    },\n");
     }
     source.push_str("];\n");
+}
+
+/// Replaces the `_base-options` marker line in `notebook/defaults.typ` with a
+/// dictionary generated from `option_table::OPTION_TABLE`, so the option
+/// vocabulary is defined exactly once, in Rust.
+fn generate_base_options(content: &str, source_path: &Path) -> String {
+    let marker = option_table::BASE_OPTIONS_MARKER;
+    let Some(marker_start) = content.find(marker) else {
+        panic!(
+            "{} must contain the marker `{marker}` for build.rs to generate `_base-options`",
+            source_path.display()
+        );
+    };
+    // Replace the whole marker line (from its start to the following newline,
+    // if any) with the generated dictionary.
+    let line_start = content[..marker_start]
+        .rfind('\n')
+        .map(|idx| idx + 1)
+        .unwrap_or(0);
+    let line_end = content[marker_start..]
+        .find('\n')
+        .map(|idx| marker_start + idx + 1)
+        .unwrap_or(content.len());
+    let mut out = String::with_capacity(content.len());
+    out.push_str(&content[..line_start]);
+    out.push_str(&option_table::render_base_options_typst());
+    out.push_str(&content[line_end..]);
+    out
 }
 
 fn collect_embedded_typst_runtime_files(

@@ -2,6 +2,9 @@ use anyhow::{anyhow, Result};
 use serde_json::Value;
 
 use crate::typst::fence_label::{metadata_node_label, raw_node_label};
+use crate::typst::option_table::OPTION_TABLE;
+#[cfg(test)]
+use crate::typst::option_table::OptionSide;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedChunkSource {
@@ -188,7 +191,7 @@ const BASE_CHUNK_KEYS: [&str; 7] = [
 
 fn supported_chunk_argument_names() -> String {
     let mut names: Vec<&str> = BASE_CHUNK_KEYS.to_vec();
-    names.extend_from_slice(native_chunk_option_names());
+    names.extend(native_chunk_option_names());
     names.sort_unstable();
     names.dedup();
     names.join(", ")
@@ -243,44 +246,37 @@ const CHUNK_OPTION_ALIASES: [(&str, &str); 17] = [
     ("layout-nrow", "fig-layout-rows"),
 ];
 
-fn native_chunk_option_names() -> &'static [&'static str] {
-    &[
-        "echo",
-        "eval",
-        "error",
-        "output",
-        "results",
-        "results-location",
-        "script",
-        "warning",
-        "message",
-        "placeholder",
-        "store-get",
-        "store-set",
-        "fig-device-format",
-        "fig-device-dpi",
-        "fig-device-width",
-        "fig-device-height",
-        "fig-device-aspect",
-        "fig-width",
-        "fig-height",
-        "fig-align",
-        "fig-responsive",
-        "fig-link",
-        "fig-caption",
-        "fig-cap-location",
-        "fig-alt-text",
-        "fig-subcaptions",
-        "fig-layout-columns",
-        "fig-layout-rows",
-        "tbl-caption",
-        "lst-caption",
-        "kind",
-    ]
+/// Per-chunk arguments to `calepin.chunk()`, `calepin.inline()`, and a `#|`
+/// fenced-block header: every option in `OPTION_TABLE` except `fenced-chunks`
+/// (a document-wide `calepin.setup()` switch, not a per-chunk override),
+/// plus the call-only `store-get`/`store-set` arguments that have no
+/// document-wide default and so are not in the table.
+fn native_chunk_option_names() -> Vec<&'static str> {
+    let mut names: Vec<&'static str> = OPTION_TABLE
+        .iter()
+        .filter(|spec| spec.name != "fenced-chunks")
+        .map(|spec| spec.name)
+        .collect();
+    names.push("store-get");
+    names.push("store-set");
+    names
+}
+
+/// Option names the Typst runtime reads while rendering a chunk (as opposed
+/// to options that only affect how Rust executes it). Used by tests that
+/// check `notebook/options.typ` and `DisplayOptions` stay in sync with
+/// `OPTION_TABLE`.
+#[cfg(test)]
+pub(crate) fn display_chunk_option_names() -> Vec<&'static str> {
+    OPTION_TABLE
+        .iter()
+        .filter(|spec| spec.side != OptionSide::Exec)
+        .map(|spec| spec.name)
+        .collect()
 }
 
 fn supported_qmd_options() -> String {
-    let mut names: Vec<&str> = native_chunk_option_names().to_vec();
+    let mut names: Vec<&str> = native_chunk_option_names();
     names.push("label");
 
     names.extend(CHUNK_OPTION_ALIASES.iter().map(|(alias, _)| *alias));
@@ -579,5 +575,65 @@ mod tests {
             excluded.overrides,
             vec![("script".to_string(), Value::Bool(false))]
         );
+    }
+
+    #[test]
+    fn native_chunk_options_cover_every_table_entry_except_fenced_chunks() {
+        use crate::typst::option_table::OPTION_TABLE;
+
+        let native = native_chunk_option_names();
+        for spec in OPTION_TABLE {
+            if spec.name == "fenced-chunks" {
+                assert!(
+                    !native.contains(&spec.name),
+                    "`fenced-chunks` is document-wide (calepin.setup only) and must not be a \
+                     per-chunk argument"
+                );
+                continue;
+            }
+            assert!(
+                native.contains(&spec.name),
+                "`{}` is in OPTION_TABLE but missing from native_chunk_option_names()",
+                spec.name
+            );
+        }
+        assert!(native.contains(&"store-get"));
+        assert!(native.contains(&"store-set"));
+    }
+
+    #[test]
+    fn display_options_serialize_exactly_the_tables_display_side_keys() {
+        use crate::typst::testfixtures::display_options;
+
+        let json = serde_json::to_value(display_options(crate::typst::model::ResultsMode::Render))
+            .unwrap();
+        let serialized_keys: std::collections::BTreeSet<&str> =
+            json.as_object().unwrap().keys().map(String::as_str).collect();
+
+        for name in display_chunk_option_names() {
+            if name == "fenced-chunks" {
+                // Document-wide only: never part of a chunk's DisplayOptions.
+                continue;
+            }
+            assert!(
+                serialized_keys.contains(name),
+                "`{name}` is a display-side option in OPTION_TABLE but DisplayOptions does not \
+                 serialize a `{name}` field"
+            );
+        }
+    }
+
+    #[test]
+    fn removed_options_are_rejected_as_unsupported_chunk_arguments() {
+        // `output` and `placeholder` were never read by the Typst runtime
+        // (finding 3.7); they were removed from the contract rather than
+        // implemented, so calepin.chunk() must reject them like any other
+        // unknown argument.
+        for name in ["output", "placeholder"] {
+            let value = json!({ "label": "x", name: true });
+            let err = validate_chunk_arguments(&value, "x").unwrap_err().to_string();
+            assert!(err.contains(name), "{err}");
+            assert!(err.contains("unsupported argument"), "{err}");
+        }
     }
 }

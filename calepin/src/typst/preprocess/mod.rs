@@ -1458,7 +1458,6 @@ mod tests {
         .unwrap();
 
         chunk.display_options.echo = false;
-        chunk.display_options.output = false;
         chunk.display_options.results = ResultsMode::Hide;
         chunk.display_options.fig_caption = Some("New caption".to_string());
 

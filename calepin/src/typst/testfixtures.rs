@@ -24,12 +24,10 @@ pub fn exec_options() -> ExecOptions {
 pub fn display_options(results: ResultsMode) -> DisplayOptions {
     DisplayOptions {
         echo: true,
-        output: true,
         results,
         results_location: ResultsLocation::Statement,
         warning: true,
         message: true,
-        placeholder: true,
         fig_width: None,
         fig_height: None,
         fig_align: None,

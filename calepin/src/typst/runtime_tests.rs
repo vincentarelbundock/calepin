@@ -1935,6 +1935,177 @@ print("ignored")
     }
 }
 
+// --- `_merge-result-options` (finding 3.1) ---
+//
+// `write_figure_results_with_options` writes a schema-current results.json
+// with an `options` object, so unlike
+// `typst_compile_renders_canonical_figure_options_from_results` (whose
+// fixture predates `options` entirely) these tests actually exercise
+// `_merge-result-options`.
+
+#[test]
+fn typst_compile_merge_prefers_call_site_caption_content_over_stored_flattened_text() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    // Simulates what Rust stores after flattening a rich `fig-caption`
+    // content value via `extract_text`: plain text, deliberately different
+    // from the call-site caption below so the two are distinguishable in the
+    // rendered output.
+    write_figure_results_with_options(
+        dir.path(),
+        "fig-demo",
+        r#""options": {
+        "fig-caption": "STORED-FLATTENED-CAPTION"
+      },"#,
+    );
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk(
+  "python",
+  label: "fig-demo",
+  echo: false,
+  results: "hide",
+  fig-caption: [Plot of _x_ vs $y$],
+)[`
+pass
+`]
+
+#calepin.results("fig-demo")
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+    assert!(output.exists());
+
+    if Command::new("pdftotext").arg("-v").output().is_ok() {
+        let extracted = pdf_text(&output);
+        assert!(
+            extracted.contains("Plot of"),
+            "expected the call-site caption content to render: {extracted}"
+        );
+        assert!(
+            !extracted.contains("STORED-FLATTENED-CAPTION"),
+            "the flattened stored caption clobbered the call-site rich content: {extracted}"
+        );
+    }
+}
+
+#[test]
+fn typst_compile_merge_normalizes_stored_cap_location_to_an_alignment() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    // `fig-cap-location` round-trips through `results.json` as the plain
+    // string "top" (same as `fig-align`). Before the fix, `_merge-result-options`
+    // handed that string straight to `figure.caption(position: ...)`, which
+    // expects a real alignment and rejects a string: this chunk has no
+    // call-site `fig-cap-location`, so the only value in play is the stored
+    // one, and a successful compile is the assertion.
+    write_figure_results_with_options(
+        dir.path(),
+        "fig-demo",
+        r#""options": {
+        "fig-caption": "Top caption",
+        "fig-cap-location": "top"
+      },"#,
+    );
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+
+#calepin.chunk("python", label: "fig-demo", echo: false, results: "hide")[`
+pass
+`]
+
+#calepin.results("fig-demo")
+"##,
+    )
+    .unwrap();
+
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT],
+    );
+    assert!(output.exists());
+    assert!(std::fs::metadata(&output).unwrap().len() > 0);
+
+    if Command::new("pdftotext").arg("-v").output().is_ok() {
+        let extracted = pdf_text(&output);
+        assert!(extracted.contains("Top caption"), "{extracted}");
+    }
+}
+
+#[test]
+fn typst_compile_merge_round_trips_display_options_from_a_current_schema_results_file() {
+    skip_if_no_typst!();
+
+    let dir = tempdir_in_manifest("calepin-runtime-test-");
+    write_runtime(dir.path()).unwrap();
+    write_figure_results_with_options(
+        dir.path(),
+        "fig-demo",
+        r#""options": {
+        "warning": false,
+        "message": false,
+        "fig-align": "left",
+        "fig-responsive": false,
+        "fig-link": "https://example.com",
+        "fig-alt-text": "Stored alt text",
+        "tbl-caption": "Stored table caption",
+        "lst-caption": "Stored listing caption",
+        "kind": "fig"
+      },"#,
+    );
+
+    let input = dir.path().join("paper.typ");
+    let output = dir.path().join("paper.pdf");
+    std::fs::write(
+        &input,
+        r##"#import ".calepin/calepin.typ"
+#set document(title: [Round-tripped display options])
+
+#calepin.chunk("python", label: "fig-demo", echo: false, results: "hide")[`
+pass
+`]
+
+#calepin.results("fig-demo")
+"##,
+    )
+    .unwrap();
+
+    // A stored value for every one of these keys must reach the renderer
+    // (some via the runtime's own `fig-alt-text`/`fig-link` attributes, none
+    // by triggering a type error such as the `fig-cap-location` one above),
+    // so a successful compile is the round-trip assertion.
+    typst_compile(
+        dir.path(),
+        &input,
+        &output,
+        &["--input", RELOCATE_RESULTS_INPUT, "--pdf-standard", "ua-1"],
+    );
+    assert!(output.exists());
+    assert!(std::fs::metadata(&output).unwrap().len() > 0);
+}
+
 #[test]
 fn typst_compile_html_renders_explicit_figure_grid_layout_from_results() {
     skip_if_no_typst!();
