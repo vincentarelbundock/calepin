@@ -326,8 +326,8 @@ pub struct FigureSpec {
 /// check that treats a `%` as the start of a page-numbering directive (e.g.
 /// `plot%03d.png`) and rejects anything else, so a label like `café`
 /// percent-encoded to `caf%C3%A9` made R refuse to open the device. `=` is
-/// not given that treatment by any of the supported engines, and — like
-/// `%` before it — is excluded from the passthrough set below, so a literal
+/// not given that treatment by any of the supported engines, and, like
+/// `%` before it, is excluded from the passthrough set below, so a literal
 /// `=` in a label is itself escaped and can never be confused with the
 /// marker.
 pub(crate) fn artifact_label_stem(label: &str) -> String {
