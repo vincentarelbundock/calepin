@@ -87,16 +87,13 @@ pub fn refresh_cached_results_metadata(path: &Path, chunks: &[ChunkSpec]) -> Res
         .with_context(|| format!("failed to read cached results {}", path.display()))?;
     let mut document: ResultsDocument = serde_json::from_str(&text)
         .with_context(|| format!("failed to parse cached results {}", path.display()))?;
-    // `ResultsDocument` deserializes strictly (most `DisplayOptions` fields
-    // have no `#[serde(default)]`), so a document old enough to predate the
-    // current schema would already have failed the `from_str` above; by the
-    // time execution reaches here, `document.schema` can only be the current
-    // version in practice. Still reject an explicit mismatch rather than
-    // silently treat a differently-schemaed but structurally-compatible
-    // document as current.
-    if document.schema != RESULT_SCHEMA_VERSION {
+    // A cached document from an older schema that still deserializes is
+    // structurally compatible (newer schemas only add defaulted fields or
+    // drop unused ones), so accept every version up to the current one and
+    // reject only documents written by a newer Calepin.
+    if document.schema == 0 || document.schema > RESULT_SCHEMA_VERSION {
         return Err(anyhow!(
-            "unsupported results schema {}; this Calepin version supports schema {}",
+            "unsupported results schema {}; this Calepin version supports schemas 1 through {}",
             document.schema,
             RESULT_SCHEMA_VERSION
         ));
