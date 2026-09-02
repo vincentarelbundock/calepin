@@ -146,6 +146,16 @@ fn validate_eval_only_watch_flags(args: &WatchArgs) -> Result<()> {
 
 fn validate_single_file_watch_flags(args: &WatchArgs, is_html: bool) -> Result<()> {
     if is_html {
+        if args.serve {
+            // `--serve` starts a static file server for a website
+            // directory (`website::watch_from_watch_args`); a single .typ
+            // file has no such server to start, so accepting and silently
+            // ignoring the flag would leave the user waiting on a server
+            // that never comes up.
+            return Err(anyhow::anyhow!(
+                "`calepin watch --serve` only supports a website directory input, not a single .typ file"
+            ));
+        }
         return Ok(());
     }
     if args.serve {
@@ -679,9 +689,8 @@ mod tests {
     }
 
     #[test]
-    fn html_watch_allows_serve_and_forwards_open_and_port_to_typst() {
+    fn html_watch_forwards_open_and_port_to_typst() {
         let mut args = watch_args(PathBuf::from("missing.typ"), Some(WatchFormat::Html));
-        args.serve = true;
         args.open = true;
         args.port = Some(3000);
 
@@ -693,6 +702,17 @@ mod tests {
             .typst_args
             .windows(2)
             .any(|pair| pair == ["--port", "3000"]));
+    }
+
+    #[test]
+    fn html_watch_rejects_serve_for_a_single_file() {
+        let mut args = watch_args(PathBuf::from("missing.typ"), Some(WatchFormat::Html));
+        args.serve = true;
+
+        let err = handle_watch(args).unwrap_err().to_string();
+
+        assert!(err.contains("--serve"), "{err}");
+        assert!(err.contains("website directory"), "{err}");
     }
 
     #[test]
