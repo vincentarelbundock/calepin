@@ -35,6 +35,47 @@ Upgrade a Homebrew installation with:
 brew upgrade calepin
 ```
 
+== Scoop (Windows)
+
+On Windows, you can also install Calepin with #link("https://scoop.sh")[Scoop]:
+
+```sh
+scoop bucket add vincentarelbundock https://github.com/vincentarelbundock/scoop-bucket
+scoop install calepin
+```
+
+Upgrade a Scoop installation with:
+
+```sh
+scoop update calepin
+```
+
+Scoop owns the installed copy, so it does not carry the `calepin-update`
+helper and `calepin update` does not apply; upgrade with Scoop instead.
+
+== Linux packages
+
+Every release publishes a `.deb`, an `.rpm` and an Arch `.pkg.tar.zst` for
+x86_64 and aarch64 on the
+#link("https://github.com/vincentarelbundock/calepin/releases")[releases page]:
+
+```sh
+sudo apt install ./calepin_*_amd64.deb      # Debian, Ubuntu
+sudo dnf install ./calepin-*.x86_64.rpm     # Fedora, RHEL
+sudo pacman -U ./calepin-*.pkg.tar.zst      # Arch
+```
+
+These packages recommend `typst` and suggest `python3`, `r-base-core`,
+`graphviz` and `pdf2svg`, but require none of them: Calepin looks up every
+engine on your `PATH` at run time. They do not include the `calepin-update`
+helper, because your package manager owns the installed copy; upgrade with the
+package manager instead.
+
+On Debian and Ubuntu you can subscribe to an APT repository that carries these
+packages and picks up each new release automatically, so `apt upgrade` notices
+a new version. The current instructions are on
+#link("https://vincentarelbundock.github.io/apt")[vincentarelbundock.github.io/apt].
+
 If you are a `cargo` for Rust user, you can install with:
 
 ```sh

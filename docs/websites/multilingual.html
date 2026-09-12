@@ -5847,7 +5847,7 @@ html:not([data-theme]) {
     <script src="../pagefind/pagefind-component-ui.js" type="module"></script>
 
 
-<script id="calepin-website-source-data" type="application/json">"#set document(title: [Multilingual sites])\n#metadata((\n  title: \"Multilingual\",\n  tags: (\"websites\", \"localization\"),\n  summary: \"Build a site in several languages: one content directory per language, pages linked as translations of each other, and language-code URL prefixes.\",\n)) <website-metadata>\n\n#title()\n\nConfigure languages with one content directory per language:\n\n```toml\ndefault-language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent-dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent-dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; other languages use their language code as a URL prefix, such as `fr/about.html`.\n\nUse page metadata when translations move or need different slugs:\n\n```typ\n#set document(title: [À propos])\n\n#metadata((\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) <website-metadata>\n\n#title()\n```\n\nWhen more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.\n"</script>
+<script id="calepin-website-source-data" type="application/json">"#set document(title: [Multilingual sites])\n#metadata((\n  title: \"Multilingual\",\n  tags: (\"websites\", \"localization\"),\n  summary: \"Build a site in several languages: one content directory per language, pages linked as translations of each other, and language-code URL prefixes.\",\n)) \u003cwebsite-metadata\u003e\n\n#title()\n\nConfigure languages with one content directory per language:\n\n```toml\ndefault-language = \"en\"\n\n[languages.en]\nlabel = \"English\"\ncontent-dir = \".\"\n\n[languages.fr]\nlabel = \"Français\"\ncontent-dir = \"fr\"\n```\n\nWith this layout, `about.typ` and `fr/about.typ` are treated as translations of the same page. The default language keeps root URLs like `about.html`; other languages use their language code as a URL prefix, such as `fr/about.html`.\n\nUse page metadata when translations move or need different slugs:\n\n```typ\n#set document(title: [À propos])\n\n#metadata((\n  translation_key: \"about\",\n  slug: \"a-propos\",\n)) \u003cwebsite-metadata\u003e\n\n#title()\n```\n\nWhen more than one language is configured, the bundled themes show a language picker. Local navigation links are shown only for the current language; external links stay global.\n"</script>
 </head><body>
 
     <header class="calepin-website-topbar calepin-site-topbar">
@@ -6493,7 +6493,11 @@ html:not([data-theme]) {
   const root = document.documentElement;
   const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
   const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
-  const urlParam = (button) => button.dataset.calepinThemeParam || "";
+  // Matches theme-init.js's default so the two scripts agree on which URL
+  // param to honor when a theme omits `data-calepin-theme-param`: otherwise
+  // the init script paints the theme from `?theme=`, and the toggle button's
+  // own read (used to sync its label/icon) silently ignores it, flashing.
+  const urlParam = (button) => button.dataset.calepinThemeParam || "theme";
   const systemTheme = () => media && media.matches ? "dark" : "light";
 
   function readUrl(button) {

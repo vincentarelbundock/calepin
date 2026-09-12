@@ -138,7 +138,7 @@ reserve a wide outer margin. Add a `marginalia.setup` rule near the top of the
 document or in a local theme when you want Tufte-style PDF margins:
 
 ```typ
-#import "@preview/marginalia:0.2.0" as marginalia
+#import "@preview/marginalia:0.3.1" as marginalia
 
 #show: marginalia.setup.with(
   outer: (far: 8mm, width: 48mm, sep: 6mm),

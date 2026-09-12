@@ -1976,7 +1976,11 @@ Eli -> Cooking        2.10</code></pre></div><h2 id="what-to-check">What to chec
   const root = document.documentElement;
   const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
   const storageKey = (button) => button.dataset.calepinThemeStorageKey || "calepin-theme";
-  const urlParam = (button) => button.dataset.calepinThemeParam || "";
+  // Matches theme-init.js's default so the two scripts agree on which URL
+  // param to honor when a theme omits `data-calepin-theme-param`: otherwise
+  // the init script paints the theme from `?theme=`, and the toggle button's
+  // own read (used to sync its label/icon) silently ignores it, flashing.
+  const urlParam = (button) => button.dataset.calepinThemeParam || "theme";
   const systemTheme = () => media && media.matches ? "dark" : "light";
 
   function readUrl(button) {
