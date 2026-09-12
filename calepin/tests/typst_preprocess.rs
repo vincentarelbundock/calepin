@@ -2319,12 +2319,13 @@ fn syntax_theme_artifact_gives_packages_the_chunk_palette() {
         return;
     }
 
-    // A package that renders `raw` itself claims plain fenced blocks before
-    // Calepin's rules reach them, so those blocks keep Typst's built-in colors
-    // while chunks keep Calepin's. Pointing `set raw` at the generated palette
-    // is what lets an author line the two up. The show rule below stands in for
-    // such a package: it rebuilds the block from its pre-highlighted lines, the
-    // way codly does, without pulling a package into the test.
+    // Calepin renders every fenced block it recognises, including one in a
+    // language it does not run, and paints it from the generated palette. A
+    // package that renders `raw` itself still reshapes the block, but the
+    // colors are already Calepin's, so pointing `set raw` at the palette adds
+    // nothing. The show rule below stands in for such a package: it rebuilds
+    // the block from its pre-highlighted lines, the way codly does, without
+    // pulling a package into the test.
     let document = |prelude: &str| {
         format!(
             r#"#import "/.calepin/calepin.typ" as calepin
@@ -2357,18 +2358,18 @@ let x = 41;
     let default_dir = typst_accessible_tempdir();
     let default = compile_svg_with_signature_theme(default_dir.path(), &document(""));
 
-    // Both documents theme the chunk; only the one pointing `set raw` at the
-    // generated palette also themes the block the package claimed.
+    // Both documents theme the chunk and the unrun block alike, so `set raw`
+    // pointed at the generated palette makes no difference to either.
     let matched_hits = matched.matches("#ff00ff").count();
     let default_hits = default.matches("#ff00ff").count();
     assert!(
         default_hits > 0,
         "chunk source carries Calepin's palette either way: {default}"
     );
-    assert!(
-        matched_hits > default_hits,
-        "the generated palette should reach the package-rendered block too \
-         ({matched_hits} vs {default_hits}): {matched}"
+    assert_eq!(
+        matched_hits, default_hits,
+        "naming the generated palette should change nothing, since Calepin \
+         already painted both blocks: {matched}"
     );
 }
 
@@ -2460,6 +2461,62 @@ NESTED_SOURCE_MARKER
             );
         }
     }
+}
+
+/// Blocks Calepin does not run are rendered by Calepin rather than handed back
+/// untouched. Handing them back needed a flag flipped around where the element
+/// sat on the page, and a flag read by position cannot settle when the position
+/// is what the layout is still deciding: Typst ran out of attempts and took
+/// whichever branch its last pass happened to hold, so the same source could
+/// render a block as a chunk or as plain code.
+#[test]
+fn unrun_fences_do_not_stall_layout_convergence() {
+    if !has_command("typst") {
+        return;
+    }
+
+    let dir = typst_accessible_tempdir();
+    let mut source = String::from(
+        r#"#import "/.calepin/calepin.typ" as calepin
+
+#show: calepin.document
+#calepin.setup(echo: true)
+
+= Tokens
+"#,
+    );
+    // Several unrun languages, spaced out enough to span more than one page:
+    // the failure only appeared once blocks moved between pages across passes.
+    for body in [
+        "```css\n:root { --a: #f6f7f9; }\n```",
+        "```text\none\ntwo\n```",
+        "```toml\nextends = \"typst\"\n```",
+        "```html\n<main class=\"page\"></main>\n```",
+        "```sh\ncalepin compile notebook.typ\n```",
+    ] {
+        source.push_str("\n#lorem(60)\n\n");
+        source.push_str(body);
+        source.push('\n');
+    }
+    source.push_str("\n#lorem(60)\n");
+    std::fs::write(dir.path().join("paper.typ"), source).unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.contains("did not converge"),
+        "unrun fences left the document unconverged:\n{stderr}"
+    );
 }
 
 #[test]

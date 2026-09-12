@@ -64,9 +64,9 @@ Chunk output is untouched: it is not a `raw` element on the paged target, so cod
 
 Setting `theme = "typst"` removes Calepin's chrome everywhere at once, with no show rules at all. Chunks still execute either way.
 
-== Matching the two palettes
+== Palettes
 
-A document that mixes executed chunks with ordinary fenced blocks will show two sets of syntax colors under codly:
+A document that mixes executed chunks with ordinary fenced blocks shows one set of syntax colors:
 
 ````typ
 ```python
@@ -74,13 +74,13 @@ x = 41       # executed chunk: Calepin's palette
 ```
 
 ```rust
-let x = 41;  // plain fence: Typst's built-in palette
+let x = 41;  // plain fence: Calepin's palette too
 ```
 ````
 
-Calepin paints the code it renders itself, but codly installs its `show raw:` rules after Calepin's, so it claims plain fenced blocks first and they keep Typst's built-in colors. Executed chunks took the other path: Calepin had already highlighted them before codly saw them.
+Calepin paints every fenced block it recognises, including one in a language it does not run, so the two already match. A package such as codly still reshapes the block, since its `show raw:` rules are installed after Calepin's, but the colors underneath are Calepin's either way.
 
-Calepin writes its palette to `.calepin/syntax.tmTheme` on every build. Point Typst at that file and both paths line up:
+Inline raw is the exception: Calepin's rules select block-level raw, so `` `x = 41` `` in a sentence keeps Typst's built-in palette. Calepin writes its own palette to `.calepin/syntax.tmTheme` on every build, so point Typst at that file when you want inline raw to match:
 
 ```typ
 #set raw(theme: "/.calepin/syntax.tmTheme")
