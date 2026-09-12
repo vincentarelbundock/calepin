@@ -141,6 +141,10 @@ struct Engine {
     fd_level_stdout: &'static str,
     tbl_chunk_stray_plot: &'static str,
     fig_chunk_after_tbl: &'static str,
+    /// Whether a plot drawn before a later `print()` is emitted before that
+    /// output. True where the engine reports a figure with the statement that
+    /// drew it; false where figures are collected once the chunk has finished.
+    plot_precedes_later_output: bool,
 }
 
 fn engines() -> Vec<Engine> {
@@ -158,6 +162,7 @@ fn engines() -> Vec<Engine> {
             fd_level_stdout: r#"system("echo hi")"#,
             tbl_chunk_stray_plot: "plot(1:3)",
             fig_chunk_after_tbl: r#"cat("ok")"#,
+            plot_precedes_later_output: true,
         },
         Engine {
             name: "python",
@@ -173,6 +178,14 @@ fn engines() -> Vec<Engine> {
             fd_level_stdout: "import subprocess\nsubprocess.run(['echo', 'hi'])",
             tbl_chunk_stray_plot: "import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])",
             fig_chunk_after_tbl: r#"print("ok")"#,
+            // A matplotlib figure stays open across statements, so a chunk
+            // that draws and then styles it (`plt.plot(..)` then
+            // `plt.title(..)`) is one figure, not two. The engine can only
+            // know which figures a chunk produced once the chunk has run, so
+            // it saves them at the end and they follow every stream the chunk
+            // printed. Emitting them per statement would split that chunk into
+            // two plots, which is the worse error.
+            plot_precedes_later_output: false,
         },
         // A Jupyter kernel is a fundamentally different execution model from
         // the native r/python engines: the whole chunk is sent to the kernel
@@ -211,6 +224,9 @@ fn engines() -> Vec<Engine> {
                 "display(fig)",
             ),
             fig_chunk_after_tbl: r#"print("ok")"#,
+            // `display(fig)` is explicit and precedes the `print()`, so the
+            // kernel sends them in that order.
+            plot_precedes_later_output: true,
         },
     ]
 }
@@ -291,7 +307,13 @@ fn a_plot_is_never_emitted_before_the_source_that_drew_it() {
         );
 
         // The figure was drawn before the print("done") call in every
-        // translation above, so the plot must come before that output.
+        // translation above, so an engine that reports a figure with the
+        // statement that drew it must put the plot before that output. An
+        // engine that collects figures once the chunk has finished cannot,
+        // and says so through `plot_precedes_later_output`.
+        if !engine.plot_precedes_later_output {
+            continue;
+        }
         let first_stream = index_of_first(&items, "stream").unwrap();
         assert!(
             first_display < first_stream,

@@ -494,20 +494,18 @@ mod embedded_runtime_tests {
         .unwrap();
         let active = publish_active_binding(&layout).unwrap();
 
-        assert_eq!(
-            facade,
-            dir.path().join(".calepin/chapters/intro/calepin.typ")
-        );
+        // `resolve_layout` canonicalizes the root, and on macOS the per-user
+        // temp directory is reached through the `/var` -> `/private/var`
+        // symlink, so the expectation has to be canonical too.
+        let root = dir.path().canonicalize().unwrap();
+        assert_eq!(facade, root.join(".calepin/chapters/intro/calepin.typ"));
         let facade_source = fs::read_to_string(facade).unwrap();
         assert!(
             facade_source.contains(r#"#import "/.calepin/calepin.typ" as runtime"#),
             "{facade_source}"
         );
-        let config = fs::read_to_string(
-            dir.path()
-                .join(".calepin/chapters/intro/runtime-config.typ"),
-        )
-        .unwrap();
+        let config =
+            fs::read_to_string(root.join(".calepin/chapters/intro/runtime-config.typ")).unwrap();
         assert!(
             config.contains(r#"source: "chapters/intro.typ""#),
             "{config}"

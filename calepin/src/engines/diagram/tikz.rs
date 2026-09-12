@@ -108,14 +108,21 @@ fn pdf2svg_args(pdf_path: &Path, fig_path: &Path) -> Vec<OsString> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::execute_diagram;
-    use super::super::test_support::{
-        assert_successful_plot, env_lock, write_executable, EnvVarGuard,
-    };
     use super::*;
-    use crate::config::ExecutablePaths;
-    use crate::typst::model::EngineName;
+    #[cfg(unix)]
+    use {
+        super::super::execute_diagram,
+        super::super::test_support::{
+            assert_successful_plot, env_lock, write_executable, EnvVarGuard,
+        },
+        crate::config::ExecutablePaths,
+        crate::typst::model::EngineName,
+    };
 
+    // Drives stub `dvisvgm`/`pdf2svg` binaries written as `#!/bin/sh` scripts,
+    // which Windows cannot execute. The source-shaping tests below are pure
+    // string work and run everywhere.
+    #[cfg(unix)]
     #[test]
     fn falls_back_to_pdf2svg_when_dvisvgm_cannot_read_pdf() {
         let _guard = env_lock();

@@ -144,6 +144,19 @@ mod tests {
         (stop, calls, handle)
     }
 
+    // macOS reports the watched directory alongside the file written inside
+    // it, where inotify reports only the file. Both are true statements about
+    // what changed, and nothing downstream rebuilds from a directory path, so
+    // the tests below assert about the files and drop directory entries rather
+    // than pinning one platform's event shape.
+    fn files_only(batch: &[PathBuf]) -> Vec<PathBuf> {
+        batch
+            .iter()
+            .filter(|path| path.is_file())
+            .cloned()
+            .collect()
+    }
+
     #[test]
     fn rapid_writes_to_one_file_are_debounced_into_fewer_changes_than_writes() {
         let dir = tempfile::tempdir().unwrap();
@@ -179,7 +192,7 @@ mod tests {
             *calls
         );
         for batch in calls.iter() {
-            assert_eq!(batch, &vec![file.canonicalize().unwrap()]);
+            assert_eq!(files_only(batch), vec![file.canonicalize().unwrap()]);
         }
     }
 
@@ -252,7 +265,7 @@ mod tests {
                 "batch reported a path more than once: {:?}",
                 batch
             );
-            seen.extend(batch.iter().cloned());
+            seen.extend(files_only(batch));
         }
         assert_eq!(
             seen,

@@ -131,7 +131,9 @@ fn chrome_executable_path(configured: Option<&Path>) -> Option<PathBuf> {
     candidates.into_iter().find(|path| path.is_file())
 }
 
-#[cfg(test)]
+// Every test here puts a stub `mmdc` on `PATH` as a `#!/bin/sh` script, which
+// Windows cannot execute, so the module is Unix-only rather than half-ported.
+#[cfg(all(test, unix))]
 mod tests {
     use super::super::execute_diagram;
     use super::super::test_support::{

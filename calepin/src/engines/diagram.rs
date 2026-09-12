@@ -223,7 +223,9 @@ pub(super) mod test_support {
     }
 }
 
-#[cfg(test)]
+// The test below puts a stub `dot` on `PATH` as a `#!/bin/sh` script, which
+// Windows cannot execute.
+#[cfg(all(test, unix))]
 mod tests {
     use super::execute_diagram;
     use super::test_support::{env_lock, write_executable, EnvVarGuard};
