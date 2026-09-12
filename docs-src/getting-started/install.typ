@@ -35,6 +35,24 @@ Upgrade a Homebrew installation with:
 brew upgrade calepin
 ```
 
+== Scoop (Windows)
+
+On Windows, you can also install Calepin with #link("https://scoop.sh")[Scoop]:
+
+```sh
+scoop bucket add vincentarelbundock https://github.com/vincentarelbundock/scoop-bucket
+scoop install calepin
+```
+
+Upgrade a Scoop installation with:
+
+```sh
+scoop update calepin
+```
+
+Scoop owns the installed copy, so it does not carry the `calepin-update`
+helper and `calepin update` does not apply; upgrade with Scoop instead.
+
 == Linux packages
 
 Every release publishes a `.deb`, an `.rpm` and an Arch `.pkg.tar.zst` for
