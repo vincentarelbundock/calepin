@@ -154,9 +154,21 @@ impl SubprocessSession {
         let stdin = self.stdin.as_mut().context("Subprocess stdin closed")?;
 
         // Send: {sentinel}_BEGIN\n{payload}\n{sentinel}_END\n
-        write!(stdin, "{}_BEGIN\n{}\n{}_END\n", sentinel, payload, sentinel)
-            .context("Failed to send code to subprocess")?;
-        stdin.flush().context("Failed to flush stdin")?;
+        //
+        // A subprocess that has already died leaves a closed pipe here, so the
+        // write fails with BrokenPipe rather than the reader seeing EOF. That
+        // is the same situation as an unexpected exit and has to report as one:
+        // relaying the raw io error told the user their engine "failed to flush
+        // stdin", which names a mechanism instead of the problem.
+        let send = write!(stdin, "{}_BEGIN\n{}\n{}_END\n", sentinel, payload, sentinel)
+            .and_then(|()| stdin.flush());
+        if let Err(error) = send {
+            if error.kind() == std::io::ErrorKind::BrokenPipe {
+                self.dead = true;
+                anyhow::bail!("Subprocess exited unexpectedly");
+            }
+            return Err(anyhow::Error::new(error).context("Failed to send code to subprocess"));
+        }
 
         // Read lines until {sentinel}_DONE, with optional timeout
         let done_marker = format!("{}_DONE", sentinel);

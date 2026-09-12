@@ -172,6 +172,7 @@ while True:
                 # the tagged protocol frame and gets lost.
                 out_buf = io.StringIO()
                 err_buf = io.StringIO()
+                expr_repr = None
                 sys.stdout = out_buf
                 sys.stderr = err_buf
                 fd_capture = tempfile.TemporaryFile()
@@ -183,7 +184,12 @@ while True:
                         result = eval(expr_code, _globals)
                         last_expr_result = result
                         if _calepin_should_print_expr_result(result):
-                            print(repr(result))
+                            # Held back rather than printed here: the value only
+                            # exists once the statement has finished, so it must
+                            # trail anything the statement wrote to fd 1 while it
+                            # ran (subprocess output, for one). Printing it into
+                            # sys.stdout would sort it ahead of that text.
+                            expr_repr = repr(result)
                     else:
                         mod = _ast.Module(body=[node], type_ignores=[])
                         _ast.fix_missing_locations(mod)
@@ -201,9 +207,14 @@ while True:
                     fd_output = fd_capture.read().decode("utf-8", errors="replace").rstrip("\n")
                     fd_capture.close()
 
+                # Chronological order within one statement: whatever print()
+                # wrote, then whatever reached fd 1 underneath it, then the
+                # value the statement evaluated to.
                 output = out_buf.getvalue().rstrip("\n")
                 if fd_output:
                     output = f"{output}\n{fd_output}" if output else fd_output
+                if expr_repr is not None:
+                    output = f"{output}\n{expr_repr}" if output else expr_repr
                 if output:
                     # Flush accumulated source before output
                     parts.append(f"{sentinel}_SOURCE:" + "\n".join(src_buf))
@@ -304,10 +315,15 @@ impl PythonSession {
         process::validate_python_interpreter(program, "start Python", Some(&tools::PYTHON))
             .context("Failed to start Python")?;
         let bootstrap = python_bootstrap_script();
+        // No `-s` and no PYTHONNOUSERSITE: both hide the per-user site
+        // directory, so a package installed with `pip install --user` (the
+        // normal outcome outside a virtualenv) would be importable in the
+        // user's own shell but not in their chunks. `-u` keeps the protocol
+        // stream unbuffered; PYTHONDONTWRITEBYTECODE only avoids .pyc litter.
         let proc = SubprocessSession::spawn(
             program,
-            &["-s", "-u", "-c", &bootstrap],
-            &[("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")],
+            &["-u", "-c", &bootstrap],
+            &[("PYTHONDONTWRITEBYTECODE", "1")],
             cwd,
             timeout,
             Some(&tools::PYTHON),

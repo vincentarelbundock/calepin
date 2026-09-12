@@ -59,13 +59,23 @@ def _handle_sigterm(signum, frame):
 
 signal.signal(signal.SIGTERM, _handle_sigterm)
 
+def _version_sort_key(spec):
+    """Order version-suffixed kernel names numerically, not lexicographically.
+
+    Plain sorting puts "julia-1.9" above "julia-1.11" because it compares "9"
+    against "1" as text. Comparing the runs of digits as integers picks the
+    genuinely highest version.
+    """
+    return [int(part) for part in re.split(r"[^0-9]+", spec) if part]
+
 def _resolve_kernel_name(name):
     """Return the best matching installed kernel name for `name`.
 
     Tries an exact match first. If that fails, looks for installed kernels
-    whose name starts with `name` followed by a period (e.g. "julia-1" ->
-    "julia-1.11"). When multiple candidates exist the lexicographically
-    largest one is returned so that the highest minor/patch version wins.
+    whose name starts with `name` followed by a version separator, either a
+    period or a hyphen (e.g. "julia" -> "julia-1.11", which is how IJulia
+    registers itself, and "python3.12"). When multiple candidates exist the
+    highest version wins.
     """
     if name in _resolved:
         return _resolved[name]
@@ -74,10 +84,10 @@ def _resolve_kernel_name(name):
     if name in all_specs:
         _resolved[name] = name
         return name
-    prefix = name + "."
-    candidates = [k for k in all_specs if k.startswith(prefix)]
+    prefixes = (name + ".", name + "-")
+    candidates = [k for k in all_specs if k.startswith(prefixes)]
     if candidates:
-        best = sorted(candidates)[-1]
+        best = sorted(candidates, key=_version_sort_key)[-1]
         _resolved[name] = best
         return best
     # No match found; let KernelManager raise NoSuchKernel with the original name
@@ -306,12 +316,15 @@ impl JupyterBridgeSession {
     ) -> Result<Self> {
         process::validate_python_interpreter(program, "start Jupyter bridge", Some(&tools::PYTHON))
             .context("failed to start Jupyter bridge")?;
-        let env: Vec<(&str, &str)> =
-            vec![("PYTHONDONTWRITEBYTECODE", "1"), ("PYTHONNOUSERSITE", "1")];
+        // No `-s` and no PYTHONNOUSERSITE. The install docs tell users to run
+        // `pip install jupyter_client`, which outside a virtualenv lands in
+        // the per-user site directory; suppressing that directory made the
+        // bridge fail to import the very package it just asked for.
+        let env: Vec<(&str, &str)> = vec![("PYTHONDONTWRITEBYTECODE", "1")];
         let bootstrap = jupyter_bridge_script();
         let mut proc = SubprocessSession::spawn(
             program,
-            &["-s", "-u", "-c", &bootstrap],
+            &["-u", "-c", &bootstrap],
             &env,
             cwd,
             timeout,
@@ -403,6 +416,84 @@ mod tests {
             Ok(s) => assert!(s.success(), "JUPYTER_BRIDGE has a Python syntax error"),
             Err(_) => eprintln!("python3 not found, skipping bootstrap syntax check"),
         }
+    }
+
+    /// Runs the real bootstrap's `_resolve_kernel_name` against a stubbed
+    /// kernel list, so the matching rules can be checked without installing
+    /// IJulia (or any other kernel) on the machine running the tests.
+    fn resolve_kernel_name_with_specs(requested: &str, installed: &[&str]) -> Option<String> {
+        if !crate::utils::testtools::command_available("python3") {
+            return None;
+        }
+        let specs: Vec<String> = installed.iter().map(|name| format!("{name:?}")).collect();
+        let harness = format!(
+            "import sys, types\n\
+             fake = types.ModuleType('jupyter_client')\n\
+             ks = types.ModuleType('jupyter_client.kernelspec')\n\
+             class KernelSpecManager:\n\
+             \x20   def get_all_specs(self):\n\
+             \x20       return {{name: {{}} for name in [{}]}}\n\
+             ks.KernelSpecManager = KernelSpecManager\n\
+             ks.NoSuchKernel = type('NoSuchKernel', (Exception,), {{}})\n\
+             fake.KernelManager = object\n\
+             fake.kernelspec = ks\n\
+             sys.modules['jupyter_client'] = fake\n\
+             sys.modules['jupyter_client.kernelspec'] = ks\n\
+             ns = {{'__name__': 'bridge'}}\n\
+             exec(compile(BOOTSTRAP, '<bootstrap>', 'exec'), ns)\n\
+             print(ns['_resolve_kernel_name']({requested:?}))\n",
+            specs.join(", ")
+        );
+        let program = format!("BOOTSTRAP = {:?}\n{harness}", jupyter_bridge_script());
+        let output = Command::new("python3")
+            .args(["-c", &program])
+            .output()
+            .ok()?;
+        assert!(
+            output.status.success(),
+            "resolver harness failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    }
+
+    #[test]
+    fn julia_resolves_to_a_hyphenated_ijulia_kernel() {
+        // IJulia registers itself as `julia-1.11`, so a bare `julia` fence has
+        // to match across the hyphen or it never finds an installed kernel.
+        let Some(resolved) = resolve_kernel_name_with_specs("julia", &["python3", "julia-1.11"])
+        else {
+            return;
+        };
+        assert_eq!(resolved, "julia-1.11");
+    }
+
+    #[test]
+    fn a_version_suffixed_kernel_picks_the_highest_version() {
+        let Some(resolved) =
+            resolve_kernel_name_with_specs("julia", &["julia-1.9", "julia-1.11", "julia-1.10"])
+        else {
+            return;
+        };
+        // Lexicographic ordering would pick 1.9 here.
+        assert_eq!(resolved, "julia-1.11");
+    }
+
+    #[test]
+    fn an_exact_kernel_name_still_wins_over_a_version_suffixed_one() {
+        let Some(resolved) = resolve_kernel_name_with_specs("python3", &["python3", "python3.12"])
+        else {
+            return;
+        };
+        assert_eq!(resolved, "python3");
+    }
+
+    #[test]
+    fn an_unknown_kernel_resolves_to_itself_so_the_caller_reports_it() {
+        let Some(resolved) = resolve_kernel_name_with_specs("nosuch", &["python3"]) else {
+            return;
+        };
+        assert_eq!(resolved, "nosuch");
     }
 
     fn has_python_jupyter_kernel() -> bool {
