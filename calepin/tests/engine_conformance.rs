@@ -145,6 +145,9 @@ struct Engine {
     /// output. True where the engine reports a figure with the statement that
     /// drew it; false where figures are collected once the chunk has finished.
     plot_precedes_later_output: bool,
+    /// Chunk options a plot scenario needs, if the engine cannot produce a
+    /// figure in Calepin's default device format.
+    plot_chunk_options: &'static str,
 }
 
 fn engines() -> Vec<Engine> {
@@ -163,6 +166,7 @@ fn engines() -> Vec<Engine> {
             tbl_chunk_stray_plot: "plot(1:3)",
             fig_chunk_after_tbl: r#"cat("ok")"#,
             plot_precedes_later_output: true,
+            plot_chunk_options: "",
         },
         Engine {
             name: "python",
@@ -186,6 +190,7 @@ fn engines() -> Vec<Engine> {
             // printed. Emitting them per statement would split that chunk into
             // two plots, which is the worse error.
             plot_precedes_later_output: false,
+            plot_chunk_options: "",
         },
         // A Jupyter kernel is a fundamentally different execution model from
         // the native r/python engines: the whole chunk is sent to the kernel
@@ -227,6 +232,11 @@ fn engines() -> Vec<Engine> {
             // `display(fig)` is explicit and precedes the `print()`, so the
             // kernel sends them in that order.
             plot_precedes_later_output: true,
+            // IPython's inline backend publishes `image/png`, and a kernel is
+            // not asked what it can render, so a chunk left on Calepin's
+            // default `svg` device gets a warning and no figure. Ask for the
+            // format this kernel actually sends.
+            plot_chunk_options: ", fig-device-format: \"png\"",
         },
     ]
 }
@@ -280,7 +290,12 @@ fn a_plot_is_never_emitted_before_the_source_that_drew_it() {
             continue;
         }
         let dir = typst_accessible_tempdir();
-        let body = chunk_doc(engine.lang, "fig-plot", engine.plot_then_print, "");
+        let body = chunk_doc(
+            engine.lang,
+            "fig-plot",
+            engine.plot_then_print,
+            engine.plot_chunk_options,
+        );
         let results = compile_and_read_results(dir.path(), &body);
         let items = chunk_items(&results, "fig-plot");
 
@@ -423,7 +438,12 @@ fn a_plot_left_open_in_a_table_chunk_does_not_leak_into_the_next_figure_chunk() 
         let dir = typst_accessible_tempdir();
         let body = format!(
             "{}\n{}",
-            chunk_doc(engine.lang, "tbl-leak", engine.tbl_chunk_stray_plot, ""),
+            chunk_doc(
+                engine.lang,
+                "tbl-leak",
+                engine.tbl_chunk_stray_plot,
+                engine.plot_chunk_options,
+            ),
             chunk_doc(engine.lang, "fig-after-tbl", engine.fig_chunk_after_tbl, ""),
         );
         let results = compile_and_read_results(dir.path(), &body);

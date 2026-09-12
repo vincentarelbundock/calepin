@@ -587,8 +587,21 @@ mod tests {
         let config = CalepinConfig::load(dir.path(), None).unwrap();
 
         assert_eq!(config.executables.typst, PathBuf::from("typst"));
-        assert_eq!(config.executables.python, PathBuf::from("python3"));
         assert_eq!(config.executables.rscript, PathBuf::from("Rscript"));
+        // Windows has no `python3` shim by convention, so the default is
+        // whichever of `python`, `py` and `python3` actually runs there.
+        if cfg!(windows) {
+            let python = config.executables.python;
+            assert!(
+                ["python", "py", "python3"]
+                    .iter()
+                    .any(|candidate| python == PathBuf::from(candidate)),
+                "unexpected Windows default python: {}",
+                python.display()
+            );
+        } else {
+            assert_eq!(config.executables.python, PathBuf::from("python3"));
+        }
     }
 
     #[test]

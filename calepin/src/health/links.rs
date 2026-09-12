@@ -445,6 +445,12 @@ mod tests {
         assert_eq!(summary.links, 1);
         assert_eq!(summary.broken_local, 1);
         assert_eq!(summary.broken.len(), 1);
-        assert!(summary.broken[0].contains("nested/sub.typ"));
+        // The entry names a file, so it carries the platform's separator.
+        let nested = Path::new("nested").join("sub.typ");
+        assert!(
+            summary.broken[0].contains(&*nested.to_string_lossy()),
+            "{}",
+            summary.broken[0]
+        );
     }
 }
