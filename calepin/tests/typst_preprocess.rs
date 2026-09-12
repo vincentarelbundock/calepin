@@ -16,6 +16,24 @@ fn has_command(command: &str) -> bool {
     testtools::command_available(command)
 }
 
+/// Reads `RESULT_SCHEMA_VERSION` out of the source that defines it. Writing the
+/// number here instead means every schema bump leaves this binary asserting
+/// against the old one, which is how it came to pin 2 after the bump to 3.
+fn calepin_results_schema_version() -> u64 {
+    const DECLARATION: &str = "pub const RESULT_SCHEMA_VERSION: u8 = ";
+    let model = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/typst/model.rs");
+    let source = std::fs::read_to_string(&model).expect("failed to read typst/model.rs");
+    let value = source
+        .split_once(DECLARATION)
+        .unwrap_or_else(|| panic!("{DECLARATION:?} not found in {}", model.display()))
+        .1;
+    value
+        .split(';')
+        .next()
+        .and_then(|digits| digits.trim().parse().ok())
+        .expect("RESULT_SCHEMA_VERSION is not a plain integer literal")
+}
+
 /// A chunk's items with its source segments dropped: engines that split their
 /// source report each segment next to the output it produced, and these
 /// assertions are about what the chunk produced.
@@ -414,7 +432,7 @@ print(x + 1)
     let results_path = dir.path().join(".calepin/paper/results.json");
     let results: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(results_path).unwrap()).unwrap();
-    assert_eq!(results["schema"], 2);
+    assert_eq!(results["schema"], calepin_results_schema_version());
     assert_eq!(results["chunks"]["chunk-1"]["engine"], "python");
     assert!(results["chunks"]["chunk-1"].get("cached").is_none());
     assert_eq!(

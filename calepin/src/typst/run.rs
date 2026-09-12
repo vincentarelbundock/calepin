@@ -222,17 +222,29 @@ pub fn push_calepin_inputs(
 mod tests {
     use super::*;
 
+    /// Stands in for the typst binary by running `sh -c <script>`. Writing a
+    /// throwaway executable into a tempdir and running it instead races with
+    /// every other test that spawns a process: a concurrent fork inherits the
+    /// still-open write descriptor, and exec'ing the file then fails with
+    /// ETXTBSY ("Text file busy"). Borrowing a shell that already exists on
+    /// disk exercises the same spawn, capture and exit-status path with no
+    /// file of our own to execute.
+    #[cfg(unix)]
+    fn shell_script_args(script: &str) -> [OsString; 2] {
+        [OsString::from("-c"), OsString::from(script)]
+    }
+
+    #[cfg(unix)]
+    const SHELL: &str = "/bin/sh";
+
     #[cfg(unix)]
     #[test]
     fn run_typst_diagnostics_failure_includes_status_and_stderr() {
         let dir = tempfile::tempdir().unwrap();
-        let typst = dir.path().join("typst");
-        write_executable(
-            &typst,
-            "#!/bin/sh\nprintf 'simulated failure\\n' >&2\nexit 23\n",
-        );
+        let typst = Path::new(SHELL);
+        let args = shell_script_args("printf 'simulated failure\\n' >&2\nexit 23\n");
 
-        let err = run_typst_diagnostics(&typst, "run typst", &[], dir.path(), |stderr| {
+        let err = run_typst_diagnostics(typst, "run typst", &args, dir.path(), |stderr| {
             format!("typst failed:\n{stderr}")
         })
         .unwrap_err()
@@ -248,13 +260,11 @@ mod tests {
     #[test]
     fn run_typst_diagnostics_returns_warnings_from_successful_runs() {
         let dir = tempfile::tempdir().unwrap();
-        let typst = dir.path().join("typst");
-        write_executable(
-            &typst,
-            "#!/bin/sh\nprintf 'warning: align was ignored during HTML export\\n' >&2\nexit 0\n",
-        );
+        let typst = Path::new(SHELL);
+        let args =
+            shell_script_args("printf 'warning: align was ignored during HTML export\\n' >&2\n");
 
-        let diagnostics = run_typst_diagnostics(&typst, "run typst", &[], dir.path(), |stderr| {
+        let diagnostics = run_typst_diagnostics(typst, "run typst", &args, dir.path(), |stderr| {
             format!("typst failed:\n{stderr}")
         })
         .unwrap();
@@ -349,18 +359,5 @@ ignored during HTML export\n   \u{250c}\u{2500} paper.typ:2:2\n";
         args.into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
             .collect()
-    }
-
-    #[cfg(unix)]
-    fn write_executable(path: &Path, contents: &str) {
-        std::fs::write(path, contents).unwrap();
-        make_executable(path);
-    }
-
-    #[cfg(unix)]
-    fn make_executable(path: &Path) {
-        use std::os::unix::fs::PermissionsExt;
-
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
     }
 }
