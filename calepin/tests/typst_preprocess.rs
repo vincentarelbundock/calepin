@@ -1830,6 +1830,54 @@ answer <- 2.0
 }
 
 #[test]
+fn a_store_capture_leaves_nothing_behind_in_the_chunk_namespace() {
+    if !has_command("typst") || !has_command("python3") {
+        return;
+    }
+
+    // The store adapter runs in the same namespace as the user's own chunks,
+    // so the names it needs must not outlive it.
+    let dir = typst_accessible_tempdir();
+    std::fs::write(
+        dir.path().join("paper.typ"),
+        r##"#import "/.calepin/calepin.typ" as calepin
+
+#calepin.chunk("python", store-set: "answer", results: "hide")[
+```python
+answer = 42
+```
+]
+
+#calepin.chunk("python")[
+```python
+print("LEAKED:", sorted(k for k in globals() if "calepin" in k.lower()))
+```
+]
+"##,
+    )
+    .unwrap();
+
+    let output = Command::new(calepin_bin())
+        .args(["compile", "paper.typ", "paper.pdf", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .expect("failed to run calepin compile");
+    assert!(
+        output.status.success(),
+        "compile failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let results: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".calepin/paper/results.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(results["store"]["answer"], 42);
+    let reported = results.to_string();
+    assert!(reported.contains("LEAKED: []"), "{reported}");
+}
+
+#[test]
 fn compile_rejects_removed_setup_vars() {
     if !has_command("typst") {
         return;

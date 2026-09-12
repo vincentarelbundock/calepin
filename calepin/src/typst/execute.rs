@@ -486,30 +486,40 @@ fn capture_python_store(
 ) -> Result<serde_json::Map<String, Value>> {
     let keys = serde_json::to_string(keys)?;
     let code = format!(
-        r#"import json as _calepin_json, math as _calepin_math
-def _calepin_store_value(v, seen=None):
-    if seen is None: seen = set()
-    if v is None or type(v) in (bool, str): return v
-    if type(v) is int:
-        if not -(2**63) <= v < 2**63: raise TypeError("integer outside signed 64-bit range")
-        return v
-    if type(v) is float:
-        if not _calepin_math.isfinite(v): raise TypeError("non-finite number")
-        return v
-    if type(v) in (list, dict):
-        if id(v) in seen: raise TypeError("serialization cycle")
-        seen.add(id(v))
-        if type(v) is list: out = [_calepin_store_value(x, seen) for x in v]
-        else:
-            if any(type(k) is not str for k in v): raise TypeError("mapping keys must be strings")
-            out = {{k: _calepin_store_value(x, seen) for k, x in v.items()}}
-        seen.remove(id(v))
-        return out
-    raise TypeError("the value is outside the supported Python store value model")
-_calepin_keys = {keys}
-_calepin_missing = [k for k in _calepin_keys if k not in globals()]
-if _calepin_missing: raise NameError("missing store variables: " + ", ".join(_calepin_missing))
-print(_calepin_json.dumps({{k: _calepin_store_value(globals()[k]) for k in _calepin_keys}}, separators=(",", ":")))"#
+        // Everything the adapter needs lives inside the function, whose own
+        // name is removed once it has run: a store capture runs in the same
+        // namespace as the user's chunks, and the earlier version left
+        // _calepin_json, _calepin_math, _calepin_store_value, _calepin_keys and
+        // _calepin_missing sitting in it afterwards.
+        r#"def _calepin_capture_store(keys):
+    import json, math
+    def store_value(v, seen=None):
+        if seen is None: seen = set()
+        if v is None or type(v) in (bool, str): return v
+        if type(v) is int:
+            if not -(2**63) <= v < 2**63: raise TypeError("integer outside signed 64-bit range")
+            return v
+        if type(v) is float:
+            if not math.isfinite(v): raise TypeError("non-finite number")
+            return v
+        if type(v) in (list, dict):
+            if id(v) in seen: raise TypeError("serialization cycle")
+            seen.add(id(v))
+            if type(v) is list: out = [store_value(x, seen) for x in v]
+            else:
+                if any(type(k) is not str for k in v): raise TypeError("mapping keys must be strings")
+                out = {{k: store_value(x, seen) for k, x in v.items()}}
+            seen.remove(id(v))
+            return out
+        raise TypeError("the value is outside the supported Python store value model")
+    namespace = globals()
+    missing = [k for k in keys if k not in namespace]
+    if missing: raise NameError("missing store variables: " + ", ".join(missing))
+    return json.dumps({{k: store_value(namespace[k]) for k in keys}}, separators=(",", ":"))
+try:
+    print(_calepin_capture_store({keys}))
+finally:
+    del _calepin_capture_store"#
     );
     let raw = session.capture(
         &code,
@@ -532,7 +542,12 @@ fn capture_r_store(
         keys.iter().cloned().map(Value::String).collect(),
     ));
     let code = format!(
-        r#".calepin_json <- function(x) {{
+        // Wrapped in local() for the same reason as the Python adapter: the
+        // helper and its working variables would otherwise stay in globalenv()
+        // alongside the user's own. R hides names starting with a dot from
+        // ls(), so this leaked more quietly rather than less.
+        r#"cat(local({{
+.calepin_json <- function(x) {{
   q <- function(s) encodeString(s, quote="\"", na.encode=FALSE)
   if (is.null(x)) return("null")
   if (is.logical(x) && length(x)==1L && !is.na(x)) return(if (x) "true" else "false")
@@ -556,7 +571,8 @@ fn capture_r_store(
 .calepin_keys <- {keys}
 .calepin_missing <- .calepin_keys[!vapply(.calepin_keys, exists, FALSE, envir=globalenv(), inherits=FALSE)]
 if (length(.calepin_missing)) stop(paste("missing store variables:", paste(.calepin_missing, collapse=", ")))
-cat(paste0("{{", paste(vapply(.calepin_keys, function(k) paste0(encodeString(k, quote="\""), ":", .calepin_json(get(k, envir=globalenv(), inherits=FALSE))), ""), collapse=","), "}}"))"#
+paste0("{{", paste(vapply(.calepin_keys, function(k) paste0(encodeString(k, quote="\""), ":", .calepin_json(get(k, envir=globalenv(), inherits=FALSE))), ""), collapse=","), "}}")
+}}))"#
     );
     let raw = session.capture(
         &code,

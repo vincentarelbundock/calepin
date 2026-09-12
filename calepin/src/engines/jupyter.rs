@@ -166,7 +166,6 @@ def _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeo
     parts = [sentinel + "_SOURCE:" + code]
     msg_id = kc.execute(code, store_history=True)
     plot_index = 1
-    stream_texts = set()  # deduplicate execute_result vs stream stdout
 
     while True:
         try:
@@ -186,8 +185,6 @@ def _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeo
             if text:
                 tag = "OUTPUT" if content["name"] == "stdout" else "WARNING"
                 parts.append(f"{sentinel}_{tag}:{text}")
-                if content["name"] == "stdout":
-                    stream_texts.add(text)
 
         elif mtype in ("execute_result", "display_data"):
             data = content.get("data", {})
@@ -201,9 +198,16 @@ def _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeo
             # For rich display bundles, text/plain is the fallback. If an image
             # was captured, emitting the fallback as stream output would duplicate
             # plot object reprs for kernels such as Julia, Python, and R.
+            #
+            # Only the image check guards this. Suppressing a result that merely
+            # matched some earlier stdout text (which is what a set of every
+            # stream text in the chunk did) discards real output: a kernel emits
+            # execute_result for a bare expression and a stream for a print, and
+            # never both for one value, so equal text means two separate
+            # outputs. `print(5)` followed by `5` lost its result that way.
             if not image_path and "text/plain" in data:
                 text = data["text/plain"].rstrip("\n")
-                if text and text not in stream_texts:
+                if text:
                     parts.append(f"{sentinel}_OUTPUT:{text}")
 
         elif mtype == "error":
@@ -542,6 +546,39 @@ display({
         assert!(raw.contains("_PLOT:"), "{raw}");
         assert!(!raw.contains("_OUTPUT:fallback text"), "{raw}");
         assert!(std::path::Path::new(&fig_path).exists());
+    }
+
+    #[test]
+    fn jupyter_bridge_keeps_a_result_matching_earlier_printed_text() {
+        if !has_python_jupyter_kernel() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let fig_path = dir.path().join("dedup-1.svg");
+        let fig_path = fig_path.to_string_lossy().replace('\\', "/");
+        let mut session = JupyterBridgeSession::init_with_program(
+            Path::new("python3"),
+            None,
+            Some(Duration::from_secs(30)),
+        )
+        .unwrap();
+
+        // Two separate outputs that happen to render the same text: stdout
+        // from the print, then the chunk's own result. Both have to survive.
+        let raw = session
+            .capture(JupyterCapture {
+                kernel: "python3",
+                code: "print(5)\n5",
+                fig_path: &fig_path,
+                fig_format: "svg",
+                width: 6.0,
+                height: 3.708,
+                dpi: 150.0,
+            })
+            .unwrap();
+
+        assert_eq!(raw.matches("_OUTPUT:5").count(), 2, "{raw}");
     }
 
     #[test]
