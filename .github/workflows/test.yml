@@ -47,6 +47,15 @@ jobs:
       - name: Install Python engine dependencies
         run: pip install --upgrade matplotlib jupyter_client
 
+      # The `sh` engine is a Jupyter kernel like any other non-native
+      # language, so tests that use an `sh` chunk need the kernel installed
+      # and its kernelspec registered, or CALEPIN_TEST_REQUIRE_TOOLS turns
+      # their skip into a failure.
+      - name: Install the bash Jupyter kernel
+        run: |
+          pip install --upgrade bash_kernel
+          python -m bash_kernel.install --sys-prefix
+
       - name: Install R
         run: |
           sudo apt-get update

@@ -3027,6 +3027,12 @@ fn compile_keeps_entry_files_when_asked() {
 
 #[test]
 fn script_extraction_leaves_no_entry_files_behind() {
+    // Script extraction still runs the preprocessor, which resolves `typst`
+    // to read its version, so this needs the binary like its neighbours do.
+    if !has_command("typst") {
+        return;
+    }
+
     let dir = typst_accessible_tempdir();
     std::fs::write(dir.path().join("paper.typ"), "```{python}\nprint(1)\n```\n").unwrap();
 
