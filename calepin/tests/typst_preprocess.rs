@@ -2141,11 +2141,16 @@ fn typst_theme_themes_generic_raw_blocks_with_a_recognized_lang() {
     // defining it, so the first raw block that reached that branch with a
     // `lang` set failed with "unknown variable". The wrapper now binds it
     // locally to the langs this document actually recognizes.
+    // The body has to be runnable Python, not just any text: `fenced-chunks`
+    // defaults to true, so a raw block with a recognized lang is a chunk
+    // whatever built it, and this one executes wherever python3 exists. It
+    // read `x`, which raised NameError and failed the compile on any machine
+    // with an interpreter installed.
     let dir = typst_accessible_tempdir();
     std::fs::write(dir.path().join("paper.toml"), "theme = \"typst\"\n").unwrap();
     std::fs::write(
         dir.path().join("paper.typ"),
-        "#raw(\"x\", block: true, lang: \"python\")\n",
+        "#raw(\"x = 1\", block: true, lang: \"python\")\n",
     )
     .unwrap();
 
@@ -2357,7 +2362,7 @@ RUST_SOURCE_MARKER
 ```
 
 ```python
-PYTHON_SOURCE_MARKER
+PYTHON_SOURCE_MARKER = 1
 ```
 
 // Not rewritten in the staged source, so this one reaches the show rules as an
