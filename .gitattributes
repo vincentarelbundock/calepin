@@ -1,0 +1,30 @@
+# Check every text file out with LF, on every platform. Git for Windows
+# defaults to core.autocrlf=true, which rewrites LF to CRLF on checkout, and
+# two things here cannot survive that:
+#
+#   - build.rs bundles calepin/src/assets/ into the binary verbatim, so a
+#     Windows build would ship CRLF inside the Typst runtime, the HTML theme
+#     templates and the .tmTheme palettes.
+#   - tests match those assets, and the generated docs fragment, against
+#     ordinary "\n" string literals.
+* text=auto eol=lf
+
+# Binary formats git must never transform. `text=auto` already detects most of
+# them, but the PDFs checked in under docs/ are the ones a mistake would
+# silently corrupt, so they are named.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.vsix binary
+*.xz binary
+*.zst binary
+*.pf_fragment binary
+*.pf_index binary
+*.pf_meta binary
