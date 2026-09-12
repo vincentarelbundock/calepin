@@ -2066,7 +2066,11 @@ fn document_body_can_call_theme_exported_helpers() {
 
 #[test]
 fn typst_theme_emits_no_chunk_chrome_but_still_executes_chunks() {
-    if !has_command("typst") || !has_command("sh") {
+    // The engine is incidental here: the point is that the theme decides the
+    // chrome and never decides whether a chunk runs. `python` is the engine CI
+    // has natively, and it avoids `sh`, which is a Jupyter kernel name like
+    // any other non-native language and needs a kernelspec called `sh`.
+    if !has_command("typst") || !has_command("python3") {
         return;
     }
 
@@ -2082,9 +2086,9 @@ fn typst_theme_emits_no_chunk_chrome_but_still_executes_chunks() {
 
 #calepin.setup(echo: true)
 
-#calepin.chunk("sh")[
-```sh
-echo CHUNK_RAN
+#calepin.chunk("python")[
+```python
+print("CHUNK_RAN")
 ```
 ]
 "#,

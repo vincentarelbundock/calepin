@@ -119,7 +119,10 @@ fn resolve_website_asset_dir(config: &WebsiteConfig) -> Result<PathBuf> {
         None => Path::new(DEFAULT_WEBSITE_ASSET_DIR),
     };
     let raw = raw.to_path_buf();
-    if raw.is_absolute() {
+    // `has_root` as well as `is_absolute`: on Windows a path like `/assets`
+    // is rooted but not absolute (it names no drive), and joining it onto the
+    // project root discards the root rather than nesting under it.
+    if raw.is_absolute() || raw.has_root() {
         bail!(
             "website `asset-dir` must be a relative path: {}",
             raw.display()

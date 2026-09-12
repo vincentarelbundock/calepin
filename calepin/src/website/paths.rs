@@ -67,11 +67,24 @@ pub(super) fn ensure_path_within_root<'a>(
     path: &'a Path,
     what: &str,
 ) -> Result<&'a Path> {
-    if !path.starts_with(root)
-        || path
-            .components()
-            .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
-    {
+    // Only the part below `root` is checked for traversal. Scanning the whole
+    // path rejected every Windows path outright, since an absolute one there
+    // opens with a `Component::Prefix` for its drive, and `root` carries the
+    // same prefix.
+    let within = match path.strip_prefix(root) {
+        Ok(within) => within,
+        Err(_) => bail!(
+            "invalid {what} {} for output directory {}",
+            path.display(),
+            root.display()
+        ),
+    };
+    if within.components().any(|component| {
+        matches!(
+            component,
+            Component::ParentDir | Component::Prefix(_) | Component::RootDir
+        )
+    }) {
         bail!(
             "invalid {what} {} for output directory {}",
             path.display(),
