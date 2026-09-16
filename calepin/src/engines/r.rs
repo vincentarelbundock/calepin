@@ -60,6 +60,56 @@ const R_BOOTSTRAP: &str = r#"
 # Signal to user code and packages that we are running inside calepin.
 options(calepin = TRUE)
 
+# Every chunk expression is evaluated through this one function, so a condition
+# signalled at the top level of a chunk always records the same call. Matching
+# that fixed text is what lets .calepin_call_label() drop the harness frame
+# instead of reporting `eval(expr, envir = globalenv())` as the error's origin.
+.calepin_eval_expr <- function(expr) withVisible(eval(expr, envir = globalenv()))
+.calepin_harness_call <- "eval(expr, envir = globalenv())"
+
+# The call a condition carries, as a single line, or "" when there is none and
+# when it is calepin's own evaluator.
+.calepin_call_label <- function(cond) {
+  call <- tryCatch(conditionCall(cond), error = function(...) NULL)
+  if (is.null(call)) return("")
+  label <- tryCatch(deparse(call)[1L], error = function(...) "")
+  if (length(label) == 0 || is.na(label) || identical(label, .calepin_harness_call)) "" else label
+}
+
+.calepin_is_harness_call <- function(cond) {
+  call <- tryCatch(conditionCall(cond), error = function(...) NULL)
+  if (is.null(call)) return(FALSE)
+  label <- tryCatch(deparse(call)[1L], error = function(...) "")
+  length(label) > 0 && !is.na(label) && identical(label, .calepin_harness_call)
+}
+
+# conditionMessage() alone drops the call, which is the part that tells a reader
+# where the failure came from. as.character() on an error condition reproduces
+# R's console framing ("Error in log(\"a\"): ...") and dispatches to rlang's
+# method for rlang/cli-styled errors, so richer errors keep their formatting.
+.calepin_format_error <- function(e) {
+  txt <- if (.calepin_is_harness_call(e)) {
+    # Raised at the top level of the chunk: our evaluator is the only call on
+    # the stack, so report the message alone rather than leak the harness.
+    paste0("Error: ", conditionMessage(e))
+  } else {
+    tryCatch(
+      paste(as.character(e), collapse = ""),
+      error = function(...) paste0("Error: ", conditionMessage(e))
+    )
+  }
+  if (!nzchar(trimws(txt))) txt <- paste0("Error: ", conditionMessage(e))
+  sub("[\r\n]+$", "", txt)
+}
+
+# Warnings need the framing built by hand: as.character() on a warning prints
+# the condition class ("simpleWarning in log(-1): NaNs produced").
+.calepin_format_warning <- function(w) {
+  msg <- sub("[\r\n]+$", "", conditionMessage(w))
+  label <- .calepin_call_label(w)
+  if (nzchar(label)) paste0("Warning in ", label, ": ", msg) else paste0("Warning: ", msg)
+}
+
 .calepin_loop <- function() {
   con <- file("stdin", "r")
   while (TRUE) {
@@ -241,7 +291,7 @@ options(calepin = TRUE)
         initial_plot <- .calepin_plot_state()
         last_plot_state <- if (is.null(initial_plot)) NULL else serialize(initial_plot, NULL)
       }, error = function(e) {
-        err_out <<- conditionMessage(e)
+        err_out <<- .calepin_format_error(e)
       })
     }
 
@@ -273,7 +323,7 @@ options(calepin = TRUE)
               # Capture stdout and direct stderr during eval
               .err_out <- capture.output(
                 .cat_out <- capture.output(
-                  .val <- withVisible(eval(exprs[[i]], envir = globalenv()))
+                  .val <- .calepin_eval_expr(exprs[[i]])
                 ),
                 type = "message"
               )
@@ -324,7 +374,7 @@ options(calepin = TRUE)
             }
           },
           warning = function(w) {
-            warns <<- c(warns, conditionMessage(w))
+            warns <<- c(warns, .calepin_format_warning(w))
             invokeRestart("muffleWarning")
           },
           message = function(m) {
@@ -333,7 +383,7 @@ options(calepin = TRUE)
           }
         ),
         error = function(e) {
-          err_out <<- conditionMessage(e)
+          err_out <<- .calepin_format_error(e)
         }
       )
     }
@@ -673,6 +723,88 @@ summary(m)"#,
         assert!(raw.contains("boom"), "{raw}");
         assert!(raw.contains("_SOURCE:"), "{raw}");
         assert!(raw.contains("stop('boom')"), "{raw}");
+    }
+
+    #[test]
+    fn r_session_reports_the_call_that_raised_an_error() {
+        if !command_available("Rscript") {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture("log(\"a\")", "", "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_ERROR:"), "{raw}");
+        assert!(raw.contains("non-numeric argument"), "{raw}");
+        assert!(raw.contains("log(\"a\")"), "{raw}");
+
+        let raw = session
+            .capture(
+                "f <- function() stop('inner boom')\nf()",
+                "",
+                "svg",
+                6.0,
+                3.708,
+                150.0,
+            )
+            .unwrap();
+
+        assert!(raw.contains("_ERROR:"), "{raw}");
+        let error_line = raw
+            .lines()
+            .find(|line| line.contains("_ERROR:"))
+            .unwrap_or_default();
+        assert!(error_line.contains("f()"), "{raw}");
+        assert!(error_line.contains("inner boom"), "{raw}");
+    }
+
+    #[test]
+    fn r_session_error_does_not_name_the_evaluation_harness() {
+        if !command_available("Rscript") {
+            return;
+        }
+
+        // A `stop()` at the top level of a chunk records calepin's own
+        // evaluator as its call; reporting it would point the reader at
+        // calepin internals instead of at their code.
+        let mut session = session();
+        let raw = session
+            .capture("stop('boom')", "", "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_ERROR:"), "{raw}");
+        assert!(raw.contains("boom"), "{raw}");
+        assert!(!raw.contains("globalenv()"), "{raw}");
+    }
+
+    #[test]
+    fn r_session_reports_the_call_that_raised_a_warning() {
+        if !command_available("Rscript") {
+            return;
+        }
+
+        let mut session = session();
+        let raw = session
+            .capture("log(-1)", "", "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        let warning_line = raw
+            .lines()
+            .find(|line| line.contains("_WARNING:"))
+            .unwrap_or_default();
+        assert!(warning_line.contains("log(-1)"), "{raw}");
+        assert!(warning_line.contains("NaNs produced"), "{raw}");
+
+        // A bare top-level warning has no call of its own to report.
+        let raw = session
+            .capture("warning('bare')", "", "svg", 6.0, 3.708, 150.0)
+            .unwrap();
+
+        assert!(raw.contains("_WARNING:"), "{raw}");
+        assert!(raw.contains("bare"), "{raw}");
+        assert!(!raw.contains("globalenv()"), "{raw}");
     }
 
     #[test]
