@@ -235,7 +235,9 @@ mod tests {
         // this asserts the "not the same file" case rather than relying on
         // filesystem timestamp resolution.
         let aside_time = std::fs::metadata(&aside).unwrap().modified().unwrap();
-        let file = std::fs::File::open(&original).unwrap();
+        // Opened for writing: setting a file's timestamps needs write access on
+        // Windows, where a read-only handle fails with "Access is denied".
+        let file = std::fs::File::options().write(true).open(&original).unwrap();
         file.set_modified(aside_time).unwrap();
 
         let moved = MovedExe { aside, original };

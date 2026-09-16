@@ -46,7 +46,15 @@ fn inline_img_tag(
         return Ok(tag.to_string());
     }
 
+    let boundary = asset_boundary(root, base_dir, page_dir);
     let Some(path) = resolve_html_asset_path(src, root, base_dir)
+        // Normalized before it is used, so a reference that climbs out of its
+        // boundary is recognized as such on every platform: Unix resolves `..`
+        // against real directories (so a climb through a directory that does
+        // not exist simply fails to resolve), while Windows collapses it
+        // lexically and happily lands back on an existing file.
+        .map(|path| lexically_normalize(&path))
+        .filter(|path| path.starts_with(&boundary))
         .filter(|path| path.exists())
         // Guard against a root-relative or relative reference that climbs
         // outside the project root (e.g. `src="/../../etc/passwd"`), the same
@@ -124,6 +132,40 @@ fn is_inlineable_src(src: &str) -> bool {
         || src.starts_with("http://")
         || src.starts_with("https://")
         || src.starts_with('#'))
+}
+
+/// The directory a relative asset reference may not climb above. For a website
+/// page that is the site root (the page's directory in the output tree, minus
+/// the page's own href), since a page cannot address anything above it; for a
+/// standalone document it is the project root.
+fn asset_boundary(root: &Path, base_dir: &Path, page_dir: Option<&Path>) -> PathBuf {
+    let Some(page_dir) = page_dir else {
+        return root.to_path_buf();
+    };
+    let mut boundary = base_dir.to_path_buf();
+    for component in page_dir.components() {
+        if matches!(component, Component::Normal(_)) && !boundary.pop() {
+            return root.to_path_buf();
+        }
+    }
+    boundary
+}
+
+/// Resolve `.` and `..` textually, without touching the filesystem.
+fn lexically_normalize(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !out.pop() {
+                    out.push(Component::ParentDir);
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 fn resolve_html_asset_path(src: &str, root: &Path, base_dir: &Path) -> Option<PathBuf> {

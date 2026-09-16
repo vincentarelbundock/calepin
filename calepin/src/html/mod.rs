@@ -508,6 +508,28 @@ mod tests {
     }
 
     #[test]
+    fn html_image_inliner_embeds_sibling_pages_assets_within_the_site_root() {
+        // Climbing out of the page's own directory is fine as long as the
+        // reference stays inside the site root.
+        let dir = tempfile::tempdir().unwrap();
+        let image = dir.path().join("out/assets/fig.svg");
+        std::fs::create_dir_all(image.parent().unwrap()).unwrap();
+        std::fs::write(&image, "<svg></svg>").unwrap();
+        std::fs::create_dir_all(dir.path().join("out/guide")).unwrap();
+        let html = r#"<img src="../assets/fig.svg">"#;
+
+        let inlined = assets::inline_html_images(
+            html,
+            dir.path(),
+            &dir.path().join("out/guide"),
+            Some(Path::new("guide")),
+        )
+        .unwrap();
+
+        assert!(inlined.contains(r#"src="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=""#));
+    }
+
+    #[test]
     fn html_image_inliner_leaves_references_above_the_site_root() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("fig.svg"), "<svg></svg>").unwrap();
