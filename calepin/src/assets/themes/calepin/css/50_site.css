@@ -14,7 +14,7 @@
 
 .calepin-website-shell.grid {
   display: grid;
-  grid-template-columns: var(--calepin-sidebar-width) minmax(0, 1fr) var(--calepin-sidebar-width);
+  grid-template-columns: var(--calepin-sidebar-width) minmax(0, 1fr) var(--calepin-toc-width);
   grid-template-areas: "sidebar main toc";
   gap: var(--calepin-shell-gap);
   width: min(100% - 2rem, 95rem);
