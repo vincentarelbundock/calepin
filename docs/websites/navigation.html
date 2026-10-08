@@ -30,7 +30,7 @@
     <meta property="og:url" content="https://vincentarelbundock.github.io/calepin/websites/navigation.html">
     
     
-    <link rel="icon" href="../.calepin/favicon.svg">
+    <link rel="icon" href="../assets/default-favicon.svg">
     
     
     <meta name="color-scheme" content="light dark">
@@ -193,6 +193,9 @@
   --calepin-border: var(--calepin-border-width) solid var(--calepin-color-border);
   --calepin-topbar-height: 3.5rem;
   --calepin-sidebar-width: 12rem;
+  /* Right-hand table-of-contents column. Defaults to the sidebar width, so
+   * overriding --calepin-sidebar-width alone still resizes both columns. */
+  --calepin-toc-width: var(--calepin-sidebar-width);
   --calepin-shell-gap: 1.5rem;
   --calepin-shadow-card: 0 10px 30px color-mix(in srgb, var(--calepin-color-text) 8%, transparent);
   --calepin-focus-ring: 0 0 0 3px color-mix(in srgb, var(--calepin-color-focus) 28%, transparent);
@@ -4493,7 +4496,7 @@ a:has(.calepin-nav-icon) {
 
 .calepin-website-shell.grid {
   display: grid;
-  grid-template-columns: var(--calepin-sidebar-width) minmax(0, 1fr) var(--calepin-sidebar-width);
+  grid-template-columns: var(--calepin-sidebar-width) minmax(0, 1fr) var(--calepin-toc-width);
   grid-template-areas: "sidebar main toc";
   gap: var(--calepin-shell-gap);
   width: min(100% - 2rem, 95rem);
@@ -6739,14 +6742,11 @@ html:not([data-theme]) {
       menu.appendChild(li);
     });
 
-    summary.addEventListener("click", () => {
-      const open = !picker.open;
-      closeAll(open ? picker : null);
-      picker.classList.toggle("is-open", open);
-      summary.setAttribute("aria-expanded", open ? "true" : "false");
-    });
-
+    // The native <details> toggle owns the open state. While open, Pico's
+    // full-viewport summary::before overlay turns any outside click into a
+    // summary click, which closes the menu without reaching the page below.
     picker.addEventListener("toggle", () => {
+      if (picker.open) closeAll(picker);
       picker.classList.toggle("is-open", picker.open);
       summary.setAttribute("aria-expanded", picker.open ? "true" : "false");
     });

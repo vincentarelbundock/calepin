@@ -235,6 +235,9 @@ mover[accent="true" i] > :not(:first-child) {
   --calepin-border: var(--calepin-border-width) solid var(--calepin-color-border);
   --calepin-topbar-height: 3.5rem;
   --calepin-sidebar-width: 12rem;
+  /* Right-hand table-of-contents column. Defaults to the sidebar width, so
+   * overriding --calepin-sidebar-width alone still resizes both columns. */
+  --calepin-toc-width: var(--calepin-sidebar-width);
   --calepin-shell-gap: 1.5rem;
   --calepin-shadow-card: 0 10px 30px color-mix(in srgb, var(--calepin-color-text) 8%, transparent);
   --calepin-focus-ring: 0 0 0 3px color-mix(in srgb, var(--calepin-color-focus) 28%, transparent);
@@ -2137,14 +2140,11 @@ Eli -> Cooking        2.10</code></pre></div><h2 id="what-to-check">What to chec
       menu.appendChild(li);
     });
 
-    summary.addEventListener("click", () => {
-      const open = !picker.open;
-      closeAll(open ? picker : null);
-      picker.classList.toggle("is-open", open);
-      summary.setAttribute("aria-expanded", open ? "true" : "false");
-    });
-
+    // The native <details> toggle owns the open state. While open, Pico's
+    // full-viewport summary::before overlay turns any outside click into a
+    // summary click, which closes the menu without reaching the page below.
     picker.addEventListener("toggle", () => {
+      if (picker.open) closeAll(picker);
       picker.classList.toggle("is-open", picker.open);
       summary.setAttribute("aria-expanded", picker.open ? "true" : "false");
     });

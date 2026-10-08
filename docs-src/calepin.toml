@@ -3,6 +3,7 @@ description = "A Typst-native computational notebook and static website generato
 base-url = "https://vincentarelbundock.github.io/calepin"
 logo = "assets/logo_short.svg"
 logo-alt = "Calepin"
+favicon = "assets/default-favicon.svg"
 pdf = true
 minify = false
 search = "pagefind"
