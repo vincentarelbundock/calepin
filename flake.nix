@@ -112,7 +112,9 @@
             packages = websiteTools;
 
             shellHook = ''
-              export PATH="$PWD/target/debug:$PATH"
+              # bash_kernel spawns `bash` from PATH and needs readline prompt escapes,
+              # which the stdenv bash nix develop puts first is built without.
+              export PATH="$PWD/target/debug:${pkgs.bashInteractive}/bin:$PATH"
               export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
             '';
           };
