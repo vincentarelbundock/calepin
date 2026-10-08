@@ -164,3 +164,22 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/vincentarelbundock/apt/dispatches \
             -d '{"event_type":"upstream-release"}'
+
+      # Same nudge for the RPM repo, with its own optional PAT in
+      # RPM_REPO_TOKEN, so either repo can be wired up without the other.
+      - name: Nudge the rpm repo
+        if: steps.resolve.outputs.proceed == 'true'
+        continue-on-error: true
+        env:
+          RPM_REPO_TOKEN: ${{ secrets.RPM_REPO_TOKEN }}
+        run: |
+          set -eu
+          if [ -z "${RPM_REPO_TOKEN:-}" ]; then
+            echo "RPM_REPO_TOKEN not set; the rpm repo will pick this up on its next cron run."
+            exit 0
+          fi
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer ${RPM_REPO_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/vincentarelbundock/rpm/dispatches \
+            -d '{"event_type":"upstream-release"}'
