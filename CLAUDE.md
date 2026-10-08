@@ -19,7 +19,7 @@ The binary crate is nested at `calepin/`, so direct cargo invocations need `--ma
 - `cargo clippy --manifest-path calepin/Cargo.toml` for lints
 - `make docs-check` runs the generated-docs-fragment test (`cargo test --manifest-path calepin/Cargo.toml generated_docs_fragment_matches_source`); rerun it with `CALEPIN_UPDATE_DOCS=1` to regenerate `docs-src/reference/generated.md` after a change to the facts it tracks (see Conventions below)
 - `make cli-reference` regenerates `docs-src/reference/cli.typ` from clap `--help` output
-- `make website` / `make serve` build the docs site via `calepin compile docs-src docs` into `docs/` (website config auto-discovered at `docs-src/calepin.toml`)
+- `make website` / `make serve` build the docs site via `calepin compile docs-src docs` into `docs/` (website config auto-discovered at `docs-src/calepin.toml`). `.github/workflows/website.yml` rebuilds the site from source and deploys it to GitHub Pages on every push to `main` that touches it
 - `make bump VERSION=x.y.z` then `make release` cuts a release (tags + pushes, which fires the cargo-dist and crates.io workflows). `make release` refuses a dirty tree.
 - `make linux-packages` builds the `.deb`, `.rpm` and Arch `.pkg.tar.zst` into `dist/` from `packaging/linux/nfpm.yaml` (needs `nfpm` on `PATH`, Linux only)
 - `make editors` builds the extension from `editors/vscode/`, installs it in VS Code, and installs it in Positron when the Positron CLI is available

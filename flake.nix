@@ -66,6 +66,7 @@
         rForWebsite = pkgs.rWrapper.override {
           packages = with pkgs.rPackages; [
             ggplot2
+            knitr
             tinytable
           ];
         };
