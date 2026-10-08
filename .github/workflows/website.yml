@@ -68,6 +68,9 @@ jobs:
             # `sh` chunks run through the bash Jupyter kernel.
             uv run python -m bash_kernel.install --sys-prefix
             cargo build --locked --manifest-path calepin/Cargo.toml
+            # The committed docs/ has no build manifest, so calepin refuses to
+            # overwrite it. Build into an empty directory instead.
+            rm -rf docs
             make website
           BUILD
 
