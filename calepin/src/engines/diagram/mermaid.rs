@@ -7,7 +7,13 @@ use super::{path_arg, run_tool, tool_error, DiagramRun};
 use crate::engines::EngineResult;
 use crate::utils::tools;
 
-const SANDBOX_ERROR: &str = "No usable sandbox";
+// Chromium's two ways of saying it cannot sandbox itself: no namespace
+// sandbox at all, or only a setuid helper that is not installed setuid root
+// (for example Nix's chromium on a host that restricts user namespaces).
+const SANDBOX_ERRORS: [&str; 2] = [
+    "No usable sandbox",
+    "The SUID sandbox helper binary was found, but is not configured correctly",
+];
 const MISSING_CHROME_ERROR: &str = "Could not find Chrome";
 
 pub(super) fn render(run: &DiagramRun<'_>, results: &mut Vec<EngineResult>) -> Result<bool> {
@@ -97,7 +103,8 @@ fn puppeteer_args(
 }
 
 fn is_sandbox_failure(stderr: &[u8]) -> bool {
-    String::from_utf8_lossy(stderr).contains(SANDBOX_ERROR)
+    let stderr = String::from_utf8_lossy(stderr);
+    SANDBOX_ERRORS.iter().any(|error| stderr.contains(error))
 }
 
 fn is_missing_chrome_failure(stderr: &[u8]) -> bool {
@@ -144,13 +151,20 @@ mod tests {
 
     #[test]
     fn retries_with_no_sandbox_config_when_chromium_requires_it() {
+        for error in super::SANDBOX_ERRORS {
+            assert_retries_with_no_sandbox(error);
+        }
+    }
+
+    fn assert_retries_with_no_sandbox(sandbox_error: &str) {
         let _guard = env_lock();
         let temp_dir = tempfile::tempdir().unwrap();
         let bin_dir = temp_dir.path().join("bin");
         std::fs::create_dir(&bin_dir).unwrap();
         write_executable(
             &bin_dir.join("mmdc"),
-            r#"#!/bin/sh
+            format!(
+                r#"#!/bin/sh
 out=""
 config=""
 while [ "$#" -gt 0 ]; do
@@ -161,7 +175,7 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 if [ -z "$config" ]; then
-  echo "No usable sandbox!" >&2
+  echo "{sandbox_error}!" >&2
   exit 1
 fi
 if ! grep -q -- "--no-sandbox" "$config"; then
@@ -169,7 +183,8 @@ if ! grep -q -- "--no-sandbox" "$config"; then
   exit 2
 fi
 printf "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>" > "$out"
-"#,
+"#
+            ),
         );
         let _path = EnvVarGuard::prepend_path(bin_dir);
 
