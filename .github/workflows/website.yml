@@ -1,0 +1,103 @@
+name: Website
+
+# Builds docs-src/ into docs/ and deploys it to GitHub Pages. The deployed
+# site comes from this build, not from the docs/ tree committed to the repo.
+
+on:
+  push:
+    branches: [main]
+    paths: &site-paths
+      - "docs-src/**"
+      - "calepin/**"
+      - "Cargo.lock"
+      - "Makefile"
+      - "flake.nix"
+      - "flake.lock"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/website.yml"
+  pull_request:
+    paths: *site-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Same pin as test.yml, so the site is rendered by the typst CI tests.
+  TYPST_VERSION: 0.15.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/install-nix-action@v31
+
+      # Keyed on flake.lock too: the build uses the flake's rustc, not the
+      # runner's rustup toolchain.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: website-cargo-${{ hashFiles('flake.lock', 'Cargo.lock') }}-${{ github.sha }}
+          restore-keys: website-cargo-${{ hashFiles('flake.lock', 'Cargo.lock') }}-
+
+      - name: Install typst
+        run: |
+          set -eu
+          asset="typst-x86_64-unknown-linux-musl"
+          url="https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/${asset}.tar.xz"
+          curl -fsSL "$url" | tar -xJ -C "$RUNNER_TEMP"
+          echo "TYPST_BIN_DIR=$RUNNER_TEMP/$asset" >> "$GITHUB_ENV"
+
+      - name: Build website
+        run: |
+          nix develop .#website --command bash -euo pipefail <<'BUILD'
+            export PATH="$TYPST_BIN_DIR:$PATH"
+            typst --version
+            uv sync --frozen
+            # `sh` chunks run through the bash Jupyter kernel.
+            uv run python -m bash_kernel.install --sys-prefix
+            cargo build --locked --manifest-path calepin/Cargo.toml
+            make website
+          BUILD
+
+      - name: Prepare artifact
+        run: |
+          set -eu
+          test -s docs/index.html
+          test -s docs/pagefind/pagefind-entry.json
+          # docs/.calepin/ holds build caches (results, fingerprints, runtime
+          # sources), not public assets. Fail if a page links into it.
+          if grep -rlE '(src|href)="[^"]*\.calepin/' docs --include='*.html'; then
+            echo "::error::pages above link into docs/.calepin/"
+            exit 1
+          fi
+          rm -rf docs/.calepin
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
