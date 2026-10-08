@@ -1,7 +1,7 @@
 name: Website
 
-# Builds docs-src/ into docs/ and deploys it to GitHub Pages. The deployed
-# site comes from this build, not from the docs/ tree committed to the repo.
+# Builds docs-src/ into docs/ and deploys it to GitHub Pages. docs/ is not
+# tracked: this workflow is the only thing that publishes the site.
 
 on:
   push:
@@ -65,12 +65,9 @@ jobs:
             export PATH="$TYPST_BIN_DIR:$PATH"
             typst --version
             uv sync --frozen
-            # `sh` chunks run through the bash Jupyter kernel.
+            # `bash` chunks run through the bash Jupyter kernel.
             uv run python -m bash_kernel.install --sys-prefix
             cargo build --locked --manifest-path calepin/Cargo.toml
-            # The committed docs/ has no build manifest, so calepin refuses to
-            # overwrite it. Build into an empty directory instead.
-            rm -rf docs
             make website
           BUILD
 
