@@ -51,6 +51,15 @@ jobs:
           key: website-cargo-${{ hashFiles('flake.lock', 'Cargo.lock') }}-${{ github.sha }}
           restore-keys: website-cargo-${{ hashFiles('flake.lock', 'Cargo.lock') }}-
 
+      # TikZ chunks run tectonic, which fetches TeX files on demand from a
+      # server that rate-limits CI (HTTP 429). Keep its download cache; the
+      # per-commit key saves files newly fetched by each build.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/Tectonic
+          key: website-tectonic-${{ github.sha }}
+          restore-keys: website-tectonic-
+
       - name: Install typst
         run: |
           set -eu
