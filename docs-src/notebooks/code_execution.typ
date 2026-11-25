@@ -136,7 +136,7 @@ print(f"The total is {total}.")
 
 _Calepin_ has built-in engines for *Python* and *R*, and built-in diagram engines for *Mermaid*, *Graphviz DOT*, *TikZ*, and *D2*.
 
-Any language with a #link("https://github.com/jupyter/jupyter/wiki/Jupyter-kernels")[Jupyter kernel] also works: use the kernel name as the block language. Popular examples include *Bash* (`bash`), *Julia* (`julia`), *Octave* (`octave`), *Gnuplot* (`gnuplot`), and *Ruby* (`ruby`). Install kernels as described in the #link("../getting-started/install.html#jupyter-support")[Jupyter install section].
+Any language with a #link("https://github.com/jupyter/jupyter/wiki/Jupyter-kernels")[Jupyter kernel] also works: use the kernel name as the block language. Popular examples include *Bash* (`bash`), *Julia* (`julia`), *Octave* (`octave`), *Gnuplot* (`gnuplot`), and *Ruby* (`ruby`). Install kernels as described in the #link("../getting-started/install.html#jupyter-kernels")[Jupyter install section]. If a kernel chunk does not run, see #link("../getting-started/install.html#kernel-troubleshooting")[Troubleshooting kernels].
 
 Run `calepin health` to see which kernels Calepin can launch. Whatever name appears there can be used as a block language directly:
 

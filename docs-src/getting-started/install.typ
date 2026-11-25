@@ -154,6 +154,23 @@ which kernels Calepin can launch, passing the same `--config` you build with so
 it checks the same Python. It asks the interpreter Calepin uses, whereas
 `jupyter kernelspec list` may belong to a different environment.
 
+== Troubleshooting kernels
+<kernel-troubleshooting>
+
+Calepin needs only the `jupyter_client` package, not a full Jupyter install.
+It launches any registered kernel, including one installed by another tool:
+IJulia's `julia-1.x` kernel works with `julia` as the block language.
+
+When a kernel chunk cannot run, Calepin prints a terminal warning naming the
+chunk and the reason (`--strict` makes it an error). Usual causes:
+
+- the config file was not passed with `--config`;
+- `jupyter_client` is missing from the Python Calepin uses (e.g. IJulia's
+  Conda Python);
+- the kernel was registered with `--sys-prefix` in another environment.
+
+`calepin health --config calepin.toml` checks all three.
+
 = Nix
 <nix>
 
