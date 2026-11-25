@@ -12,6 +12,10 @@
 use std::path::Path;
 use std::process::Command;
 
+// Shared tool-skip helper; see its doc comment for CALEPIN_TEST_REQUIRE_TOOLS.
+#[path = "../src/utils/testtools.rs"]
+mod testtools;
+
 fn calepin_bin() -> &'static Path {
     Path::new(env!("CARGO_BIN_EXE_calepin"))
 }
@@ -42,6 +46,26 @@ fn has_jupyter_kernel(kernel: &str) -> bool {
     );
     Command::new("python3")
         .args(["-c", &code])
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+}
+
+/// Whether a Julia kernel the bridge would pick for a ```julia fence is
+/// installed: an exact `julia` kernelspec or a version-suffixed one such as
+/// `julia-1.12`, which is how IJulia registers itself. Mirrors
+/// `_resolve_kernel_name` in the bridge, which `has_jupyter_kernel`'s
+/// exact-name lookup does not.
+fn has_julia_kernel() -> bool {
+    if !has_python_module("jupyter_client") {
+        return false;
+    }
+    let code = "import sys\n\
+from jupyter_client.kernelspec import KernelSpecManager\n\
+names = KernelSpecManager().get_all_specs()\n\
+sys.exit(0 if any(n == 'julia' or n.startswith(('julia-', 'julia.')) for n in names) else 1)\n";
+    Command::new("python3")
+        .args(["-c", code])
         .output()
         .map(|output| output.status.success())
         .unwrap_or(false)
@@ -466,6 +490,44 @@ fn a_plot_left_open_in_a_table_chunk_does_not_leak_into_the_next_figure_chunk() 
             any_text_contains(&streams, "ok"),
             "[{}] the figure chunk after the table chunk should still run normally, got {fig_items:#?}",
             engine.name
+        );
+    }
+}
+
+#[test]
+fn kernel_process_stdout_never_lands_in_chunk_output() {
+    // A kernel inherits the bridge's stdout unless the bridge redirects it,
+    // and that stdout is the sentinel channel back to Calepin. IJulia writes
+    // "Starting kernel event loops." straight to its process stdout at
+    // startup, so without the redirect that line surfaced as output of the
+    // first Julia chunk (#130). Every chunk's output must be exactly what its
+    // code printed.
+    // CI installs IJulia, so a missing kernel there must fail rather than
+    // skip: otherwise a broken registration leaves this regression unchecked.
+    if !testtools::command_available("typst")
+        || !testtools::require(has_julia_kernel(), "IJulia kernelspec")
+    {
+        return;
+    }
+    let dir = typst_accessible_tempdir();
+    let body = format!(
+        "{}{}",
+        chunk_doc("julia", "first", r#"println("first")"#, ""),
+        chunk_doc("julia", "second", r#"println("second")"#, ""),
+    );
+    let results = compile_and_read_results(dir.path(), &body);
+
+    for (label, expected) in [("first", "first"), ("second", "second")] {
+        let items = chunk_items(&results, label);
+        let outputs = items
+            .iter()
+            .filter(|item| item["type"] != "source")
+            .map(|item| item["text"].as_str().unwrap_or_default().trim())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            outputs,
+            vec![expected],
+            "chunk `{label}` should output only what it printed, got {items:#?}"
         );
     }
 }

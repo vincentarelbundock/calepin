@@ -41,4 +41,5 @@ mmdc = "mmdc"                      # Mermaid
 
 If `python` is not configured, set `CALEPIN_PYTHON` in the environment to
 pick it. If that is absent, Calepin uses a local `.venv` interpreter when
-available.
+available, and otherwise `python3` (on Windows, the first of `python`, `py`,
+and `python3` that works).

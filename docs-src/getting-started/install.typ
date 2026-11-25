@@ -105,18 +105,27 @@ Calepin has built-in support for #strong[Python] and #strong[R], and can also
 run many other languages through Jupyter kernels, but that requires installing
 the language kernel and kernel client tooling.
 
-To use a Jupyter kernel, install `jupyter_client` first:
+Calepin starts its Jupyter bridge with the same Python as your `python`
+chunks, so everything in this section must be installed into that interpreter;
+packages installed anywhere else are invisible to it. Calepin picks it from
+`[executables] python` in a config file passed with `--config`, then the
+`CALEPIN_PYTHON` environment variable, then a project `.venv`, then `python3`
+(see #link("config.html")[the config page]). Run `calepin health` to see which
+interpreter it chose.
+
+The commands below use `python3`. If Calepin uses a different interpreter,
+replace `python3` with its path. Install `jupyter_client` first:
 
 ```sh
-pip install jupyter_client
+python3 -m pip install jupyter_client
 ```
 
 Most kernels then install with a single `pip install`:
 
 ```sh
-pip install bash_kernel       # Bash
-pip install octave_kernel     # GNU Octave
-pip install gnuplot_kernel    # Gnuplot
+python3 -m pip install bash_kernel       # Bash
+python3 -m pip install octave_kernel     # GNU Octave
+python3 -m pip install gnuplot_kernel    # Gnuplot
 ```
 
 Some Python kernel packages also need to register a Jupyter kernelspec after
@@ -124,7 +133,7 @@ installation. For Bash, run this in the same Python environment that Calepin
 uses:
 
 ```sh
-python -m bash_kernel.install --sys-prefix
+python3 -m bash_kernel.install --sys-prefix
 ```
 
 If you use `uv run`, the equivalent command is:
@@ -140,7 +149,10 @@ Some kernels are installed from their language's own package manager:
 julia -e 'using Pkg; Pkg.add("IJulia")'
 ```
 
-Run `jupyter kernelspec list` to see what engines are registered and available.
+Run `calepin health` to check that `jupyter_client` is importable and to see
+which kernels Calepin can launch, passing the same `--config` you build with so
+it checks the same Python. It asks the interpreter Calepin uses, whereas
+`jupyter kernelspec list` may belong to a different environment.
 
 = Nix
 <nix>

@@ -21,7 +21,7 @@ use crate::utils::process;
 use crate::utils::tools;
 
 const JUPYTER_BRIDGE_TEMPLATE: &str = r#"
-import sys, base64, os, traceback, re, json, signal
+import sys, base64, os, traceback, re, json, signal, subprocess
 
 try:
     from jupyter_client import KernelManager
@@ -94,11 +94,34 @@ def _resolve_kernel_name(name):
     _resolved[name] = name
     return name
 
+def _kernel_stdout():
+    """Where a launched kernel's process stdout goes: never this bridge's own.
+
+    The bridge's stderr when it is backed by a real file descriptor (the
+    terminal, normally); `sys.stderr` can be None or a descriptor-less object
+    when Calepin runs without a usable stderr, and then the output is dropped.
+    """
+    try:
+        sys.stderr.flush()
+        return sys.stderr.fileno()
+    except Exception:
+        return subprocess.DEVNULL
+
 def _get_kernel(kernel_name, timeout):
     actual = _resolve_kernel_name(kernel_name)
     if actual not in _managers:
         km = KernelManager(kernel_name=actual)
-        km.start_kernel()
+        # The kernel would otherwise inherit this bridge's stdout, which is
+        # the sentinel channel back to Calepin. Anything a kernel writes to
+        # its process stdout rather than over iopub (IJulia prints "Starting
+        # kernel event loops." that way) then lands in whichever chunk is
+        # running as untagged output. Send it to the terminal instead, as
+        # Jupyter does with kernel process output: chunk output is what the
+        # kernel reports over iopub (ipykernel and IJulia forward subprocess
+        # and C-level writes there too), and a separate process's raw stdout
+        # has no defined order relative to the bridge's replies, so it cannot
+        # be attributed to a chunk reliably.
+        km.start_kernel(stdout=_kernel_stdout())
         kc = km.client()
         kc.start_channels()
         # Store before wait_for_ready: if it raises (e.g. a slow-starting
@@ -220,7 +243,7 @@ def _execute(kc, code, fig_path, fig_format, width, height, dpi, sentinel, timeo
 
     return ("\n" + sep + "\n").join(parts)
 
-try:
+def _main():
     while True:
         header = sys.stdin.readline()
         if not header:
@@ -286,6 +309,12 @@ try:
 
         print(result, flush=True)
         print(sentinel + "_DONE", flush=True)
+# The loop lives in a function so its kernel manager and client locals are
+# released when it returns. As module globals they would survive until
+# interpreter teardown, where jupyter_client's KernelClient.__del__ runs after
+# its dependencies are gone and prints a spurious traceback.
+try:
+    _main()
 finally:
     # Guaranteed even if the loop above exits through an unexpected path, not
     # just the normal "shutdown" command or stdin EOF.

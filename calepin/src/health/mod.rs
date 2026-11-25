@@ -234,11 +234,13 @@ pub fn build_report(
         .iter()
         .find(|check| check.name == "python")
         .is_some_and(|check| check.status == HealthStatus::Ok);
-    checks.push(jupyter_client_check(
+    let jupyter_client = jupyter_client_check(&config.executables.python, python_available);
+    let jupyter_client_available = jupyter_client.status == HealthStatus::Ok;
+    checks.push(jupyter_client);
+    checks.push(jupyter_kernels_check(
         &config.executables.python,
-        python_available,
+        jupyter_client_available,
     ));
-    checks.push(jupyter_kernels_check());
     match collect_quality_sources(&root, check_links_depth) {
         Ok(sources) => {
             checks.push(link_check(&root, &sources, check_external_links));
@@ -398,51 +400,64 @@ struct JupyterKernelspec {
     argv: Vec<String>,
 }
 
-fn jupyter_kernels_check() -> HealthCheck {
-    let jupyter = Path::new("jupyter");
-    if let Err(error) = validate_executable(jupyter, "list registered Jupyter kernels", None) {
-        return HealthCheck::warn("jupyter kernels", error.to_string())
-            .with_path("jupyter")
-            .with_hint("install Jupyter or ensure the `jupyter` command is on PATH");
+/// Lists the kernels the Jupyter bridge can actually launch.
+///
+/// The bridge resolves kernels with `KernelSpecManager` inside the configured
+/// Python, so this asks the same interpreter the same question. Shelling out
+/// to whatever `jupyter` is on PATH instead can describe a different
+/// environment: a Homebrew `jupyter` sees kernels installed into its own
+/// prefix that the configured Python never will, and the reverse.
+/// `get_all_specs()` returns the same shape as `jupyter kernelspec list
+/// --json`'s `kernelspecs` object.
+const LIST_KERNELSPECS_SCRIPT: &str = "import json\n\
+from jupyter_client.kernelspec import KernelSpecManager\n\
+print(json.dumps({'kernelspecs': KernelSpecManager().get_all_specs()}))\n";
+
+fn jupyter_kernels_check(python: &Path, jupyter_client_available: bool) -> HealthCheck {
+    let path = python.display().to_string();
+    if !jupyter_client_available {
+        return HealthCheck::warn(
+            "jupyter kernels",
+            "skipped because jupyter_client is not available in configured Python",
+        )
+        .with_path(path)
+        .with_hint(tools::JUPYTER_CLIENT.install_hint);
     }
 
-    match Command::new(jupyter)
-        .args(["kernelspec", "list", "--json"])
+    match Command::new(python)
+        .args(["-c", LIST_KERNELSPECS_SCRIPT])
         .output()
     {
-        Ok(output) if output.status.success() => jupyter_kernels_json_check(&output.stdout),
+        Ok(output) if output.status.success() => jupyter_kernels_json_check(&output.stdout, &path),
         Ok(output) => {
             let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
             HealthCheck::warn(
                 "jupyter kernels",
                 if stderr.is_empty() {
-                    "`jupyter kernelspec list --json` failed".to_string()
+                    "listing kernelspecs from configured Python failed".to_string()
                 } else {
-                    format!("`jupyter kernelspec list --json` failed: {stderr}")
+                    format!("listing kernelspecs from configured Python failed: {stderr}")
                 },
             )
-            .with_path("jupyter")
-            .with_hint("run `jupyter kernelspec list --json` for details")
+            .with_path(path)
         }
         Err(error) => HealthCheck::warn(
             "jupyter kernels",
-            format!("failed to run `jupyter kernelspec list --json`: {error}"),
+            format!("failed to list kernelspecs from configured Python: {error}"),
         )
-        .with_path("jupyter")
-        .with_hint("install Jupyter or ensure the `jupyter` command is on PATH"),
+        .with_path(path),
     }
 }
 
-fn jupyter_kernels_json_check(stdout: &[u8]) -> HealthCheck {
+fn jupyter_kernels_json_check(stdout: &[u8], path: &str) -> HealthCheck {
     let parsed: JupyterKernelspecList = match serde_json::from_slice(stdout) {
         Ok(parsed) => parsed,
         Err(error) => {
             return HealthCheck::warn(
                 "jupyter kernels",
-                format!("failed to parse `jupyter kernelspec list --json`: {error}"),
+                format!("failed to parse kernelspec list from configured Python: {error}"),
             )
-            .with_path("jupyter")
-            .with_hint("run `jupyter kernelspec list --json` for details");
+            .with_path(path);
         }
     };
 
@@ -488,7 +503,7 @@ fn jupyter_kernels_json_check(stdout: &[u8]) -> HealthCheck {
     };
 
     HealthCheck::new("jupyter kernels", status, message)
-        .with_path("jupyter")
+        .with_path(path)
         .with_optional_hint(
             (warnings > 0)
                 .then(|| "fix the kernelspec argv executable or reinstall the kernel".to_string()),
@@ -553,11 +568,55 @@ mod tests {
                 }
               }
             }"#,
+            "python3",
         );
 
         assert_eq!(report.status, HealthStatus::Warning);
         assert!(report.message.contains("1 launch warning"));
         assert!(report.details[0].contains("missing launch executable"));
+    }
+
+    /// A stand-in for the configured Python that ignores its arguments and
+    /// prints `stdout`, so a test can tell which interpreter a check asked.
+    #[cfg(unix)]
+    fn stub_python(dir: &Path, stdout: &str) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let path = dir.join("python-stub");
+        std::fs::write(&path, format!("#!/bin/sh\ncat <<'JSON'\n{stdout}\nJSON\n")).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        path
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn kernels_check_lists_the_kernels_the_configured_python_sees() {
+        // The bridge launches kernels through the configured Python, so the
+        // health report must describe that interpreter's kernels, not those
+        // of whatever `jupyter` happens to be on PATH.
+        let dir = tempfile::tempdir().unwrap();
+        let python = stub_python(
+            dir.path(),
+            r#"{"kernelspecs": {"julia-1.12": {"resource_dir": "/kernels/julia-1.12",
+               "spec": {"argv": ["/bin/sh", "{connection_file}"]}}}}"#,
+        );
+
+        let check = jupyter_kernels_check(&python, true);
+
+        assert_eq!(check.status, HealthStatus::Ok, "{check:?}");
+        assert_eq!(
+            check.path.as_deref(),
+            Some(python.display().to_string().as_str())
+        );
+        assert_eq!(check.details.len(), 1, "{check:?}");
+        assert!(check.details[0].starts_with("julia-1.12 "), "{check:?}");
+    }
+
+    #[test]
+    fn kernels_check_is_skipped_when_jupyter_client_is_missing() {
+        let check = jupyter_kernels_check(Path::new("definitely-missing-python"), false);
+
+        assert_eq!(check.status, HealthStatus::Warning);
+        assert!(check.message.contains("jupyter_client"), "{check:?}");
     }
 
     #[test]
