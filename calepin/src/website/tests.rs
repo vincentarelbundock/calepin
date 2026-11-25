@@ -335,6 +335,121 @@ fn website_build_result_normalizes_created_output_dir_inside_source() {
 }
 
 #[test]
+fn watcher_ignores_every_pages_index_the_build_writes_under_a_custom_asset_dir() {
+    // Regression for #131: with a custom `asset-dir`, the build writes
+    // `website-pages.json` into `<page dir>/<asset-dir>/` for nested pages
+    // too, and the watcher used to treat those copies as source changes,
+    // rebuilding forever.
+    if !command_available("typst") {
+        return;
+    }
+
+    let dir = tempdir_in_manifest("calepin-website-test-");
+    let src = dir.path().join("docs");
+    std::fs::create_dir_all(src.join("blog")).unwrap();
+    std::fs::write(
+        src.join("calepin.toml"),
+        "theme = \"calepin\"\nasset-dir = \"_assets\"\n[pages]\ninclude = [\"blog/*.typ\"]\n",
+    )
+    .unwrap();
+    std::fs::write(src.join("index.typ"), "= Home").unwrap();
+    std::fs::write(src.join("blog/post.typ"), "= Post").unwrap();
+
+    let result = build_site(WebsiteBuildOptions {
+        config: src.join("calepin.toml"),
+        src: Some(src.clone()),
+        out: None,
+        parallelism: Some(1),
+        render_pdf: Some(false),
+        quiet: true,
+        timeout: None,
+        config_overrides: Vec::new(),
+        typst_args: Vec::new(),
+        incremental_inputs: None,
+        incremental_changed: Vec::new(),
+        clean: true,
+        minify_html: false,
+        force: false,
+    })
+    .unwrap();
+
+    let mut indexes = Vec::new();
+    crate::utils::static_files::collect_files_by(
+        &result.src_dir,
+        &result.src_dir,
+        &mut indexes,
+        |_, _| true,
+        |rel, _| rel.file_name() == Some(std::ffi::OsStr::new(PAGES_INDEX_FILE)),
+    )
+    .unwrap();
+    assert!(
+        indexes
+            .iter()
+            .any(|path| path.starts_with(result.src_dir.join("blog"))),
+        "expected a nested pages index under blog/, found {indexes:?}"
+    );
+    for index in &indexes {
+        assert!(
+            !should_rebuild_for_path(&result, index),
+            "watcher would rebuild for generated {}",
+            index.display()
+        );
+    }
+    // The source pages themselves must still trigger a rebuild.
+    assert!(should_rebuild_for_path(
+        &result,
+        &result.src_dir.join("blog/post.typ")
+    ));
+}
+
+#[test]
+fn should_rebuild_for_path_ignores_nested_pages_indexes_but_not_nested_sources() {
+    let temp = tempfile::tempdir().unwrap();
+    let src = temp.path().join("docs");
+    fs::create_dir_all(src.join("blog/2026")).unwrap();
+    let pages = [
+        src.join("index.typ"),
+        src.join("blog/post.typ"),
+        src.join("blog/2026/recap.typ"),
+    ];
+    for page in &pages {
+        fs::write(page, "= Page").unwrap();
+    }
+    let mut current = test_build_result(&src, &pages);
+    current.asset_dir = PathBuf::from("build/assets");
+
+    for generated in [
+        "build/assets/website-pages.json",
+        "build/assets/anything.json",
+        "blog/build/assets/website-pages.json",
+        "blog/2026/build/assets/.website-pages.json.AbC123.tmp",
+    ] {
+        assert!(
+            !should_rebuild_for_path(&current, &src.join(generated)),
+            "{generated} is generated and should not trigger a rebuild"
+        );
+    }
+    for source in [
+        "blog/post.typ",
+        "build/notes.typ",
+        "assets/logo.svg",
+        "blog/assets/build/figure.svg",
+        // Discovery only skips the asset dir at the root, so a page under a
+        // nested directory of the same name is real source.
+        "blog/build/assets/post.typ",
+        "blog/build/assets/logo.svg",
+        // No page lives in `downloads/`, so the build writes no index there:
+        // a file of that name is the author's own.
+        "downloads/build/assets/website-pages.json",
+    ] {
+        assert!(
+            should_rebuild_for_path(&current, &src.join(source)),
+            "{source} is a source file and should trigger a rebuild"
+        );
+    }
+}
+
+#[test]
 fn website_config_output_dir_sets_default_build_directory() {
     if !command_available("typst") {
         return;

@@ -802,7 +802,9 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
     if rel.components().next().is_none() {
         return false;
     }
-    if path_has_skip_dir(rel, &[initial.asset_dir.as_path()]) {
+    if path_has_skip_dir(rel, &[initial.asset_dir.as_path()])
+        || is_generated_pages_index(initial, path)
+    {
         return false;
     }
     // Generated entry files are rewritten by the build itself; reacting to them
@@ -816,6 +818,43 @@ fn should_rebuild_for_path(initial: &WebsiteBuildResult, path: &Path) -> bool {
         }
     }
     true
+}
+
+/// Whether `path` is a `website-pages.json` copy (or the temporary file it is
+/// staged through) that the build writes into `<page dir>/<asset_dir>/`.
+///
+/// `write_pages_index` writes the index next to every directory that holds a
+/// page, not only at the source root, so a nested copy otherwise looks like a
+/// source change and re-triggers the build that wrote it (#131). The check
+/// mirrors the writer exactly: the file must sit in `<dir>/<asset_dir>/` for a
+/// `dir` that holds a built page. Anything else, such as a page under
+/// `blog/assets/` or a static file that happens to share the index's name, is
+/// real source and must still rebuild.
+fn is_generated_pages_index(current: &WebsiteBuildResult, path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+    let is_index = name == PAGES_INDEX_FILE
+        || (name.starts_with(&format!(".{PAGES_INDEX_FILE}.")) && name.ends_with(".tmp"));
+    if !is_index {
+        return false;
+    }
+    let Some(index_dir) = path.parent() else {
+        return false;
+    };
+    if !index_dir.ends_with(&current.asset_dir) {
+        return false;
+    }
+    let Some(page_dir) = index_dir
+        .ancestors()
+        .nth(current.asset_dir.components().count())
+    else {
+        return false;
+    };
+    current
+        .page_fingerprints
+        .keys()
+        .any(|page| page.parent() == Some(page_dir))
 }
 
 fn rebuild_changed_pages(

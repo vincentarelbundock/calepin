@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, bail, Context, Result};
 
 use crate::html::SiteNavEntry;
+use crate::typst::io::write_if_changed;
 use crate::typst::paths::is_generated_entry_file;
 use crate::utils::html::escape as html_escape;
 use crate::utils::static_files::{collect_files_by, path_has_common_skip_dir};
@@ -1215,8 +1216,9 @@ pub(super) fn write_pages_index(
         fs::create_dir_all(&target_dir)
             .with_context(|| format!("failed to create {}", target_dir.display()))?;
         let target = target_dir.join(PAGES_INDEX_FILE);
-        fs::write(&target, index_json)
-            .with_context(|| format!("failed to write {}", target.display()))?;
+        // Skip unchanged writes: every write is a filesystem event for
+        // `calepin watch`, so rewriting identical content invites rebuild churn.
+        write_if_changed(&target, index_json)?;
     }
     Ok(())
 }
