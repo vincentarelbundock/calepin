@@ -37,14 +37,9 @@ pub(crate) fn is_watch_candidate(
 
     // Calepin writes the generated entry files itself on every preprocess pass.
     // Watching them would turn each rebuild into the trigger for the next one.
-    if rel.components().next().is_none()
+    !(rel.components().next().is_none()
         || path_has_common_skip_dir(rel)
-        || is_generated_entry_file(rel)
-    {
-        return false;
-    }
-
-    true
+        || is_generated_entry_file(rel))
 }
 
 fn is_typst_temporary_output(preview_output: &Path, path: &Path) -> bool {
