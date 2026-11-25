@@ -38,3 +38,8 @@ auto-includes = true
 pr-run-mode = "plan"
 # Enable GitHub Attestations for provenance
 github-attestations = true
+
+# dist 0.31.0 plans aarch64-apple-darwin on macos-14, which GitHub has retired
+# ("The configuration 'macos-14-arm64-us-default' is not supported").
+[workspace.metadata.dist.github-custom-runners]
+aarch64-apple-darwin = "macos-15"
