@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.63
+
+- Restore release binaries and installers. 0.0.62 was published to crates.io only, because its Apple Silicon build ran on a retired GitHub runner.
+- Document how to troubleshoot Jupyter kernels that don't run, including kernels installed by other tools such as IJulia.
+
 ## 0.0.62
 
 - Fix an infinite rebuild loop in `calepin watch` for websites with a custom `asset-dir`. Thanks to [@0x7CFE](https://github.com/0x7CFE) ([#131](https://github.com/vincentarelbundock/calepin/issues/131)).
