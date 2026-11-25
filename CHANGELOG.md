@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.62
+
+- Fix an infinite rebuild loop in `calepin watch` for websites with a custom `asset-dir`. Thanks to [@0x7CFE](https://github.com/0x7CFE) ([#131](https://github.com/vincentarelbundock/calepin/issues/131)).
+- Fix a stray `Starting kernel event loops.` line in the first Julia chunk. Jupyter kernels' own startup output now goes to the terminal instead of chunk output. Thanks to [@tpoisot](https://github.com/tpoisot) ([#130](https://github.com/vincentarelbundock/calepin/issues/130)).
+- `calepin health` now lists the Jupyter kernels available to the Python Calepin uses. The install docs explain which Python needs `jupyter_client`. Thanks to [@technocrat](https://github.com/technocrat) ([#125](https://github.com/vincentarelbundock/calepin/issues/125)).
+- Fix Mermaid diagrams failing when Chromium's sandbox helper is unusable, as with Nix's Chromium on Ubuntu.
+
 ## 0.0.61
 
 - Fix the website language picker staying open after an outside click.
